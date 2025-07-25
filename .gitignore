@@ -1,0 +1,86 @@
+# Dependencies
+node_modules/
+vendor/
+composer.lock
+package-lock.json
+yarn.lock
+
+# Environment files
+.env
+.env.local
+.env.production
+.env.staging
+
+# Build outputs
+dist/
+build/
+public/build/
+
+# Logs
+*.log
+logs/
+storage/logs/
+
+# Database
+*.sqlite
+*.sqlite3
+database.sqlite
+
+# Cache
+storage/framework/cache/
+storage/framework/sessions/
+storage/framework/views/
+bootstrap/cache/
+
+# Temporary files
+temp/
+tmp/
+*.tmp
+*.temp
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Audio processing files
+storage/app/private/
+storage/app/processing/
+storage/app/uploads/
+storage/app/test_audio.wav
+
+# Ruby specific
+*.gem
+*.rbc
+/.config
+/coverage/
+/InstalledFiles
+/pkg/
+/spec/reports/
+/spec/examples.txt
+/test/tmp/
+/test/version_tmp/
+/tmp/
+
+# Laravel specific
+storage/app/public/
+storage/framework/testing/
+storage/framework/updates/
+storage/debugbar/
+
+# Frontend specific
+.cache/
+.parcel-cache/
+.next/
+.nuxt/ 
