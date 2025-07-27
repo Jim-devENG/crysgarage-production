@@ -1,4 +1,4 @@
-import { Button } from "./ui/button";
+
 import { Card, CardContent } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { UploadInterface } from "./UploadInterface";
@@ -7,7 +7,7 @@ import {
   Zap, 
   Download, 
   Clock, 
-  Headphones,
+
   Star,
   CheckCircle,
   TrendingUp,

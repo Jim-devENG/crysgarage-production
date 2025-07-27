@@ -4,7 +4,7 @@ import { useAudioUpload } from './hooks/useAudioUpload';
 import { useCredits } from './hooks/useCredits';
 import { useAddons } from './hooks/useAddons';
 import { useMasteringControls } from './hooks/useMasteringControls';
-import { audioAPI, authAPI, creditsAPI, API_BASE_URL } from './services/api';
+import { audioAPI } from './services/api';
 import { Header } from './components/Header';
 import { LandingPage } from './components/LandingPage';
 import { CoursesPage } from './components/CoursesPage';
@@ -27,7 +27,7 @@ import { AfrocentricDesignSystem } from './components/AfrocentricDesignSystem';
 import { Button } from './components/ui/button';
 import { Badge } from './components/ui/badge';
 import { Progress } from './components/ui/progress';
-import { ArrowLeft, Settings, Smartphone, Palette } from 'lucide-react';
+import { Settings, Palette } from 'lucide-react';
 import { Toaster } from './components/ui/sonner';
 import { AutoAuthFix } from './components/AutoAuthFix';
 
@@ -512,15 +512,14 @@ function AppContent() {
       // Start the mastering process
       await audioAPI.startMastering(session.audioId, {
         genre: session.genre,
-        config: session.config || {
-          sample_rate: 44100,
-          bit_depth: 16,
-          target_lufs: -14,
-          true_peak: -1,
-          eq_settings: {},
-          compression_settings: {},
-          stereo_width: 1.0
-        }
+        config: (session.config || {
+          sampleRate: '44.1',
+          resolution: '16',
+          noiseReduction: false,
+          tuningCorrection: false,
+          downloadFormat: ['wav'],
+          totalCost: 0
+        }) as any
       });
       
       // Poll for status updates

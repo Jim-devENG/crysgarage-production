@@ -5,7 +5,7 @@ import { Switch } from "./ui/switch";
 import { Badge } from "./ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
-import { Settings, Zap, Volume2, Sliders, Lock, DollarSign } from "lucide-react";
+import { Settings, Zap, Volume2, DollarSign } from "lucide-react";
 
 interface ProcessingOption {
   id: string;

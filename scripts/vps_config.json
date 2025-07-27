@@ -1,0 +1,38 @@
+{
+  "vps": {
+    "user": "root",
+    "host": "209.74.80.162",
+    "port": "22",
+    "path": "/var/www/crysgarage"
+  },
+  "services": {
+    "backend_port": "8000",
+    "frontend_port": "3000",
+    "ruby_port": "4567"
+  },
+  "domains": {
+    "api": "api.crysgarage.studio",
+    "frontend": "crysgarage.studio",
+    "admin": "admin.crysgarage.studio"
+  },
+  "ssl": {
+    "enabled": true,
+    "provider": "letsencrypt"
+  },
+  "database": {
+    "type": "mysql",
+    "host": "localhost",
+    "port": "3306",
+    "name": "crysgarage",
+    "user": "crysgarage_user"
+  },
+  "email": {
+    "provider": "smtp",
+    "host": "smtp.yourdomain.com",
+    "port": "587"
+  },
+  "monitoring": {
+    "enabled": true,
+    "log_retention_days": 30
+  }
+} 

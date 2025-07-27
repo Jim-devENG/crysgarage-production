@@ -11,11 +11,11 @@ import {
   Phone, 
   MapPin, 
   Building, 
-  Calendar,
+
   Save,
   X,
   Edit3,
-  Upload,
+
   Camera
 } from "lucide-react";
 

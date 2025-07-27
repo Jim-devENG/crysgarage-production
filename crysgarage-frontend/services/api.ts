@@ -456,4 +456,44 @@ export const createWebSocketConnection = (audioId: string) => {
   return ws;
 };
 
+// Mastering API
+export const masteringAPI = {
+  // Start mastering process
+  startMastering: async (file: File, genre: string, tier: string, config?: ProcessingConfiguration): Promise<{ session_id: string; status: string }> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('genre', genre);
+    formData.append('tier', tier);
+    
+    if (config) {
+      formData.append('config', JSON.stringify(config));
+    }
+    
+    const response = await api.post('/mastering/start', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  },
+
+  // Get mastering status
+  getStatus: async (sessionId: string): Promise<AudioStatus> => {
+    const response = await api.get(`/mastering/${sessionId}/status`);
+    return response.data;
+  },
+
+  // Get mastering result
+  getResult: async (sessionId: string): Promise<MasteringResult> => {
+    const response = await api.get(`/mastering/${sessionId}/result`);
+    return response.data;
+  },
+
+  // Cancel mastering process
+  cancelMastering: async (sessionId: string): Promise<{ success: boolean }> => {
+    const response = await api.post(`/mastering/${sessionId}/cancel`);
+    return response.data;
+  },
+};
+
 export default api; 

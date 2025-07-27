@@ -14,17 +14,12 @@ import {
   ChevronDown,
   ChevronRight,
   PlayCircle,
-  FileText,
   Zap,
   Music,
   Settings,
   Download,
-  CreditCard,
-  Shield,
   Clock,
-  Star,
-  Users,
-  ExternalLink
+  Star
 } from "lucide-react";
 
 interface HelpPageProps {

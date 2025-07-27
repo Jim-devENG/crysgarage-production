@@ -8,9 +8,7 @@ import {
   Zap, 
   Download, 
   Clock, 
-  Headphones,
   Star,
-  Users,
   TrendingUp,
   Mic,
   PlayCircle,
@@ -21,8 +19,7 @@ import {
   Music2,
   Radio,
   Waves,
-  Cpu,
-  Disc3
+  Cpu
 } from "lucide-react";
 
 interface LandingPageProps {

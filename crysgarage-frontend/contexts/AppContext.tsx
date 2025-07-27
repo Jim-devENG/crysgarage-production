@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
-import { authAPI, userAPI, audioAPI, creditsAPI, User, MasteringSession, ProcessingConfiguration } from '../services/api';
+import { authAPI, audioAPI, creditsAPI, User, MasteringSession, ProcessingConfiguration } from '../services/api';
 
 // Types
 interface AppState {
@@ -243,7 +243,7 @@ export function AppProvider({ children }: AppProviderProps) {
     }
   };
 
-  const startMastering = async (sessionId: string, genre: string, config: ProcessingConfiguration) => {
+  const startMastering = async (sessionId: string, genre: string) => {
     try {
       dispatch({ type: 'SET_LOADING', payload: true });
       dispatch({ type: 'CLEAR_ERROR' });

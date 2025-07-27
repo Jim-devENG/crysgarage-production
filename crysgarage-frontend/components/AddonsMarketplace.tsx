@@ -64,7 +64,7 @@ import {
   PenTool,
   Brush,
   Scissors,
-  Copy,
+
   Share2,
   Link2,
   MessageSquare,
@@ -673,16 +673,18 @@ export function AddonsMarketplace({ onClose, onPurchase, userTier, onUpgrade }: 
       {/* Payment Modal */}
       {showPaymentModal && selectedAddon && (
         <PaymentModal
-          addon={selectedAddon}
-          userTier={userTier}
-          isOwned={isAddonOwned(selectedAddon.id)}
-          isLocked={isAddonLocked(selectedAddon)}
-          onClose={() => {
-            setShowPaymentModal(false);
-            setSelectedAddon(null);
-          }}
-          onPurchase={handlePaymentModalPurchase}
-          onUpgrade={handleUpgradeClick}
+          {...{
+            addon: selectedAddon,
+            userTier,
+            isOwned: isAddonOwned(selectedAddon.id),
+            isLocked: isAddonLocked(selectedAddon),
+            onClose: () => {
+              setShowPaymentModal(false);
+              setSelectedAddon(null);
+            },
+            onPurchase: handlePaymentModalPurchase,
+            onUpgrade: handleUpgradeClick
+          } as any}
         />
       )}
     </div>

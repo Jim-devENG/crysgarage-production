@@ -31,7 +31,7 @@ export const useAddons = (user: User | null): UseAddonsReturn => {
 
   // Get addons filtered by user's tier
   const getFilteredAddons = useCallback((): Addon[] => {
-    return addons.filter(addon => {
+    return addons.filter(() => {
       // Show all addons, but mark inaccessible ones
       return true;
     });

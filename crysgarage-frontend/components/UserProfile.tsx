@@ -11,9 +11,9 @@ import {
   Wallet, 
   Music, 
   Settings, 
-  Download, 
+ 
   Star,
-  Clock,
+
   CreditCard,
   Package,
   TrendingUp,
@@ -22,7 +22,7 @@ import {
   History,
   Crown,
   Zap,
-  FileAudio,
+
   Volume2,
   ExternalLink,
   ShoppingBag

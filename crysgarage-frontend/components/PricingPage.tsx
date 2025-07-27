@@ -19,7 +19,7 @@ interface PricingPageProps {
   currentTier?: string;
 }
 
-export function PricingPage({ onSelectTier, onGoToDashboard, currentTier }: PricingPageProps) {
+export function PricingPage({ onSelectTier, onGoToDashboard }: PricingPageProps) {
   const handleTierSelection = (tierId: string) => {
     if (tierId === 'free') {
       // Free tier - direct access

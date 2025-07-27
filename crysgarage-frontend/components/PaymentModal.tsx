@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
-import { Card, CardContent, CardHeader } from "./ui/card";
+import { CardContent, CardHeader } from "./ui/card";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { 
@@ -11,7 +11,7 @@ import {
   CheckCircle, 
   X,
   Zap,
-  Star,
+
   Crown
 } from "lucide-react";
 

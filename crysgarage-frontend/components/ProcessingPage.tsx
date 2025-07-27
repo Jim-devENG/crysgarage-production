@@ -10,8 +10,7 @@ import {
   Zap, 
   CheckCircle, 
   AlertCircle,
-  Download,
-  Play
+  Download
 } from "lucide-react";
 
 interface ProcessingPageProps {
@@ -29,7 +28,7 @@ interface ProcessingStep {
   completed: boolean;
 }
 
-export function ProcessingPage({ progress, isProcessing, onComplete, onError }: ProcessingPageProps) {
+export function ProcessingPage({ progress, isProcessing }: ProcessingPageProps) {
   const [currentStep, setCurrentStep] = useState(0);
   const [stepProgress, setStepProgress] = useState<ProcessingStep[]>([
     {

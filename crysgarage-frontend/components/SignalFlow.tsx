@@ -109,7 +109,7 @@ export function SignalFlow({ isProcessing = false, fileName }: SignalFlowProps) 
           
           {/* Modules */}
           <div className="grid grid-cols-6 gap-4 relative z-10">
-            {modules.map((module, index) => (
+            {modules.map((module) => (
               <div
                 key={module.id}
                 className={`

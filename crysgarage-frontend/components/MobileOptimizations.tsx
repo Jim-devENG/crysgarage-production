@@ -7,7 +7,6 @@ import {
   Tablet, 
   Monitor, 
   Hand, 
-  Gesture,
   Menu,
   Navigation,
   Zap

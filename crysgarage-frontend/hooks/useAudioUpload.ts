@@ -65,7 +65,7 @@ export const useAudioUpload = (): UseAudioUploadReturn => {
       }
     }, 3000); // Poll every 3 seconds
 
-    setPollingInterval(interval);
+    setPollingInterval(interval as unknown as number);
   }, [pollingInterval]);
 
   // Download file

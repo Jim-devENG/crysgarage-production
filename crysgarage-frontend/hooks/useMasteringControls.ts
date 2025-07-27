@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { masteringAPI, ProcessingConfiguration } from '../services/api';
+import { ProcessingConfiguration } from '../services/api';
 
 interface EQSettings {
   low: number;
