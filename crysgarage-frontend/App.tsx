@@ -111,6 +111,14 @@ function AppContent() {
       case 'home':
         setCurrentPage('home');
         break;
+      case 'signin':
+        setAuthMode('signin');
+        setCurrentPage('auth');
+        break;
+      case 'signup':
+        setAuthMode('signup');
+        setCurrentPage('auth');
+        break;
       case 'pricing':
         if (isAuthenticated) {
           console.log('User authenticated, going to pricing');
