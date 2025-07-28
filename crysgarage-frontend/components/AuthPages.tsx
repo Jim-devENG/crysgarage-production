@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
@@ -43,6 +43,20 @@ export function SignInPage({ onSignIn, onClose, onSwitchToSignUp }: {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Add ESC key support
+  useEffect(() => {
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    document.addEventListener('keydown', handleEscape);
+    return () => {
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [onClose]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -62,7 +76,7 @@ export function SignInPage({ onSignIn, onClose, onSwitchToSignUp }: {
     setError(null);
     
     try {
-      await onSignIn('demo@crysgarage.com', 'demo123');
+      await onSignIn('demo.free@crysgarage.com', 'password');
     } catch (err: any) {
       setError(err.message || 'Demo sign in failed.');
     } finally {
@@ -71,14 +85,15 @@ export function SignInPage({ onSignIn, onClose, onSwitchToSignUp }: {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-      <Card className="bg-audio-panel-bg border-audio-panel-border max-w-md w-full max-h-[80vh] overflow-y-auto relative">
+    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4" onClick={onClose}>
+      <Card className="bg-audio-panel-bg border-audio-panel-border max-w-md w-full max-h-[80vh] overflow-y-auto relative" onClick={(e) => e.stopPropagation()}>
         {/* Close button */}
         <button
           onClick={onClose}
-          className="absolute top-3 right-3 p-2 text-crys-light-grey hover:text-crys-white hover:bg-crys-graphite/30 rounded-lg transition-colors z-10"
+          className="absolute top-4 right-4 p-2 text-crys-light-grey hover:text-crys-white hover:bg-crys-graphite/50 rounded-lg transition-colors z-20 cursor-pointer"
+          aria-label="Close modal"
         >
-          <X className="w-4 h-4" />
+          <X className="w-5 h-5" />
         </button>
         
         <CardHeader className="text-center pb-4">
@@ -244,6 +259,20 @@ export function SignUpPage({ onSignUp, onClose, onSwitchToSignIn }: {
   const [passwordStrength, setPasswordStrength] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
+  // Add ESC key support
+  useEffect(() => {
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    document.addEventListener('keydown', handleEscape);
+    return () => {
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [onClose]);
+
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     
@@ -284,7 +313,7 @@ export function SignUpPage({ onSignUp, onClose, onSwitchToSignIn }: {
     setError(null);
     
     try {
-      await onSignUp('demo@crysgarage.com', 'demo123', 'Demo User');
+      await onSignUp('demo.free@crysgarage.com', 'password', 'Demo User');
     } catch (err: any) {
       setError(err.message || 'Demo sign up failed.');
     } finally {
@@ -317,14 +346,15 @@ export function SignUpPage({ onSignUp, onClose, onSwitchToSignIn }: {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-      <Card className="bg-audio-panel-bg border-audio-panel-border max-w-md w-full max-h-[75vh] overflow-y-auto relative">
+    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4" onClick={onClose}>
+      <Card className="bg-audio-panel-bg border-audio-panel-border max-w-md w-full max-h-[75vh] overflow-y-auto relative" onClick={(e) => e.stopPropagation()}>
         {/* Close button */}
         <button
           onClick={onClose}
-          className="absolute top-3 right-3 p-2 text-crys-light-grey hover:text-crys-white hover:bg-crys-graphite/30 rounded-lg transition-colors z-10"
+          className="absolute top-4 right-4 p-2 text-crys-light-grey hover:text-crys-white hover:bg-crys-graphite/50 rounded-lg transition-colors z-20 cursor-pointer"
+          aria-label="Close modal"
         >
-          <X className="w-4 h-4" />
+          <X className="w-5 h-5" />
         </button>
         
         <CardHeader className="text-center pb-3">

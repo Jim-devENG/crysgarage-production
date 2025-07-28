@@ -1,276 +1,183 @@
 #!/bin/bash
 
 # Crys Garage VPS Deployment Script
-# Customize the variables below with your VPS details
+# This script builds and deploys the application to your VPS
 
-# VPS Connection Details
-VPS_USER="root"
+set -e  # Exit on any error
+
+# Configuration
 VPS_HOST="209.74.80.162"
-VPS_PORT="22"
+VPS_USER="root"
 VPS_PATH="/var/www/crysgarage"
-
-# Local project path
-LOCAL_PROJECT_PATH="$(pwd)"
+BACKUP_PATH="/var/www/crysgarage_backup_$(date +%Y%m%d_%H%M%S)"
 
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-echo -e "${GREEN}🚀 Starting Crys Garage VPS Deployment${NC}"
-
-# Check if required tools are installed
-check_requirements() {
-    echo -e "${YELLOW}Checking requirements...${NC}"
-    
-    if ! command -v rsync &> /dev/null; then
-        echo -e "${RED}❌ rsync is not installed. Please install it first.${NC}"
-        exit 1
-    fi
-    
-    if ! command -v ssh &> /dev/null; then
-        echo -e "${RED}❌ ssh is not installed. Please install it first.${NC}"
-        exit 1
-    fi
-    
-    echo -e "${GREEN}✅ Requirements check passed${NC}"
+# Logging function
+log() {
+    echo -e "${BLUE}[$(date +'%Y-%m-%d %H:%M:%S')]${NC} $1"
 }
 
-# Test SSH connection
-test_connection() {
-    echo -e "${YELLOW}Testing SSH connection to VPS...${NC}"
-    
-    if ssh -p $VPS_PORT -o ConnectTimeout=10 -o BatchMode=yes $VPS_USER@$VPS_HOST exit 2>/dev/null; then
-        echo -e "${GREEN}✅ SSH connection successful${NC}"
-    else
-        echo -e "${RED}❌ SSH connection failed. Please check your VPS details.${NC}"
-        echo -e "${YELLOW}Make sure to:${NC}"
-        echo -e "  1. Update VPS_USER, VPS_HOST, and VPS_PORT variables in this script"
-        echo -e "  2. Set up SSH key authentication or have password ready"
-        echo -e "  3. Ensure the VPS is accessible"
-        exit 1
-    fi
+error() {
+    echo -e "${RED}[ERROR]${NC} $1"
+    exit 1
 }
 
-# Create remote directory structure
-setup_remote_dirs() {
-    echo -e "${YELLOW}Setting up remote directory structure...${NC}"
-    
-    ssh -p $VPS_PORT $VPS_USER@$VPS_HOST << 'EOF'
-        mkdir -p /var/www/crysgarage
-        mkdir -p /var/www/crysgarage/crysgarage-backend
-        mkdir -p /var/www/crysgarage/crysgarage-frontend
-        mkdir -p /var/www/crysgarage/crysgarage-ruby
-        mkdir -p /var/www/crysgarage/logs
-        mkdir -p /var/www/crysgarage/backups
+success() {
+    echo -e "${GREEN}[SUCCESS]${NC} $1"
+}
+
+warning() {
+    echo -e "${YELLOW}[WARNING]${NC} $1"
+}
+
+# Check if we're in the right directory
+if [ ! -d "crysgarage-frontend" ] || [ ! -d "crysgarage-backend" ]; then
+    error "Please run this script from the Crys Garage project root directory"
+fi
+
+log "🚀 Starting Crys Garage deployment to VPS..."
+
+# Step 1: Test SSH connection
+log "🔍 Testing SSH connection to VPS..."
+if ! ssh -o ConnectTimeout=10 -o BatchMode=yes $VPS_USER@$VPS_HOST "echo 'SSH connection successful'" 2>/dev/null; then
+    error "Cannot connect to VPS. Please check your SSH configuration."
+fi
+success "SSH connection established"
+
+# Step 2: Create backup on VPS
+log "💾 Creating backup of current installation..."
+ssh $VPS_USER@$VPS_HOST "if [ -d '$VPS_PATH' ]; then cp -r $VPS_PATH $BACKUP_PATH; fi"
+success "Backup created at $BACKUP_PATH"
+
+# Step 3: Build frontend
+log "📦 Building frontend application..."
+cd crysgarage-frontend
+
+# Check if node_modules exists
+if [ ! -d "node_modules" ]; then
+    log "📥 Installing frontend dependencies..."
+    npm install
+fi
+
+# Build the application
+npm run build
+if [ $? -ne 0 ]; then
+    error "Frontend build failed"
+fi
+success "Frontend built successfully"
+
+# Step 4: Upload frontend
+log "📤 Uploading frontend to VPS..."
+scp -r dist/* $VPS_USER@$VPS_HOST:$VPS_PATH/crysgarage-frontend/dist/
+if [ $? -ne 0 ]; then
+    error "Frontend upload failed"
+fi
+success "Frontend uploaded successfully"
+
+# Step 5: Upload backend
+log "📤 Uploading backend to VPS..."
+cd ../crysgarage-backend
+scp -r . $VPS_USER@$VPS_HOST:$VPS_PATH/crysgarage-backend/
+if [ $? -ne 0 ]; then
+    error "Backend upload failed"
+fi
+success "Backend uploaded successfully"
+
+# Step 6: Configure server
+log "🔧 Configuring server..."
+ssh $VPS_USER@$VPS_HOST << 'EOF'
+set -e
+
+cd /var/www/crysgarage/crysgarage-backend
+
+# Install/update dependencies
+echo "Installing PHP dependencies..."
+composer install --no-dev --optimize-autoloader
+
+# Set proper permissions
+echo "Setting permissions..."
+chown -R nginx:nginx /var/www/crysgarage
+chmod -R 755 /var/www/crysgarage
+chmod -R 664 /var/www/crysgarage/crysgarage-backend/database/database.sqlite
+
+# Run database migrations
+echo "Running database migrations..."
+php artisan migrate --force
+
+# Seed demo users
+echo "Seeding demo users..."
+php artisan db:seed --class=DemoUserSeeder --force
+
+# Clear and cache configurations
+echo "Caching configurations..."
+php artisan config:cache
+php artisan route:cache
+php artisan view:cache
+
+# Restart services
+echo "Restarting services..."
+systemctl restart crysgarage-backend
+systemctl restart nginx
+
+# Check service status
+echo "Checking service status..."
+systemctl is-active --quiet crysgarage-backend && echo "Backend service is running" || echo "Backend service failed to start"
+systemctl is-active --quiet nginx && echo "Nginx service is running" || echo "Nginx service failed to start"
 EOF
-    
-    echo -e "${GREEN}✅ Remote directories created${NC}"
-}
 
-# Deploy backend
-deploy_backend() {
-    echo -e "${YELLOW}Deploying Laravel backend...${NC}"
-    
-    # Exclude unnecessary files for production
-    rsync -avz --progress \
-        --exclude='vendor/' \
-        --exclude='node_modules/' \
-        --exclude='.env' \
-        --exclude='storage/logs/' \
-        --exclude='storage/framework/cache/' \
-        --exclude='storage/framework/sessions/' \
-        --exclude='storage/framework/views/' \
-        --exclude='bootstrap/cache/' \
-        --exclude='*.sqlite' \
-        --exclude='.git/' \
-        --exclude='tests/' \
-        -e "ssh -p $VPS_PORT" \
-        $LOCAL_PROJECT_PATH/crysgarage-backend/ \
-        $VPS_USER@$VPS_HOST:$VPS_PATH/crysgarage-backend/
-    
-    echo -e "${GREEN}✅ Backend deployed${NC}"
-}
+if [ $? -ne 0 ]; then
+    error "Server configuration failed"
+fi
 
-# Deploy frontend
-deploy_frontend() {
-    echo -e "${YELLOW}Deploying React frontend...${NC}"
-    
-    # Build the frontend for production
-    echo -e "${YELLOW}Building frontend for production...${NC}"
-    cd crysgarage-frontend
-    npm run build
-    
-    # Deploy built files
-    rsync -avz --progress \
-        --exclude='node_modules/' \
-        --exclude='.git/' \
-        --exclude='src/' \
-        --exclude='*.tsx' \
-        --exclude='*.ts' \
-        --exclude='*.js' \
-        --exclude='*.jsx' \
-        --exclude='package*.json' \
-        --exclude='vite.config.ts' \
-        --exclude='tailwind.config.js' \
-        --exclude='postcss.config.js' \
-        --exclude='tsconfig.json' \
-        -e "ssh -p $VPS_PORT" \
-        $LOCAL_PROJECT_PATH/crysgarage-frontend/dist/ \
-        $VPS_USER@$VPS_HOST:$VPS_PATH/crysgarage-frontend/
-    
-    echo -e "${GREEN}✅ Frontend deployed${NC}"
-}
+# Step 7: Test deployment
+log "🧪 Testing deployment..."
+sleep 5  # Wait for services to start
 
-# Deploy Ruby audio processor
-deploy_ruby() {
-    echo -e "${YELLOW}Deploying Ruby audio processor...${NC}"
-    
-    rsync -avz --progress \
-        --exclude='*.gem' \
-        --exclude='*.rbc' \
-        --exclude='/.config' \
-        --exclude='/coverage/' \
-        --exclude='/InstalledFiles' \
-        --exclude='/pkg/' \
-        --exclude='/spec/reports/' \
-        --exclude='/spec/examples.txt' \
-        --exclude='/test/tmp/' \
-        --exclude='/test/version_tmp/' \
-        --exclude='/tmp/' \
-        --exclude='output/' \
-        --exclude='logs/' \
-        --exclude='temp/' \
-        -e "ssh -p $VPS_PORT" \
-        $LOCAL_PROJECT_PATH/crysgarage-ruby/ \
-        $VPS_USER@$VPS_HOST:$VPS_PATH/crysgarage-ruby/
-    
-    echo -e "${GREEN}✅ Ruby audio processor deployed${NC}"
-}
+# Test if the site is accessible
+if curl -s -o /dev/null -w "%{http_code}" https://crysgarage.studio | grep -q "200\|301\|302"; then
+    success "Frontend is accessible"
+else
+    warning "Frontend might not be accessible yet (check DNS propagation)"
+fi
 
-# Deploy configuration files
-deploy_config() {
-    echo -e "${YELLOW}Deploying configuration files...${NC}"
-    
-    rsync -avz --progress \
-        -e "ssh -p $VPS_PORT" \
-        $LOCAL_PROJECT_PATH/README.md \
-        $LOCAL_PROJECT_PATH/.gitignore \
-        $VPS_USER@$VPS_HOST:$VPS_PATH/
-    
-    echo -e "${GREEN}✅ Configuration files deployed${NC}"
-}
+# Test API endpoint
+if curl -s -o /dev/null -w "%{http_code}" https://api.crysgarage.studio/api/auth/signin | grep -q "200\|405"; then
+    success "API is accessible"
+else
+    warning "API might not be accessible yet"
+fi
 
-# Setup services on VPS
-setup_services() {
-    echo -e "${YELLOW}Setting up services on VPS...${NC}"
-    
-    ssh -p $VPS_PORT $VPS_USER@$VPS_HOST << 'EOF'
-        cd /var/www/crysgarage
-        
-        # Install backend dependencies
-        echo "Installing Laravel dependencies..."
-        cd crysgarage-backend
-        composer install --no-dev --optimize-autoloader
-        
-        # Set proper permissions
-        chmod -R 755 storage/
-        chmod -R 755 bootstrap/cache/
-        
-        # Install frontend dependencies and build
-        echo "Installing frontend dependencies..."
-        cd ../crysgarage-frontend
-        npm install
-        npm run build
-        
-        # Install Ruby dependencies
-        echo "Installing Ruby dependencies..."
-        cd ../crysgarage-ruby
-        bundle install
-        
-        echo "✅ Services setup completed"
-EOF
-    
-    echo -e "${GREEN}✅ Services setup completed${NC}"
-}
+# Step 8: Cleanup old backups (keep last 3)
+log "🧹 Cleaning up old backups..."
+ssh $VPS_USER@$VPS_HOST "cd /var/www && ls -dt crysgarage_backup_* | tail -n +4 | xargs -r rm -rf"
 
-# Create systemd service files
-create_service_files() {
-    echo -e "${YELLOW}Creating systemd service files...${NC}"
-    
-    # Create Laravel service
-    ssh -p $VPS_PORT $VPS_USER@$VPS_HOST << 'EOF'
-        sudo tee /etc/systemd/system/crysgarage-backend.service > /dev/null << 'SERVICE'
-[Unit]
-Description=Crys Garage Laravel Backend
-After=network.target
+success "🎉 Deployment completed successfully!"
 
-[Service]
-Type=simple
-User=www-data
-Group=www-data
-WorkingDirectory=/var/www/crysgarage/crysgarage-backend
-ExecStart=/usr/bin/php artisan serve --host=0.0.0.0 --port=8000
-Restart=always
-RestartSec=10
+log "📋 Post-deployment checklist:"
+echo "1. ✅ Frontend built and uploaded"
+echo "2. ✅ Backend uploaded and configured"
+echo "3. ✅ Database migrated and seeded"
+echo "4. ✅ Services restarted"
+echo "5. ✅ Basic connectivity tested"
 
-[Install]
-WantedBy=multi-user.target
-SERVICE
+log "🔗 Your application should be available at:"
+echo "   Frontend: https://crysgarage.studio"
+echo "   API: https://api.crysgarage.studio"
 
-        # Create Ruby audio processor service
-        sudo tee /etc/systemd/system/crysgarage-ruby.service > /dev/null << 'SERVICE'
-[Unit]
-Description=Crys Garage Ruby Audio Processor
-After=network.target
+log "🧪 Test the login modal with:"
+echo "   Email: demo.free@crysgarage.com"
+echo "   Password: password"
 
-[Service]
-Type=simple
-User=www-data
-Group=www-data
-WorkingDirectory=/var/www/crysgarage/crysgarage-ruby
-ExecStart=/usr/bin/ruby mastering_server.rb
-Restart=always
-RestartSec=10
+log "📊 Monitor your application:"
+echo "   Check logs: ssh $VPS_USER@$VPS_HOST 'journalctl -u crysgarage-backend -f'"
+echo "   Check status: ssh $VPS_USER@$VPS_HOST 'systemctl status crysgarage-backend'"
 
-[Install]
-WantedBy=multi-user.target
-SERVICE
-
-        # Reload systemd and enable services
-        sudo systemctl daemon-reload
-        sudo systemctl enable crysgarage-backend
-        sudo systemctl enable crysgarage-ruby
-        sudo systemctl start crysgarage-backend
-        sudo systemctl start crysgarage-ruby
-        
-        echo "✅ Systemd services created and started"
-EOF
-    
-    echo -e "${GREEN}✅ Systemd services created and started${NC}"
-}
-
-# Main deployment function
-main() {
-    check_requirements
-    test_connection
-    setup_remote_dirs
-    deploy_backend
-    deploy_frontend
-    deploy_ruby
-    deploy_config
-    setup_services
-    create_service_files
-    
-    echo -e "${GREEN}🎉 Deployment completed successfully!${NC}"
-    echo -e "${YELLOW}Next steps:${NC}"
-    echo -e "  1. Configure your web server (nginx/apache) to serve the frontend"
-    echo -e "  2. Set up environment variables in /var/www/crysgarage/crysgarage-backend/.env"
-    echo -e "  3. Run database migrations: php artisan migrate"
-    echo -e "  4. Configure SSL certificates"
-    echo -e "  5. Set up monitoring and logging"
-}
-
-# Run main function
-main 
+if [ -n "$BACKUP_PATH" ]; then
+    log "💾 Backup available at: $BACKUP_PATH"
+fi 

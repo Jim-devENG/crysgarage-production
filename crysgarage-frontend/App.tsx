@@ -799,16 +799,12 @@ function AppContent() {
     console.log('currentPage:', currentPage);
     console.log('intendedDestination:', intendedDestination);
     
-    if (isAuthenticated && currentPage === 'auth') {
-      console.log('User authenticated, redirecting from auth page');
-      if (intendedDestination) {
-        console.log('Redirecting to intended destination:', intendedDestination);
-        setCurrentPage(intendedDestination);
-        setIntendedDestination(null);
-      } else {
-        console.log('No intended destination, going to home');
-        setCurrentPage('home');
-      }
+    // Only redirect if user is authenticated AND we're on auth page AND there's an intended destination
+    // This prevents the useEffect from interfering with manual modal closes
+    if (isAuthenticated && currentPage === 'auth' && intendedDestination) {
+      console.log('User authenticated, redirecting from auth page to intended destination:', intendedDestination);
+      setCurrentPage(intendedDestination);
+      setIntendedDestination(null);
     }
     console.log('=== POST-LOGIN REDIRECTION DEBUG END ===');
   }, [isAuthenticated, currentPage, intendedDestination]);
@@ -977,9 +973,12 @@ function AppContent() {
                 onSignIn={handleSignIn}
                 onSignUp={handleSignUp}
                 onClose={() => {
-                  console.log('Pricing AuthModal closed');
-                  // Let the useEffect handle redirection after login
-                  // Don't redirect here to avoid race conditions
+                  console.log('=== PRICING MODAL CLOSE DEBUG ===');
+                  console.log('Pricing AuthModal close clicked');
+                  console.log('Current page before close:', currentPage);
+                  setCurrentPage('home');
+                  console.log('Current page after close:', currentPage);
+                  console.log('=== PRICING MODAL CLOSE DEBUG END ===');
                 }}
               />
             )}
@@ -1024,9 +1023,12 @@ function AppContent() {
                 onSignIn={handleSignIn}
                 onSignUp={handleSignUp}
                 onClose={() => {
-                  console.log('Main AuthModal closed');
-                  // Let the useEffect handle redirection after login
-                  // Don't redirect here to avoid race conditions
+                  console.log('=== MODAL CLOSE DEBUG ===');
+                  console.log('Main AuthModal close clicked');
+                  console.log('Current page before close:', currentPage);
+                  setCurrentPage('home');
+                  console.log('Current page after close:', currentPage);
+                  console.log('=== MODAL CLOSE DEBUG END ===');
                 }}
               />
             )}
