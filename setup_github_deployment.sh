@@ -17,7 +17,7 @@ fi
 # Clone the repository (replace with your actual GitHub repo URL)
 echo "Cloning repository..."
 cd /var/www/crysgarage-deploy
-git clone https://github.com/yourusername/crys-garage.git .
+git clone https://github.com/Jim-devENG/crys-garage.git .
 
 # Set up deployment script
 cat > /var/www/crysgarage-deploy/deploy.sh << 'EOF'
