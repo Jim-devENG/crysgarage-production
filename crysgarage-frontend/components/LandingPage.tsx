@@ -1037,7 +1037,7 @@ export function LandingPage({ onGetStarted, onTryMastering }: LandingPageProps) 
                   className="bg-crys-gold hover:bg-crys-gold-muted text-crys-black px-8 py-4 text-lg"
                 >
                   <PlayCircle className="w-5 h-5 mr-2" />
-                  Start Mastering Now
+                  Try Mastering Now
                   <ArrowRight className="w-5 h-5 ml-2" />
                 </Button>
               </motion.div>
@@ -1052,7 +1052,7 @@ export function LandingPage({ onGetStarted, onTryMastering }: LandingPageProps) 
                   onClick={onGetStarted}
                   className="border-crys-gold/30 text-crys-gold hover:bg-crys-gold/10 px-8 py-4 text-lg backdrop-blur-sm"
                 >
-                  View All Plans
+                  Get Started
                 </Button>
               </motion.div>
             </motion.div>

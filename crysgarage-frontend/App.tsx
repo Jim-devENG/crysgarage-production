@@ -163,54 +163,74 @@ function AppContent() {
   };
 
   const handleGetStarted = () => {
+    console.log('=== GET STARTED BUTTON CLICKED ===');
+    console.log('isAuthenticated:', isAuthenticated);
+    console.log('current tier:', tier);
+    
     if (isAuthenticated) {
       // Go to appropriate dashboard based on tier
       switch (tier) {
         case 'free':
+          console.log('Redirecting to free dashboard');
           setCurrentPage('free-dashboard');
           break;
         case 'pro':
+          console.log('Redirecting to professional dashboard');
           setCurrentPage('professional-dashboard');
           break;
         case 'advanced':
+          console.log('Redirecting to advanced dashboard');
           setCurrentPage('advanced-dashboard');
           break;
         default:
           // If no tier assigned, go to pricing to select tier
+          console.log('No tier assigned, going to pricing');
           setCurrentPage('pricing');
       }
     } else {
       // Unauthenticated users go to signup
+      console.log('User not authenticated, going to signup');
       setAuthMode('signup');
       setCurrentPage('auth');
     }
+    console.log('=== GET STARTED BUTTON END ===');
   };
 
   const handleTryMastering = () => {
+    console.log('=== TRY MASTERING BUTTON CLICKED ===');
+    console.log('isAuthenticated:', isAuthenticated);
+    console.log('current tier:', tier);
+    
     if (isAuthenticated) {
       // Redirect to appropriate tier workflow
       switch (tier) {
         case 'free':
           // Free tier goes directly to upload
+          console.log('Redirecting to free dashboard for mastering');
           setCurrentPage('free-dashboard');
           break;
         case 'pro':
           // Professional tier goes to genre selection
+          console.log('Redirecting to professional dashboard for mastering');
           setCurrentPage('professional-dashboard');
           break;
         case 'advanced':
           // Advanced tier goes to manual controls
+          console.log('Redirecting to advanced dashboard for mastering');
           setCurrentPage('advanced-dashboard');
           break;
         default:
           // If no tier, go to pricing
+          console.log('No tier assigned, going to pricing');
           setCurrentPage('pricing');
       }
     } else {
-      // Unauthenticated users go to signup
-      setAuthMode('signup');
+      // Unauthenticated users go to signin (not signup) for trying mastering
+      console.log('User not authenticated, going to signin');
+      setAuthMode('signin');
       setCurrentPage('auth');
     }
+    console.log('=== TRY MASTERING BUTTON END ===');
   };
 
   const handleSignIn = async (email: string, password: string) => {
