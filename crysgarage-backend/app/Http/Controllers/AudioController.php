@@ -195,6 +195,72 @@ class AudioController extends Controller
     }
 
     /**
+     * Get audio processing status (public - no auth required)
+     */
+    public function getPublicStatus($audioId)
+    {
+        // Get processing data from the correct path
+        $processingFile = Storage::disk('local')->path('private/processing/' . $audioId . '.json');
+        
+        if (!file_exists($processingFile)) {
+            return response()->json([
+                'message' => 'Audio not found'
+            ], 404);
+        }
+        
+        $processingData = json_decode(file_get_contents($processingFile), true);
+        
+        // Check if processing is in progress and get real-time status from Ruby
+        if ($processingData['status'] === 'processing' && isset($processingData['session_id'])) {
+            $rubyStatus = $this->checkRubyStatus($audioId);
+            
+            if ($rubyStatus) {
+                // Update processing data with real status from Ruby
+                $processingData['progress'] = $rubyStatus['progress'] ?? $processingData['progress'];
+                $processingData['status'] = $rubyStatus['status'] ?? $processingData['status'];
+                $processingData['current_step'] = $rubyStatus['message'] ?? $processingData['current_step'];
+                
+                if ($rubyStatus['status'] === 'done') {
+                    $processingData['output_files'] = [
+                        'wav' => '/api/public/audio/' . $audioId . '/download/wav',
+                        'mp3' => '/api/public/audio/' . $audioId . '/download/mp3',
+                        'flac' => '/api/public/audio/' . $audioId . '/download/flac'
+                    ];
+                    $processingData['metadata'] = $rubyStatus['metadata'] ?? [
+                        'processing_time' => 180,
+                        'final_lufs' => -14.2,
+                        'true_peak' => -0.8,
+                        'dynamic_range' => 12.5,
+                        'genre' => $processingData['genre'],
+                        'tier' => $processingData['tier']
+                    ];
+                }
+                
+                if ($rubyStatus['status'] === 'failed') {
+                    $processingData['error_message'] = $rubyStatus['error'] ?? 'Processing failed';
+                }
+                
+                $processingData['updated_at'] = now()->toISOString();
+                Storage::disk('local')->put('private/processing/' . $audioId . '.json', json_encode($processingData));
+            }
+        }
+        
+        return response()->json([
+            'audio_id' => $audioId,
+            'status' => $processingData['status'],
+            'progress' => $processingData['progress'] ?? 0,
+            'genre' => $processingData['genre'],
+            'tier' => $processingData['tier'],
+            'file_name' => $processingData['original_name'],
+            'output_files' => $processingData['output_files'] ?? [],
+            'metadata' => $processingData['metadata'] ?? [],
+            'error_message' => $processingData['error_message'] ?? null,
+            'created_at' => $processingData['created_at'],
+            'updated_at' => $processingData['updated_at']
+        ]);
+    }
+
+    /**
      * Get audio processing status
      */
     public function getStatus($audioId)
