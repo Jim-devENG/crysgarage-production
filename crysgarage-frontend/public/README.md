@@ -4,14 +4,14 @@ This directory contains static assets that will be served directly by the web se
 
 ## Logo File
 
-The Crys Garage logo is now available as:
-- `crys-garage-logo.svg` - Vector format for best quality and scalability
+The Crys Garage logo is available as:
+- `CRG_Logo_svg.svg` - Official Crys Garage logo in vector format
 
 The logo features:
 - Golden metallic texture with concentric circles
 - Stylized "G" symbol in the center
-- High resolution (512x512 viewBox)
-- Scalable vector format
+- High resolution vector format
+- Professional branding design
 
 The logo is automatically used in:
 - Header navigation
@@ -22,6 +22,6 @@ The logo is automatically used in:
 ## File Structure
 ```
 public/
-├── crys-garage-logo.svg  ← Crys Garage logo (SVG format)
+├── CRG_Logo_svg.svg  ← Official Crys Garage logo
 └── README.md
 ```

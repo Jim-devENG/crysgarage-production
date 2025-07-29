@@ -18,7 +18,7 @@ export function CrysGarageLogo({ size = 40, className = "", onClick }: CrysGarag
       {/* SVG Logo with Fallback */}
       {!imageError ? (
         <img 
-          src="/crys-garage-logo.svg" 
+          src="/CRG_Logo_svg.svg" 
           alt="Crys Garage Logo" 
           className="w-full h-full object-contain"
           style={{ width: size, height: size }}
