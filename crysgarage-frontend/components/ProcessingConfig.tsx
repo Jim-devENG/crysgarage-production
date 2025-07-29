@@ -57,8 +57,8 @@ export function ProcessingConfig({ selectedTier, fileName, onConfigChange, onNex
           { value: '32', label: '32-bit', price: 1, available: false }
         ],
         formats: ['mp3', 'wav'],
-        noiseReduction: { price: 1, available: false },
-        tuningCorrection: { price: 1, available: false },
+        noiseReduction: { price: 1, available: true },
+        tuningCorrection: { price: 1, available: true },
         maxFileSize: '60MB'
       },
       professional: {
@@ -73,8 +73,8 @@ export function ProcessingConfig({ selectedTier, fileName, onConfigChange, onNex
           { value: '32', label: '32-bit', price: 1, available: false }
         ],
         formats: ['mp3', 'wav', 'flac'],
-        noiseReduction: { price: 1, available: false },
-        tuningCorrection: { price: 1, available: false },
+        noiseReduction: { price: 1, available: true },
+        tuningCorrection: { price: 1, available: true },
         maxFileSize: '100MB'
       },
       advanced: {
@@ -286,7 +286,7 @@ export function ProcessingConfig({ selectedTier, fileName, onConfigChange, onNex
                 <p className="text-crys-light-grey text-xs">Remove background noise and artifacts</p>
               </div>
               <div className="flex items-center gap-2">
-                {!tierOptions.noiseReduction.available && tierOptions.noiseReduction.price > 0 && (
+                {tierOptions.noiseReduction.price > 0 && (
                   <Badge variant="secondary" className="bg-crys-gold/20 text-crys-gold text-xs">
                     +${tierOptions.noiseReduction.price}
                   </Badge>
@@ -294,7 +294,7 @@ export function ProcessingConfig({ selectedTier, fileName, onConfigChange, onNex
                 <Switch
                   checked={noiseReduction}
                   onCheckedChange={(checked) => 
-                    handleOptionChange('noiseReduction', checked, !tierOptions.noiseReduction.available, tierOptions.noiseReduction.price)
+                    handleOptionChange('noiseReduction', checked, tierOptions.noiseReduction.price > 0, tierOptions.noiseReduction.price)
                   }
                 />
               </div>
@@ -307,7 +307,7 @@ export function ProcessingConfig({ selectedTier, fileName, onConfigChange, onNex
                 <p className="text-crys-light-grey text-xs">Natural tuning frequency correction</p>
               </div>
               <div className="flex items-center gap-2">
-                {!tierOptions.tuningCorrection.available && tierOptions.tuningCorrection.price > 0 && (
+                {tierOptions.tuningCorrection.price > 0 && (
                   <Badge variant="secondary" className="bg-crys-gold/20 text-crys-gold text-xs">
                     +${tierOptions.tuningCorrection.price}
                   </Badge>
@@ -315,7 +315,7 @@ export function ProcessingConfig({ selectedTier, fileName, onConfigChange, onNex
                 <Switch
                   checked={tuningCorrection}
                   onCheckedChange={(checked) => 
-                    handleOptionChange('tuningCorrection', checked, !tierOptions.tuningCorrection.available, tierOptions.tuningCorrection.price)
+                    handleOptionChange('tuningCorrection', checked, tierOptions.tuningCorrection.price > 0, tierOptions.tuningCorrection.price)
                   }
                 />
               </div>
