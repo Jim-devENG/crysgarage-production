@@ -35,9 +35,6 @@ export function CrysGarageLogo({ size = 40, className = "", onClick }: CrysGarag
           </span>
         </div>
       )}
-      
-      {/* Animated Pulse Effect */}
-      <div className="absolute -top-1 -right-1 w-3 h-3 bg-crys-gold rounded-full pulse-gold"></div>
     </div>
   );
 }
