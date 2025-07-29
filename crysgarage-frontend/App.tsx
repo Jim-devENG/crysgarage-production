@@ -80,6 +80,7 @@ function AppContent() {
   });
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingProgress, setProcessingProgress] = useState(0);
+  const [isUploading, setIsUploading] = useState(false); // New loading state for upload
   
   // Payment modal state
   const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -285,6 +286,8 @@ function AppContent() {
 
   const handleFileUpload = async (file: File) => {
     try {
+      setIsUploading(true); // Start loading
+      
       // Check if user has enough credits for mastering
       if (!creditsManager.canUpload) {
         throw new Error('Insufficient credits. Please upgrade your tier or purchase more credits.');
@@ -348,6 +351,8 @@ function AppContent() {
         alert('Upload failed: ' + (error instanceof Error ? error.message : 'Unknown error'));
       }
       throw error;
+    } finally {
+      setIsUploading(false); // Stop loading
     }
   };
 
@@ -477,35 +482,41 @@ function AppContent() {
   };
 
   const handleGenreSelect = (genreId: string, price: number) => {
-    console.log('🎵 Genre selected:', genreId, 'with price:', price);
-    console.log('🎯 Current session tier:', session.tier);
+    console.log('Genre selected:', genreId, 'Price:', price);
     
+    // Update session with selected genre
     setSession(prev => ({
       ...prev,
       genre: genreId,
       totalCost: prev.totalCost + price
     }));
     
-    // Different next steps based on session tier (not global tier)
-    const currentSessionTier = session.tier;
-    console.log('🔄 Using session tier for routing:', currentSessionTier);
-    
-    switch (currentSessionTier) {
-      case 'professional':
-        console.log('⚡ Professional tier: going to mastering-config');
-        // Professional tier: Genre → Quality Options → Processing
-        setCurrentPage('mastering-config');
-        break;
-        
+    // Route to next step based on tier
+    switch (session.tier) {
       case 'advanced':
-        console.log('👑 Advanced tier: going to mastering-controls');
-        // Advanced tier: Genre → Manual Controls
         setCurrentPage('mastering-controls');
         break;
-        
       default:
-        console.log('🆓 Default tier: going to mastering-config');
-        // Default to config page
+        setCurrentPage('mastering-config');
+    }
+  };
+
+  const handleGenreNext = () => {
+    console.log('Continuing without genre selection');
+    
+    // Set a default genre or skip genre selection
+    setSession(prev => ({
+      ...prev,
+      genre: 'default',
+      totalCost: prev.totalCost
+    }));
+    
+    // Route to next step based on tier
+    switch (session.tier) {
+      case 'advanced':
+        setCurrentPage('mastering-controls');
+        break;
+      default:
         setCurrentPage('mastering-config');
     }
   };
@@ -687,38 +698,39 @@ function AppContent() {
 
   const handleDownload = async (format: string) => {
     try {
-      // Check tier restrictions for downloads
-      if (tier === 'free') {
-        alert('Download is not available in Free tier. Please upgrade to Professional or Advanced tier to download your mastered files.');
-        return;
-      }
-      
-      if (!session.audioId) {
-        throw new Error('No audio ID available for download');
-      }
-      
-      console.log(`Downloading ${session.file?.name} as ${format}`);
-      
-      // Use the audioAPI to download the file
-      const blob = await audioAPI.downloadFile(session.audioId, format as 'wav' | 'mp3' | 'flac');
+      console.log('Downloading file in format:', format);
+      const blob = await audioAPI.downloadFile(session.audioId || '', format as 'wav' | 'mp3' | 'flac');
       
       // Create download link
       const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `${session.file?.name?.replace(/\.[^/.]+$/, '')}_mastered.${format}`;
-      
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      
-      // Clean up
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${session.file?.name?.replace(/\.[^/.]+$/, '')}_mastered.${format}`;
+      document.body.appendChild(a);
+      a.click();
       window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
       
-      console.log('Download completed');
-    } catch (error) {
+      console.log('Download completed successfully');
+    } catch (error: any) {
       console.error('Download failed:', error);
-      alert('Download failed: ' + (error instanceof Error ? error.message : 'Unknown error'));
+      alert('Download failed. Please try again.');
+    }
+  };
+
+  const handlePaidDownload = async (format: string) => {
+    try {
+      console.log('Processing paid download for format:', format);
+      // Here you would integrate with a payment processor
+      // For now, we'll show a payment modal or redirect to payment
+      alert(`Payment required: $2.99 for ${format.toUpperCase()} download. Payment integration coming soon!`);
+      
+      // TODO: Integrate with payment processor
+      // After successful payment, proceed with download
+      // await handleDownload(format);
+    } catch (error: any) {
+      console.error('Paid download failed:', error);
+      alert('Payment processing failed. Please try again.');
     }
   };
 
@@ -1126,6 +1138,7 @@ function AppContent() {
                   selectedTier={session.tier}
                   onGenreSelect={handleGenreSelect}
                   selectedGenre={session.genre}
+                  onNext={handleGenreNext}
                 />
                 
                 {/* Back Button */}
@@ -1302,6 +1315,7 @@ function AppContent() {
                   onStartNewMaster={resetWorkflow}
                   originalFile={session.file}
                   masteredResult={session.masteredResult}
+                  onPaidDownload={handlePaidDownload}
                 />
                 
                 {/* Back Button */}

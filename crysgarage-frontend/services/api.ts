@@ -515,4 +515,22 @@ export const masteringAPI = {
   },
 };
 
+// Genre API
+export const genreAPI = {
+  // Get genres for a specific tier
+  getGenresForTier: async (tier: string): Promise<{ genres: any[]; tier: string }> => {
+    const response = await api.get(`/genres?tier=${tier}`);
+    return response.data;
+  },
+};
+
+// Audio Quality API
+export const audioQualityAPI = {
+  // Get audio quality options for a specific tier
+  getQualityOptionsForTier: async (tier: string): Promise<{ quality_options: any[]; tier: string }> => {
+    const response = await api.get(`/audio-quality?tier=${tier}`);
+    return response.data;
+  },
+};
+
 export default api; 

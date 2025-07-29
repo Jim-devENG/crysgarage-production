@@ -29,6 +29,7 @@ interface MasteringResultsProps {
   onStartNewMaster: () => void;
   originalFile?: File;
   masteredResult?: any;
+  onPaidDownload?: (format: string) => void; // New prop for paid downloads
 }
 
 export function MasteringResults({ 
@@ -41,7 +42,8 @@ export function MasteringResults({
   onDownload,
   onStartNewMaster,
   originalFile,
-  masteredResult
+  masteredResult,
+  onPaidDownload
 }: MasteringResultsProps) {
   const [isPlayingOriginal, setIsPlayingOriginal] = useState(false);
   const [isPlayingMastered, setIsPlayingMastered] = useState(false);
@@ -842,37 +844,60 @@ export function MasteringResults({
         </CardContent>
       </Card>
 
-      {/* Download Section - Moved to the end */}
-      {canDownload && (
-        <Card className="bg-audio-panel-bg border-audio-panel-border">
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <Download className="w-5 h-5 text-crys-light-grey" />
-              <h4 className="text-crys-white">Download Your Mastered Track</h4>
+      {/* Download Section - Updated for free tier paid downloads */}
+      <Card className="bg-audio-panel-bg border-audio-panel-border">
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <Download className="w-5 h-5 text-crys-light-grey" />
+            <h4 className="text-crys-white">
+              {selectedTier === 'free' ? 'Download Your Mastered Track' : 'Download Your Mastered Track'}
+            </h4>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <p className="text-crys-light-grey text-sm">
+              {selectedTier === 'free' 
+                ? 'Choose your preferred format. Download for $2.99 per format.'
+                : 'Choose your preferred format. All files are professionally mastered and ready for distribution.'
+              }
+            </p>
+            <div className="grid grid-cols-3 gap-4">
+              {['wav', 'mp3', 'flac'].map((format) => (
+                <Button
+                  key={format}
+                  variant="outline"
+                  onClick={() => selectedTier === 'free' ? onPaidDownload?.(format) : onDownload(format)}
+                  className="border-crys-gold/30 text-crys-gold hover:bg-crys-gold/10"
+                >
+                  <span className="mr-2">{getFormatIcon(format)}</span>
+                  {format.toUpperCase()}
+                  {selectedTier === 'free' && (
+                    <span className="ml-2 text-xs bg-crys-gold/20 px-2 py-1 rounded">
+                      $2.99
+                    </span>
+                  )}
+                </Button>
+              ))}
             </div>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <p className="text-crys-light-grey text-sm">
-                Choose your preferred format. All files are professionally mastered and ready for distribution.
-              </p>
-              <div className="grid grid-cols-3 gap-4">
-                {['wav', 'mp3', 'flac'].map((format) => (
+            {selectedTier === 'free' && (
+              <div className="mt-4 p-3 bg-crys-graphite/30 rounded-lg">
+                <div className="flex items-center gap-2 text-crys-light-grey text-sm">
+                  <span>💡 Want unlimited downloads?</span>
                   <Button
-                    key={format}
                     variant="outline"
-                    onClick={() => onDownload(format)}
+                    size="sm"
                     className="border-crys-gold/30 text-crys-gold hover:bg-crys-gold/10"
+                    onClick={() => window.location.href = '/pricing'}
                   >
-                    <span className="mr-2">{getFormatIcon(format)}</span>
-                    {format.toUpperCase()}
+                    Upgrade to Professional
                   </Button>
-                ))}
+                </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+            )}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 } 

@@ -7,6 +7,8 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\AudioController;
 use App\Http\Controllers\CreditsController;
 use App\Http\Controllers\AddonController;
+use App\Http\Controllers\GenreController;
+use App\Http\Controllers\AudioQualityController;
 use App\Http\Middleware\ApiTokenAuth;
 
 /*
@@ -24,6 +26,12 @@ use App\Http\Middleware\ApiTokenAuth;
 Route::post('/auth/signin', [AuthController::class, 'signIn']);
 Route::post('/auth/signup', [AuthController::class, 'signUp']);
 Route::post('/auth/signout', [AuthController::class, 'signOut']);
+
+// Public genre routes
+Route::get('/genres', [GenreController::class, 'getGenresForTier']);
+
+// Public audio quality routes
+Route::get('/audio-quality', [AudioQualityController::class, 'getQualityOptionsForTier']);
 
 // Test route for debugging
 Route::get('/test/debug', function() {
@@ -245,6 +253,18 @@ Route::middleware(ApiTokenAuth::class)->group(function () {
     Route::get('/addons', [AddonController::class, 'getAddons']);
     Route::get('/user/addons', [AddonController::class, 'getUserAddons']);
     Route::post('/addons/{addon_id}/purchase', [AddonController::class, 'purchaseAddon']);
+    
+    // Admin genre routes
+    Route::get('/admin/genres', [GenreController::class, 'getAllGenres']);
+    Route::post('/admin/genres', [GenreController::class, 'createGenre']);
+    Route::put('/admin/genres/{id}', [GenreController::class, 'updateGenre']);
+    Route::delete('/admin/genres/{id}', [GenreController::class, 'deleteGenre']);
+    
+    // Admin audio quality routes
+    Route::get('/admin/audio-quality', [AudioQualityController::class, 'getAllQualityOptions']);
+    Route::post('/admin/audio-quality', [AudioQualityController::class, 'createQualityOption']);
+    Route::put('/admin/audio-quality/{id}', [AudioQualityController::class, 'updateQualityOption']);
+    Route::delete('/admin/audio-quality/{id}', [AudioQualityController::class, 'deleteQualityOption']);
     
     // Mastering routes (for advanced controls)
     Route::post('/mastering/{audio_id}/start', [AudioController::class, 'startMastering']);

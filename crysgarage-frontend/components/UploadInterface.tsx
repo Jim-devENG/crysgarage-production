@@ -8,16 +8,19 @@ import { audioAPI } from '../services/api';
 interface UploadInterfaceProps {
   onFileUpload?: (file: File) => void;
   disabled?: boolean;
+  isLoading?: boolean; // New prop for external loading state
 }
 
-export function UploadInterface({ onFileUpload, disabled = false }: UploadInterfaceProps) {
+export function UploadInterface({ onFileUpload, disabled = false, isLoading = false }: UploadInterfaceProps) {
   const [dragOver, setDragOver] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Use external loading state if provided, otherwise use internal state
+  const isUploading = isLoading || false;
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -52,7 +55,6 @@ export function UploadInterface({ onFileUpload, disabled = false }: UploadInterf
     try {
       setUploadError(null);
       setUploadedFile(file);
-      setIsUploading(true);
       setUploadProgress(0);
       
       console.log('Starting file upload to backend:', file.name);
@@ -63,7 +65,6 @@ export function UploadInterface({ onFileUpload, disabled = false }: UploadInterf
       console.log('File uploaded successfully, audio_id:', result.audio_id);
       
       setUploadProgress(100);
-      setIsUploading(false);
       
       // Call the parent handler with the uploaded file
       onFileUpload?.(file);
@@ -71,7 +72,6 @@ export function UploadInterface({ onFileUpload, disabled = false }: UploadInterf
     } catch (error) {
       console.error('Upload failed:', error);
       setUploadError(error instanceof Error ? error.message : 'Upload failed');
-      setIsUploading(false);
       setUploadedFile(null);
     }
   };

@@ -18,9 +18,10 @@ interface GenreSelectionProps {
   selectedTier: string;
   onGenreSelect: (genreId: string, price: number) => void;
   selectedGenre?: string;
+  onNext?: () => void; // New prop for free tier next button
 }
 
-export function GenreSelection({ selectedTier, onGenreSelect, selectedGenre }: GenreSelectionProps) {
+export function GenreSelection({ selectedTier, onGenreSelect, selectedGenre, onNext }: GenreSelectionProps) {
   const [showPayment, setShowPayment] = useState(false);
   const [pendingGenre, setPendingGenre] = useState<Genre | null>(null);
 
@@ -247,6 +248,21 @@ export function GenreSelection({ selectedTier, onGenreSelect, selectedGenre }: G
           <Badge variant="secondary" className="bg-crys-gold/20 text-crys-gold">
             Selected: {genres.find(g => g.id === selectedGenre)?.name}
           </Badge>
+        </div>
+      )}
+
+      {/* Next button for free tier */}
+      {selectedTier === 'free' && onNext && (
+        <div className="text-center mt-6">
+          <Button
+            onClick={onNext}
+            className="bg-crys-gold hover:bg-crys-gold-muted text-crys-black px-8"
+          >
+            Continue Without Genre Selection
+          </Button>
+          <p className="text-crys-light-grey text-sm mt-2">
+            You can skip genre selection and use default mastering settings
+          </p>
         </div>
       )}
     </div>
