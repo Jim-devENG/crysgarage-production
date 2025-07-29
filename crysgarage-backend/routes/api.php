@@ -100,23 +100,17 @@ Route::get('/test/mastering/{audio_id}/results', function($audioId) {
     
     if (!file_exists($processingFile)) {
         return response()->json([
-            'message' => 'Processing file not found',
-            'audio_id' => $audioId,
-            'file_path' => $processingFile,
-            'exists' => false
+            'error' => 'Audio not found'
         ], 404);
     }
     
     $processingData = json_decode(file_get_contents($processingFile), true);
     
-    return response()->json([
-        'message' => 'Processing file found',
-        'audio_id' => $audioId,
-        'file_path' => $processingFile,
-        'exists' => true,
-        'processing_data' => $processingData
-    ]);
+    return response()->json($processingData);
 });
+
+// Test endpoint to immediately complete mastering
+Route::post('/test/mastering/{audio_id}/complete', [AudioController::class, 'testCompleteMastering']);
 
 // Test audio endpoints (no auth required for development)
 Route::options('/test/audio/{audio_id}/original', function($audioId) {
@@ -279,3 +273,6 @@ Route::middleware(ApiTokenAuth::class)->group(function () {
 // Public audio endpoints (no auth required for demo)
 Route::get('/public/audio/{audio_id}/download/{format}', [AudioController::class, 'download']);
 Route::get('/public/audio/{audio_id}/original', [AudioController::class, 'getOriginalAudio']);
+
+// Public upload route for testing (no auth required)
+Route::post('/public/upload', [AudioController::class, 'publicUpload']);
