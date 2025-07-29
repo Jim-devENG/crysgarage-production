@@ -84,7 +84,7 @@ export function Header({
               <CrysGarageLogo 
                 size={120} 
                 onClick={() => handleNavigation('home')}
-                className="hover:scale-105 transition-transform duration-200 absolute -left-4 -top-2"
+                className="hover:scale-105 transition-transform duration-200 absolute -left-1 -top-1"
               />
             </div>
             <div className="ml-16">
