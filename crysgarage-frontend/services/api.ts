@@ -230,7 +230,44 @@ export const userAPI = {
 
 // Audio processing API - Updated to match Laravel endpoints
 export const audioAPI = {
-  // Upload audio file
+  // Public upload (no authentication required)
+  publicUpload: async (file: File, genre?: string): Promise<{ 
+    success: boolean;
+    audio_id: string;
+    message: string;
+    status: string;
+  }> => {
+    console.log('=== PUBLIC UPLOAD FILE DEBUG ===');
+    console.log('File:', file.name, 'Size:', file.size);
+    console.log('Genre:', genre);
+    
+    const formData = new FormData();
+    formData.append('audio', file);
+    if (genre && genre.trim() !== '') {
+      formData.append('genre', genre);
+    }
+
+    try {
+      // Use axios directly without the authenticated api instance
+      const response = await axios.post(`${API_BASE_URL}/public/upload`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+        timeout: 60000, // 60 second timeout for uploads
+      });
+      console.log('Public upload successful:', response.data);
+      return response.data;
+    } catch (error: any) {
+      console.error('=== PUBLIC UPLOAD ERROR ===');
+      console.error('Error status:', error.response?.status);
+      console.error('Error data:', error.response?.data);
+      console.error('Error message:', error.message);
+      console.error('Request config:', error.config);
+      throw error;
+    }
+  },
+
+  // Upload audio file (authenticated)
   uploadFile: async (file: File, genre?: string): Promise<{ 
     audio_id: string;
     credits_deducted?: number;

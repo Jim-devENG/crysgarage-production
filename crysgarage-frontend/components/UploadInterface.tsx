@@ -3,7 +3,7 @@ import { Button } from "./ui/button";
 import { Progress } from "./ui/progress";
 import { Badge } from "./ui/badge";
 import { Upload, FileAudio, X, Play, Pause } from "lucide-react";
-import { audioAPI } from '../services/api';
+import { useApp } from '../contexts/AppContext';
 
 interface UploadInterfaceProps {
   onFileUpload?: (file: File) => void;
@@ -12,15 +12,17 @@ interface UploadInterfaceProps {
 }
 
 export function UploadInterface({ onFileUpload, disabled = false, isLoading = false }: UploadInterfaceProps) {
+  const { uploadFile } = useApp();
   const [dragOver, setDragOver] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Use external loading state if provided, otherwise use internal state
-  const isUploading = isLoading || false;
+  const isUploadingState = isLoading || false;
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -56,13 +58,14 @@ export function UploadInterface({ onFileUpload, disabled = false, isLoading = fa
       setUploadError(null);
       setUploadedFile(file);
       setUploadProgress(0);
+      setIsUploading(true);
       
       console.log('Starting file upload to backend:', file.name);
       
-      // Upload to backend
-      const result = await audioAPI.uploadFile(file);
+      // Use the context's uploadFile function which handles authentication
+      const audioId = await uploadFile(file);
       
-      console.log('File uploaded successfully, audio_id:', result.audio_id);
+      console.log('File uploaded successfully, audio_id:', audioId);
       
       setUploadProgress(100);
       
@@ -73,6 +76,8 @@ export function UploadInterface({ onFileUpload, disabled = false, isLoading = fa
       console.error('Upload failed:', error);
       setUploadError(error instanceof Error ? error.message : 'Upload failed');
       setUploadedFile(null);
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -143,7 +148,7 @@ export function UploadInterface({ onFileUpload, disabled = false, isLoading = fa
           </Button>
         </div>
 
-        {isUploading && (
+        {isUploadingState && (
           <div className="mt-4">
             <div className="flex justify-between text-sm mb-2">
               <span className="text-crys-light-grey">Uploading...</span>
@@ -208,7 +213,7 @@ export function UploadInterface({ onFileUpload, disabled = false, isLoading = fa
         disabled={disabled}
         className="bg-crys-gold hover:bg-crys-gold-muted text-crys-black disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        {isUploading ? 'Uploading...' : 'Select Audio File'}
+        {isUploadingState ? 'Uploading...' : 'Select Audio File'}
       </Button>
       
       <div className="mt-6 pt-6 border-t border-crys-graphite">

@@ -215,7 +215,16 @@ export function AppProvider({ children }: AppProviderProps) {
       dispatch({ type: 'SET_LOADING', payload: true });
       dispatch({ type: 'CLEAR_ERROR' });
 
-      const { audio_id } = await audioAPI.uploadFile(file, genre);
+      let audio_id: string;
+      
+      // Use public upload for free tier to avoid authentication issues
+      if (state.tier === 'free' || !state.isAuthenticated) {
+        const result = await audioAPI.publicUpload(file, genre);
+        audio_id = result.audio_id;
+      } else {
+        const result = await audioAPI.uploadFile(file, genre);
+        audio_id = result.audio_id;
+      }
       
       // Create a session object for compatibility
       const session: MasteringSession = {
