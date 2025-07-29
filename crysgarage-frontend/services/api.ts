@@ -376,11 +376,11 @@ export const audioAPI = {
     };
   }> => {
     // For development, use the test endpoint that doesn't require authentication
-    const endpoint = import.meta.env.DEV ? `/test/mastering/${audioId}/results` : `/mastering/${audioId}/results`;
+    const endpoint = import.meta.env.MODE === 'development' ? `/test/mastering/${audioId}/results` : `/mastering/${audioId}/results`;
     const response = await api.get(endpoint);
     
     // If using test endpoint, create mock data with public endpoints
-    if (import.meta.env.DEV && endpoint.includes('/test/')) {
+    if (import.meta.env.MODE === 'development' && endpoint.includes('/test/')) {
       return {
         audio_id: audioId,
         file_name: 'test_audio.wav',

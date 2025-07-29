@@ -42,7 +42,7 @@ export function MobileOptimizations({ children }: MobileOptimizationsProps) {
       </div>
 
       {/* Development indicator for mobile optimization status */}
-      {process.env.NODE_ENV === 'development' && (
+      {import.meta.env.MODE === 'development' && (
         <div className="fixed bottom-4 right-4 z-50">
           <Card className="bg-audio-panel-bg border-audio-panel-border">
             <CardContent className="p-3">

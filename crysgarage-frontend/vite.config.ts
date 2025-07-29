@@ -14,5 +14,9 @@ export default defineConfig({
         secure: false
       }
     }
+  },
+  esbuild: {
+    jsxFactory: 'React.createElement',
+    jsxFragment: 'React.Fragment'
   }
 }) 
