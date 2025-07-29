@@ -2,6 +2,7 @@ import { Button } from "./ui/button";
 import { Card, CardContent } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { ImageWithFallback } from './figma/ImageWithFallback';
+import { CrysGarageLogo } from './CrysGarageLogo';
 import { motion } from "framer-motion";
 import { 
   Music, 
@@ -295,13 +296,16 @@ export function LandingPage({ onGetStarted, onTryMastering }: LandingPageProps) 
               initial="hidden"
               animate="visible"
             >
-              {/* Badge */}
+              {/* Logo and Badge */}
               <motion.div 
-                className="inline-flex items-center gap-2 bg-crys-gold/10 border border-crys-gold/30 rounded-full px-6 py-3 mb-8 backdrop-blur-sm"
+                className="flex items-center gap-4 mb-8"
                 variants={itemVariants}
               >
-                <Sparkles className="w-5 h-5 text-crys-gold" />
-                <span className="text-crys-gold">Powered by Crys Garage Engine</span>
+                <CrysGarageLogo size={60} />
+                <div className="inline-flex items-center gap-2 bg-crys-gold/10 border border-crys-gold/30 rounded-full px-6 py-3 backdrop-blur-sm">
+                  <Sparkles className="w-5 h-5 text-crys-gold" />
+                  <span className="text-crys-gold">Powered by Crys Garage Engine</span>
+                </div>
               </motion.div>
               
               {/* Main Headline */}

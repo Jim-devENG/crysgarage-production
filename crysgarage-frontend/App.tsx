@@ -24,6 +24,7 @@ import { PaymentModal } from './components/PaymentModal';
 import { APIIntegrationLayer } from './components/APIIntegrationLayer';
 import { MobileOptimizations } from './components/MobileOptimizations';
 import { AfrocentricDesignSystem } from './components/AfrocentricDesignSystem';
+import { CrysGarageLogo } from './components/CrysGarageLogo';
 import { Button } from './components/ui/button';
 import { Badge } from './components/ui/badge';
 import { Progress } from './components/ui/progress';
@@ -863,6 +864,9 @@ function AppContent() {
     return (
       <div className="min-h-screen bg-crys-black flex items-center justify-center">
         <div className="text-center">
+          <div className="flex justify-center mb-6">
+            <CrysGarageLogo size={80} />
+          </div>
           <div className="text-crys-gold text-xl mb-4">Loading Crys Garage...</div>
           <div className="text-crys-light-grey text-sm">
             If this takes too long, try refreshing the page
@@ -1276,9 +1280,14 @@ function AppContent() {
         {/* Footer - Full Width */}
         <footer className="w-full border-t border-crys-graphite bg-crys-black/95 mt-20">
           <div className="container mx-auto px-4 py-8">
-            <div className="text-center text-crys-light-grey text-sm">
-              <p className="mb-2">© 2025 Crys Garage Studio - Professional Audio Mastering Platform</p>
-              <p className="text-crys-gold">"Craft the sound, Unleash the future"</p>
+            <div className="text-center">
+              <div className="flex justify-center mb-4">
+                <CrysGarageLogo size={50} />
+              </div>
+              <div className="text-crys-light-grey text-sm">
+                <p className="mb-2">© 2025 Crys Garage Studio - Professional Audio Mastering Platform</p>
+                <p className="text-crys-gold">"Craft the sound, Unleash the future"</p>
+              </div>
             </div>
           </div>
         </footer>

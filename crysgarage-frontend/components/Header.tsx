@@ -1,5 +1,6 @@
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
+import { CrysGarageLogo } from "./CrysGarageLogo";
 import { 
   User, 
   ChevronDown, 
@@ -79,17 +80,11 @@ export function Header({
         <div className="flex items-center justify-between">
           {/* Logo and Brand */}
           <div className="flex items-center gap-3">
-            <div className="relative">
-              <div className="w-10 h-10 bg-gradient-to-br from-crys-gold to-crys-gold-muted rounded-lg flex items-center justify-center cursor-pointer">
-                <button 
-                  onClick={() => handleNavigation('home')}
-                  className="text-crys-black font-extrabold text-lg w-full h-full flex items-center justify-center"
-                >
-                  C
-                </button>
-              </div>
-              <div className="absolute -top-1 -right-1 w-3 h-3 bg-crys-gold rounded-full pulse-gold"></div>
-            </div>
+            <CrysGarageLogo 
+              size={40} 
+              onClick={() => handleNavigation('home')}
+              className="hover:scale-105 transition-transform duration-200"
+            />
             <div>
               <button 
                 onClick={() => handleNavigation('home')}
