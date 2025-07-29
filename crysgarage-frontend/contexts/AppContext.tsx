@@ -289,7 +289,14 @@ export function AppProvider({ children }: AppProviderProps) {
 
   const getSessionStatus = async (sessionId: string) => {
     try {
-      const status = await audioAPI.getStatus(sessionId);
+      // Use public status for free tier to avoid authentication issues
+      let status;
+      if (state.tier === 'free' || !state.isAuthenticated) {
+        status = await audioAPI.publicGetStatus(sessionId);
+      } else {
+        status = await audioAPI.getStatus(sessionId);
+      }
+      
       const session: MasteringSession = {
         id: sessionId,
         user_id: state.user?.id || 0,
@@ -306,7 +313,6 @@ export function AppProvider({ children }: AppProviderProps) {
     } catch (error: any) {
       const message = error.response?.data?.message || 'Failed to get session status';
       dispatch({ type: 'SET_ERROR', payload: message });
-      throw error;
     }
   };
 

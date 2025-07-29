@@ -306,9 +306,15 @@ export const audioAPI = {
     }
   },
 
-  // Get audio status
+  // Get audio status (authenticated)
   getStatus: async (audioId: string): Promise<AudioStatus> => {
     const response = await api.get(`/status/${audioId}`);
+    return response.data;
+  },
+
+  // Public status check (no authentication required)
+  publicGetStatus: async (audioId: string): Promise<AudioStatus> => {
+    const response = await axios.get(`${API_BASE_URL}/public/status/${audioId}`);
     return response.data;
   },
 

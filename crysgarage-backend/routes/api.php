@@ -276,3 +276,6 @@ Route::get('/public/audio/{audio_id}/original', [AudioController::class, 'getOri
 
 // Public upload route for testing (no auth required)
 Route::post('/public/upload', [AudioController::class, 'publicUpload']);
+
+// Public status route for free tier (no auth required)
+Route::get('/public/status/{audio_id}', [AudioController::class, 'getStatus']);
