@@ -57,8 +57,8 @@ export function ProcessingConfig({ selectedTier, fileName, onConfigChange, onNex
           { value: '32', label: '32-bit', price: 1, available: false }
         ],
         formats: ['mp3', 'wav'],
-        noiseReduction: { price: 0, available: true },
-        tuningCorrection: { price: 0, available: true },
+        noiseReduction: { price: 1, available: false },
+        tuningCorrection: { price: 1, available: false },
         maxFileSize: '60MB'
       },
       professional: {
@@ -73,8 +73,8 @@ export function ProcessingConfig({ selectedTier, fileName, onConfigChange, onNex
           { value: '32', label: '32-bit', price: 1, available: false }
         ],
         formats: ['mp3', 'wav', 'flac'],
-        noiseReduction: { price: 0, available: true },
-        tuningCorrection: { price: 0, available: true },
+        noiseReduction: { price: 1, available: false },
+        tuningCorrection: { price: 1, available: false },
         maxFileSize: '100MB'
       },
       advanced: {
