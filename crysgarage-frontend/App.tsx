@@ -1127,6 +1127,17 @@ function AppContent() {
                   onGenreSelect={handleGenreSelect}
                   selectedGenre={session.genre}
                 />
+                
+                {/* Back Button */}
+                <div className="text-center mt-8">
+                  <Button 
+                    onClick={goBack}
+                    variant="outline"
+                    className="border-crys-graphite text-crys-light-grey hover:bg-crys-graphite/20"
+                  >
+                    ← Back
+                  </Button>
+                </div>
               </div>
             )}
 
@@ -1157,6 +1168,17 @@ function AppContent() {
                     }
                   }}
                 />
+                
+                {/* Back Button */}
+                <div className="text-center mt-8">
+                  <Button 
+                    onClick={goBack}
+                    variant="outline"
+                    className="border-crys-graphite text-crys-light-grey hover:bg-crys-graphite/20"
+                  >
+                    ← Back
+                  </Button>
+                </div>
               </div>
             )}
 
@@ -1209,14 +1231,14 @@ function AppContent() {
                     </div>
                   )}
                   
-                  {/* Back to Home button for stuck users */}
+                  {/* Back Button */}
                   <div className="text-center mt-6">
                     <Button 
-                      onClick={() => setCurrentPage('home')}
+                      onClick={goBack}
                       variant="outline"
                       className="border-crys-graphite text-crys-light-grey hover:bg-crys-graphite/20"
                     >
-                      Back to Home
+                      ← Back
                     </Button>
                   </div>
                 </div>
@@ -1249,7 +1271,14 @@ function AppContent() {
                   />
                 </div>
                 
-                <div className="text-center mt-8">
+                <div className="text-center mt-8 space-x-4">
+                  <Button 
+                    onClick={goBack}
+                    variant="outline"
+                    className="border-crys-graphite text-crys-light-grey hover:bg-crys-graphite/20"
+                  >
+                    ← Back
+                  </Button>
                   <Button 
                     onClick={completeAdvancedMastering}
                     className="bg-crys-gold hover:bg-crys-gold-muted text-crys-black px-8"
@@ -1261,18 +1290,31 @@ function AppContent() {
             )}
 
             {currentPage === 'mastering-results' && session.file && (
-              <MasteringResults
-                audioId={session.audioId || ''}
-                fileName={session.file.name}
-                selectedTier={session.tier || tier}
-                selectedGenre={session.genre}
-                processingConfig={session.config}
-                canDownload={tier !== 'free'} // Only pro and advanced can download
-                onDownload={handleDownload}
-                onStartNewMaster={resetWorkflow}
-                originalFile={session.file}
-                masteredResult={session.masteredResult}
-              />
+              <div>
+                <MasteringResults
+                  audioId={session.audioId || ''}
+                  fileName={session.file.name}
+                  selectedTier={session.tier || tier}
+                  selectedGenre={session.genre}
+                  processingConfig={session.config}
+                  canDownload={tier !== 'free'} // Only pro and advanced can download
+                  onDownload={handleDownload}
+                  onStartNewMaster={resetWorkflow}
+                  originalFile={session.file}
+                  masteredResult={session.masteredResult}
+                />
+                
+                {/* Back Button */}
+                <div className="text-center mt-8">
+                  <Button 
+                    onClick={goBack}
+                    variant="outline"
+                    className="border-crys-graphite text-crys-light-grey hover:bg-crys-graphite/20"
+                  >
+                    ← Back
+                  </Button>
+                </div>
+              </div>
             )}
           </main>
         )}
