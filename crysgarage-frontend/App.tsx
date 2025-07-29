@@ -290,13 +290,20 @@ function AppContent() {
         throw new Error('Insufficient credits. Please upgrade your tier or purchase more credits.');
       }
 
-      // Upload file to backend
-      const uploadResult = await audioAPI.uploadFile(file, session.genre);
+      // Prepare Processing Options from session config
+      const processingOptions = session.config ? {
+        noiseReduction: session.config.noiseReduction || false,
+        tuningCorrection: session.config.tuningCorrection || false
+      } : undefined;
+
+      // Upload file to backend with Processing Options
+      const uploadResult = await audioAPI.uploadFile(file, session.genre, processingOptions);
       const audioId = uploadResult.audio_id;
       
       console.log('File uploaded successfully, audio_id:', audioId);
       console.log('Credits deducted:', uploadResult.credits_deducted);
       console.log('Remaining credits:', uploadResult.remaining_credits);
+      console.log('Processing Options:', processingOptions);
       
       // Update credits in the UI
       if (uploadResult.credits_deducted) {

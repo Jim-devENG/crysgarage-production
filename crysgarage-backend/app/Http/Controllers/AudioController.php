@@ -56,9 +56,24 @@ class AudioController extends Controller
             $creditsRequired = 1; // Free tier uses 1 credit
         }
         
+        // Add Processing Options costs
+        $processingOptions = $request->input('processing_options', []);
+        if (is_array($processingOptions)) {
+            if (in_array('noise_reduction', $processingOptions)) {
+                $creditsRequired += 1; // Noise Reduction costs 1 additional credit
+                \Log::info("Noise Reduction selected - adding 1 credit");
+            }
+            if (in_array('tuning_correction', $processingOptions)) {
+                $creditsRequired += 1; // Tuning Correction costs 1 additional credit
+                \Log::info("Tuning Correction selected - adding 1 credit");
+            }
+        }
+        
         // Reduce credit consumption for demo accounts (except advanced which is unlimited)
         if (str_contains($user->email, 'demo@crysgarage.com') && $user->tier !== 'advanced') {
+            $originalCreditsRequired = $creditsRequired;
             $creditsRequired = 0.2; // Only consume 0.2 credits for demo accounts
+            \Log::info("Demo account - reducing credits from {$originalCreditsRequired} to {$creditsRequired}");
         }
         
         \Log::info("Credit calculation - Credits required: {$creditsRequired}");
