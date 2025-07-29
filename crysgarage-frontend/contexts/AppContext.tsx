@@ -217,11 +217,24 @@ export function AppProvider({ children }: AppProviderProps) {
 
       let audio_id: string;
       
+      // Check authentication state before upload
+      const token = localStorage.getItem('crysgarage_token');
+      const isCurrentlyAuthenticated = state.isAuthenticated && token;
+      
+      console.log('Upload authentication check:', {
+        isAuthenticated: state.isAuthenticated,
+        hasToken: !!token,
+        tier: state.tier,
+        isCurrentlyAuthenticated
+      });
+      
       // Use public upload for free tier to avoid authentication issues
-      if (state.tier === 'free' || !state.isAuthenticated) {
+      if (state.tier === 'free' || !isCurrentlyAuthenticated) {
+        console.log('Using public upload (free tier or not authenticated)');
         const result = await audioAPI.publicUpload(file, genre);
         audio_id = result.audio_id;
       } else {
+        console.log('Using authenticated upload');
         const result = await audioAPI.uploadFile(file, genre);
         audio_id = result.audio_id;
       }
@@ -242,10 +255,27 @@ export function AppProvider({ children }: AppProviderProps) {
       
       dispatch({ type: 'SET_SESSION', payload: session });
       
+      // Verify authentication state is still intact after upload
+      const tokenAfterUpload = localStorage.getItem('crysgarage_token');
+      if (isCurrentlyAuthenticated && !tokenAfterUpload) {
+        console.warn('Token was lost during upload - this should not happen');
+        // Don't sign out automatically, let the user continue
+      }
+      
       return audio_id;
     } catch (error: any) {
-      const message = error.response?.data?.message || 'File upload failed';
-      dispatch({ type: 'SET_ERROR', payload: message });
+      console.error('Upload error:', error);
+      
+      // Handle authentication errors specifically
+      if (error.response?.status === 401) {
+        console.error('Authentication error during upload');
+        // Don't automatically sign out, just show the error
+        const message = 'Authentication error. Please try signing in again.';
+        dispatch({ type: 'SET_ERROR', payload: message });
+      } else {
+        const message = error.response?.data?.message || 'File upload failed';
+        dispatch({ type: 'SET_ERROR', payload: message });
+      }
       throw error;
     } finally {
       dispatch({ type: 'SET_LOADING', payload: false });

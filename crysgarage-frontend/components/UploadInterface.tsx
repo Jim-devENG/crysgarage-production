@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Button } from "./ui/button";
 import { Progress } from "./ui/progress";
 import { Badge } from "./ui/badge";
@@ -22,7 +22,26 @@ export function UploadInterface({ onFileUpload, disabled = false, isLoading = fa
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Use external loading state if provided, otherwise use internal state
-  const isUploadingState = isLoading || false;
+  const isUploadingState = isLoading || isUploading;
+
+  // Prevent page reload during upload
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isUploadingState) {
+        e.preventDefault();
+        e.returnValue = 'Upload in progress. Are you sure you want to leave?';
+        return e.returnValue;
+      }
+    };
+
+    if (isUploadingState) {
+      window.addEventListener('beforeunload', handleBeforeUnload);
+    }
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [isUploadingState]);
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -72,9 +91,22 @@ export function UploadInterface({ onFileUpload, disabled = false, isLoading = fa
       // Call the parent handler with the uploaded file
       onFileUpload?.(file);
       
-    } catch (error) {
+    } catch (error: any) {
       console.error('Upload failed:', error);
-      setUploadError(error instanceof Error ? error.message : 'Upload failed');
+      
+      // Handle specific error types
+      if (error.response?.status === 401) {
+        setUploadError('Authentication error. Please try signing in again.');
+      } else if (error.response?.status === 402) {
+        setUploadError('Insufficient credits. Please upgrade your tier or purchase more credits.');
+      } else if (error.response?.status === 413) {
+        setUploadError('File too large. Maximum size is 100MB.');
+      } else if (error.response?.status === 415) {
+        setUploadError('Unsupported file format. Please use MP3, WAV, FLAC, AAC, or OGG files.');
+      } else {
+        setUploadError(error.response?.data?.message || error.message || 'Upload failed');
+      }
+      
       setUploadedFile(null);
     } finally {
       setIsUploading(false);

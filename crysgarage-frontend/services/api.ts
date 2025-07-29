@@ -54,16 +54,12 @@ api.interceptors.response.use(
       message: error.message
     });
     
+    // Don't automatically clear token on 401 - let the app handle it
+    // This prevents authentication loss during upload
     if (error.response?.status === 401) {
-      // Clear token but don't redirect - let the app handle it
-      localStorage.removeItem('crysgarage_token');
-      console.log('Token cleared due to 401 error');
-      
-      // Try to refresh token or redirect to login
-      if (window.location.pathname !== '/auth') {
-        // Store current location for redirect after login
-        sessionStorage.setItem('redirectAfterLogin', window.location.pathname);
-      }
+      console.log('401 error detected - letting app handle authentication');
+      // Don't clear token automatically
+      // Don't redirect automatically
     }
     return Promise.reject(error);
   }
