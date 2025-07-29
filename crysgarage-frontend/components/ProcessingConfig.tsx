@@ -112,12 +112,12 @@ export function ProcessingConfig({ selectedTier, fileName, onConfigChange, onNex
     if (resolutionOption && !resolutionOption.available) cost += resolutionOption.price;
     
     // Noise reduction cost
-    if (noiseReduction && !tierOptions.noiseReduction.available) {
+    if (noiseReduction && tierOptions.noiseReduction.price > 0) {
       cost += tierOptions.noiseReduction.price;
     }
     
     // Tuning correction cost
-    if (tuningCorrection && !tierOptions.tuningCorrection.available) {
+    if (tuningCorrection && tierOptions.tuningCorrection.price > 0) {
       cost += tierOptions.tuningCorrection.price;
     }
     
@@ -293,9 +293,11 @@ export function ProcessingConfig({ selectedTier, fileName, onConfigChange, onNex
                 )}
                 <Switch
                   checked={noiseReduction}
-                  onCheckedChange={(checked) => 
-                    handleOptionChange('noiseReduction', checked, tierOptions.noiseReduction.price > 0, tierOptions.noiseReduction.price)
-                  }
+                  onCheckedChange={(checked) => {
+                    console.log('Noise Reduction toggled:', checked);
+                    handleOptionChange('noiseReduction', checked, tierOptions.noiseReduction.price > 0, tierOptions.noiseReduction.price);
+                  }}
+                  className="data-[state=checked]:bg-crys-gold data-[state=unchecked]:bg-crys-graphite"
                 />
               </div>
             </div>
@@ -314,9 +316,11 @@ export function ProcessingConfig({ selectedTier, fileName, onConfigChange, onNex
                 )}
                 <Switch
                   checked={tuningCorrection}
-                  onCheckedChange={(checked) => 
-                    handleOptionChange('tuningCorrection', checked, tierOptions.tuningCorrection.price > 0, tierOptions.tuningCorrection.price)
-                  }
+                  onCheckedChange={(checked) => {
+                    console.log('Tuning Correction toggled:', checked);
+                    handleOptionChange('tuningCorrection', checked, tierOptions.tuningCorrection.price > 0, tierOptions.tuningCorrection.price);
+                  }}
+                  className="data-[state=checked]:bg-crys-gold data-[state=unchecked]:bg-crys-graphite"
                 />
               </div>
             </div>
