@@ -41,6 +41,9 @@ class AudioController extends Controller
         $file = $request->file('audio');
         $audioId = Str::uuid();
         
+        // Log initial credit state
+        \Log::info("Credit consumption - User: {$user->email}, Tier: {$user->tier}, Initial credits: {$user->credits}");
+        
         // Check if user has enough credits
         $creditsRequired = 0; // Default to 0
         
@@ -58,8 +61,11 @@ class AudioController extends Controller
             $creditsRequired = 0.2; // Only consume 0.2 credits for demo accounts
         }
         
+        \Log::info("Credit calculation - Credits required: {$creditsRequired}");
+        
         // Only check credits for non-advanced tiers
         if ($user->tier !== 'advanced' && $user->credits < $creditsRequired) {
+            \Log::warning("Insufficient credits - Required: {$creditsRequired}, Available: {$user->credits}");
             return response()->json([
                 'error' => 'Insufficient credits',
                 'required' => $creditsRequired,
@@ -69,8 +75,13 @@ class AudioController extends Controller
         
         // Deduct credits (only for non-advanced tiers)
         if ($user->tier !== 'advanced') {
+            $oldCredits = $user->credits;
             $user->credits -= $creditsRequired;
+            \Log::info("Credits deducted - Old: {$oldCredits}, Deducted: {$creditsRequired}, New: {$user->credits}");
+        } else {
+            \Log::info("No credits deducted - Advanced tier unlimited");
         }
+        
         $user->total_tracks += 1;
         $user->save();
         
