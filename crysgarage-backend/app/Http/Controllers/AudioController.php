@@ -322,7 +322,7 @@ class AudioController extends Controller
                         ]
                     ]
                 ],
-                'timeout' => 300
+                'timeout' => 30
             ]);
             
             $result = json_decode($response->getBody(), true);
