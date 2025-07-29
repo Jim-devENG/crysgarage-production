@@ -44,30 +44,20 @@ class AudioController extends Controller
         // Log initial credit state
         \Log::info("Credit consumption - User: {$user->email}, Tier: {$user->tier}, Initial credits: {$user->credits}");
         
-        // Check if user has enough credits
+        // Check if user has enough credits for basic mastering
         $creditsRequired = 0; // Default to 0
         
-        // Set credit requirements based on tier
+        // Set credit requirements based on tier (only for mastering, not Processing Options)
         if ($user->tier === 'advanced') {
             $creditsRequired = 0; // Advanced tier is unlimited subscription
         } elseif ($user->tier === 'professional') {
-            $creditsRequired = 1; // Professional tier uses 1 credit
+            $creditsRequired = 1; // Professional tier uses 1 credit for mastering
         } else {
-            $creditsRequired = 1; // Free tier uses 1 credit
+            $creditsRequired = 1; // Free tier uses 1 credit for mastering
         }
         
-        // Add Processing Options costs
-        $processingOptions = $request->input('processing_options', []);
-        if (is_array($processingOptions)) {
-            if (in_array('noise_reduction', $processingOptions)) {
-                $creditsRequired += 1; // Noise Reduction costs 1 additional credit
-                \Log::info("Noise Reduction selected - adding 1 credit");
-            }
-            if (in_array('tuning_correction', $processingOptions)) {
-                $creditsRequired += 1; // Tuning Correction costs 1 additional credit
-                \Log::info("Tuning Correction selected - adding 1 credit");
-            }
-        }
+        // Note: Processing Options (Noise Reduction, Tuning Correction) are dollar payments, not credit consumption
+        // They are handled separately in the frontend payment flow
         
         // Reduce credit consumption for demo accounts (except advanced which is unlimited)
         if (str_contains($user->email, 'demo@crysgarage.com') && $user->tier !== 'advanced') {
@@ -76,7 +66,7 @@ class AudioController extends Controller
             \Log::info("Demo account - reducing credits from {$originalCreditsRequired} to {$creditsRequired}");
         }
         
-        \Log::info("Credit calculation - Credits required: {$creditsRequired}");
+        \Log::info("Credit calculation - Credits required for mastering: {$creditsRequired}");
         
         // Only check credits for non-advanced tiers
         if ($user->tier !== 'advanced' && $user->credits < $creditsRequired) {

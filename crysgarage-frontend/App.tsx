@@ -285,25 +285,18 @@ function AppContent() {
 
   const handleFileUpload = async (file: File) => {
     try {
-      // Check if user has enough credits
+      // Check if user has enough credits for mastering
       if (!creditsManager.canUpload) {
         throw new Error('Insufficient credits. Please upgrade your tier or purchase more credits.');
       }
 
-      // Prepare Processing Options from session config
-      const processingOptions = session.config ? {
-        noiseReduction: session.config.noiseReduction || false,
-        tuningCorrection: session.config.tuningCorrection || false
-      } : undefined;
-
-      // Upload file to backend with Processing Options
-      const uploadResult = await audioAPI.uploadFile(file, session.genre, processingOptions);
+      // Upload file to backend (Processing Options are dollar payments, handled separately)
+      const uploadResult = await audioAPI.uploadFile(file, session.genre);
       const audioId = uploadResult.audio_id;
       
       console.log('File uploaded successfully, audio_id:', audioId);
       console.log('Credits deducted:', uploadResult.credits_deducted);
       console.log('Remaining credits:', uploadResult.remaining_credits);
-      console.log('Processing Options:', processingOptions);
       
       // Update credits in the UI
       if (uploadResult.credits_deducted) {

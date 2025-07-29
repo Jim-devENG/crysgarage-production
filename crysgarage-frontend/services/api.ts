@@ -231,7 +231,7 @@ export const userAPI = {
 // Audio processing API - Updated to match Laravel endpoints
 export const audioAPI = {
   // Upload audio file
-  uploadFile: async (file: File, genre?: string, processingOptions?: { noiseReduction?: boolean; tuningCorrection?: boolean }): Promise<{ 
+  uploadFile: async (file: File, genre?: string): Promise<{ 
     audio_id: string;
     credits_deducted?: number;
     remaining_credits?: number;
@@ -240,16 +240,6 @@ export const audioAPI = {
     formData.append('audio', file);
     if (genre && genre.trim() !== '') {
       formData.append('genre', genre);
-    }
-    
-    // Add Processing Options
-    if (processingOptions) {
-      if (processingOptions.noiseReduction) {
-        formData.append('processing_options[]', 'noise_reduction');
-      }
-      if (processingOptions.tuningCorrection) {
-        formData.append('processing_options[]', 'tuning_correction');
-      }
     }
 
     const response = await api.post('/upload', formData, {
