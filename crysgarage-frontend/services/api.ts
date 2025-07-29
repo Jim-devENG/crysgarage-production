@@ -236,18 +236,37 @@ export const audioAPI = {
     credits_deducted?: number;
     remaining_credits?: number;
   }> => {
+    console.log('=== UPLOAD FILE DEBUG ===');
+    console.log('File:', file.name, 'Size:', file.size);
+    console.log('Genre:', genre);
+    
+    // Check if token exists
+    const token = localStorage.getItem('crysgarage_token');
+    console.log('Token exists:', !!token);
+    console.log('Token preview:', token ? token.substring(0, 20) + '...' : 'No token');
+    
     const formData = new FormData();
     formData.append('audio', file);
     if (genre && genre.trim() !== '') {
       formData.append('genre', genre);
     }
 
-    const response = await api.post('/upload', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
-    return response.data;
+    try {
+      const response = await api.post('/upload', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      console.log('Upload successful:', response.data);
+      return response.data;
+    } catch (error: any) {
+      console.error('=== UPLOAD ERROR ===');
+      console.error('Error status:', error.response?.status);
+      console.error('Error data:', error.response?.data);
+      console.error('Error message:', error.message);
+      console.error('Request config:', error.config);
+      throw error;
+    }
   },
 
   // Get audio status
