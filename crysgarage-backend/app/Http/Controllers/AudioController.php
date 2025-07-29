@@ -202,20 +202,9 @@ class AudioController extends Controller
         // Get processing data from the correct path - use storage_path directly
         $processingFile = storage_path('app/private/processing/' . $audioId . '.json');
         
-        // Debug logging
-        \Log::info('Public status check', [
-            'audio_id' => $audioId,
-            'processing_file_path' => $processingFile,
-            'file_exists' => file_exists($processingFile)
-        ]);
-        
         if (!file_exists($processingFile)) {
             return response()->json([
-                'message' => 'Audio not found',
-                'debug' => [
-                    'path' => $processingFile,
-                    'exists' => file_exists($processingFile)
-                ]
+                'message' => 'Audio not found'
             ], 404);
         }
         
