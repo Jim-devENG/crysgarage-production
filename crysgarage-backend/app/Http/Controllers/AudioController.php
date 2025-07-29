@@ -69,8 +69,8 @@ class AudioController extends Controller
         // Save processing data
         Storage::disk('local')->put('processing/' . $audioId . '.json', json_encode($processingData));
         
-        // Start processing immediately
-        $this->completeMasteringImmediately($audioId, $processingData);
+        // Start processing
+        $this->startRubyProcessing($audioId, $processingData);
         
         return response()->json([
             'success' => true,
@@ -288,11 +288,6 @@ class AudioController extends Controller
     private function startRubyProcessing($audioId, $processingData)
     {
         try {
-            // For now, let's use direct Laravel processing instead of Ruby
-            // This ensures reliable completion
-            $this->startDirectProcessing($audioId, $processingData);
-            return;
-            
             $client = new \GuzzleHttp\Client();
             
             // Get genre-specific configuration
@@ -321,8 +316,8 @@ class AudioController extends Controller
                             'loudness_normalization'
                         ]
                     ]
-                ],
-                'timeout' => 30
+                ]
+                // No timeout - let it process as long as needed
             ]);
             
             $result = json_decode($response->getBody(), true);
@@ -364,10 +359,6 @@ class AudioController extends Controller
                 'audio_id' => $audioId,
                 'genre' => $processingData['genre']
             ]);
-            
-            // For immediate completion (bypass all processing)
-            $this->completeMasteringImmediately($audioId, $processingData);
-            return;
             
             // Update status to processing
             $processingData['status'] = 'processing';
