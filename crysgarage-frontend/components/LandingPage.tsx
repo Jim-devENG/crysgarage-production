@@ -301,7 +301,7 @@ export function LandingPage({ onGetStarted, onTryMastering }: LandingPageProps) 
                 className="flex items-center gap-4 mb-8"
                 variants={itemVariants}
               >
-                <CrysGarageLogo size={60} />
+                <CrysGarageLogo size={180} />
                 <div className="inline-flex items-center gap-2 bg-crys-gold/10 border border-crys-gold/30 rounded-full px-6 py-3 backdrop-blur-sm">
                   <Sparkles className="w-5 h-5 text-crys-gold" />
                   <span className="text-crys-gold">Powered by Crys Garage Engine</span>
