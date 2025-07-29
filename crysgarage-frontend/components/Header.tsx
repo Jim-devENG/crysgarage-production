@@ -81,7 +81,7 @@ export function Header({
           {/* Logo and Brand */}
           <div className="flex items-center gap-3">
             <CrysGarageLogo 
-              size={40} 
+              size={120} 
               onClick={() => handleNavigation('home')}
               className="hover:scale-105 transition-transform duration-200"
             />
