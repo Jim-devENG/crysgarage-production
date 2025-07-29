@@ -25,7 +25,7 @@ log() {
 
 error() {
     echo -e "${RED}[ERROR]${NC} $1"
-    exit 1
+        exit 1
 }
 
 success() {
@@ -57,7 +57,7 @@ success "Backup created at $BACKUP_PATH"
 
 # Step 3: Build frontend
 log "📦 Building frontend application..."
-cd crysgarage-frontend
+    cd crysgarage-frontend
 
 # Check if node_modules exists
 if [ ! -d "node_modules" ]; then
@@ -98,9 +98,9 @@ cd /var/www/crysgarage/crysgarage-backend
 
 # Install/update dependencies
 echo "Installing PHP dependencies..."
-composer install --no-dev --optimize-autoloader
-
-# Set proper permissions
+        composer install --no-dev --optimize-autoloader
+        
+        # Set proper permissions
 echo "Setting permissions..."
 chown -R nginx:nginx /var/www/crysgarage
 chmod -R 755 /var/www/crysgarage

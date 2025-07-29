@@ -15,10 +15,10 @@ export function CrysGarageLogo({ size = 40, className = "", onClick }: CrysGarag
       onClick={onClick}
       style={{ width: size, height: size }}
     >
-      {/* PNG Logo Image with Fallback */}
+      {/* SVG Logo with Fallback */}
       {!imageError ? (
         <img 
-          src="/crys-garage-logo.png" 
+          src="/crys-garage-logo.svg" 
           alt="Crys Garage Logo" 
           className="w-full h-full object-contain"
           style={{ width: size, height: size }}

@@ -832,8 +832,8 @@ function AppContent() {
     // This prevents the useEffect from interfering with manual modal closes
     if (isAuthenticated && currentPage === 'auth' && intendedDestination) {
       console.log('User authenticated, redirecting from auth page to intended destination:', intendedDestination);
-      setCurrentPage(intendedDestination);
-      setIntendedDestination(null);
+        setCurrentPage(intendedDestination);
+        setIntendedDestination(null);
     }
     console.log('=== POST-LOGIN REDIRECTION DEBUG END ===');
   }, [isAuthenticated, currentPage, intendedDestination]);
@@ -1285,8 +1285,8 @@ function AppContent() {
                 <CrysGarageLogo size={50} />
               </div>
               <div className="text-crys-light-grey text-sm">
-                <p className="mb-2">© 2025 Crys Garage Studio - Professional Audio Mastering Platform</p>
-                <p className="text-crys-gold">"Craft the sound, Unleash the future"</p>
+              <p className="mb-2">© 2025 Crys Garage Studio - Professional Audio Mastering Platform</p>
+              <p className="text-crys-gold">"Craft the sound, Unleash the future"</p>
               </div>
             </div>
           </div>

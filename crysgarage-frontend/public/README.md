@@ -4,16 +4,16 @@ This directory contains static assets that will be served directly by the web se
 
 ## Logo File
 
-Please add your Crys Garage logo PNG file here with the name:
-- `crys-garage-logo.png`
+The Crys Garage logo is now available as:
+- `crys-garage-logo.svg` - Vector format for best quality and scalability
 
-The logo should be:
-- PNG format with transparent background
-- Golden "G" symbol facing down
-- High resolution (recommended: 512x512 or larger)
-- Named exactly: `crys-garage-logo.png`
+The logo features:
+- Golden metallic texture with concentric circles
+- Stylized "G" symbol in the center
+- High resolution (512x512 viewBox)
+- Scalable vector format
 
-The logo will be automatically used in:
+The logo is automatically used in:
 - Header navigation
 - Loading screen
 - Landing page hero section
@@ -22,6 +22,6 @@ The logo will be automatically used in:
 ## File Structure
 ```
 public/
-├── crys-garage-logo.png  ← Add your logo here
+├── crys-garage-logo.svg  ← Crys Garage logo (SVG format)
 └── README.md
 ```
