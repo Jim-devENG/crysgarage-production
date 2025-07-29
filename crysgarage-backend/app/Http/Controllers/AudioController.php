@@ -201,8 +201,8 @@ class AudioController extends Controller
     {
         $user = request()->user();
         
-        // Get processing data
-        $processingFile = Storage::disk('local')->path('processing/' . $audioId . '.json');
+        // Get processing data from the correct path
+        $processingFile = Storage::disk('local')->path('private/processing/' . $audioId . '.json');
         
         if (!file_exists($processingFile)) {
             return response()->json([
@@ -212,47 +212,23 @@ class AudioController extends Controller
         
         $processingData = json_decode(file_get_contents($processingFile), true);
         
-        // Check if processing is in progress and get real-time status
+        // Check if processing is in progress and get real-time status from Ruby
         if ($processingData['status'] === 'processing' && isset($processingData['session_id'])) {
             $rubyStatus = $this->checkRubyStatus($audioId);
             
             if ($rubyStatus) {
-                // Update processing data with real status
+                // Update processing data with real status from Ruby
                 $processingData['progress'] = $rubyStatus['progress'] ?? $processingData['progress'];
                 $processingData['status'] = $rubyStatus['status'] ?? $processingData['status'];
+                $processingData['current_step'] = $rubyStatus['message'] ?? $processingData['current_step'];
                 
                 if ($rubyStatus['status'] === 'done') {
-                    $processingData['output_files'] = $rubyStatus['output_files'] ?? [];
-                    $processingData['metadata'] = $rubyStatus['metadata'] ?? [];
-                }
-                
-                if ($rubyStatus['status'] === 'failed') {
-                    $processingData['error_message'] = $rubyStatus['error'] ?? 'Processing failed';
-                }
-                
-                $processingData['updated_at'] = now()->toISOString();
-                Storage::disk('local')->put('processing/' . $audioId . '.json', json_encode($processingData));
-            }
-        }
-        
-        // Simulate processing completion for demo if no Ruby service
-        if ($processingData['status'] === 'pending' || $processingData['status'] === 'processing') {
-            // Simulate progress
-            if ($processingData['progress'] < 100) {
-                $processingData['progress'] += 25; // Faster progress for demo
-                if ($processingData['progress'] >= 100) {
-                    $processingData['status'] = 'done';
-                    $processingData['progress'] = 100;
-                    $processingData['tier'] = $processingData['tier'] ?? 'professional'; // Ensure tier is set
-                    
-                    // Add demo output files
                     $processingData['output_files'] = [
                         'wav' => '/api/audio/' . $audioId . '/download/wav',
                         'mp3' => '/api/audio/' . $audioId . '/download/mp3',
                         'flac' => '/api/audio/' . $audioId . '/download/flac'
                     ];
-                    
-                    $processingData['metadata'] = [
+                    $processingData['metadata'] = $rubyStatus['metadata'] ?? [
                         'processing_time' => 180,
                         'final_lufs' => -14.2,
                         'true_peak' => -0.8,
@@ -260,10 +236,14 @@ class AudioController extends Controller
                         'genre' => $processingData['genre'],
                         'tier' => $processingData['tier']
                     ];
-                    
-                    $processingData['updated_at'] = now()->toISOString();
-                    Storage::disk('local')->put('processing/' . $audioId . '.json', json_encode($processingData));
                 }
+                
+                if ($rubyStatus['status'] === 'failed') {
+                    $processingData['error_message'] = $rubyStatus['error'] ?? 'Processing failed';
+                }
+                
+                $processingData['updated_at'] = now()->toISOString();
+                Storage::disk('local')->put('private/processing/' . $audioId . '.json', json_encode($processingData));
             }
         }
         
@@ -273,7 +253,7 @@ class AudioController extends Controller
             'progress' => $processingData['progress'] ?? 0,
             'genre' => $processingData['genre'],
             'tier' => $processingData['tier'],
-            'file_name' => $processingData['file_name'],
+            'file_name' => $processingData['original_name'],
             'output_files' => $processingData['output_files'] ?? [],
             'metadata' => $processingData['metadata'] ?? [],
             'error_message' => $processingData['error_message'] ?? null,
@@ -534,19 +514,32 @@ class AudioController extends Controller
     private function checkRubyStatus($audioId)
     {
         try {
-            $processingFile = Storage::disk('local')->path('processing/' . $audioId . '.json');
+            $processingFile = Storage::disk('local')->path('private/processing/' . $audioId . '.json');
             $processingData = json_decode(file_get_contents($processingFile), true);
             
             if (!isset($processingData['session_id'])) {
                 return null;
             }
             
-            $client = new \GuzzleHttp\Client();
-            $response = $client->get('http://localhost:4567/status/' . $processingData['session_id']);
+            $sessionId = $processingData['session_id'];
             
-            return json_decode($response->getBody(), true);
+            $client = new \GuzzleHttp\Client();
+            $response = $client->get("http://localhost:4567/status/{$sessionId}");
+            
+            $result = json_decode($response->getBody(), true);
+            
+            \Log::info('Ruby status check result', [
+                'audio_id' => $audioId,
+                'session_id' => $sessionId,
+                'ruby_status' => $result
+            ]);
+            
+            return $result;
+            
         } catch (\Exception $e) {
-            \Log::error('Ruby status check failed: ' . $e->getMessage());
+            \Log::error('Ruby status check failed: ' . $e->getMessage(), [
+                'audio_id' => $audioId
+            ]);
             return null;
         }
     }
