@@ -199,15 +199,14 @@ class AudioController extends Controller
      */
     public function getPublicStatus($audioId)
     {
-        // Get processing data from the correct path
-        $processingFile = Storage::disk('local')->path('private/processing/' . $audioId . '.json');
+        // Get processing data from the correct path - use storage_path directly
+        $processingFile = storage_path('app/private/processing/' . $audioId . '.json');
         
         // Debug logging
         \Log::info('Public status check', [
             'audio_id' => $audioId,
             'processing_file_path' => $processingFile,
-            'file_exists' => file_exists($processingFile),
-            'storage_path' => storage_path('app/private/processing/' . $audioId . '.json')
+            'file_exists' => file_exists($processingFile)
         ]);
         
         if (!file_exists($processingFile)) {
@@ -253,7 +252,7 @@ class AudioController extends Controller
                 }
                 
                 $processingData['updated_at'] = now()->toISOString();
-                Storage::disk('local')->put('private/processing/' . $audioId . '.json', json_encode($processingData));
+                file_put_contents($processingFile, json_encode($processingData));
             }
         }
         
