@@ -24,9 +24,9 @@ function AppContent() {
     user, 
     isAuthenticated, 
     isLoading, 
-    currentSession,
-    signIn, 
-    signUp, 
+    currentSession, 
+    signIn,
+    signUp,
     signOut,
     error,
     clearError
@@ -34,17 +34,17 @@ function AppContent() {
 
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
-  const [currentPage, setCurrentPage] = useState<'landing' | 'dashboard' | 'processing' | 'results' | 'pricing' | 'help' | 'courses' | 'marketplace' | 'profile'>('landing');
+  const [currentPage, setCurrentPage] = useState<'landing' | 'home' | 'dashboard' | 'processing' | 'results' | 'pricing' | 'help' | 'courses' | 'marketplace' | 'profile'>('landing');
   const [showBillingModal, setShowBillingModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showProfileEditModal, setShowProfileEditModal] = useState(false);
-
+  
   // Handle navigation with proper type conversion
   const handleNavigation = (section: string) => {
-    if (section === 'landing' || section === 'dashboard' || section === 'processing' || 
+    if (section === 'landing' || section === 'home' || section === 'dashboard' || section === 'processing' || 
         section === 'results' || section === 'pricing' || section === 'help' || 
         section === 'courses' || section === 'marketplace' || section === 'profile') {
-      setCurrentPage(section);
+          setCurrentPage(section);
     }
   };
 
@@ -56,8 +56,8 @@ function AppContent() {
           <div className="w-16 h-16 border-4 border-crys-gold border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <h2 className="text-crys-white text-xl font-semibold">Loading Crys Garage...</h2>
           <p className="text-crys-light-grey mt-2">Preparing your audio mastering experience</p>
-        </div>
-      </div>
+          </div>
+          </div>
     );
   }
 
@@ -81,7 +81,7 @@ function AppContent() {
 
   // Authenticated user - show dashboard
   if (isAuthenticated && user) {
-    return (
+  return (
       <div className="min-h-screen bg-gradient-to-br from-crys-black via-crys-graphite to-crys-black">
         <Header 
           user={user}
@@ -92,6 +92,17 @@ function AppContent() {
         />
         
         <main className="pt-20">
+          {currentPage === 'home' && (
+            <LandingPage 
+              onGetStarted={() => {
+                setCurrentPage('dashboard');
+              }}
+              onTryMastering={() => {
+                setCurrentPage('dashboard');
+              }}
+            />
+          )}
+          
           {currentPage === 'dashboard' && (
             <>
               {user.tier === 'free' && (
@@ -156,8 +167,8 @@ function AppContent() {
             />
           )}
           
-          {currentPage === 'courses' && (
-            <CoursesPage 
+            {currentPage === 'courses' && (
+              <CoursesPage 
               onGetStarted={() => setShowAuthModal(true)}
             />
           )}
@@ -171,17 +182,17 @@ function AppContent() {
           )}
           
           {currentPage === 'profile' && (
-            <UserProfile 
+              <UserProfile
               onClose={() => setCurrentPage('dashboard')}
-              userData={{
+                userData={{
                 name: user.name || 'User',
                 email: user.email || '',
                 tier: user.tier,
                 joinDate: user.join_date || '',
-                totalTracks: 0,
-                totalSpent: 0,
-                isSignedIn: true
-              }}
+                  totalTracks: 0,
+                  totalSpent: 0,
+                  isSignedIn: true
+                }}
               userCredits={user.credits || 0}
               userTier={user.tier}
             />
@@ -205,10 +216,10 @@ function AppContent() {
             onPaymentSuccess={() => {
               setShowPaymentModal(false);
               setCurrentPage('dashboard');
-            }}
-          />
-        )}
-        
+                }}
+              />
+            )}
+
         {showProfileEditModal && (
           <ProfileEditModal 
             onClose={() => setShowProfileEditModal(false)}
@@ -227,7 +238,7 @@ function AppContent() {
             }}
           />
         )}
-      </div>
+                </div>
     );
   }
 
@@ -242,6 +253,19 @@ function AppContent() {
       />
       
       {currentPage === 'landing' && (
+        <LandingPage 
+          onGetStarted={() => {
+            setAuthMode('signup');
+            setShowAuthModal(true);
+          }}
+          onTryMastering={() => {
+            setAuthMode('signin');
+            setShowAuthModal(true);
+          }}
+        />
+      )}
+      
+      {currentPage === 'home' && (
         <LandingPage 
           onGetStarted={() => {
             setAuthMode('signup');
@@ -285,7 +309,7 @@ function AppContent() {
       
       {/* Auto auth fix for development */}
       <AutoAuthFix />
-    </div>
+      </div>
   );
 }
 
