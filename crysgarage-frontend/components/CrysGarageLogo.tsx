@@ -4,16 +4,17 @@ interface CrysGarageLogoProps {
   size?: number;
   className?: string;
   onClick?: () => void;
+  style?: React.CSSProperties;
 }
 
-export function CrysGarageLogo({ size = 40, className = "", onClick }: CrysGarageLogoProps) {
+export function CrysGarageLogo({ size = 40, className = "", onClick, style }: CrysGarageLogoProps) {
   const [imageError, setImageError] = React.useState(false);
 
   return (
     <div 
       className={`relative ${onClick ? 'cursor-pointer' : ''} ${className}`}
       onClick={onClick}
-      style={{ width: size, height: size }}
+      style={{ width: size, height: size, ...style }}
     >
       {/* SVG Logo with Fallback */}
       {!imageError ? (
