@@ -321,15 +321,29 @@ export function MasteringResults({
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       {/* Credit Usage Notification */}
-      {selectedTier !== 'free' && (
+      {selectedTier !== 'free' && selectedTier !== 'advanced' && (
         <div className="bg-crys-gold/10 border border-crys-gold/30 rounded-lg p-4 mb-6">
           <div className="flex items-center gap-2 text-crys-gold mb-2">
             <span className="text-sm font-medium">Credit Usage</span>
           </div>
           <div className="text-xs text-crys-light-grey space-y-1">
-            <p>• {selectedTier === 'advanced' ? '2' : '1'} credit(s) deducted for this mastering session</p>
+            <p>• 1 credit deducted for this mastering session</p>
             <p>• Credits are deducted when mastering starts, not when completed</p>
             <p>• Demo mode (using original file) does not deduct credits</p>
+          </div>
+        </div>
+      )}
+
+      {/* Advanced Tier Notification */}
+      {selectedTier === 'advanced' && (
+        <div className="bg-crys-gold/10 border border-crys-gold/30 rounded-lg p-4 mb-6">
+          <div className="flex items-center gap-2 text-crys-gold mb-2">
+            <span className="text-sm font-medium">Unlimited Subscription</span>
+          </div>
+          <div className="text-xs text-crys-light-grey space-y-1">
+            <p>• No credits consumed - unlimited mastering sessions</p>
+            <p>• Monthly subscription includes unlimited processing</p>
+            <p>• All advanced features and manual controls available</p>
           </div>
         </div>
       )}

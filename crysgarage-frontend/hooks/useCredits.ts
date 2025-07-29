@@ -25,14 +25,14 @@ export const useCredits = (user: User | null): UseCreditsReturn => {
       case 'pro':
         return 1;
       case 'advanced':
-        return 2;
+        return 0; // Advanced tier is unlimited subscription
       default:
         return 1;
     }
   }, []);
 
   // Check if user can upload
-  const canUpload = credits >= getCreditsRequired(tier);
+  const canUpload = tier === 'advanced' || credits >= getCreditsRequired(tier);
 
   // Refresh credits from API
   const refreshCredits = useCallback(async () => {

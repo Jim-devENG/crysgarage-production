@@ -42,8 +42,24 @@ class AudioController extends Controller
         $audioId = Str::uuid();
         
         // Check if user has enough credits
-        $creditsRequired = $user->tier === 'advanced' ? 2 : 1;
-        if ($user->credits < $creditsRequired) {
+        $creditsRequired = 0; // Default to 0
+        
+        // Set credit requirements based on tier
+        if ($user->tier === 'advanced') {
+            $creditsRequired = 0; // Advanced tier is unlimited subscription
+        } elseif ($user->tier === 'professional') {
+            $creditsRequired = 1; // Professional tier uses 1 credit
+        } else {
+            $creditsRequired = 1; // Free tier uses 1 credit
+        }
+        
+        // Reduce credit consumption for demo accounts (except advanced which is unlimited)
+        if (str_contains($user->email, 'demo@crysgarage.com') && $user->tier !== 'advanced') {
+            $creditsRequired = 0.2; // Only consume 0.2 credits for demo accounts
+        }
+        
+        // Only check credits for non-advanced tiers
+        if ($user->tier !== 'advanced' && $user->credits < $creditsRequired) {
             return response()->json([
                 'error' => 'Insufficient credits',
                 'required' => $creditsRequired,
@@ -51,8 +67,10 @@ class AudioController extends Controller
             ], 402);
         }
         
-        // Deduct credits
-        $user->credits -= $creditsRequired;
+        // Deduct credits (only for non-advanced tiers)
+        if ($user->tier !== 'advanced') {
+            $user->credits -= $creditsRequired;
+        }
         $user->total_tracks += 1;
         $user->save();
         
