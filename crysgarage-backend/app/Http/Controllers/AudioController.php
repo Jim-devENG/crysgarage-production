@@ -591,24 +591,35 @@ class AudioController extends Controller
     private function checkRubyStatus($audioId)
     {
         try {
-            $processingFile = Storage::disk('local')->path('private/processing/' . $audioId . '.json');
-            $processingData = json_decode(file_get_contents($processingFile), true);
+            // Read processing data from the correct path
+            $processingFile = storage_path('app/private/processing/' . $audioId . '.json');
             
-            if (!isset($processingData['session_id'])) {
+            if (!file_exists($processingFile)) {
+                \Log::error('Processing file not found for Ruby status check', [
+                    'audio_id' => $audioId,
+                    'file_path' => $processingFile
+                ]);
                 return null;
             }
             
-            $sessionId = $processingData['session_id'];
+            $processingData = json_decode(file_get_contents($processingFile), true);
+            
+            if (!isset($processingData['session_id'])) {
+                \Log::error('No session_id found in processing data', [
+                    'audio_id' => $audioId
+                ]);
+                return null;
+            }
             
             $client = new \GuzzleHttp\Client();
-            $response = $client->get("http://localhost:4567/status/{$sessionId}");
+            $response = $client->get('http://localhost:4567/status/' . $processingData['session_id']);
             
             $result = json_decode($response->getBody(), true);
             
             \Log::info('Ruby status check result', [
                 'audio_id' => $audioId,
-                'session_id' => $sessionId,
-                'ruby_status' => $result
+                'session_id' => $processingData['session_id'],
+                'result' => $result
             ]);
             
             return $result;
