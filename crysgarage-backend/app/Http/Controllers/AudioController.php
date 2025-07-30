@@ -22,19 +22,89 @@ class AudioController extends Controller
     }
 
     /**
+     * Get tier-specific features
+     */
+    private function getTierFeatures($tier)
+    {
+        $features = [
+            'free' => [
+                'max_file_size' => 50 * 1024, // 50 MB (50 * 1024 KB)
+                'supported_formats' => ['wav', 'mp3'],
+                'supported_genres' => ['hip_hop', 'r_b', 'afrobeats'],
+                'max_tracks_per_month' => 3
+            ],
+            'professional' => [
+                'max_file_size' => 200,
+                'supported_formats' => ['wav', 'mp3', 'flac'],
+                'supported_genres' => ['hip_hop', 'r_b', 'afrobeats', 'gospel', 'highlife'],
+                'max_tracks_per_month' => 20
+            ],
+            'advanced' => [
+                'max_file_size' => 500,
+                'supported_formats' => ['wav', 'mp3', 'flac', 'aiff'],
+                'supported_genres' => ['hip_hop', 'r_b', 'afrobeats', 'gospel', 'highlife'],
+                'max_tracks_per_month' => -1 // Unlimited
+            ]
+        ];
+
+        return $features[$tier] ?? $features['free'];
+    }
+
+    /**
+     * Check if user has exceeded tier limits
+     */
+    private function checkTierLimits($user, $tier)
+    {
+        $features = $this->getTierFeatures($tier);
+        
+        // Check monthly track limit
+        if ($features['max_tracks_per_month'] !== -1) {
+            $monthlyTracks = Audio::where('user_id', $user->id)
+                ->whereMonth('created_at', now()->month)
+                ->whereYear('created_at', now()->year)
+                ->count();
+                
+            if ($monthlyTracks >= $features['max_tracks_per_month']) {
+                return false;
+            }
+        }
+
+        // Check credits for non-advanced tiers
+        if ($tier !== 'advanced' && $user->credits <= 0) {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
      * Upload audio file and start processing
      */
     public function upload(Request $request)
     {
         try {
-            // Validate request
+        $user = $request->user();
+            
+            // Get user's tier and validate against it
+            $userTier = $user->tier;
+            $tierFeatures = $this->getTierFeatures($userTier);
+            
+            // Validate request with tier-specific limits
             $request->validate([
-                'audio' => 'required|file|mimes:wav,mp3,flac,aiff|max:' . ($this->maxFileSize / 1024 / 1024),
-                'genre' => 'required|string|in:afrobeats,gospel,hip_hop,highlife',
+                'audio' => 'required|file|mimes:' . implode(',', $tierFeatures['supported_formats']) . '|max:' . $tierFeatures['max_file_size'],
+                'genre' => 'required|string|in:' . implode(',', $tierFeatures['supported_genres']),
                 'tier' => 'required|string|in:free,professional,advanced'
             ]);
 
-            $user = $request->user();
+            // Check tier limits
+            if (!$this->checkTierLimits($user, $userTier)) {
+            return response()->json([
+                    'success' => false,
+                    'error' => 'Tier limit exceeded. Please upgrade your plan.',
+                    'upgrade_required' => true
+                ], 403);
+            }
+
             $file = $request->file('audio');
             
             // Generate unique audio ID
@@ -47,12 +117,12 @@ class AudioController extends Controller
             // Create audio record
             $audio = Audio::create([
                 'id' => $audioId,
-                'user_id' => $user->id,
-                'file_name' => $file->getClientOriginalName(),
-                'file_size' => $file->getSize(),
+            'user_id' => $user->id,
+            'file_name' => $file->getClientOriginalName(),
+            'file_size' => $file->getSize(),
                 'genre' => $request->genre,
                 'tier' => $request->tier,
-                'status' => 'pending',
+            'status' => 'pending',
                 'progress' => 0
             ]);
 
@@ -66,10 +136,10 @@ class AudioController extends Controller
                 'genre' => $request->genre,
                 'tier' => $request->tier
             ]);
-
-            return response()->json([
+        
+        return response()->json([
                 'success' => true,
-                'audio_id' => $audioId,
+            'audio_id' => $audioId,
                 'message' => 'Audio uploaded and processing started'
             ]);
 
@@ -83,6 +153,62 @@ class AudioController extends Controller
                 'success' => false,
                 'error' => 'Upload failed: ' . $e->getMessage()
             ], 500);
+        }
+    }
+
+    /**
+     * Start audio processing (internal method called by upload)
+     */
+    private function startProcessing($audioId, $genre, $tier)
+    {
+        try {
+            $audio = Audio::findOrFail($audioId);
+            
+            // Update status to processing
+            $audio->update([
+                'status' => 'processing',
+                'processing_started_at' => now(),
+                'progress' => 10
+            ]);
+
+            // Call Ruby service for processing
+            $response = Http::post($this->rubyServiceUrl . '/process', [
+                'audio_id' => $audioId,
+                'genre' => $genre,
+                'tier' => $tier,
+                'file_path' => storage_path("app/uploads/{$audioId}.wav")
+            ]);
+
+            if ($response->successful()) {
+                Log::info('Processing started successfully', [
+                    'audio_id' => $audioId,
+                    'genre' => $genre,
+                    'tier' => $tier
+                ]);
+            } else {
+                Log::error('Failed to start processing', [
+                    'audio_id' => $audioId,
+                    'response' => $response->body()
+                ]);
+                
+                // Update status to failed
+                $audio->update([
+                    'status' => 'failed',
+                    'progress' => 0
+                ]);
+            }
+
+        } catch (\Exception $e) {
+            Log::error('Error starting processing', [
+                'audio_id' => $audioId,
+                'error' => $e->getMessage()
+            ]);
+            
+            // Update status to failed
+            $audio->update([
+                'status' => 'failed',
+                'progress' => 0
+            ]);
         }
     }
 
@@ -110,7 +236,7 @@ class AudioController extends Controller
                 'input_file' => $filePath,
                 'genre' => $audio->genre,
                 'tier' => $audio->tier,
-                'config' => [
+                    'config' => [
                     'target_lufs' => env('AUDIO_TARGET_LUFS', -14.0),
                     'true_peak' => env('AUDIO_TRUE_PEAK', -1.0),
                     'sample_rate' => env('AUDIO_SAMPLE_RATE', 44100),
@@ -123,8 +249,8 @@ class AudioController extends Controller
 
             if ($response->successful()) {
                 $result = $response->json();
-                
-                if ($result['success']) {
+            
+            if ($result['success']) {
                     // Update audio record
                     $audio->update([
                         'status' => 'processing',
@@ -144,16 +270,16 @@ class AudioController extends Controller
                     );
 
                     Log::info('Audio processing started', [
-                        'audio_id' => $audioId,
+                    'audio_id' => $audioId,
                         'session_id' => $result['session_id']
                     ]);
 
                     return response()->json([
                         'success' => true,
-                        'session_id' => $result['session_id'],
+                    'session_id' => $result['session_id'],
                         'message' => 'Processing started successfully'
-                    ]);
-                } else {
+                ]);
+            } else {
                     throw new \Exception($result['error'] ?? 'Processing failed');
                 }
             } else {
@@ -172,9 +298,9 @@ class AudioController extends Controller
                     'status' => 'failed',
                     'error_message' => $e->getMessage()
                 ]);
-            }
-
-            return response()->json([
+        }
+        
+        return response()->json([
                 'success' => false,
                 'error' => 'Processing start failed: ' . $e->getMessage()
             ], 500);
@@ -218,7 +344,7 @@ class AudioController extends Controller
                         
                         // Update audio record
                         $audio->update([
-                            'status' => $processingData['status'],
+            'status' => $processingData['status'],
                             'progress' => $processingData['progress']
                         ]);
                     }
@@ -226,7 +352,7 @@ class AudioController extends Controller
                 
                 return response()->json([
                     'success' => true,
-                    'audio_id' => $audioId,
+            'audio_id' => $audioId,
                     'status' => $processingData['status'] ?? 'unknown',
                     'progress' => $processingData['progress'] ?? 0,
                     'output_files' => $processingData['output_files'] ?? [],
@@ -292,7 +418,7 @@ class AudioController extends Controller
                 'metadata' => $processingData['metadata'] ?? [],
                 'processing_time' => $processingData['processing_time'] ?? 0
             ]);
-
+            
         } catch (\Exception $e) {
             Log::error('Get mastering results failed', [
                 'audio_id' => $audioId,
@@ -314,13 +440,13 @@ class AudioController extends Controller
         try {
             $audio = Audio::findOrFail($audioId);
             $processingFile = storage_path("app/processing/{$audioId}.json");
-            
-            if (!file_exists($processingFile)) {
+        
+        if (!file_exists($processingFile)) {
                 return response()->json(['error' => 'Processing data not found'], 404);
-            }
-            
-            $processingData = json_decode(file_get_contents($processingFile), true);
-            
+        }
+        
+        $processingData = json_decode(file_get_contents($processingFile), true);
+        
             if (!isset($processingData['output_files'][$format])) {
                 return response()->json(['error' => "Format {$format} not available"], 404);
             }
@@ -381,8 +507,8 @@ class AudioController extends Controller
                 'audio_id' => $audioId,
                 'error' => $e->getMessage()
             ]);
-
-            return response()->json([
+        
+        return response()->json([
                 'success' => false,
                 'error' => 'Failed to get original audio: ' . $e->getMessage()
             ], 500);
@@ -397,22 +523,22 @@ class AudioController extends Controller
         try {
             $audio = Audio::findOrFail($audioId);
             $processingFile = storage_path("app/processing/{$audioId}.json");
-            
-            if (!file_exists($processingFile)) {
+        
+        if (!file_exists($processingFile)) {
                 return response()->json(['error' => 'Processing data not found'], 404);
-            }
-            
-            $processingData = json_decode(file_get_contents($processingFile), true);
-            
+        }
+        
+        $processingData = json_decode(file_get_contents($processingFile), true);
+        
             $downloadUrls = [];
             if (isset($processingData['output_files'])) {
                 foreach ($processingData['output_files'] as $format => $filePath) {
                     $downloadUrls[$format] = url("/api/audio/{$audioId}/download/{$format}");
                 }
             }
-            
-            return response()->json([
-                'success' => true,
+        
+        return response()->json([
+            'success' => true,
                 'audio_id' => $audioId,
                 'download_urls' => $downloadUrls,
                 'available_formats' => array_keys($downloadUrls)
@@ -444,13 +570,13 @@ class AudioController extends Controller
                 'session_id' => 'test-session-' . $audioId,
                 'status' => 'completed',
                 'progress' => 100,
-                'output_files' => [
+            'output_files' => [
                     'wav' => storage_path("app/uploads/{$audioId}.wav"),
                     'mp3' => storage_path("app/uploads/{$audioId}.wav"),
                     'flac' => storage_path("app/uploads/{$audioId}.wav")
-                ],
-                'metadata' => [
-                    'processing_time' => 120,
+            ],
+            'metadata' => [
+                'processing_time' => 120,
                     'final_lufs' => -14.0,
                     'true_peak' => -1.0,
                     'dynamic_range' => 12.5
@@ -470,14 +596,14 @@ class AudioController extends Controller
                 'status' => 'completed',
                 'progress' => 100
             ]);
-            
-            return response()->json([
-                'success' => true,
+        
+        return response()->json([
+            'success' => true,
                 'message' => 'Test mastering completed',
                 'audio_id' => $audioId,
                 'session_id' => $processingData['session_id']
             ]);
-
+            
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -491,22 +617,41 @@ class AudioController extends Controller
      */
     public function publicUpload(Request $request)
     {
-        // Create a temporary user for public uploads
-        $tempUser = User::firstOrCreate(
-            ['email' => 'public@crysgarage.studio'],
-            [
-                'name' => 'Public User',
+        try {
+            // Create a unique temporary user for each public upload to avoid tier limits
+            $uniqueId = Str::uuid()->toString();
+            $tempUser = User::create([
+                'name' => 'Public User ' . substr($uniqueId, 0, 8),
+                'email' => 'public_' . $uniqueId . '@crysgarage.studio',
                 'password' => bcrypt('temp-password'),
-                'tier' => 'free'
-            ]
-        );
-        
-        // Set the user for this request
-        $request->setUserResolver(function () use ($tempUser) {
-            return $tempUser;
-        });
-        
-        return $this->upload($request);
+                'tier' => 'free',
+                'credits' => 10 // Give some credits for demo
+            ]);
+            
+            // Set the user for this request
+            $request->setUserResolver(function () use ($tempUser) {
+                return $tempUser;
+            });
+            
+            // Add missing required parameters for free tier
+            $request->merge([
+                'tier' => 'free',
+                'genre' => $request->genre ?? 'hip_hop'
+            ]);
+            
+            return $this->upload($request);
+            
+        } catch (\Exception $e) {
+            Log::error('Public upload failed', [
+                'error' => $e->getMessage(),
+                'request_data' => $request->all()
+            ]);
+
+                    return response()->json([
+                'success' => false,
+                'error' => 'Public upload failed: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     /**
@@ -515,5 +660,13 @@ class AudioController extends Controller
     public function getPublicStatus($audioId)
     {
         return $this->getStatus($audioId);
+    }
+
+    /**
+     * Public result endpoint (no auth required)
+     */
+    public function getPublicResult($audioId)
+    {
+        return $this->getMasteringResults($audioId);
     }
 } 

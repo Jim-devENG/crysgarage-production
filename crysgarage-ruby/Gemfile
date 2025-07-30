@@ -5,7 +5,16 @@ gem 'json', '~> 2.6'
 gem 'fileutils', '~> 1.6'
 gem 'securerandom', '~> 0.2'
 
+# Audio Processing - Windows-compatible approach
+gem 'wavefile', '~> 1.1'     # WAV file reading/writing (pure Ruby)
+gem 'ruby-mp3info', '~> 0.8' # MP3 metadata (pure Ruby)
+
+# Additional audio processing capabilities (pure Ruby)
+gem 'ffi', '~> 1.16'         # Foreign Function Interface for native audio processing
+
 group :development do
   gem 'puma', '~> 6.0'
   gem 'rack', '~> 2.2'
 end 
+
+gem "sinatra-cors", "~> 1.2"

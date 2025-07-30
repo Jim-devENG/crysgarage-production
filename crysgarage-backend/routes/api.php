@@ -9,6 +9,7 @@ use App\Http\Controllers\CreditsController;
 use App\Http\Controllers\AddonController;
 use App\Http\Controllers\GenreController;
 use App\Http\Controllers\AudioQualityController;
+use App\Http\Controllers\TierController;
 use App\Http\Middleware\ApiTokenAuth;
 
 /*
@@ -214,6 +215,14 @@ Route::middleware(ApiTokenAuth::class)->group(function () {
     Route::get('/user/stats', [UserController::class, 'getStats']);
     Route::post('/user/upgrade', [UserController::class, 'upgradeTier']);
     
+    // Tier management routes
+    Route::get('/tier/features', [TierController::class, 'getTierFeatures']);
+    Route::get('/tier/dashboard', [TierController::class, 'getTierDashboard']);
+    Route::get('/tier/upload-options', [TierController::class, 'getTierUploadOptions']);
+    Route::get('/tier/processing-options', [TierController::class, 'getTierProcessingOptions']);
+    Route::get('/tier/stats', [TierController::class, 'getTierStats']);
+    Route::post('/tier/upgrade', [TierController::class, 'upgradeTier']);
+    
     // Audio routes
     Route::post('/upload', [AudioController::class, 'upload']);
     Route::get('/status/{audio_id}', [AudioController::class, 'getStatus']);
@@ -279,3 +288,6 @@ Route::post('/public/upload', [AudioController::class, 'publicUpload']);
 
 // Public status route for free tier (no auth required)
 Route::get('/public/status/{audio_id}', [AudioController::class, 'getPublicStatus']);
+
+// Public result route for free tier (no auth required)
+Route::get('/public/result/{audio_id}', [AudioController::class, 'getPublicResult']);

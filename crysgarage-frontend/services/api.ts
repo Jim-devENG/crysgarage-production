@@ -154,14 +154,99 @@ export interface Addon {
   is_purchased: boolean;
 }
 
+export interface TierFeatures {
+  name: string;
+  max_file_size: number;
+  max_tracks_per_month: number;
+  supported_formats: string[];
+  supported_genres: string[];
+  processing_quality: string;
+  download_formats: string[];
+  features: string[];
+  limitations: string[];
+}
+
+export interface TierDashboard {
+  user_info: {
+    name: string;
+    email: string;
+    tier: string;
+    credits: number;
+    join_date: string;
+  };
+  audio_stats: {
+    total_tracks: number;
+    recent_tracks: any[];
+  };
+  tier_specific: {
+    tracks_remaining?: number;
+    upgrade_prompt?: boolean;
+    unlimited_tracks?: boolean;
+    processing_queue?: any[];
+    advanced_analytics?: any;
+    quick_actions: Record<string, boolean>;
+  };
+}
+
+export interface TierUploadOptions {
+  max_file_size: number;
+  supported_formats: string[];
+  supported_genres: string[];
+  upload_methods: {
+    drag_drop: boolean;
+    file_picker: boolean;
+    url_upload: boolean;
+    batch_upload: boolean;
+  };
+  processing_options: {
+    custom_settings: boolean;
+    presets: boolean;
+    advanced_algorithms: boolean;
+  };
+}
+
+export interface TierProcessingOptions {
+  quality: string;
+  download_formats: string[];
+  processing_features: {
+    real_time_progress: boolean;
+    processing_history: boolean;
+    comparison_tools: boolean;
+    advanced_analytics: boolean;
+    custom_algorithms: boolean;
+  };
+  priority_processing: boolean;
+}
+
+export interface TierStats {
+  total_tracks: number;
+  completed_tracks: number;
+  total_size_mb: number;
+  success_rate: number;
+  tracks_remaining?: number;
+  unlimited_tracks?: boolean;
+  upgrade_benefits?: Record<string, string>;
+  processing_efficiency?: {
+    avg_processing_time: number;
+    total_processing_time: number;
+    efficiency_score: number;
+  };
+  popular_genres?: any[];
+  advanced_metrics?: {
+    file_size_distribution: Record<string, number>;
+    processing_success_rate: number;
+    peak_usage_times: Record<string, number>;
+  };
+}
+
 // Authentication API
 export const authAPI = {
   // Sign in user
   signIn: async (email: string, password: string): Promise<{ user: User; token: string }> => {
-    const response = await api.post('/auth/signin', { email, password });
-    const { user, token } = response.data;
-    localStorage.setItem('crysgarage_token', token);
-    return { user, token };
+      const response = await api.post('/auth/signin', { email, password });
+      const { user, token } = response.data;
+      localStorage.setItem('crysgarage_token', token);
+      return { user, token };
   },
 
   // Sign up user
@@ -285,13 +370,13 @@ export const audioAPI = {
     }
 
     try {
-      const response = await api.post('/upload', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
+    const response = await api.post('/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
       console.log('Upload successful:', response.data);
-      return response.data;
+    return response.data;
     } catch (error: any) {
       console.error('=== UPLOAD ERROR ===');
       console.error('Error status:', error.response?.status);
@@ -493,24 +578,24 @@ export const analyticsAPI = {
 // WebSocket connection for real-time updates
 export const createWebSocketConnection = (audioId: string) => {
   const ws = new WebSocket(`ws://localhost:8000/ws/audio/${audioId}`);
-  
+
   ws.onopen = () => {
     console.log('WebSocket connected for audio:', audioId);
   };
-  
+
   ws.onmessage = (event) => {
     const data = JSON.parse(event.data);
     console.log('WebSocket message:', data);
   };
-  
+
   ws.onerror = (error) => {
     console.error('WebSocket error:', error);
   };
-  
+
   ws.onclose = () => {
     console.log('WebSocket disconnected');
   };
-  
+
   return ws;
 };
 
@@ -563,6 +648,50 @@ export const genreAPI = {
   },
 };
 
+// Tier Management API
+export const tierAPI = {
+  // Get tier-specific features
+  getTierFeatures: async (): Promise<{ success: boolean; tier: string; features: TierFeatures }> => {
+    const response = await api.get('/tier/features');
+    return response.data;
+  },
+
+  // Get tier-specific dashboard data
+  getTierDashboard: async (): Promise<{ success: boolean; tier: string; dashboard: TierDashboard }> => {
+    const response = await api.get('/tier/dashboard');
+    return response.data;
+  },
+
+  // Get tier-specific upload options
+  getTierUploadOptions: async (): Promise<{ success: boolean; tier: string; upload_options: TierUploadOptions }> => {
+    const response = await api.get('/tier/upload-options');
+    return response.data;
+  },
+
+  // Get tier-specific processing options
+  getTierProcessingOptions: async (): Promise<{ success: boolean; tier: string; processing_options: TierProcessingOptions }> => {
+    const response = await api.get('/tier/processing-options');
+    return response.data;
+  },
+
+  // Get tier-specific stats
+  getTierStats: async (): Promise<{ success: boolean; tier: string; stats: TierStats }> => {
+    const response = await api.get('/tier/stats');
+    return response.data;
+  },
+
+  // Upgrade user tier
+  upgradeTier: async (newTier: 'professional' | 'advanced'): Promise<{ 
+    success: boolean; 
+    message: string; 
+    new_tier: string; 
+    new_features: TierFeatures 
+  }> => {
+    const response = await api.post('/tier/upgrade', { new_tier: newTier });
+    return response.data;
+  },
+};
+
 // Audio Quality API
 export const audioQualityAPI = {
   // Get audio quality options for a specific tier
@@ -572,4 +701,4 @@ export const audioQualityAPI = {
   },
 };
 
-export default api; 
+export default api;

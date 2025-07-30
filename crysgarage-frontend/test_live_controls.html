@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Live Audio Controls Test</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background: #1a1a1a;
+        color: #ffffff;
+        margin: 0;
+        padding: 20px;
+      }
+      .container {
+        max-width: 800px;
+        margin: 0 auto;
+      }
+      .test-section {
+        background: #2a2a2a;
+        border: 1px solid #fbbf24;
+        border-radius: 8px;
+        padding: 20px;
+        margin: 20px 0;
+      }
+      .audio-player {
+        width: 100%;
+        margin: 10px 0;
+      }
+      .controls {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 20px;
+        margin: 20px 0;
+      }
+      .control-group {
+        background: #333;
+        padding: 15px;
+        border-radius: 8px;
+      }
+      .control-group label {
+        display: block;
+        margin-bottom: 10px;
+        color: #fbbf24;
+        font-weight: bold;
+      }
+      .slider {
+        width: 100%;
+        height: 6px;
+        border-radius: 3px;
+        background: #555;
+        outline: none;
+        -webkit-appearance: none;
+      }
+      .slider::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: #fbbf24;
+        cursor: pointer;
+      }
+      .slider::-moz-range-thumb {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: #fbbf24;
+        cursor: pointer;
+        border: none;
+      }
+      .value-display {
+        text-align: center;
+        margin-top: 10px;
+        font-size: 14px;
+        color: #ccc;
+      }
+      .button {
+        background: #fbbf24;
+        color: #000;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-weight: bold;
+        margin: 5px;
+      }
+      .button:hover {
+        background: #f59e0b;
+      }
+      .button:disabled {
+        background: #666;
+        cursor: not-allowed;
+      }
+      .status {
+        background: #333;
+        padding: 10px;
+        border-radius: 5px;
+        margin: 10px 0;
+        font-family: monospace;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>🎵 Live Audio Controls Test</h1>
+
+      <div class="test-section">
+        <h2>Web Audio API Test</h2>
+        <p>
+          This test verifies that the Web Audio API is working correctly for
+          real-time audio processing.
+        </p>
+
+        <div class="status" id="status">Initializing...</div>
+
+        <audio id="testAudio" controls class="audio-player">
+          <source
+            src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLZiTYIG2m98OScTgwOUarm7blmGgU7k9n1unEiBC13yO/eizEIHWq+8+OWT"
+            type="audio/wav"
+          />
+          Your browser does not support the audio element.
+        </audio>
+
+        <div class="controls">
+          <div class="control-group">
+            <label for="volume">Volume</label>
+            <input
+              type="range"
+              id="volume"
+              class="slider"
+              min="0"
+              max="2"
+              step="0.1"
+              value="1"
+            />
+            <div class="value-display" id="volumeValue">100%</div>
+          </div>
+
+          <div class="control-group">
+            <label for="bass">Bass</label>
+            <input
+              type="range"
+              id="bass"
+              class="slider"
+              min="0.5"
+              max="2"
+              step="0.1"
+              value="1"
+            />
+            <div class="value-display" id="bassValue">100%</div>
+          </div>
+
+          <div class="control-group">
+            <label for="treble">Treble</label>
+            <input
+              type="range"
+              id="treble"
+              class="slider"
+              min="0.5"
+              max="2"
+              step="0.1"
+              value="1"
+            />
+            <div class="value-display" id="trebleValue">100%</div>
+          </div>
+
+          <div class="control-group">
+            <label for="compression">Compression</label>
+            <input
+              type="range"
+              id="compression"
+              class="slider"
+              min="1"
+              max="10"
+              step="0.1"
+              value="1"
+            />
+            <div class="value-display" id="compressionValue">1.0x</div>
+          </div>
+
+          <div class="control-group">
+            <label for="stereoWidth">Stereo Width</label>
+            <input
+              type="range"
+              id="stereoWidth"
+              class="slider"
+              min="0.1"
+              max="3"
+              step="0.1"
+              value="1"
+            />
+            <div class="value-display" id="stereoWidthValue">100%</div>
+          </div>
+        </div>
+
+        <div style="text-align: center; margin: 20px 0">
+          <button class="button" id="resetBtn">Reset Controls</button>
+          <button class="button" id="testBtn">Test Audio Processing</button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      let audioContext;
+      let gainNode;
+      let biquadFilter;
+      let compressor;
+      let stereoPanner;
+      let sourceNode;
+      let audioElement;
+
+      const statusDiv = document.getElementById("status");
+      const volumeSlider = document.getElementById("volume");
+      const bassSlider = document.getElementById("bass");
+      const trebleSlider = document.getElementById("treble");
+      const compressionSlider = document.getElementById("compression");
+      const stereoWidthSlider = document.getElementById("stereoWidth");
+      const resetBtn = document.getElementById("resetBtn");
+      const testBtn = document.getElementById("testBtn");
+
+      // Update value displays
+      function updateValueDisplay(slider, displayId, format = "percent") {
+        const value = parseFloat(slider.value);
+        const display = document.getElementById(displayId);
+        if (format === "percent") {
+          display.textContent = `${(value * 100).toFixed(0)}%`;
+        } else if (format === "ratio") {
+          display.textContent = `${value.toFixed(1)}x`;
+        }
+      }
+
+      // Initialize Web Audio API
+      function initAudioContext() {
+        try {
+          audioElement = document.getElementById("testAudio");
+
+          // Create Audio Context
+          audioContext = new (window.AudioContext ||
+            window.webkitAudioContext)();
+
+          // Create audio nodes
+          gainNode = audioContext.createGain();
+          biquadFilter = audioContext.createBiquadFilter();
+          compressor = audioContext.createDynamicsCompressor();
+          stereoPanner = audioContext.createStereoPanner();
+
+          // Create source from audio element
+          sourceNode = audioContext.createMediaElementSource(audioElement);
+
+          // Connect the audio nodes
+          sourceNode
+            .connect(biquadFilter)
+            .connect(compressor)
+            .connect(gainNode)
+            .connect(stereoPanner)
+            .connect(audioContext.destination);
+
+          // Set initial filter type for bass/treble
+          biquadFilter.type = "lowshelf";
+          biquadFilter.frequency.value = 200;
+
+          statusDiv.textContent = "✅ Web Audio API initialized successfully!";
+          statusDiv.style.color = "#4ade80";
+
+          // Enable controls
+          [
+            volumeSlider,
+            bassSlider,
+            trebleSlider,
+            compressionSlider,
+            stereoWidthSlider,
+          ].forEach((slider) => {
+            slider.disabled = false;
+          });
+          resetBtn.disabled = false;
+          testBtn.disabled = false;
+        } catch (error) {
+          statusDiv.textContent = `❌ Failed to initialize Web Audio API: ${error.message}`;
+          statusDiv.style.color = "#f87171";
+          console.error("Audio initialization error:", error);
+        }
+      }
+
+      // Apply audio controls
+      function applyControls() {
+        if (!audioContext) return;
+
+        const volume = parseFloat(volumeSlider.value);
+        const bass = parseFloat(bassSlider.value);
+        const treble = parseFloat(trebleSlider.value);
+        const compression = parseFloat(compressionSlider.value);
+        const stereoWidth = parseFloat(stereoWidthSlider.value);
+
+        // Volume control
+        if (gainNode) {
+          gainNode.gain.setValueAtTime(volume, audioContext.currentTime);
+        }
+
+        // Bass control
+        if (biquadFilter) {
+          biquadFilter.gain.setValueAtTime(bass - 1, audioContext.currentTime);
+        }
+
+        // Treble control (create high shelf filter)
+        if (biquadFilter) {
+          biquadFilter.type = treble > 1 ? "highshelf" : "lowshelf";
+          biquadFilter.frequency.setValueAtTime(
+            treble > 1 ? 3000 : 200,
+            audioContext.currentTime
+          );
+          biquadFilter.gain.setValueAtTime(
+            treble > 1 ? treble - 1 : bass - 1,
+            audioContext.currentTime
+          );
+        }
+
+        // Compression control
+        if (compressor) {
+          compressor.threshold.setValueAtTime(
+            -50 + (compression - 1) * 20,
+            audioContext.currentTime
+          );
+          compressor.ratio.setValueAtTime(
+            compression,
+            audioContext.currentTime
+          );
+        }
+
+        // Stereo width control
+        if (stereoPanner) {
+          stereoPanner.pan.setValueAtTime(
+            (stereoWidth - 1) * 0.5,
+            audioContext.currentTime
+          );
+        }
+      }
+
+      // Reset controls
+      function resetControls() {
+        volumeSlider.value = 1;
+        bassSlider.value = 1;
+        trebleSlider.value = 1;
+        compressionSlider.value = 1;
+        stereoWidthSlider.value = 1;
+
+        updateValueDisplay(volumeSlider, "volumeValue");
+        updateValueDisplay(bassSlider, "bassValue");
+        updateValueDisplay(trebleSlider, "trebleValue");
+        updateValueDisplay(compressionSlider, "compressionValue", "ratio");
+        updateValueDisplay(stereoWidthSlider, "stereoWidthValue");
+
+        applyControls();
+      }
+
+      // Test audio processing
+      function testAudioProcessing() {
+        if (!audioContext) {
+          alert("Audio context not initialized!");
+          return;
+        }
+
+        // Resume audio context if suspended
+        if (audioContext.state === "suspended") {
+          audioContext.resume();
+        }
+
+        // Play audio
+        audioElement
+          .play()
+          .then(() => {
+            statusDiv.textContent =
+              "🎵 Playing audio with live controls - try adjusting the sliders!";
+            statusDiv.style.color = "#fbbf24";
+          })
+          .catch((error) => {
+            statusDiv.textContent = `❌ Failed to play audio: ${error.message}`;
+            statusDiv.style.color = "#f87171";
+          });
+      }
+
+      // Event listeners
+      volumeSlider.addEventListener("input", () => {
+        updateValueDisplay(volumeSlider, "volumeValue");
+        applyControls();
+      });
+
+      bassSlider.addEventListener("input", () => {
+        updateValueDisplay(bassSlider, "bassValue");
+        applyControls();
+      });
+
+      trebleSlider.addEventListener("input", () => {
+        updateValueDisplay(trebleSlider, "trebleValue");
+        applyControls();
+      });
+
+      compressionSlider.addEventListener("input", () => {
+        updateValueDisplay(compressionSlider, "compressionValue", "ratio");
+        applyControls();
+      });
+
+      stereoWidthSlider.addEventListener("input", () => {
+        updateValueDisplay(stereoWidthSlider, "stereoWidthValue");
+        applyControls();
+      });
+
+      resetBtn.addEventListener("click", resetControls);
+      testBtn.addEventListener("click", testAudioProcessing);
+
+      // Initialize when page loads
+      window.addEventListener("load", () => {
+        // Disable controls initially
+        [
+          volumeSlider,
+          bassSlider,
+          trebleSlider,
+          compressionSlider,
+          stereoWidthSlider,
+        ].forEach((slider) => {
+          slider.disabled = true;
+        });
+        resetBtn.disabled = true;
+        testBtn.disabled = true;
+
+        // Initialize audio context on first user interaction
+        document.addEventListener(
+          "click",
+          () => {
+            if (!audioContext) {
+              initAudioContext();
+            }
+          },
+          {once: true}
+        );
+      });
+    </script>
+  </body>
+</html>

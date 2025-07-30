@@ -122,7 +122,7 @@ export function LandingPage({ onGetStarted, onTryMastering }: LandingPageProps) 
   ];
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen py-8">
       {/* Hero Section with Audio Wave Pattern */}
       <section className="relative overflow-hidden py-20 md:py-32 min-h-screen flex items-center">
         {/* Audio Waveform Pattern Background */}

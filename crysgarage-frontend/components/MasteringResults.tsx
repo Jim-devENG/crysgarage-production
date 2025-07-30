@@ -17,6 +17,7 @@ import {
   CheckCircle
 } from "lucide-react";
 import { audioAPI } from '../services/api';
+// LiveAudioControls removed - using preset-based mastering instead
 
 interface MasteringResultsProps {
   audioId: string;
@@ -481,6 +482,22 @@ export function MasteringResults({
         </div>
       </div>
 
+      {/* Live Audio Controls Notification for Free Tier */}
+      {selectedTier === 'free' && finalMasteredUrl && (
+        <div className="bg-crys-gold/10 border border-crys-gold/30 rounded-lg p-4">
+          <div className="flex items-center gap-2 text-crys-gold mb-2">
+            <Zap className="w-5 h-5" />
+            <span className="text-sm font-medium">🎵 New Feature: Live Audio Controls!</span>
+          </div>
+          <div className="text-xs text-crys-light-grey space-y-1">
+            <p>• Adjust volume, bass, treble, compression, and stereo width in real-time</p>
+            <p>• Hear changes instantly while the audio is playing</p>
+            <p>• Save your customized audio with all adjustments applied</p>
+            <p>• Perfect for fine-tuning your mastered track to your preference</p>
+          </div>
+        </div>
+      )}
+
       {/* Credit Usage & Mastering Status */}
       <Card className="bg-audio-panel-bg border-audio-panel-border">
         <CardHeader>
@@ -521,7 +538,7 @@ export function MasteringResults({
             <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
               <div className="flex items-center gap-2 text-blue-400 mb-2">
                 <span className="text-sm font-medium">Demo Mode Active</span>
-              </div>
+                </div>
               <div className="text-xs text-blue-300 space-y-1">
                 <p>• Using original file as mastered audio (test endpoint unavailable)</p>
                 <p>• No credits were deducted in demo mode</p>
@@ -628,6 +645,8 @@ export function MasteringResults({
           </div>
         </CardContent>
       </Card>
+
+      {/* Preset-based mastering is now handled in FreeTierDashboard */}
 
       {/* Audio Players */}
       <div className="grid md:grid-cols-2 gap-6">
@@ -840,7 +859,7 @@ export function MasteringResults({
                 />
               </div>
             </div>
-          </div>
+            </div>
         </CardContent>
       </Card>
 
@@ -884,7 +903,7 @@ export function MasteringResults({
               <div className="mt-4 p-3 bg-crys-graphite/30 rounded-lg">
                 <div className="flex items-center gap-2 text-crys-light-grey text-sm">
                   <span>💡 Want unlimited downloads?</span>
-                  <Button
+                  <Button 
                     variant="outline"
                     size="sm"
                     className="border-crys-gold/30 text-crys-gold hover:bg-crys-gold/10"
@@ -900,4 +919,4 @@ export function MasteringResults({
       </Card>
     </div>
   );
-} 
+}

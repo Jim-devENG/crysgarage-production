@@ -38,6 +38,7 @@ function AppContent() {
   const [showBillingModal, setShowBillingModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showProfileEditModal, setShowProfileEditModal] = useState(false);
+  const [selectedTier, setSelectedTier] = useState<string>('free'); // Add selected tier state
   
   // Handle navigation with proper type conversion
   const handleNavigation = (section: string) => {
@@ -45,6 +46,20 @@ function AppContent() {
         section === 'results' || section === 'pricing' || section === 'help' || 
         section === 'courses' || section === 'marketplace' || section === 'profile') {
           setCurrentPage(section);
+    }
+  };
+
+  // Handle tier selection
+  const handleTierSelection = (tierId: string) => {
+    setSelectedTier(tierId);
+    
+    if (tierId === 'free') {
+      // For free tier, allow access to dashboard even for non-authenticated users
+      setCurrentPage('dashboard');
+    } else {
+      // For paid tiers, require authentication
+      setAuthMode('signup');
+      setShowAuthModal(true);
     }
   };
 
@@ -91,7 +106,7 @@ function AppContent() {
           onShowProfile={() => setCurrentPage('profile')}
         />
         
-        <main className="pt-20">
+        <main className="pt-20 px-4 py-8">
           {currentPage === 'home' && (
             <LandingPage 
               onGetStarted={() => {
@@ -107,20 +122,33 @@ function AppContent() {
             <>
               {user.tier === 'free' && (
                 <FreeTierDashboard 
-                  onFileUpload={() => {}}
+                  onFileUpload={(file) => {
+                    // Handle file upload for free tier
+                    console.log('Free tier file upload:', file);
+                    // You can add upload logic here or call a function from context
+                  }}
                   onUpgrade={() => setShowPaymentModal(true)}
                   credits={user.credits || 0}
+                  isAuthenticated={true} // Pass authentication status
                 />
               )}
               {user.tier === 'pro' && (
                 <ProfessionalTierDashboard 
-                  onFileUpload={() => {}}
+                  onFileUpload={(file) => {
+                    // Handle file upload for professional tier
+                    console.log('Professional tier file upload:', file);
+                    // You can add upload logic here or call a function from context
+                  }}
                   credits={user.credits || 0}
                 />
               )}
               {user.tier === 'advanced' && (
                 <AdvancedTierDashboard 
-                  onFileUpload={() => {}}
+                  onFileUpload={(file) => {
+                    // Handle file upload for advanced tier
+                    console.log('Advanced tier file upload:', file);
+                    // You can add upload logic here or call a function from context
+                  }}
                 />
               )}
             </>
@@ -156,7 +184,7 @@ function AppContent() {
           {currentPage === 'pricing' && (
             <PricingPage 
               currentTier={user.tier}
-              onSelectTier={() => {}}
+              onSelectTier={handleTierSelection}
               onGoToDashboard={() => setCurrentPage('dashboard')}
             />
           )}
@@ -252,18 +280,19 @@ function AppContent() {
         onShowProfile={() => setShowAuthModal(true)}
       />
       
-      {currentPage === 'landing' && (
-        <LandingPage 
-          onGetStarted={() => {
-            setAuthMode('signup');
-            setShowAuthModal(true);
-          }}
-          onTryMastering={() => {
-            setAuthMode('signin');
-            setShowAuthModal(true);
-          }}
-        />
-      )}
+      <main className="pt-20 px-4 py-8">
+        {currentPage === 'landing' && (
+          <LandingPage 
+            onGetStarted={() => {
+              setAuthMode('signup');
+              setShowAuthModal(true);
+            }}
+            onTryMastering={() => {
+              setAuthMode('signin');
+              setShowAuthModal(true);
+            }}
+          />
+        )}
       
       {currentPage === 'home' && (
         <LandingPage 
@@ -281,8 +310,8 @@ function AppContent() {
       {currentPage === 'pricing' && (
         <PricingPage 
           currentTier="free"
-          onSelectTier={() => {}}
-          onGoToDashboard={() => setCurrentPage('landing')}
+          onSelectTier={handleTierSelection}
+          onGoToDashboard={() => setCurrentPage('dashboard')}
         />
       )}
       
@@ -292,11 +321,28 @@ function AppContent() {
         />
       )}
       
-      {currentPage === 'courses' && (
-        <CoursesPage 
-          onGetStarted={() => setShowAuthModal(true)}
-        />
-      )}
+        {currentPage === 'courses' && (
+          <CoursesPage 
+            onGetStarted={() => setShowAuthModal(true)}
+          />
+        )}
+        
+        {currentPage === 'dashboard' && !isAuthenticated && (
+          <FreeTierDashboard 
+            onFileUpload={(file) => {
+              // For non-authenticated users, prompt them to sign up
+              setAuthMode('signup');
+              setShowAuthModal(true);
+            }}
+            onUpgrade={() => {
+              setAuthMode('signup');
+              setShowAuthModal(true);
+            }}
+            credits={3} // Default free tier credits
+            isAuthenticated={false} // Pass authentication status
+          />
+        )}
+      </main>
       
       {showAuthModal && (
         <AuthModal 

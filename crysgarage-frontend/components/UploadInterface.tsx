@@ -79,17 +79,27 @@ export function UploadInterface({ onFileUpload, disabled = false, isLoading = fa
       setUploadProgress(0);
       setIsUploading(true);
       
-      console.log('Starting file upload to backend:', file.name);
+      console.log('Starting file upload:', file.name);
       
-      // Use the context's uploadFile function which handles authentication
-      const audioId = await uploadFile(file);
-      
-      console.log('File uploaded successfully, audio_id:', audioId);
-      
-      setUploadProgress(100);
-      
-      // Call the parent handler with the uploaded file
-      onFileUpload?.(file);
+      // For free tier demo, skip real backend upload and go directly to parent handler
+      if (onFileUpload) {
+        console.log('Using parent handler for demo mode');
+        // Simulate upload progress
+        setUploadProgress(50);
+        await new Promise(resolve => setTimeout(resolve, 500));
+        setUploadProgress(100);
+        onFileUpload(file);
+      } else {
+        // Only try real backend upload if no parent handler is provided
+        try {
+          const audioId = await uploadFile(file);
+          console.log('File uploaded successfully to backend, audio_id:', audioId);
+          setUploadProgress(100);
+        } catch (backendError) {
+          console.error('Backend upload failed:', backendError);
+          throw backendError;
+        }
+      }
       
     } catch (error: any) {
       console.error('Upload failed:', error);

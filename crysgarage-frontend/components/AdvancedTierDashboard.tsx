@@ -1,13 +1,22 @@
+import { useState, useEffect } from 'react';
 import { Button } from "./ui/button";
 import { Card, CardContent } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { UploadInterface } from "./UploadInterface";
+import { tierAPI, TierFeatures, TierDashboard } from "../services/api";
 import { 
   Music, 
   Zap, 
   Download, 
   Clock, 
   Headphones,
+  Gift,
+  CreditCard,
+  Star,
+  Lock,
+  AlertTriangle,
+  X,
+  Loader2,
   Crown,
   CheckCircle,
   TrendingUp,
@@ -24,264 +33,307 @@ interface AdvancedTierDashboardProps {
 }
 
 export function AdvancedTierDashboard({ onFileUpload }: AdvancedTierDashboardProps) {
+  const [tierFeatures, setTierFeatures] = useState<TierFeatures | null>(null);
+  const [tierDashboard, setTierDashboard] = useState<TierDashboard | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Fetch tier-specific data on component mount
+  useEffect(() => {
+    const fetchTierData = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+
+        // Fetch tier features and dashboard data
+        const [featuresResponse, dashboardResponse] = await Promise.all([
+          tierAPI.getTierFeatures(),
+          tierAPI.getTierDashboard()
+        ]);
+
+        setTierFeatures(featuresResponse.features);
+        setTierDashboard(dashboardResponse.dashboard);
+      } catch (err: any) {
+        console.error('Failed to fetch tier data:', err);
+        setError(err.response?.data?.message || 'Failed to load tier information');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchTierData();
+  }, []);
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="max-w-7xl mx-auto py-8">
+        <div className="text-center py-12">
+          <Loader2 className="w-8 h-8 text-crys-gold animate-spin mx-auto mb-4" />
+          <h2 className="text-crys-white text-xl font-semibold mb-2">Loading Advanced Tier Dashboard</h2>
+          <p className="text-crys-light-grey">Preparing your master-level mastering experience...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="max-w-7xl mx-auto py-8">
+        <div className="text-center py-12">
+          <AlertTriangle className="w-8 h-8 text-red-400 mx-auto mb-4" />
+          <h2 className="text-crys-white text-xl font-semibold mb-2">Failed to Load Dashboard</h2>
+          <p className="text-crys-light-grey mb-4">{error}</p>
+          <Button 
+            onClick={() => window.location.reload()}
+            className="bg-crys-gold hover:bg-crys-gold-muted text-crys-black"
+          >
+            Try Again
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Get tier-specific data
+  const features = tierFeatures || {
+    name: 'Advanced Tier',
+    max_file_size: 500,
+    max_tracks_per_month: -1,
+    supported_formats: ['wav', 'mp3', 'flac', 'aiff'],
+    supported_genres: ['afrobeats', 'gospel', 'hip_hop', 'highlife'],
+    processing_quality: 'master',
+    download_formats: ['wav', 'mp3', 'flac'],
+    features: [
+      'Master quality audio mastering',
+      'Unlimited processing',
+      'All genres and formats',
+      'Custom presets',
+      'Advanced analytics',
+      'Priority support',
+      'Custom processing algorithms'
+    ],
+    limitations: [
+      'No limitations'
+    ]
+  };
+
+  const dashboard = tierDashboard || {
+    user_info: {
+      name: 'User',
+      email: '',
+      tier: 'advanced',
+      credits: -1,
+      join_date: ''
+    },
+    audio_stats: {
+      total_tracks: 0,
+      recent_tracks: []
+    },
+    tier_specific: {
+      unlimited_tracks: true,
+      advanced_analytics: {},
+      quick_actions: {
+        upload_audio: true,
+        view_analytics: true,
+        manage_presets: true,
+        contact_support: true,
+        custom_algorithms: true
+      }
+    }
+  };
+
+  const analytics = dashboard.tier_specific.advanced_analytics || {};
+
   return (
-    <div className="max-w-6xl mx-auto">
+    <div className="max-w-7xl mx-auto py-8">
       {/* Header */}
       <div className="text-center mb-12">
         <div className="inline-flex items-center gap-2 bg-purple-500/10 border border-purple-500/30 rounded-full px-4 py-2 mb-6">
           <Crown className="w-4 h-4 text-purple-400" />
-          <span className="text-purple-400 text-sm">Advanced Professional Studio</span>
+          <span className="text-purple-400 text-sm">Advanced Tier</span>
         </div>
         
         <h1 className="text-4xl md:text-6xl font-bold text-crys-white mb-4">
-          Advanced Manual
-          <span className="block text-crys-gold">Mastering Suite</span>
+          Advanced
+          <span className="block text-crys-gold">Mastering Studio</span>
         </h1>
         
-        <p className="text-xl text-crys-light-grey mb-8 max-w-3xl mx-auto">
-          Complete mastering control with real-time parameters, unlimited sessions, 
-          and professional-grade tools for mastering engineers and serious producers.
+        <p className="text-xl text-crys-light-grey mb-8 max-w-2xl mx-auto">
+          Master-level audio processing with unlimited capabilities, custom algorithms, and advanced analytics.
         </p>
         
-        {/* Unlimited Badge */}
-        <div className="inline-flex items-center gap-4 bg-crys-graphite/30 rounded-2xl p-4 mb-8">
+        {/* Unlimited Status */}
+        <div className="inline-flex items-center gap-4 bg-purple-500/10 border border-purple-500/30 rounded-2xl p-4 mb-8">
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 bg-purple-400 rounded-full pulse-gold"></div>
-            <span className="text-crys-white">Mastering Sessions:</span>
+            <Infinity className="w-4 h-4 text-purple-400" />
+            <span className="text-crys-white">Unlimited Processing</span>
           </div>
           <Badge 
             variant="secondary" 
-            className="bg-purple-500/20 text-purple-400 text-lg px-3 py-1 flex items-center gap-1"
+            className="bg-purple-500/20 text-purple-400 text-lg px-3 py-1"
           >
-            <Infinity className="w-4 h-4" />
-            Unlimited
+            ∞ Unlimited
           </Badge>
+          <span className="text-purple-400 text-sm">✨ Master tier</span>
         </div>
         
         <div className="flex items-center justify-center gap-6 text-sm text-crys-light-grey mb-12">
           <div className="flex items-center gap-2">
-            <Sliders className="w-4 h-4 text-crys-gold" />
-            <span>Real-time controls</span>
+            <Clock className="w-4 h-4 text-crys-gold" />
+            <span>Priority processing</span>
           </div>
           <div className="flex items-center gap-2">
-            <Eye className="w-4 h-4 text-crys-gold" />
-            <span>Live preview</span>
+            <Music className="w-4 h-4 text-crys-gold" />
+            <span>All genres supported</span>
           </div>
           <div className="flex items-center gap-2">
-            <BarChart3 className="w-4 h-4 text-crys-gold" />
-            <span>Professional analysis</span>
+            <Download className="w-4 h-4 text-crys-gold" />
+            <span>All formats available</span>
           </div>
         </div>
       </div>
 
       {/* Upload Interface */}
-      <UploadInterface onFileUpload={onFileUpload} />
-      
-      {/* Advanced Tier Features Grid */}
-      <div className="grid md:grid-cols-3 lg:grid-cols-4 gap-6 mt-16 mb-12">
-        <Card className="bg-audio-panel-bg border-audio-panel-border">
-          <CardContent className="p-6 text-center">
-            <div className="w-12 h-12 bg-crys-gold/20 rounded-lg flex items-center justify-center mx-auto mb-4">
-              <Sliders className="w-6 h-6 text-crys-gold" />
-            </div>
-            <h3 className="text-crys-white mb-2">Manual Controls</h3>
-            <p className="text-crys-light-grey text-sm">
-              8-band EQ, compression, limiting with real-time adjustment
-            </p>
-            <div className="flex items-center justify-center gap-1 mt-2">
-              <CheckCircle className="w-3 h-3 text-green-400" />
-              <span className="text-green-400 text-xs">Full Access</span>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card className="bg-audio-panel-bg border-audio-panel-border">
-          <CardContent className="p-6 text-center">
-            <div className="w-12 h-12 bg-crys-gold/20 rounded-lg flex items-center justify-center mx-auto mb-4">
-              <Eye className="w-6 h-6 text-crys-gold" />
-            </div>
-            <h3 className="text-crys-white mb-2">Live Preview</h3>
-            <p className="text-crys-light-grey text-sm">
-              Hear changes instantly with A/B comparison capabilities
-            </p>
-            <div className="flex items-center justify-center gap-1 mt-2">
-              <CheckCircle className="w-3 h-3 text-green-400" />
-              <span className="text-green-400 text-xs">Real-time</span>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card className="bg-audio-panel-bg border-audio-panel-border">
-          <CardContent className="p-6 text-center">
-            <div className="w-12 h-12 bg-crys-gold/20 rounded-lg flex items-center justify-center mx-auto mb-4">
-              <BarChart3 className="w-6 h-6 text-crys-gold" />
-            </div>
-            <h3 className="text-crys-white mb-2">Pro Analysis</h3>
-            <p className="text-crys-light-grey text-sm">
-              Spectrum analyzer, loudness meters, phase correlation
-            </p>
-            <div className="flex items-center justify-center gap-1 mt-2">
-              <CheckCircle className="w-3 h-3 text-green-400" />
-              <span className="text-green-400 text-xs">Advanced</span>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card className="bg-audio-panel-bg border-audio-panel-border">
-          <CardContent className="p-6 text-center">
-            <div className="w-12 h-12 bg-crys-gold/20 rounded-lg flex items-center justify-center mx-auto mb-4">
-              <Infinity className="w-6 h-6 text-crys-gold" />
-            </div>
-            <h3 className="text-crys-white mb-2">Unlimited</h3>
-            <p className="text-crys-light-grey text-sm">
-              No session limits, unlimited file size, all features
-            </p>
-            <div className="flex items-center justify-center gap-1 mt-2">
-              <CheckCircle className="w-3 h-3 text-green-400" />
-              <span className="text-green-400 text-xs">Everything</span>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <UploadInterface 
+        onFileUpload={onFileUpload}
+        disabled={false}
+      />
 
-      {/* Detailed Features */}
-      <div className="grid md:grid-cols-2 gap-8 mb-12">
-        <Card className="bg-audio-panel-bg border-audio-panel-border">
-          <CardContent className="p-6">
-            <h3 className="text-crys-white text-lg mb-4 flex items-center gap-2">
-              <Settings className="w-5 h-5 text-crys-gold" />
-              Manual Mastering Tools
-            </h3>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <h4 className="text-crys-gold text-sm font-medium">EQ & Dynamics</h4>
-                <ul className="space-y-1 text-crys-light-grey text-xs">
-                  <li>• 8-band graphic EQ</li>
-                  <li>• Multiband compression</li>
-                  <li>• Dynamic EQ</li>
-                  <li>• Stereo imaging</li>
-                </ul>
-              </div>
-              <div className="space-y-2">
-                <h4 className="text-crys-gold text-sm font-medium">Limiting & Effects</h4>
-                <ul className="space-y-1 text-crys-light-grey text-xs">
-                  <li>• Advanced limiting</li>
-                  <li>• Harmonic enhancement</li>
-                  <li>• Tape saturation</li>
-                  <li>• Mid-side processing</li>
-                </ul>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card className="bg-audio-panel-bg border-audio-panel-border">
-          <CardContent className="p-6">
-            <h3 className="text-crys-white text-lg mb-4 flex items-center gap-2">
-              <BarChart3 className="w-5 h-5 text-crys-gold" />
-              Analysis & Monitoring
-            </h3>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <h4 className="text-crys-gold text-sm font-medium">Visual Analysis</h4>
-                <ul className="space-y-1 text-crys-light-grey text-xs">
-                  <li>• Real-time spectrum</li>
-                  <li>• Loudness metering</li>
-                  <li>• Phase correlation</li>
-                  <li>• Waveform display</li>
-                </ul>
-              </div>
-              <div className="space-y-2">
-                <h4 className="text-crys-gold text-sm font-medium">Reference Tools</h4>
-                <ul className="space-y-1 text-crys-light-grey text-xs">
-                  <li>• A/B comparison</li>
-                  <li>• Reference matching</li>
-                  <li>• Before/after toggle</li>
-                  <li>• Bypass controls</li>
-                </ul>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Quality & Format Options */}
-      <Card className="bg-gradient-to-r from-crys-gold/10 via-crys-gold/5 to-crys-gold/10 border-crys-gold/30 mb-12">
-        <CardContent className="p-8">
-          <h3 className="text-2xl font-bold text-crys-white text-center mb-6">
-            Complete Quality & Format Support
+      {/* Advanced Analytics */}
+      <Card className="bg-audio-panel-bg border-audio-panel-border mt-8">
+        <CardContent className="p-6">
+          <h3 className="text-crys-white text-lg mb-4 flex items-center gap-2">
+            <BarChart3 className="w-5 h-5 text-crys-gold" />
+            Advanced Analytics
           </h3>
-          <div className="grid md:grid-cols-3 gap-6">
+          <div className="grid md:grid-cols-4 gap-4">
             <div className="text-center">
-              <FileAudio className="w-8 h-8 text-crys-gold mx-auto mb-3" />
-              <h4 className="text-crys-white font-medium mb-2">All Sample Rates</h4>
-              <p className="text-crys-light-grey text-sm">44.1kHz to 192kHz</p>
-              <Badge variant="secondary" className="bg-green-500/20 text-green-400 mt-2">
-                Included
-              </Badge>
+              <div className="text-2xl font-bold text-crys-gold mb-1">{dashboard.audio_stats.total_tracks}</div>
+              <div className="text-crys-light-grey text-sm">Total Tracks</div>
             </div>
             <div className="text-center">
-              <Settings className="w-8 h-8 text-crys-gold mx-auto mb-3" />
-              <h4 className="text-crys-white font-medium mb-2">All Bit Depths</h4>
-              <p className="text-crys-light-grey text-sm">16/24/32-bit processing</p>
-              <Badge variant="secondary" className="bg-green-500/20 text-green-400 mt-2">
-                Included
-              </Badge>
+              <div className="text-2xl font-bold text-crys-gold mb-1">∞</div>
+              <div className="text-crys-light-grey text-sm">Credits Available</div>
             </div>
             <div className="text-center">
-              <Music className="w-8 h-8 text-crys-gold mx-auto mb-3" />
-              <h4 className="text-crys-white font-medium mb-2">All Genres</h4>
-              <p className="text-crys-light-grey text-sm">Every genre optimization</p>
-              <Badge variant="secondary" className="bg-green-500/20 text-green-400 mt-2">
-                Included
-              </Badge>
+              <div className="text-2xl font-bold text-crys-gold mb-1">{features.supported_formats.length}</div>
+              <div className="text-crys-light-grey text-sm">Formats Supported</div>
             </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-crys-gold mb-1">{features.supported_genres.length}</div>
+              <div className="text-crys-light-grey text-sm">Genres Available</div>
+            </div>
+            </div>
+          </CardContent>
+        </Card>
+        
+      {/* Advanced Tier Features */}
+      <div className="grid md:grid-cols-3 gap-6 mt-16 mb-12">
+        <Card className="bg-audio-panel-bg border-audio-panel-border">
+          <CardContent className="p-6 text-center">
+            <div className="w-12 h-12 bg-purple-500/20 rounded-lg flex items-center justify-center mx-auto mb-4">
+              <Zap className="w-6 h-6 text-purple-400" />
+            </div>
+            <h3 className="text-crys-white text-lg mb-2">Master AI Processing</h3>
+            <p className="text-crys-light-grey text-sm">
+              Custom algorithms and master-quality processing for professional studios
+            </p>
+          </CardContent>
+        </Card>
+        
+        <Card className="bg-audio-panel-bg border-audio-panel-border">
+          <CardContent className="p-6 text-center">
+            <div className="w-12 h-12 bg-purple-500/20 rounded-lg flex items-center justify-center mx-auto mb-4">
+              <Sliders className="w-6 h-6 text-purple-400" />
+            </div>
+            <h3 className="text-crys-white text-lg mb-2">{features.processing_quality} Quality</h3>
+            <p className="text-crys-light-grey text-sm">
+              {features.processing_quality === 'master' ? '96kHz/32-bit' : '192kHz/32-bit'} processing for studio-quality results
+            </p>
+          </CardContent>
+        </Card>
+        
+        <Card className="bg-audio-panel-bg border-audio-panel-border">
+          <CardContent className="p-6 text-center">
+            <div className="w-12 h-12 bg-purple-500/20 rounded-lg flex items-center justify-center mx-auto mb-4">
+              <Download className="w-6 h-6 text-purple-400" />
+            </div>
+            <h3 className="text-crys-white text-lg mb-2">All Formats</h3>
+            <p className="text-crys-light-grey text-sm">
+              Download in {features.download_formats.join(', ')} formats for any platform
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Advanced Features */}
+      <Card className="bg-purple-500/5 border-purple-500/30 mt-8">
+          <CardContent className="p-6">
+          <h3 className="text-purple-400 text-lg font-semibold mb-4 flex items-center gap-2">
+            <Crown className="w-5 h-5" />
+            Advanced Features
+            </h3>
+          <div className="grid md:grid-cols-2 gap-6">
+            <div>
+              <h4 className="text-crys-white font-medium mb-2">Included Features:</h4>
+              <ul className="text-crys-light-grey text-sm space-y-1">
+                {features.features.map((feature, index) => (
+                  <li key={index} className="flex items-center gap-2">
+                    <CheckCircle className="w-3 h-3 text-purple-400 flex-shrink-0" />
+                    {feature}
+                  </li>
+                ))}
+                </ul>
+              </div>
+            <div>
+              <h4 className="text-crys-white font-medium mb-2">Technical Specs:</h4>
+              <ul className="text-crys-light-grey text-sm space-y-1">
+                <li>• Max file size: {features.max_file_size}MB</li>
+                <li>• Formats: {features.supported_formats.join(', ')}</li>
+                <li>• Quality: {features.processing_quality}</li>
+                <li>• Monthly tracks: Unlimited</li>
+                <li>• Custom algorithms: Available</li>
+                <li>• Priority support: 24/7</li>
+                </ul>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        
+      {/* Quick Actions */}
+      <Card className="bg-audio-panel-bg border-audio-panel-border mt-8">
+          <CardContent className="p-6">
+            <h3 className="text-crys-white text-lg mb-4 flex items-center gap-2">
+            <Settings className="w-5 h-5 text-crys-gold" />
+            Quick Actions
+          </h3>
+          <div className="grid md:grid-cols-3 gap-4">
+            <Button 
+              variant="outline"
+              className="border-crys-gold/30 text-crys-gold hover:bg-crys-gold/10 h-12"
+            >
+              <BarChart3 className="w-4 h-4 mr-2" />
+              View Analytics
+            </Button>
+            <Button 
+              variant="outline"
+              className="border-crys-gold/30 text-crys-gold hover:bg-crys-gold/10 h-12"
+            >
+              <Sliders className="w-4 h-4 mr-2" />
+              Manage Presets
+            </Button>
+            <Button 
+              variant="outline"
+              className="border-crys-gold/30 text-crys-gold hover:bg-crys-gold/10 h-12"
+            >
+              <Eye className="w-4 h-4 mr-2" />
+              Custom Algorithms
+            </Button>
           </div>
         </CardContent>
       </Card>
-
-      {/* Professional Workflow */}
-      <div className="grid md:grid-cols-4 gap-4">
-        <Card className="bg-audio-panel-bg border-audio-panel-border text-center">
-          <CardContent className="p-4">
-            <div className="w-8 h-8 bg-crys-gold/20 rounded-lg flex items-center justify-center mx-auto mb-2">
-              <span className="text-crys-gold font-bold">1</span>
-            </div>
-            <h4 className="text-crys-white text-sm font-medium">Upload & Analyze</h4>
-            <p className="text-crys-light-grey text-xs mt-1">Automatic audio analysis</p>
-          </CardContent>
-        </Card>
-        
-        <Card className="bg-audio-panel-bg border-audio-panel-border text-center">
-          <CardContent className="p-4">
-            <div className="w-8 h-8 bg-crys-gold/20 rounded-lg flex items-center justify-center mx-auto mb-2">
-              <span className="text-crys-gold font-bold">2</span>
-            </div>
-            <h4 className="text-crys-white text-sm font-medium">Manual Control</h4>
-            <p className="text-crys-light-grey text-xs mt-1">Real-time parameter adjustment</p>
-          </CardContent>
-        </Card>
-        
-        <Card className="bg-audio-panel-bg border-audio-panel-border text-center">
-          <CardContent className="p-4">
-            <div className="w-8 h-8 bg-crys-gold/20 rounded-lg flex items-center justify-center mx-auto mb-2">
-              <span className="text-crys-gold font-bold">3</span>
-            </div>
-            <h4 className="text-crys-white text-sm font-medium">Live Preview</h4>
-            <p className="text-crys-light-grey text-xs mt-1">A/B comparison & feedback</p>
-          </CardContent>
-        </Card>
-        
-        <Card className="bg-audio-panel-bg border-audio-panel-border text-center">
-          <CardContent className="p-4">
-            <div className="w-8 h-8 bg-crys-gold/20 rounded-lg flex items-center justify-center mx-auto mb-2">
-              <span className="text-crys-gold font-bold">4</span>
-            </div>
-            <h4 className="text-crys-white text-sm font-medium">Export & Share</h4>
-            <p className="text-crys-light-grey text-xs mt-1">Multiple formats ready</p>
-          </CardContent>
-        </Card>
-      </div>
     </div>
   );
 }
