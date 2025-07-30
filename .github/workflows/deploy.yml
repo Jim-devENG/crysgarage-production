@@ -21,4 +21,5 @@ jobs:
           script: |
             cd /var/www/crysgarage-deploy
             git pull origin master
+            chmod +x deploy.sh
             ./deploy.sh
