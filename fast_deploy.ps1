@@ -2,7 +2,7 @@
 # PowerShell Version
 
 param(
-    [string]$CommitMessage = "Fast deploy: Update application",
+    [string]$CommitMessage = "",
     [switch]$SkipCommit = $false,
     [switch]$SkipPush = $false
 )
