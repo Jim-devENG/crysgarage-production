@@ -488,7 +488,7 @@ export function LandingPage({ onGetStarted, onTryMastering }: LandingPageProps) 
       </section>
 
       {/* Features Section */}
-      <section className="bg-crys-charcoal/50 relative">
+      <section className="bg-crys-charcoal/50 relative pt-16 pb-16">
         {/* Background Image */}
         <div className="absolute inset-0 z-0">
           <ImageWithFallback
@@ -562,7 +562,7 @@ export function LandingPage({ onGetStarted, onTryMastering }: LandingPageProps) 
       </section>
 
       {/* How It Works */}
-      <section className="relative">
+      <section className="relative pt-16 pb-16">
         {/* Background with Audio Visualizations */}
         <div className="absolute inset-0 z-0">
           <ImageWithFallback
@@ -673,7 +673,7 @@ export function LandingPage({ onGetStarted, onTryMastering }: LandingPageProps) 
       </section>
 
       {/* Testimonials */}
-      <section className="bg-crys-charcoal/30 relative">
+      <section className="bg-crys-charcoal/30 relative pt-16 pb-16">
         {/* Background */}
         <div className="absolute inset-0 z-0">
           <ImageWithFallback
@@ -751,7 +751,7 @@ export function LandingPage({ onGetStarted, onTryMastering }: LandingPageProps) 
       </section>
 
       {/* African Music Focus Section */}
-      <section className="relative">
+      <section className="relative pt-16 pb-16">
         {/* Background */}
         <div className="absolute inset-0 z-0">
           <ImageWithFallback
@@ -874,7 +874,7 @@ export function LandingPage({ onGetStarted, onTryMastering }: LandingPageProps) 
       </section>
 
       {/* Perfect For Section */}
-      <section className="bg-crys-charcoal/50 relative">
+      <section className="bg-crys-charcoal/50 relative pt-16 pb-16">
         {/* Background */}
         <div className="absolute inset-0 z-0">
           <ImageWithFallback
@@ -974,7 +974,7 @@ export function LandingPage({ onGetStarted, onTryMastering }: LandingPageProps) 
       </section>
 
       {/* CTA Section */}
-      <section className="bg-gradient-to-r from-crys-gold/10 via-crys-gold/5 to-crys-gold/10 relative overflow-hidden">
+      <section className="bg-gradient-to-r from-crys-gold/10 via-crys-gold/5 to-crys-gold/10 relative overflow-hidden pt-16 pb-16">
         {/* Background */}
         <div className="absolute inset-0 z-0">
           <ImageWithFallback
