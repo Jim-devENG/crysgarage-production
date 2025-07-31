@@ -124,7 +124,7 @@ export function LandingPage({ onGetStarted, onTryMastering }: LandingPageProps) 
   return (
     <div className="min-h-screen">
       {/* Hero Section with Audio Wave Pattern */}
-              <section className="relative overflow-hidden min-h-screen flex items-center bg-gradient-to-br from-crys-black via-crys-graphite to-crys-black">
+              <section className="relative overflow-hidden min-h-screen flex items-center bg-gradient-to-br from-crys-black via-crys-graphite to-crys-black" style={{ marginTop: '-80px', paddingTop: '80px' }}>
         {/* Audio Waveform Pattern Background */}
         <div className="absolute inset-0 z-0">
           {/* Primary Gradient Background */}

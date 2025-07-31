@@ -99,7 +99,7 @@ function AppContent() {
   return (
       <div className="min-h-screen bg-gradient-to-br from-crys-black via-crys-graphite to-crys-black relative">
         {/* Background overlay to cover gaps */}
-        <div className="absolute inset-0 bg-gradient-to-br from-crys-black via-crys-graphite to-crys-black -z-10"></div>
+        <div className="absolute inset-0 bg-gradient-to-br from-crys-black via-crys-graphite to-crys-black -z-10" style={{ top: '-80px', height: 'calc(100% + 80px)' }}></div>
         <Header 
           user={user}
           onSignOut={signOut}
@@ -276,7 +276,7 @@ function AppContent() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-crys-black via-crys-graphite to-crys-black relative">
         {/* Background overlay to cover gaps */}
-        <div className="absolute inset-0 bg-gradient-to-br from-crys-black via-crys-graphite to-crys-black -z-10"></div>
+        <div className="absolute inset-0 bg-gradient-to-br from-crys-black via-crys-graphite to-crys-black -z-10" style={{ top: '-80px', height: 'calc(100% + 80px)' }}></div>
       <Header 
         user={null}
         onNavigate={handleNavigation}
