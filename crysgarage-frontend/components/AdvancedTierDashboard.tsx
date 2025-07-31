@@ -67,8 +67,8 @@ export function AdvancedTierDashboard({ onFileUpload }: AdvancedTierDashboardPro
   // Loading state
   if (isLoading) {
     return (
-      <div className="max-w-7xl mx-auto py-8">
-        <div className="text-center py-12">
+      <div className="max-w-7xl mx-auto">
+        <div className="text-center">
           <Loader2 className="w-8 h-8 text-crys-gold animate-spin mx-auto mb-4" />
           <h2 className="text-crys-white text-xl font-semibold mb-2">Loading Advanced Tier Dashboard</h2>
           <p className="text-crys-light-grey">Preparing your master-level mastering experience...</p>
@@ -80,8 +80,8 @@ export function AdvancedTierDashboard({ onFileUpload }: AdvancedTierDashboardPro
   // Error state
   if (error) {
     return (
-      <div className="max-w-7xl mx-auto py-8">
-        <div className="text-center py-12">
+      <div className="max-w-7xl mx-auto">
+        <div className="text-center">
           <AlertTriangle className="w-8 h-8 text-red-400 mx-auto mb-4" />
           <h2 className="text-crys-white text-xl font-semibold mb-2">Failed to Load Dashboard</h2>
           <p className="text-crys-light-grey mb-4">{error}</p>
@@ -147,7 +147,7 @@ export function AdvancedTierDashboard({ onFileUpload }: AdvancedTierDashboardPro
   const analytics = dashboard.tier_specific.advanced_analytics || {};
 
   return (
-    <div className="max-w-7xl mx-auto py-8">
+    <div className="max-w-7xl mx-auto">
       {/* Header */}
       <div className="text-center mb-12">
         <div className="inline-flex items-center gap-2 bg-purple-500/10 border border-purple-500/30 rounded-full px-4 py-2 mb-6">

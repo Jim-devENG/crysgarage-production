@@ -122,9 +122,9 @@ export function LandingPage({ onGetStarted, onTryMastering }: LandingPageProps) 
   ];
 
   return (
-    <div className="min-h-screen py-8">
+    <div className="min-h-screen">
       {/* Hero Section with Audio Wave Pattern */}
-      <section className="relative overflow-hidden py-20 md:py-32 min-h-screen flex items-center">
+              <section className="relative overflow-hidden min-h-screen flex items-center">
         {/* Audio Waveform Pattern Background */}
         <div className="absolute inset-0 z-0">
           {/* Primary Gradient Background */}
@@ -287,7 +287,7 @@ export function LandingPage({ onGetStarted, onTryMastering }: LandingPageProps) 
           </div>
         </div>
 
-        <div className="container mx-auto px-4 relative z-10">
+        <div className="container mx-auto relative z-10">
           <div className="grid lg:grid-cols-2 gap-12 items-center max-w-7xl mx-auto">
             {/* Left Content */}
             <motion.div 
@@ -488,7 +488,7 @@ export function LandingPage({ onGetStarted, onTryMastering }: LandingPageProps) 
       </section>
 
       {/* Features Section */}
-      <section className="py-20 bg-crys-charcoal/50 relative">
+      <section className="bg-crys-charcoal/50 relative">
         {/* Background Image */}
         <div className="absolute inset-0 z-0">
           <ImageWithFallback
@@ -499,7 +499,7 @@ export function LandingPage({ onGetStarted, onTryMastering }: LandingPageProps) 
           <div className="absolute inset-0 bg-crys-charcoal/80"></div>
         </div>
 
-        <div className="container mx-auto px-4 relative z-10">
+        <div className="container mx-auto relative z-10">
           <motion.div 
             className="text-center mb-16"
             initial={{ opacity: 0, y: 50 }}
@@ -562,7 +562,7 @@ export function LandingPage({ onGetStarted, onTryMastering }: LandingPageProps) 
       </section>
 
       {/* How It Works */}
-      <section className="py-20 relative">
+      <section className="relative">
         {/* Background with Audio Visualizations */}
         <div className="absolute inset-0 z-0">
           <ImageWithFallback
@@ -573,7 +573,7 @@ export function LandingPage({ onGetStarted, onTryMastering }: LandingPageProps) 
           <div className="absolute inset-0 bg-gradient-to-br from-crys-black/90 via-crys-black/85 to-crys-black/90"></div>
         </div>
 
-        <div className="container mx-auto px-4 relative z-10">
+        <div className="container mx-auto relative z-10">
           <motion.div 
             className="text-center mb-16"
             initial={{ opacity: 0, y: 50 }}
@@ -673,7 +673,7 @@ export function LandingPage({ onGetStarted, onTryMastering }: LandingPageProps) 
       </section>
 
       {/* Testimonials */}
-      <section className="py-20 bg-crys-charcoal/30 relative">
+      <section className="bg-crys-charcoal/30 relative">
         {/* Background */}
         <div className="absolute inset-0 z-0">
           <ImageWithFallback
@@ -684,7 +684,7 @@ export function LandingPage({ onGetStarted, onTryMastering }: LandingPageProps) 
           <div className="absolute inset-0 bg-crys-charcoal/80"></div>
         </div>
 
-        <div className="container mx-auto px-4 relative z-10">
+        <div className="container mx-auto relative z-10">
           <motion.div 
             className="text-center mb-16"
             initial={{ opacity: 0, y: 50 }}
@@ -751,7 +751,7 @@ export function LandingPage({ onGetStarted, onTryMastering }: LandingPageProps) 
       </section>
 
       {/* African Music Focus Section */}
-      <section className="py-20 relative">
+      <section className="relative">
         {/* Background */}
         <div className="absolute inset-0 z-0">
           <ImageWithFallback
@@ -762,7 +762,7 @@ export function LandingPage({ onGetStarted, onTryMastering }: LandingPageProps) 
           <div className="absolute inset-0 bg-gradient-to-br from-crys-black/90 via-crys-black/85 to-crys-black/90"></div>
         </div>
 
-        <div className="container mx-auto px-4 relative z-10">
+        <div className="container mx-auto relative z-10">
           <motion.div 
             className="grid md:grid-cols-2 gap-12 items-center max-w-6xl mx-auto"
             initial={{ opacity: 0 }}
@@ -874,7 +874,7 @@ export function LandingPage({ onGetStarted, onTryMastering }: LandingPageProps) 
       </section>
 
       {/* Perfect For Section */}
-      <section className="py-20 bg-crys-charcoal/50 relative">
+      <section className="bg-crys-charcoal/50 relative">
         {/* Background */}
         <div className="absolute inset-0 z-0">
           <ImageWithFallback
@@ -885,7 +885,7 @@ export function LandingPage({ onGetStarted, onTryMastering }: LandingPageProps) 
           <div className="absolute inset-0 bg-crys-charcoal/80"></div>
         </div>
 
-        <div className="container mx-auto px-4 relative z-10">
+        <div className="container mx-auto relative z-10">
           <motion.div 
             className="text-center mb-16"
             initial={{ opacity: 0, y: 50 }}
@@ -974,7 +974,7 @@ export function LandingPage({ onGetStarted, onTryMastering }: LandingPageProps) 
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 bg-gradient-to-r from-crys-gold/10 via-crys-gold/5 to-crys-gold/10 relative overflow-hidden">
+      <section className="bg-gradient-to-r from-crys-gold/10 via-crys-gold/5 to-crys-gold/10 relative overflow-hidden">
         {/* Background */}
         <div className="absolute inset-0 z-0">
           <ImageWithFallback
@@ -985,7 +985,7 @@ export function LandingPage({ onGetStarted, onTryMastering }: LandingPageProps) 
           <div className="absolute inset-0 bg-gradient-to-br from-crys-gold/20 via-crys-gold/10 to-crys-gold/20"></div>
         </div>
 
-        <div className="container mx-auto px-4 text-center relative z-10">
+        <div className="container mx-auto text-center relative z-10">
           <motion.div 
             className="max-w-3xl mx-auto"
             initial={{ opacity: 0, y: 50 }}

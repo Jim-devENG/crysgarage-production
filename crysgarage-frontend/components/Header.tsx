@@ -94,7 +94,7 @@ export function Header({
 
   return (
     <header className="border-b border-crys-graphite bg-crys-black/95 backdrop-blur supports-[backdrop-filter]:bg-crys-black/60 sticky top-0 z-50">
-      <div className="container mx-auto px-4 py-3 relative">
+              <div className="container mx-auto py-3 relative">
         <div className="flex items-center justify-between">
           {/* Logo and Brand */}
           <div className="flex items-center gap-3">

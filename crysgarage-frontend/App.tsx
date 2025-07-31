@@ -106,7 +106,7 @@ function AppContent() {
           onShowProfile={() => setCurrentPage('profile')}
         />
         
-        <main className="pt-20 px-4 py-8">
+        <main className="pt-20">
           {currentPage === 'home' && (
             <LandingPage 
               onGetStarted={() => {
@@ -280,7 +280,7 @@ function AppContent() {
         onShowProfile={() => setShowAuthModal(true)}
       />
       
-      <main className="pt-20 px-4 py-8">
+      <main className="pt-20">
         {currentPage === 'landing' && (
           <LandingPage 
             onGetStarted={() => {

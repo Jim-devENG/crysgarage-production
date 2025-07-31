@@ -661,7 +661,7 @@ export function AddonsMarketplace({ onClose, onPurchase, userTier, onUpgrade }: 
             </TabsContent>
 
             {filteredAddons.length === 0 && (
-              <div className="text-center py-12">
+              <div className="text-center">
                 <ShoppingCart className="w-12 h-12 text-crys-light-grey mx-auto mb-4" />
                 <p className="text-crys-light-grey">No add-ons found matching your criteria</p>
               </div>

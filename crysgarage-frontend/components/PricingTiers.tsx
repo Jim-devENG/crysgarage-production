@@ -90,7 +90,7 @@ export function PricingTiers({ onTierSelect, selectedTier }: PricingTiersProps) 
   ];
 
   return (
-    <div className="py-8">
+            <div>
       <div className="text-center mb-8">
         <h2 className="text-crys-white text-3xl mb-2">Choose Your Mastering Tier</h2>
         <p className="text-crys-light-grey">Professional audio mastering for every need and budget</p>
