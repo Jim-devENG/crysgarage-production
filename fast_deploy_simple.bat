@@ -23,11 +23,15 @@ if not exist "crysgarage-frontend" (
 
 :: Check git status
 echo 📊 Checking git status...
-git status --porcelain > temp_status.txt
-set /p STATUS=<temp_status.txt
-del temp_status.txt
+git status --porcelain > temp_status.txt 2>nul
+if exist temp_status.txt (
+    set /p STATUS=<temp_status.txt
+    del temp_status.txt
+) else (
+    set STATUS=
+)
 
-if not "%STATUS%"=="" (
+if not "!STATUS!"=="" (
     echo 📝 Changes detected. Staging files...
     git add .
     
@@ -82,13 +86,17 @@ echo 🌐 Testing application availability...
 
 :: Test if the application is accessible
 curl -s -o nul -w "%%{http_code}" %APP_URL% > temp_response.txt 2>nul
-set /p HTTP_CODE=<temp_response.txt
-del temp_response.txt
+if exist temp_response.txt (
+    set /p HTTP_CODE=<temp_response.txt
+    del temp_response.txt
+) else (
+    set HTTP_CODE=000
+)
 
-if "%HTTP_CODE%"=="200" (
+if "!HTTP_CODE!"=="200" (
     echo ✅ Application is live and accessible!
 ) else (
-    echo ⚠️  Application might still be deploying (HTTP: %HTTP_CODE%)
+    echo ⚠️  Application might still be deploying (HTTP: !HTTP_CODE!)
 )
 
 echo.

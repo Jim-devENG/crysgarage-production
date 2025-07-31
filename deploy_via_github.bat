@@ -2,30 +2,59 @@
 echo 🚀 Crys Garage GitHub Deployment
 echo ================================
 
-echo.
-echo 📤 Pushing latest changes to GitHub...
-git add .
-git commit -m "Auto-deploy: $(date)"
-git push origin master
+echo 📊 Checking current git status...
+git status
 
 echo.
-echo 🔧 Setting up VPS deployment...
-echo Please run these commands on your VPS (209.74.80.162):
+echo 💬 Do you want to commit and push changes? (y/n)
+set /p CONFIRM=
+if /i not "%CONFIRM%"=="y" (
+    echo ❌ Deployment cancelled
+    pause
+    exit /b 0
+)
+
 echo.
-echo 1. SSH into VPS:
-echo    ssh root@209.74.80.162
+echo 📝 Staging all changes...
+git add .
+
+echo 💬 Enter commit message (or press Enter for default):
+set /p COMMIT_MSG=
+if "%COMMIT_MSG%"=="" set COMMIT_MSG=Deploy: Update application
+
+echo 💾 Committing changes...
+git commit -m "%COMMIT_MSG%"
+
 echo.
-echo 2. Set up GitHub deployment:
-echo    mkdir -p /var/www/crysgarage-deploy
-echo    cd /var/www/crysgarage-deploy
-echo    git clone https://github.com/Jim-devENG/Crysgarage.git .
-echo    chmod +x deploy.sh
-echo    ./deploy.sh
+echo 📤 Pushing to GitHub...
+git push origin master
+
+if %ERRORLEVEL% neq 0 (
+    echo ❌ Failed to push to GitHub
+    echo Please check your git configuration and try again.
+    pause
+    exit /b 1
+)
+
 echo.
-echo 3. Or run the setup script:
-echo    curl -s https://raw.githubusercontent.com/Jim-devENG/Crysgarage/master/setup_github_deployment.sh | bash
+echo ✅ Successfully pushed to GitHub!
 echo.
-echo ✅ GitHub deployment ready!
-echo 🌐 Live site: https://crysgarage.studio
+echo 🌐 GitHub Actions will automatically deploy to your VPS
+echo 📊 Monitor deployment at: https://github.com/Jim-devENG/Crysgarage/actions
+echo 🌐 Your application: https://crysgarage.studio
 echo.
+echo ⏳ Waiting 10 seconds for deployment to start...
+timeout /t 10 /nobreak >nul
+
+echo.
+echo 🔍 Testing application availability...
+curl -s -o nul -w "HTTP Status: %%{http_code}\n" https://crysgarage.studio
+
+echo.
+echo 🎉 Deployment Summary:
+echo ✅ Code pushed to GitHub
+echo ✅ Automated deployment triggered
+echo 🌐 Check status at: https://github.com/Jim-devENG/Crysgarage/actions
+echo 🌐 Application: https://crysgarage.studio
+
 pause 
