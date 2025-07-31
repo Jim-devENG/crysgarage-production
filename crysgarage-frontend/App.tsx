@@ -97,7 +97,9 @@ function AppContent() {
   // Authenticated user - show dashboard
   if (isAuthenticated && user) {
   return (
-      <div className="min-h-screen bg-gradient-to-br from-crys-black via-crys-graphite to-crys-black">
+      <div className="min-h-screen bg-gradient-to-br from-crys-black via-crys-graphite to-crys-black relative">
+        {/* Background overlay to cover gaps */}
+        <div className="absolute inset-0 bg-gradient-to-br from-crys-black via-crys-graphite to-crys-black -z-10"></div>
         <Header 
           user={user}
           onSignOut={signOut}
@@ -272,7 +274,9 @@ function AppContent() {
 
   // Not authenticated - show landing page
   return (
-    <div className="min-h-screen bg-gradient-to-br from-crys-black via-crys-graphite to-crys-black">
+    <div className="min-h-screen bg-gradient-to-br from-crys-black via-crys-graphite to-crys-black relative">
+        {/* Background overlay to cover gaps */}
+        <div className="absolute inset-0 bg-gradient-to-br from-crys-black via-crys-graphite to-crys-black -z-10"></div>
       <Header 
         user={null}
         onNavigate={handleNavigation}
