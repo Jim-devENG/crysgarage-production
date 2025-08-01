@@ -1,0 +1,43 @@
+# Vite allowedHosts Fix Commands
+# Copy and paste these commands one by one into your VPS terminal
+
+# 1. Stop the frontend service
+systemctl stop crysgarage-frontend
+
+# 2. Navigate to frontend directory
+cd /var/www/crysgarage-deploy/crysgarage-frontend
+
+# 3. Clear Vite cache
+rm -rf node_modules/.vite
+rm -rf .vite
+
+# 4. Clear npm cache
+npm cache clean --force
+
+# 5. Check current vite.config.ts
+cat vite.config.ts
+
+# 6. If needed, update vite.config.ts with nano
+nano vite.config.ts
+# Make sure it contains:
+# allowedHosts: ['localhost', '127.0.0.1', 'crysgarage.studio', 'www.crysgarage.studio', '209.74.80.162']
+
+# 7. Start the frontend service
+systemctl start crysgarage-frontend
+
+# 8. Wait a moment for service to start
+sleep 5
+
+# 9. Check service status
+systemctl status crysgarage-frontend
+
+# 10. Test the frontend directly
+curl -I http://localhost:5173
+
+# 11. Test through Nginx
+curl -I http://localhost
+
+# 12. Check Vite logs for any errors
+journalctl -u crysgarage-frontend --no-pager -l -n 10
+
+# After completing these steps, test https://crysgarage.studio in your browser 
