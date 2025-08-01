@@ -3,27 +3,16 @@
 echo "🔧 Fixing Vite allowedHosts Configuration"
 echo "========================================="
 
-# Stop the frontend service
-echo "🛑 Stopping frontend service..."
-systemctl stop crysgarage-frontend
-
-# Clear Vite cache
-echo "🧹 Clearing Vite cache..."
+# Navigate to the frontend directory
 cd /var/www/crysgarage-deploy/crysgarage-frontend
-rm -rf node_modules/.vite
-rm -rf .vite
 
-# Verify the vite.config.ts has the correct allowedHosts
-echo "📋 Checking Vite configuration..."
-if grep -q "crysgarage.studio" vite.config.ts; then
-    echo "✅ Vite config already has crysgarage.studio in allowedHosts"
-else
-    echo "❌ Vite config missing crysgarage.studio - updating..."
-    # Backup original config
-    cp vite.config.ts vite.config.ts.backup
-    
-    # Update the config to ensure allowedHosts includes crysgarage.studio
-    cat > vite.config.ts << 'EOF'
+echo "📝 Updating Vite configuration..."
+
+# Create a backup of the current config
+cp vite.config.ts vite.config.ts.backup
+
+# Update the TypeScript config with more comprehensive allowedHosts
+cat > vite.config.ts << 'EOF'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
@@ -32,8 +21,15 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 5173,
-    host: true,
-    allowedHosts: ['localhost', '127.0.0.1', 'crysgarage.studio', 'www.crysgarage.studio', '209.74.80.162'],
+    host: '0.0.0.0',
+    allowedHosts: [
+      'localhost',
+      '127.0.0.1',
+      'crysgarage.studio',
+      'www.crysgarage.studio',
+      '209.74.80.162',
+      '*.crysgarage.studio'
+    ],
     proxy: {
       '/api': {
         target: 'http://localhost:8000',
@@ -48,17 +44,54 @@ export default defineConfig({
   }
 })
 EOF
-    echo "✅ Vite config updated"
-fi
 
-# Clear npm cache
-echo "🧹 Clearing npm cache..."
-npm cache clean --force
+# Also create a JavaScript version
+cat > vite.config.js << 'EOF'
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
 
-# Reinstall dependencies to ensure clean state
-echo "📦 Reinstalling dependencies..."
-rm -rf node_modules package-lock.json
-npm install
+// https://vitejs.dev/config/
+export default defineConfig({
+  plugins: [react()],
+  server: {
+    port: 5173,
+    host: '0.0.0.0',
+    allowedHosts: [
+      'localhost',
+      '127.0.0.1',
+      'crysgarage.studio',
+      'www.crysgarage.studio',
+      '209.74.80.162',
+      '*.crysgarage.studio'
+    ],
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+        secure: false
+      }
+    }
+  },
+  esbuild: {
+    jsxFactory: 'React.createElement',
+    jsxFragment: 'React.Fragment'
+  }
+})
+EOF
+
+echo "✅ Vite configuration updated"
+
+# Stop the frontend service
+echo "🛑 Stopping frontend service..."
+systemctl stop crysgarage-frontend
+
+# Wait a moment
+sleep 3
+
+# Clear any cached files
+echo "🧹 Clearing Vite cache..."
+rm -rf node_modules/.vite 2>/dev/null || true
+rm -rf .vite 2>/dev/null || true
 
 # Start the frontend service
 echo "▶️ Starting frontend service..."
@@ -73,20 +106,22 @@ systemctl status crysgarage-frontend --no-pager -l
 
 # Check if the service is running
 if systemctl is-active --quiet crysgarage-frontend; then
-    echo "✅ Frontend service started successfully!"
+    echo "✅ Frontend service restarted successfully!"
+    
+    # Wait a bit more for Vite to fully initialize
+    sleep 5
     
     # Test the frontend directly
     echo "🔍 Testing frontend directly..."
-    sleep 5
     curl -s -o /dev/null -w "Frontend Status: %{http_code}\n" http://localhost:5173/ 2>/dev/null || echo "Frontend test failed"
     
     # Test through Nginx
     echo "🔍 Testing through Nginx..."
     curl -s -o /dev/null -w "Nginx Status: %{http_code}\n" http://localhost/ 2>/dev/null || echo "Nginx test failed"
     
-    # Check Vite logs for allowedHosts
-    echo "📋 Checking Vite logs..."
-    journalctl -u crysgarage-frontend --no-pager -l -n 10 | grep -i "allowed\|host" || echo "No host-related logs found"
+    # Test with the domain
+    echo "🔍 Testing with domain..."
+    curl -s -o /dev/null -w "Domain Status: %{http_code}\n" http://crysgarage.studio/ 2>/dev/null || echo "Domain test failed"
     
 else
     echo "❌ Frontend service failed to start!"
