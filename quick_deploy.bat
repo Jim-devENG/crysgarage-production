@@ -1,43 +1,39 @@
 @echo off
-echo ========================================
-echo Crys Garage - Quick Deploy
-echo ========================================
+echo ⚡ Quick Deploy - Crys Garage
+echo =============================
+
+echo.
+echo This is a faster deployment for small changes.
+echo.
+echo 📋 What will happen:
+echo    1. Push changes to Git
+echo    2. Pull and restart containers (no rebuild)
+echo    3. Test the application
 echo.
 
-:: Colors
-set "GREEN=[92m"
-set "RED=[91m"
-set "BLUE=[94m"
-set "RESET=[0m"
+set /p confirm="Continue with quick deploy? (y/N): "
+if /i not "%confirm%"=="y" (
+    echo Quick deploy cancelled.
+    pause
+    exit /b
+)
 
-echo %BLUE%Quick deployment to VPS...%RESET%
 echo.
-
-:: Add and commit changes
+echo 📤 Pushing changes to Git...
 git add .
-git commit -m "Quick deploy: %date% %time%"
-if %errorlevel% neq 0 (
-    echo %RED%Failed to commit changes%RESET%
-    pause
-    exit /b 1
-)
-
-:: Push to GitHub
+git commit -m "Quick update: $(date /t) $(time /t)"
 git push origin master
-if %errorlevel% neq 0 (
-    echo %RED%Failed to push to GitHub%RESET%
-    pause
-    exit /b 1
-)
-
-:: Deploy to VPS
-ssh root@209.74.80.162 "cd /var/www/crysgarage && git stash -q 2>/dev/null || true && git pull origin master && cd crysgarage-backend && composer install --no-dev --optimize-autoloader && php artisan config:clear && php artisan route:clear && systemctl restart crysgarage-backend && cd ../crysgarage-frontend && npm ci --production && npm run build && cd ../crysgarage-ruby && bundle install && systemctl restart crysgarage-ruby && systemctl reload nginx"
-
-if %errorlevel% equ 0 (
-    echo %GREEN%✓ Quick deployment completed!%RESET%
-) else (
-    echo %RED%⚠ Quick deployment had issues%RESET%
-)
 
 echo.
+echo 🚀 Quick deploy on VPS...
+ssh root@209.74.80.162 "cd /var/www/crysgarage-deploy && git pull origin master && docker-compose restart"
+
+echo.
+echo ⏳ Waiting for services to restart...
+timeout /t 10 /nobreak >nul
+
+echo.
+echo ✅ Quick deploy completed!
+echo 🌐 Your application: https://crysgarage.studio
+
 pause 
