@@ -3,6 +3,7 @@ import { AppProvider, useApp } from './contexts/AppContext';
 import { LandingPage } from './components/LandingPage';
 import { AuthModal } from './components/AuthPages';
 import { FreeTierDashboard } from './components/FreeTierDashboard';
+import { ModernFreeTierDashboard } from './components/ModernFreeTierDashboard';
 import { ProfessionalTierDashboard } from './components/ProfessionalTierDashboard';
 import { AdvancedTierDashboard } from './components/AdvancedTierDashboard';
 import { Header } from './components/Header';
@@ -123,7 +124,7 @@ function AppContent() {
           {currentPage === 'dashboard' && (
             <>
               {user.tier === 'free' && (
-                <FreeTierDashboard 
+                <ModernFreeTierDashboard 
                   onFileUpload={(file) => {
                     // Handle file upload for free tier
                     console.log('Free tier file upload:', file);
@@ -332,7 +333,7 @@ function AppContent() {
         )}
         
         {currentPage === 'dashboard' && !isAuthenticated && (
-          <FreeTierDashboard 
+          <ModernFreeTierDashboard 
             onFileUpload={(file) => {
               // For non-authenticated users, prompt them to sign up
               setAuthMode('signup');

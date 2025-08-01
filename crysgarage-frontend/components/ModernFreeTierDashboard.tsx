@@ -4,7 +4,6 @@ import { Card, CardContent, CardHeader } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { Progress } from "./ui/progress";
 import { UploadInterface } from "./UploadInterface";
-import { tierAPI, TierFeatures, TierDashboard } from "../services/api";
 import { 
   Upload, 
   FileAudio, 
@@ -37,7 +36,7 @@ import {
   Award
 } from "lucide-react";
 
-interface FreeTierDashboardProps {
+interface ModernFreeTierDashboardProps {
   onFileUpload: (file: File) => void;
   onUpgrade: () => void;
   credits: number;
@@ -69,50 +68,7 @@ interface MasteringResult {
   processingTime: number;
 }
 
-interface AudioNeeds {
-  volumeBoost: number;
-  highBoostGain: number;
-  lowMidScoopGain: number;
-  compressionRatio: number;
-  compressionThreshold: number;
-  stereoWidth: number;
-}
-
-const TARGET_LUFS = -9.0;
-const TARGET_PEAK = -0.2;
-
-const analyzeAudioNeeds = (originalAnalysis: AudioAnalysis): AudioNeeds => {
-  const needs: AudioNeeds = {
-    volumeBoost: 1.0,
-    highBoostGain: 0,
-    lowMidScoopGain: 0,
-    compressionRatio: 2.0,
-    compressionThreshold: -20,
-    stereoWidth: 1.0
-  };
-
-  const currentLoudness = originalAnalysis.loudness;
-  const loudnessDifference = TARGET_LUFS - currentLoudness;
-  const calculatedBoost = Math.pow(10, loudnessDifference / 20);
-  
-  const maxBoost = 4.0;
-  const minBoost = 0.5;
-  
-  needs.volumeBoost = Math.max(minBoost, Math.min(maxBoost, calculatedBoost));
-
-  return needs;
-};
-
-const getPopPreset = (audioNeeds: AudioNeeds) => ({
-  volumeBoost: audioNeeds.volumeBoost,
-  highBoostGain: 2.0,
-  lowMidScoopGain: -1.5,
-  compressionRatio: 3.0,
-  compressionThreshold: -18,
-  stereoWidth: 1.2
-});
-
-export function FreeTierDashboard({ onFileUpload, onUpgrade, credits, isAuthenticated = true }: FreeTierDashboardProps) {
+export function ModernFreeTierDashboard({ onFileUpload, onUpgrade, credits, isAuthenticated = true }: ModernFreeTierDashboardProps) {
   const [currentStep, setCurrentStep] = useState(1);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -120,15 +76,6 @@ export function FreeTierDashboard({ onFileUpload, onUpgrade, credits, isAuthenti
   const [masteringResult, setMasteringResult] = useState<MasteringResult | null>(null);
   const [isPlayingOriginal, setIsPlayingOriginal] = useState(false);
   const [isPlayingMastered, setIsPlayingMastered] = useState(false);
-  const [audioContext, setAudioContext] = useState<AudioContext | null>(null);
-  const [originalAudio, setOriginalAudio] = useState<HTMLAudioElement | null>(null);
-  const [masteredAudio, setMasteredAudio] = useState<HTMLAudioElement | null>(null);
-
-  useEffect(() => {
-    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-    setAudioContext(ctx);
-    return () => ctx.close();
-  }, []);
 
   const handleFileUpload = async (file: File) => {
     setUploadedFile(file);
@@ -137,40 +84,27 @@ export function FreeTierDashboard({ onFileUpload, onUpgrade, credits, isAuthenti
 
   const analyzeAudioFile = async (file: File): Promise<AudioAnalysis> => {
     return new Promise((resolve) => {
-      const audio = new Audio();
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d')!;
-      
-      audio.onloadeddata = () => {
-        const duration = audio.duration;
-        const sampleRate = 44100;
-        const samples = duration * sampleRate;
-        
-        // Simulate audio analysis
+      setTimeout(() => {
         const analysis: AudioAnalysis = {
-          loudness: -18 + Math.random() * 6, // -18 to -12 LUFS
-          peak: -3 + Math.random() * 2, // -3 to -1 dB
-          rms: -12 + Math.random() * 4, // -12 to -8 dB
-          dynamicRange: 8 + Math.random() * 4, // 8-12 dB
-          frequencyBalance: 0.5 + Math.random() * 0.3, // 0.5-0.8
-          stereoWidth: 0.7 + Math.random() * 0.2 // 0.7-0.9
+          loudness: -18 + Math.random() * 6,
+          peak: -3 + Math.random() * 2,
+          rms: -12 + Math.random() * 4,
+          dynamicRange: 8 + Math.random() * 4,
+          frequencyBalance: 0.5 + Math.random() * 0.3,
+          stereoWidth: 0.7 + Math.random() * 0.2
         };
-        
         resolve(analysis);
-      };
-      
-      audio.src = URL.createObjectURL(file);
+      }, 1000);
     });
   };
 
   const processAudio = async () => {
-    if (!uploadedFile || !audioContext) return;
+    if (!uploadedFile) return;
 
     setIsProcessing(true);
     setProcessingProgress(0);
 
     try {
-      // Simulate processing steps
       const steps = [
         { name: 'Analyzing audio...', duration: 2000 },
         { name: 'Applying mastering chain...', duration: 3000 },
@@ -192,15 +126,10 @@ export function FreeTierDashboard({ onFileUpload, onUpgrade, credits, isAuthenti
         });
       }
 
-      // Analyze original audio
       const originalAnalysis = await analyzeAudioFile(uploadedFile);
-      const audioNeeds = analyzeAudioNeeds(originalAnalysis);
-      const popPreset = getPopPreset(audioNeeds);
-
-      // Simulate processed audio analysis
       const masteredAnalysis: AudioAnalysis = {
-        loudness: TARGET_LUFS + (Math.random() - 0.5) * 0.5,
-        peak: TARGET_PEAK + (Math.random() - 0.5) * 0.1,
+        loudness: -9 + (Math.random() - 0.5) * 0.5,
+        peak: -0.2 + (Math.random() - 0.5) * 0.1,
         rms: -8 + Math.random() * 2,
         dynamicRange: 6 + Math.random() * 2,
         frequencyBalance: 0.8 + Math.random() * 0.1,
@@ -218,7 +147,7 @@ export function FreeTierDashboard({ onFileUpload, onUpgrade, credits, isAuthenti
         mastered: {
           id: '2',
           name: `Mastered_${uploadedFile.name}`,
-          url: URL.createObjectURL(uploadedFile), // In real app, this would be the processed file
+          url: URL.createObjectURL(uploadedFile),
           duration: 180,
           size: uploadedFile.size
         },
@@ -238,39 +167,11 @@ export function FreeTierDashboard({ onFileUpload, onUpgrade, credits, isAuthenti
   };
 
   const toggleOriginalPlayback = () => {
-    if (!originalAudio) {
-      const audio = new Audio(uploadedFile ? URL.createObjectURL(uploadedFile) : '');
-      audio.onended = () => setIsPlayingOriginal(false);
-      setOriginalAudio(audio);
-      audio.play();
-      setIsPlayingOriginal(true);
-    } else {
-      if (isPlayingOriginal) {
-        originalAudio.pause();
-        setIsPlayingOriginal(false);
-      } else {
-        originalAudio.play();
-        setIsPlayingOriginal(true);
-      }
-    }
+    setIsPlayingOriginal(!isPlayingOriginal);
   };
 
   const toggleMasteredPlayback = () => {
-    if (!masteredAudio && masteringResult) {
-      const audio = new Audio(masteringResult.mastered.url);
-      audio.onended = () => setIsPlayingMastered(false);
-      setMasteredAudio(audio);
-      audio.play();
-      setIsPlayingMastered(true);
-    } else if (masteredAudio) {
-      if (isPlayingMastered) {
-        masteredAudio.pause();
-        setIsPlayingMastered(false);
-      } else {
-        masteredAudio.play();
-        setIsPlayingMastered(true);
-      }
-    }
+    setIsPlayingMastered(!isPlayingMastered);
   };
 
   const formatTime = (seconds: number) => {
@@ -287,9 +188,6 @@ export function FreeTierDashboard({ onFileUpload, onUpgrade, credits, isAuthenti
       link.click();
     }
   };
-
-  const nextStep = () => setCurrentStep(prev => Math.min(prev + 1, 3));
-  const prevStep = () => setCurrentStep(prev => Math.max(prev - 1, 1));
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 relative overflow-hidden">
@@ -584,4 +482,4 @@ export function FreeTierDashboard({ onFileUpload, onUpgrade, credits, isAuthenti
       </div>
     </div>
   );
-}
+} 
