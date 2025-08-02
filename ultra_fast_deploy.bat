@@ -1,8 +1,8 @@
 @echo off
 setlocal enabledelayedexpansion
 
-echo ⚡ Quick Deploy to VPS
-echo ====================
+echo ⚡ Ultra Fast Deploy to VPS
+echo ==========================
 
 :: Check if we're in the right directory
 if not exist "crysgarage-frontend" (
@@ -11,17 +11,17 @@ if not exist "crysgarage-frontend" (
     exit /b 1
 )
 
-:: Add only essential files (excluding node_modules)
+:: Add only essential files
 echo 📝 Adding essential files to git...
+git add crysgarage-frontend/src/
+git add crysgarage-frontend/components/
+git add crysgarage-frontend/styles/
 git add crysgarage-frontend/App.tsx
 git add crysgarage-frontend/main.tsx
 git add crysgarage-frontend/vite.config.ts
 git add crysgarage-frontend/package.json
 git add crysgarage-frontend/Dockerfile
 git add crysgarage-frontend/.dockerignore
-git add crysgarage-frontend/components/
-git add crysgarage-frontend/styles/
-git add crysgarage-frontend/src/
 
 git add crysgarage-backend/app/
 git add crysgarage-backend/routes/
@@ -40,21 +40,21 @@ git add nginx-docker.conf
 
 :: Commit changes
 echo Committing changes...
-git commit -m "Quick deploy: %date% %time%"
+git commit -m "Ultra fast deploy: %date% %time%"
 
 :: Push to repository
 echo 🚀 Pushing to repository...
 git push origin master
 
-:: Quick deploy to VPS
-echo ⚡ Quick deploying to VPS...
+:: Ultra fast deploy to VPS
+echo ⚡ Ultra fast deploying to VPS...
 ssh root@209.74.80.162 "cd /var/www/crysgarage-deploy && git pull origin master && docker-compose down && docker-compose build && docker-compose up -d"
 
 if %errorlevel% equ 0 (
-    echo ✅ Quick deployment successful!
+    echo ✅ Ultra fast deployment successful!
     echo 🌐 Check your application at: https://crysgarage.studio
 ) else (
-    echo ❌ Quick deployment failed!
+    echo ❌ Ultra fast deployment failed!
     echo Check the VPS logs for errors
 )
 

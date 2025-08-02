@@ -1,17 +1,17 @@
 #!/bin/bash
 
-echo "🚀 Simple VPS Deployment"
-echo "========================"
+echo "🚀 Deploying Crys Garage on VPS"
+echo "==============================="
 
 # Navigate to deployment directory
 cd /var/www/crysgarage-deploy
 
 # Pull latest changes
-echo "📥 Pulling latest changes..."
+echo "📥 Pulling latest changes from Git..."
 git pull origin master
 
 # Stop existing containers
-echo "🛑 Stopping containers..."
+echo "🛑 Stopping existing containers..."
 docker-compose down
 
 # Build and start containers
@@ -21,7 +21,7 @@ docker-compose up -d
 
 # Wait for services to start
 echo "⏳ Waiting for services to start..."
-sleep 15
+sleep 10
 
 # Check container status
 echo "📊 Container status:"

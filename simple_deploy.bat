@@ -1,8 +1,8 @@
 @echo off
 setlocal enabledelayedexpansion
 
-echo ⚡ Quick Deploy to VPS
-echo ====================
+echo 🚀 Simple Deploy to VPS
+echo ======================
 
 :: Check if we're in the right directory
 if not exist "crysgarage-frontend" (
@@ -11,7 +11,7 @@ if not exist "crysgarage-frontend" (
     exit /b 1
 )
 
-:: Add only essential files (excluding node_modules)
+:: Add essential files only
 echo 📝 Adding essential files to git...
 git add crysgarage-frontend/App.tsx
 git add crysgarage-frontend/main.tsx
@@ -37,25 +37,18 @@ git add crysgarage-ruby/.dockerignore
 
 git add docker-compose.yml
 git add nginx-docker.conf
+git add .gitignore
 
 :: Commit changes
 echo Committing changes...
-git commit -m "Quick deploy: %date% %time%"
+git commit -m "Simple deploy: %date% %time%"
 
 :: Push to repository
 echo 🚀 Pushing to repository...
 git push origin master
 
-:: Quick deploy to VPS
-echo ⚡ Quick deploying to VPS...
-ssh root@209.74.80.162 "cd /var/www/crysgarage-deploy && git pull origin master && docker-compose down && docker-compose build && docker-compose up -d"
-
-if %errorlevel% equ 0 (
-    echo ✅ Quick deployment successful!
-    echo 🌐 Check your application at: https://crysgarage.studio
-) else (
-    echo ❌ Quick deployment failed!
-    echo Check the VPS logs for errors
-)
+echo ✅ Code pushed to repository!
+echo 🌐 The VPS will automatically pull and deploy the changes
+echo 📊 Check your application at: https://crysgarage.studio
 
 pause 
