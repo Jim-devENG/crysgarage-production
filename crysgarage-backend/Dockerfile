@@ -16,11 +16,11 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
 WORKDIR /var/www
 
-# Copy composer files
+# Copy composer files first
 COPY composer*.json ./
 
-# Install PHP dependencies
-RUN composer install --no-dev --optimize-autoloader
+# Install PHP dependencies (skip scripts to avoid artisan issues)
+RUN composer install --no-dev --optimize-autoloader --no-scripts
 
 # Copy application code
 COPY . .
@@ -30,5 +30,5 @@ RUN chown -R www-data:www-data /var/www
 
 EXPOSE 8000
 
-# Start Laravel server
-CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=8000"] 
+# Start simple PHP server instead of Laravel artisan
+CMD ["php", "-S", "0.0.0.0:8000", "-t", "public"] 
