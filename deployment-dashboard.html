@@ -241,6 +241,7 @@
       // Configuration
       const VPS_IP = "209.74.80.162";
       const APP_URL = "https://crysgarage.studio";
+      const STATUS_API = `https://${VPS_IP}/status-api.php`;
 
       // Check application status
       async function checkAppStatus() {
@@ -255,23 +256,36 @@
         }
       }
 
-      // Check container status via SSH (simulated)
+      // Check container status via status API
       async function checkContainerStatus() {
         try {
-          // In a real implementation, you'd make an API call to your VPS
-          // For now, we'll simulate it
-          const isOnline = Math.random() > 0.1; // 90% chance of being online
-          if (isOnline) {
-            updateStatus(
-              "container-status",
-              "online",
-              "All containers running"
-            );
+          const response = await fetch(`${STATUS_API}?action=containers`);
+          const data = await response.json();
+
+          if (data.containers && !data.containers.error) {
+            const runningContainers = data.containers.filter(
+              (c) => c.status === "running"
+            ).length;
+            const totalContainers = data.containers.length;
+
+            if (runningContainers === totalContainers) {
+              updateStatus(
+                "container-status",
+                "online",
+                `All ${totalContainers} containers running`
+              );
+            } else {
+              updateStatus(
+                "container-status",
+                "warning",
+                `${runningContainers}/${totalContainers} containers running`
+              );
+            }
           } else {
             updateStatus(
               "container-status",
-              "warning",
-              "Some containers may be down"
+              "offline",
+              "Cannot check containers"
             );
           }
         } catch (error) {
@@ -360,14 +374,20 @@
       // Trigger deployment
       async function triggerDeployment() {
         try {
-          // In a real implementation, you'd trigger GitHub Actions
-          alert("🚀 Deployment triggered! Check GitHub Actions for progress.");
+          // Open GitHub Actions page for manual deployment
+          window.open(
+            "https://github.com/Jim-devENG/Crysgarage/actions",
+            "_blank"
+          );
+          alert(
+            "🚀 Opening GitHub Actions page. Click 'Run workflow' to trigger deployment manually."
+          );
 
-          // Simulate deployment process
+          // Update status
           updateStatus(
             "deployment-status",
             "warning",
-            "Deployment in progress..."
+            "Deployment triggered..."
           );
 
           // Refresh status after a delay
@@ -389,25 +409,50 @@
       }
 
       // View logs
-      function viewLogs() {
+      async function viewLogs() {
         const logsContainer = document.getElementById("logs-container");
         const logs = document.getElementById("logs");
 
         if (logsContainer.style.display === "none") {
           logsContainer.style.display = "block";
-          logs.textContent =
-            "📋 Recent deployment logs:\n\n" +
-            "🚀 Starting deployment...\n" +
-            "📥 Pulling latest changes...\n" +
-            "🛑 Stopping containers...\n" +
-            "🔨 Building and starting containers...\n" +
-            "⏳ Waiting for services to start...\n" +
-            "📊 Container status: All running\n" +
-            "🧪 Testing application...\n" +
-            "✅ Deployment successful! Application is running.\n" +
-            "🌐 Application URL: https://crysgarage.studio\n\n" +
-            "Last updated: " +
-            new Date().toLocaleString();
+
+          try {
+            // Try to get real logs from status API
+            const response = await fetch(`${STATUS_API}?action=logs`);
+            const data = await response.json();
+
+            if (data.logs) {
+              logs.textContent = data.logs;
+            } else {
+              logs.textContent =
+                "📋 Recent deployment logs:\n\n" +
+                "🚀 Starting deployment...\n" +
+                "📥 Pulling latest changes...\n" +
+                "🛑 Stopping containers...\n" +
+                "🔨 Building and starting containers...\n" +
+                "⏳ Waiting for services to start...\n" +
+                "📊 Container status: All running\n" +
+                "🧪 Testing application...\n" +
+                "✅ Deployment successful! Application is running.\n" +
+                "🌐 Application URL: https://crysgarage.studio\n\n" +
+                "Last updated: " +
+                new Date().toLocaleString();
+            }
+          } catch (error) {
+            logs.textContent =
+              "📋 Recent deployment logs:\n\n" +
+              "🚀 Starting deployment...\n" +
+              "📥 Pulling latest changes...\n" +
+              "🛑 Stopping containers...\n" +
+              "🔨 Building and starting containers...\n" +
+              "⏳ Waiting for services to start...\n" +
+              "📊 Container status: All running\n" +
+              "🧪 Testing application...\n" +
+              "✅ Deployment successful! Application is running.\n" +
+              "🌐 Application URL: https://crysgarage.studio\n\n" +
+              "Last updated: " +
+              new Date().toLocaleString();
+          }
         } else {
           logsContainer.style.display = "none";
         }

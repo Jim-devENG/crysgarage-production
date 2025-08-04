@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AppProvider, useApp } from './contexts/AppContext';
 import { LandingPage } from './components/LandingPage';
 import { AuthModal } from './components/AuthPages';
@@ -17,6 +17,7 @@ import { BillingModal } from './components/BillingModal';
 import { PaymentModal } from './components/PaymentModal';
 import { ProfileEditModal } from './components/ProfileEditModal';
 import { AutoAuthFix } from './components/AutoAuthFix';
+import { AdminDashboard } from './components/AdminDashboard';
 
 // Main App Component
 function AppContent() {
@@ -34,7 +35,7 @@ function AppContent() {
 
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
-  const [currentPage, setCurrentPage] = useState<'landing' | 'home' | 'dashboard' | 'processing' | 'results' | 'pricing' | 'help' | 'courses' | 'marketplace' | 'profile'>('landing');
+  const [currentPage, setCurrentPage] = useState<'landing' | 'home' | 'dashboard' | 'processing' | 'results' | 'pricing' | 'help' | 'courses' | 'marketplace' | 'profile' | 'admin'>('landing');
   const [showBillingModal, setShowBillingModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showProfileEditModal, setShowProfileEditModal] = useState(false);
@@ -42,9 +43,11 @@ function AppContent() {
   
   // Handle navigation with proper type conversion
   const handleNavigation = (section: string) => {
+    console.log('Navigation requested to:', section);
     if (section === 'landing' || section === 'home' || section === 'dashboard' || section === 'processing' || 
         section === 'results' || section === 'pricing' || section === 'help' || 
-        section === 'courses' || section === 'marketplace' || section === 'profile') {
+        section === 'courses' || section === 'marketplace' || section === 'profile' || section === 'admin') {
+          console.log('Setting current page to:', section);
           setCurrentPage(section);
     }
   };
@@ -109,6 +112,7 @@ function AppContent() {
         />
         
         <main className="pt-20">
+          {(() => { console.log('Current page is:', currentPage); return null; })()}
           {currentPage === 'home' && (
             <LandingPage 
               onGetStarted={() => {
@@ -226,6 +230,10 @@ function AppContent() {
               userCredits={user.credits || 0}
               userTier={user.tier}
             />
+          )}
+          
+          {currentPage === 'admin' && (
+            <AdminDashboard onBack={() => setCurrentPage('landing')} />
           )}
         </main>
 
@@ -345,6 +353,10 @@ function AppContent() {
             credits={3} // Default free tier credits
             isAuthenticated={false} // Pass authentication status
           />
+        )}
+
+        {currentPage === 'admin' && (
+          <AdminDashboard onBack={() => setCurrentPage('landing')} />
         )}
       </main>
       
