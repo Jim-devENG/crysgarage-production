@@ -239,25 +239,25 @@ export function FreeTierDashboard({ onFileUpload, onUpgrade, credits, isAuthenti
       </div>
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-6 py-2">
+      <div className="max-w-7xl mx-auto px-6 py-1">
         {/* Upload Tab */}
         {activeTab === 'upload' && (
-          <div className="space-y-6">
+          <div className="space-y-4">
             {/* Welcome Section */}
             <div className="text-center">
-              <div className="w-20 h-20 bg-gradient-to-r from-crys-gold/20 to-yellow-400/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                <Sparkles className="w-10 h-10 text-crys-gold" />
+              <div className="w-16 h-16 bg-gradient-to-r from-crys-gold/20 to-yellow-400/20 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                <Sparkles className="w-8 h-8 text-crys-gold" />
               </div>
-              <h2 className="text-2xl font-bold text-crys-white mb-3">
+              <h2 className="text-xl font-bold text-crys-white mb-2">
                 Transform Your Audio
               </h2>
-              <p className="text-crys-light-grey max-w-2xl mx-auto">
+              <p className="text-crys-light-grey text-sm max-w-2xl mx-auto">
                 Upload your tracks and experience professional-grade mastering with our advanced audio processing technology.
               </p>
             </div>
 
             {/* Features Grid */}
-            <div className="grid md:grid-cols-3 gap-6 mb-8">
+            <div className="grid md:grid-cols-3 gap-4 mb-6">
               {[
                 {
                   icon: Radio,
@@ -278,9 +278,9 @@ export function FreeTierDashboard({ onFileUpload, onUpgrade, credits, isAuthenti
                 const Icon = feature.icon;
                 return (
                   <Card key={index} className="bg-audio-panel-bg border-audio-panel-border hover:border-crys-gold/30 transition-colors">
-                    <CardContent className="p-6 text-center">
-                      <div className="w-12 h-12 bg-gradient-to-r from-crys-gold/20 to-yellow-400/20 rounded-xl flex items-center justify-center mx-auto mb-4">
-                        <Icon className="w-6 h-6 text-crys-gold" />
+                    <CardContent className="p-4 text-center">
+                      <div className="w-10 h-10 bg-gradient-to-r from-crys-gold/20 to-yellow-400/20 rounded-xl flex items-center justify-center mx-auto mb-3">
+                        <Icon className="w-5 h-5 text-crys-gold" />
                       </div>
                       <h3 className="text-crys-white font-semibold mb-2">{feature.title}</h3>
                       <p className="text-crys-light-grey text-sm">{feature.description}</p>
