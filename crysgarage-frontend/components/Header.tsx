@@ -204,13 +204,7 @@ export function Header({
                         <HelpCircle className="w-4 h-4" />
                         <span className="text-sm">Help & Support</span>
                       </button>
-                      <button 
-                        onClick={() => handleNavigation('admin')}
-                        className="w-full flex items-center gap-2 px-3 py-2 text-crys-gold hover:bg-crys-gold/10 rounded-lg transition-colors text-left"
-                      >
-                        <Shield className="w-4 h-4" />
-                        <span className="text-sm">Admin Dashboard</span>
-                      </button>
+
                       <div className="border-t border-crys-graphite my-2"></div>
                       <button 
                         onClick={onSignOut}
@@ -225,14 +219,7 @@ export function Header({
               </div>
             ) : (
               <div className="flex items-center gap-3">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={() => handleNavigation('admin')}
-                  className="border-crys-gold/30 text-crys-gold hover:bg-crys-gold/10 hidden sm:flex"
-                >
-                  Admin
-                </Button>
+
                 <Button 
                   variant="outline" 
                   size="sm" 
@@ -285,25 +272,11 @@ export function Header({
               {user && (
                 <>
                   <div className="border-t border-crys-graphite my-3"></div>
-                  <button
-                    onClick={() => handleNavigation('admin')}
-                    className="w-full flex items-center gap-3 px-4 py-3 text-crys-gold hover:bg-crys-gold/10 rounded-lg transition-colors text-left"
-                  >
-                    <Shield className="w-4 h-4" />
-                    Admin Dashboard
-                  </button>
                 </>
               )}
               {!user && (
                 <>
                   <div className="border-t border-crys-graphite my-3"></div>
-                  <button
-                    onClick={() => handleNavigation('admin')}
-                    className="w-full flex items-center gap-3 px-4 py-3 text-crys-gold hover:bg-crys-gold/10 rounded-lg transition-colors text-left"
-                  >
-                    <Shield className="w-4 h-4" />
-                    Admin Dashboard
-                  </button>
                   <Button 
                     variant="outline" 
                     size="sm" 

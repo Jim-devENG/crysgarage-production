@@ -39,8 +39,30 @@ function AppContent() {
   const [showBillingModal, setShowBillingModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showProfileEditModal, setShowProfileEditModal] = useState(false);
-  const [selectedTier, setSelectedTier] = useState<string>('free'); // Add selected tier state
-  
+    const [selectedTier, setSelectedTier] = useState<string>('free'); // Add selected tier state 
+
+  // URL-based routing
+  useEffect(() => {
+    const path = window.location.pathname;
+    console.log('Current path:', path);
+    
+    if (path === '/admin') {
+      setCurrentPage('admin');
+    } else if (path === '/dashboard') {
+      setCurrentPage('dashboard');
+    } else if (path === '/pricing') {
+      setCurrentPage('pricing');
+    } else if (path === '/help') {
+      setCurrentPage('help');
+    } else if (path === '/courses') {
+      setCurrentPage('courses');
+    } else if (path === '/profile') {
+      setCurrentPage('profile');
+    } else if (path === '/') {
+      setCurrentPage('landing');
+    }
+  }, []);
+
   // Handle navigation with proper type conversion
   const handleNavigation = (section: string) => {
     console.log('Navigation requested to:', section);
