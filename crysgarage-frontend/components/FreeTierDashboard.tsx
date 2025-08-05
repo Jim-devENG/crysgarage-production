@@ -77,6 +77,7 @@ export function FreeTierDashboard({ onFileUpload, onUpgrade, credits, isAuthenti
   const [currentTimeMastered, setCurrentTimeMastered] = useState(0);
   const [originalAudioElement, setOriginalAudioElement] = useState<HTMLAudioElement | null>(null);
   const [masteredAudioElement, setMasteredAudioElement] = useState<HTMLAudioElement | null>(null);
+  const [masteredAudioUrl, setMasteredAudioUrl] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'upload' | 'processing' | 'results' | 'library'>('upload');
 
   // Handle file upload
@@ -146,6 +147,63 @@ export function FreeTierDashboard({ onFileUpload, onUpgrade, credits, isAuthenti
     };
     setMasteredStats(mastered);
 
+    // Create mastered audio URL using Web Audio API processing
+    try {
+      console.log('Starting audio processing...');
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const response = await fetch(file.url);
+      const arrayBuffer = await response.arrayBuffer();
+      const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+      
+      console.log('Audio decoded, creating offline context...');
+      
+      // Create offline context for processing
+      const offlineContext = new OfflineAudioContext(
+        audioBuffer.numberOfChannels,
+        audioBuffer.length,
+        audioBuffer.sampleRate
+      );
+      
+      // Create source from the audio buffer
+      const source = offlineContext.createBufferSource();
+      source.buffer = audioBuffer;
+      
+      // Mastering effects
+      const gainNode = offlineContext.createGain();
+      gainNode.gain.value = 1.5; // Boost volume by 50%
+      
+      // Add compression-like effect
+      const compressor = offlineContext.createDynamicsCompressor();
+      compressor.threshold.value = -20;
+      compressor.knee.value = 10;
+      compressor.ratio.value = 3;
+      compressor.attack.value = 0.003;
+      compressor.release.value = 0.25;
+      
+      // Connect the processing chain
+      source.connect(compressor).connect(gainNode).connect(offlineContext.destination);
+      
+      console.log('Starting rendering...');
+      // Start processing
+      source.start(0);
+      
+      // Render the processed audio
+      const renderedBuffer = await offlineContext.startRendering();
+      
+      console.log('Rendering complete, converting to WAV...');
+      // Convert to WAV and create URL
+      const wavBlob = await audioBufferToWav(renderedBuffer);
+      const masteredUrl = URL.createObjectURL(wavBlob);
+      setMasteredAudioUrl(masteredUrl);
+      
+      console.log('Mastered audio created successfully:', masteredUrl);
+      audioContext.close();
+    } catch (error) {
+      console.error('Error creating mastered audio:', error);
+      // Don't fallback to original - throw error to prevent using original
+      throw new Error('Failed to create mastered audio');
+    }
+
     // Update file status
     setUploadedFiles(prev => prev.map(f => 
       f.id === file.id ? { ...f, status: 'completed', progress: 100 } : f
@@ -176,8 +234,8 @@ export function FreeTierDashboard({ onFileUpload, onUpgrade, credits, isAuthenti
   };
 
   const toggleMasteredPlayback = () => {
-    if (!masteredAudioElement && currentFile) {
-      const audio = new Audio(currentFile.url); // Using same URL for demo, in real app this would be mastered file
+    if (!masteredAudioElement && masteredAudioUrl) {
+      const audio = new Audio(masteredAudioUrl);
       audio.addEventListener('timeupdate', () => setCurrentTimeMastered(audio.currentTime));
       audio.addEventListener('ended', () => setIsPlayingMastered(false));
       setMasteredAudioElement(audio);
@@ -205,12 +263,54 @@ export function FreeTierDashboard({ onFileUpload, onUpgrade, credits, isAuthenti
     return `${mb.toFixed(1)} MB`;
   };
 
+  // Convert AudioBuffer to WAV format
+  const audioBufferToWav = async (buffer: AudioBuffer): Promise<Blob> => {
+    const length = buffer.length;
+    const numberOfChannels = buffer.numberOfChannels;
+    const sampleRate = buffer.sampleRate;
+    const arrayBuffer = new ArrayBuffer(44 + length * numberOfChannels * 2);
+    const view = new DataView(arrayBuffer);
+    
+    // WAV header
+    const writeString = (offset: number, string: string) => {
+      for (let i = 0; i < string.length; i++) {
+        view.setUint8(offset + i, string.charCodeAt(i));
+      }
+    };
+    
+    writeString(0, 'RIFF');
+    view.setUint32(4, 36 + length * numberOfChannels * 2, true);
+    writeString(8, 'WAVE');
+    writeString(12, 'fmt ');
+    view.setUint32(16, 16, true);
+    view.setUint16(20, 1, true);
+    view.setUint16(22, numberOfChannels, true);
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, sampleRate * numberOfChannels * 2, true);
+    view.setUint16(32, numberOfChannels * 2, true);
+    view.setUint16(34, 16, true);
+    writeString(36, 'data');
+    view.setUint32(40, length * numberOfChannels * 2, true);
+    
+    // Convert audio data
+    let offset = 44;
+    for (let i = 0; i < length; i++) {
+      for (let channel = 0; channel < numberOfChannels; channel++) {
+        const sample = Math.max(-1, Math.min(1, buffer.getChannelData(channel)[i]));
+        view.setInt16(offset, sample < 0 ? sample * 0x8000 : sample * 0x7FFF, true);
+        offset += 2;
+      }
+    }
+    
+    return new Blob([arrayBuffer], { type: 'audio/wav' });
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-crys-black via-crys-graphite to-crys-black text-crys-white">
       {/* Navigation Tabs */}
-      <div className="bg-audio-panel-bg/30 border-b border-audio-panel-border/30">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="flex space-x-1">
+      <div className="border-b border-audio-panel-border/30 -mt-16">
+        <div className="max-w-7xl mx-auto px-6 py-0">
+          <div className="flex justify-center space-x-1">
             {[
               { id: 'upload', label: 'Upload', icon: Upload },
               { id: 'processing', label: 'Processing', icon: Activity },
@@ -223,9 +323,9 @@ export function FreeTierDashboard({ onFileUpload, onUpgrade, credits, isAuthenti
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id as any)}
-                  className={`flex items-center gap-2 px-4 py-3 rounded-t-lg font-medium transition-all ${
+                  className={`flex items-center gap-2 px-4 py-2 rounded-t-lg font-medium transition-all ${
                     isActive 
-                      ? 'bg-audio-panel-bg border border-audio-panel-border border-b-0 text-crys-gold' 
+                      ? 'border border-audio-panel-border border-b-0 text-crys-gold' 
                       : 'text-crys-light-grey hover:text-crys-white hover:bg-audio-panel-bg/50'
                   }`}
                 >
@@ -239,12 +339,12 @@ export function FreeTierDashboard({ onFileUpload, onUpgrade, credits, isAuthenti
       </div>
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-6 py-1">
+      <div className="max-w-7xl mx-auto px-6 pt-0">
         {/* Upload Tab */}
         {activeTab === 'upload' && (
-          <div className="space-y-4">
+          <div className="space-y-2">
             {/* Welcome Section */}
-            <div className="text-center">
+            <div className="text-center pt-8">
               <div className="w-16 h-16 bg-gradient-to-r from-crys-gold/20 to-yellow-400/20 rounded-2xl flex items-center justify-center mx-auto mb-3">
                 <Sparkles className="w-8 h-8 text-crys-gold" />
               </div>
@@ -292,7 +392,7 @@ export function FreeTierDashboard({ onFileUpload, onUpgrade, credits, isAuthenti
 
             {/* Upload Section */}
             <Card className="bg-audio-panel-bg border-audio-panel-border">
-              <CardHeader>
+              <CardHeader className="pt-2">
                 <div className="flex items-center gap-3">
                   <Upload className="w-5 h-5 text-crys-gold" />
                   <h3 className="text-crys-white font-semibold">Upload Your Track</h3>
