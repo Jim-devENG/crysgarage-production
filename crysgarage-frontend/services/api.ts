@@ -241,35 +241,95 @@ export interface TierStats {
 
 // Authentication API
 export const authAPI = {
-  // Sign in user
+  // Sign in user (Mock implementation for development)
   signIn: async (email: string, password: string): Promise<{ user: User; token: string }> => {
-      const response = await api.post('/auth/signin', { email, password });
-      const { user, token } = response.data;
-      localStorage.setItem('crysgarage_token', token);
-      return { user, token };
-  },
-
-  // Sign up user
-  signUp: async (name: string, email: string, password: string): Promise<{ user: User; token: string }> => {
-    const response = await api.post('/auth/signup', { name, email, password });
-    const { user, token } = response.data;
+    // Simulate API delay
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // Mock user data (simulate existing user)
+    const user: User = {
+      id: Math.floor(Math.random() * 10000) + 1,
+      name: email.split('@')[0], // Use email prefix as name
+      email: email,
+      tier: 'free',
+      credits: 3,
+      join_date: new Date().toISOString().split('T')[0],
+      total_tracks: 0,
+      total_spent: 0
+    };
+    
+    // Mock token
+    const token = 'mock_token_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    
+    // Store token
     localStorage.setItem('crysgarage_token', token);
+    
+    console.log('Mock signin successful:', { user, token });
     return { user, token };
   },
 
-  // Sign out user
-  signOut: async (): Promise<void> => {
-    try {
-      await api.post('/auth/signout');
-    } finally {
-      localStorage.removeItem('crysgarage_token');
-    }
+  // Sign up user (Mock implementation for development)
+  signUp: async (name: string, email: string, password: string): Promise<{ user: User; token: string }> => {
+    // Simulate API delay
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // Mock user data
+    const user: User = {
+      id: Math.floor(Math.random() * 10000) + 1,
+      name: name,
+      email: email,
+      tier: 'free',
+      credits: 3,
+      join_date: new Date().toISOString().split('T')[0],
+      total_tracks: 0,
+      total_spent: 0
+    };
+    
+    // Mock token
+    const token = 'mock_token_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    
+    // Store token
+    localStorage.setItem('crysgarage_token', token);
+    
+    console.log('Mock signup successful:', { user, token });
+    return { user, token };
   },
 
-  // Get current user
+  // Sign out user (Mock implementation for development)
+  signOut: async (): Promise<void> => {
+    // Simulate API delay
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    // Remove token from localStorage
+    localStorage.removeItem('crysgarage_token');
+    
+    console.log('Mock signout successful');
+  },
+
+  // Get current user (Mock implementation for development)
   getCurrentUser: async (): Promise<User> => {
-    const response = await api.get('/user');
-    return response.data;
+    const token = localStorage.getItem('crysgarage_token');
+    if (!token) {
+      throw new Error('No authentication token found');
+    }
+    
+    // Simulate API delay
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    // Mock user data
+    const user: User = {
+      id: Math.floor(Math.random() * 10000) + 1,
+      name: 'Mock User',
+      email: 'user@example.com',
+      tier: 'free',
+      credits: 3,
+      join_date: new Date().toISOString().split('T')[0],
+      total_tracks: 0,
+      total_spent: 0
+    };
+    
+    console.log('Mock getCurrentUser successful:', user);
+    return user;
   },
 
   // Refresh token

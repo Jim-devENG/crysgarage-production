@@ -13,10 +13,7 @@ import {
   EyeOff, 
   ArrowRight,
   Check,
-  Globe,
-  Code,
   Users,
-  Zap,
   Shield,
   Star,
   X,
@@ -71,18 +68,7 @@ export function SignInPage({ onSignIn, onClose, onSwitchToSignUp }: {
     }
   };
 
-  const handleDemoSignIn = async () => {
-    setIsLoading(true);
-    setError(null);
-    
-    try {
-      await onSignIn('demo.free@crysgarage.com', 'password');
-    } catch (err: any) {
-      setError(err.message || 'Demo sign in failed.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+
 
   return (
     <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4" onClick={onClose}>
@@ -113,50 +99,9 @@ export function SignInPage({ onSignIn, onClose, onSwitchToSignUp }: {
             </div>
           )}
 
-          {/* Demo Sign In Button */}
-          <div className="bg-crys-gold/5 border border-crys-gold/20 rounded-lg p-3 text-center">
-            <p className="text-crys-white text-xs mb-2">Quick Demo Access</p>
-            <Button 
-              size="sm"
-              onClick={handleDemoSignIn}
-              disabled={isLoading}
-              className="bg-crys-gold hover:bg-crys-gold-muted text-crys-black w-full"
-            >
-              <Zap className="w-3 h-3 mr-2" />
-              {isLoading ? 'Signing in...' : 'Try Demo Account'}
-            </Button>
-          </div>
 
-          {/* Social Login */}
-          <div className="grid grid-cols-2 gap-2">
-            <Button 
-              variant="outline"
-              size="sm"
-              disabled={isLoading}
-              className="border-crys-graphite text-crys-white hover:bg-crys-graphite/50"
-            >
-              <Globe className="w-3 h-3 mr-1" />
-              Google
-            </Button>
-            <Button 
-              variant="outline"
-              size="sm" 
-              disabled={isLoading}
-              className="border-crys-graphite text-crys-white hover:bg-crys-graphite/50"
-            >
-              <Code className="w-3 h-3 mr-1" />
-              GitHub
-            </Button>
-          </div>
 
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <Separator className="w-full bg-crys-graphite" />
-            </div>
-            <div className="relative flex justify-center text-xs">
-              <span className="bg-audio-panel-bg px-2 text-crys-light-grey">Or email</span>
-            </div>
-          </div>
+
 
           {/* Email/Password Form */}
           <form onSubmit={handleSubmit} className="space-y-3">
@@ -308,18 +253,7 @@ export function SignUpPage({ onSignUp, onClose, onSwitchToSignIn }: {
     }
   };
 
-  const handleQuickSignUp = async () => {
-    setIsLoading(true);
-    setError(null);
-    
-    try {
-      await onSignUp('demo.free@crysgarage.com', 'password', 'Demo User');
-    } catch (err: any) {
-      setError(err.message || 'Demo sign up failed.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+
 
   const getPasswordStrengthColor = () => {
     switch (passwordStrength) {
@@ -374,19 +308,7 @@ export function SignUpPage({ onSignUp, onClose, onSwitchToSignIn }: {
             </div>
           )}
 
-          {/* Quick Demo Signup */}
-          <div className="bg-crys-gold/5 border border-crys-gold/20 rounded-lg p-3 text-center">
-            <p className="text-crys-white text-xs mb-2">Quick Demo Account</p>
-            <Button 
-              size="sm"
-              onClick={handleQuickSignUp}
-              disabled={isLoading}
-              className="bg-crys-gold hover:bg-crys-gold-muted text-crys-black w-full"
-            >
-              <Zap className="w-3 h-3 mr-2" />
-              {isLoading ? 'Creating...' : 'Create Demo Account'}
-            </Button>
-          </div>
+
 
           {/* Benefits - Compact */}
           <div className="bg-crys-gold/5 border border-crys-gold/20 rounded-lg p-3">
@@ -411,36 +333,7 @@ export function SignUpPage({ onSignUp, onClose, onSwitchToSignIn }: {
             </div>
           </div>
 
-          {/* Social Signup */}
-          <div className="grid grid-cols-2 gap-2">
-            <Button 
-              variant="outline"
-              size="sm"
-              disabled={isLoading}
-              className="border-crys-graphite text-crys-white hover:bg-crys-graphite/50"
-            >
-              <Globe className="w-3 h-3 mr-1" />
-              Google
-            </Button>
-            <Button 
-              variant="outline"
-              size="sm" 
-              disabled={isLoading}
-              className="border-crys-graphite text-crys-white hover:bg-crys-graphite/50"
-            >
-              <Code className="w-3 h-3 mr-1" />
-              GitHub
-            </Button>
-          </div>
 
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <Separator className="w-full bg-crys-graphite" />
-            </div>
-            <div className="relative flex justify-center text-xs">
-              <span className="bg-audio-panel-bg px-2 text-crys-light-grey">Or email</span>
-            </div>
-          </div>
 
           {/* Signup Form */}
           <form onSubmit={handleSubmit} className="space-y-2">

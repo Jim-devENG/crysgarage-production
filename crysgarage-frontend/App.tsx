@@ -66,6 +66,23 @@ function AppContent() {
   // Handle navigation with proper type conversion
   const handleNavigation = (section: string) => {
     console.log('Navigation requested to:', section);
+    
+    // Handle authentication actions
+    if (section === 'signin') {
+      console.log('Opening signin modal');
+      setAuthMode('signin');
+      setShowAuthModal(true);
+      return;
+    }
+    
+    if (section === 'signup') {
+      console.log('Opening signup modal');
+      setAuthMode('signup');
+      setShowAuthModal(true);
+      return;
+    }
+    
+    // Handle page navigation
     if (section === 'landing' || section === 'home' || section === 'dashboard' || section === 'processing' || 
         section === 'results' || section === 'pricing' || section === 'help' || 
         section === 'courses' || section === 'marketplace' || section === 'profile' || section === 'admin') {
@@ -78,14 +95,9 @@ function AppContent() {
   const handleTierSelection = (tierId: string) => {
     setSelectedTier(tierId);
     
-    if (tierId === 'free') {
-      // For free tier, allow access to dashboard even for non-authenticated users
-      setCurrentPage('dashboard');
-    } else {
-      // For paid tiers, require authentication
-      setAuthMode('signup');
-      setShowAuthModal(true);
-    }
+    // For all tiers, require authentication
+    setAuthMode('signup');
+    setShowAuthModal(true);
   };
 
   // Loading state
@@ -298,6 +310,16 @@ function AppContent() {
             }}
           />
         )}
+        
+        {/* Auth Modal for authenticated users */}
+        {showAuthModal && (
+          <AuthModal 
+            initialMode={authMode}
+            onSignIn={signIn}
+            onSignUp={signUp}
+            onClose={() => setShowAuthModal(false)}
+          />
+        )}
                 </div>
     );
   }
@@ -345,7 +367,14 @@ function AppContent() {
         <PricingPage 
           currentTier="free"
           onSelectTier={handleTierSelection}
-          onGoToDashboard={() => setCurrentPage('dashboard')}
+          onGoToDashboard={() => {
+            if (!isAuthenticated) {
+              setAuthMode('signup');
+              setShowAuthModal(true);
+            } else {
+              setCurrentPage('dashboard');
+            }
+          }}
         />
       )}
       
@@ -362,19 +391,32 @@ function AppContent() {
         )}
         
         {currentPage === 'dashboard' && !isAuthenticated && (
-          <FreeTierDashboard 
-            onFileUpload={(file) => {
-              // For non-authenticated users, prompt them to sign up
-              setAuthMode('signup');
-              setShowAuthModal(true);
-            }}
-            onUpgrade={() => {
-              setAuthMode('signup');
-              setShowAuthModal(true);
-            }}
-            credits={3} // Default free tier credits
-            isAuthenticated={false} // Pass authentication status
-          />
+          <div className="min-h-screen flex items-center justify-center">
+            <div className="bg-audio-panel-bg border border-audio-panel-border rounded-xl p-8 max-w-md w-full text-center">
+              <h2 className="text-crys-white text-xl font-semibold mb-4">Authentication Required</h2>
+              <p className="text-crys-light-grey mb-6">Please sign in or create an account to access the dashboard.</p>
+              <div className="space-y-3">
+                <button
+                  onClick={() => {
+                    setAuthMode('signin');
+                    setShowAuthModal(true);
+                  }}
+                  className="w-full bg-crys-gold text-crys-black px-6 py-3 rounded-lg font-semibold hover:bg-crys-gold/90 transition-colors"
+                >
+                  Sign In
+                </button>
+                <button
+                  onClick={() => {
+                    setAuthMode('signup');
+                    setShowAuthModal(true);
+                  }}
+                  className="w-full border border-crys-gold/30 text-crys-gold px-6 py-3 rounded-lg font-semibold hover:bg-crys-gold/10 transition-colors"
+                >
+                  Create Account
+                </button>
+              </div>
+            </div>
+          </div>
         )}
 
         {currentPage === 'admin' && (
