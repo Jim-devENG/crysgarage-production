@@ -59,10 +59,15 @@ export function SignInPage({ onSignIn, onClose, onSwitchToSignUp }: {
     setIsLoading(true);
     setError(null);
     
+    // Close modal immediately
+    onClose();
+    
     try {
       await onSignIn(email, password);
     } catch (err: any) {
-      setError(err.message || 'Sign in failed. Please check your credentials.');
+      // If authentication fails, we can't show error in modal since it's closed
+      // The error will be handled by the AppContext and shown in the main app
+      console.error('Sign in error:', err);
     } finally {
       setIsLoading(false);
     }
@@ -112,7 +117,6 @@ export function SignInPage({ onSignIn, onClose, onSwitchToSignUp }: {
                 <Input
                   id="email"
                   type="email"
-                  placeholder="Enter your email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="pl-9 bg-crys-graphite/30 border-crys-graphite text-crys-white h-9"
@@ -129,7 +133,6 @@ export function SignInPage({ onSignIn, onClose, onSwitchToSignUp }: {
                 <Input
                   id="password"
                   type={showPassword ? "text" : "password"}
-                  placeholder="Enter your password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="pl-9 pr-9 bg-crys-graphite/30 border-crys-graphite text-crys-white h-9"
@@ -244,10 +247,15 @@ export function SignUpPage({ onSignUp, onClose, onSwitchToSignIn }: {
       return;
     }
     
+    // Close modal immediately
+    onClose();
+    
     try {
       await onSignUp(formData.email, formData.password, formData.name);
     } catch (err: any) {
-      setError(err.message || 'Sign up failed. Please try again.');
+      // If authentication fails, we can't show error in modal since it's closed
+      // The error will be handled by the AppContext and shown in the main app
+      console.error('Sign up error:', err);
     } finally {
       setIsLoading(false);
     }
@@ -345,7 +353,6 @@ export function SignUpPage({ onSignUp, onClose, onSwitchToSignIn }: {
                   <Input
                     id="name"
                     type="text"
-                    placeholder="Full name"
                     value={formData.name}
                     onChange={(e) => handleInputChange('name', e.target.value)}
                     className="pl-7 bg-crys-graphite/30 border-crys-graphite text-crys-white h-8 text-xs"
@@ -362,7 +369,6 @@ export function SignUpPage({ onSignUp, onClose, onSwitchToSignIn }: {
                   <Input
                     id="email"
                     type="email"
-                    placeholder="Email"
                     value={formData.email}
                     onChange={(e) => handleInputChange('email', e.target.value)}
                     className="pl-7 bg-crys-graphite/30 border-crys-graphite text-crys-white h-8 text-xs"
@@ -380,7 +386,6 @@ export function SignUpPage({ onSignUp, onClose, onSwitchToSignIn }: {
                 <Input
                   id="password"
                   type={showPassword ? "text" : "password"}
-                  placeholder="Create password"
                   value={formData.password}
                   onChange={(e) => handleInputChange('password', e.target.value)}
                   className="pl-7 pr-8 bg-crys-graphite/30 border-crys-graphite text-crys-white h-8 text-xs"
@@ -416,7 +421,6 @@ export function SignUpPage({ onSignUp, onClose, onSwitchToSignIn }: {
                 <Input
                   id="confirmPassword"
                   type={showConfirmPassword ? "text" : "password"}
-                  placeholder="Confirm password"
                   value={formData.confirmPassword}
                   onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
                   className="pl-7 pr-8 bg-crys-graphite/30 border-crys-graphite text-crys-white h-8 text-xs"

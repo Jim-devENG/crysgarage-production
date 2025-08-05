@@ -219,22 +219,7 @@ export function Header({
               </div>
             ) : (
               <div className="flex items-center gap-3">
-
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={() => handleNavigation('signin')}
-                  className="border-crys-gold/30 text-crys-gold hover:bg-crys-gold/10 hidden sm:flex"
-                >
-                  Sign In
-                </Button>
-                <Button 
-                  size="sm" 
-                  onClick={() => handleNavigation('signup')}
-                  className="bg-crys-gold hover:bg-crys-gold-muted text-crys-black"
-                >
-                  Get Started
-                </Button>
+                {/* Authentication buttons removed */}
               </div>
             )}
 
@@ -277,21 +262,7 @@ export function Header({
               {!user && (
                 <>
                   <div className="border-t border-crys-graphite my-3"></div>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={() => handleNavigation('signin')}
-                    className="w-full border-crys-gold/30 text-crys-gold hover:bg-crys-gold/10"
-                  >
-                    Sign In
-                  </Button>
-                  <Button 
-                    size="sm" 
-                    onClick={() => handleNavigation('signup')}
-                    className="w-full bg-crys-gold hover:bg-crys-gold-muted text-crys-black"
-                  >
-                    Get Started
-                  </Button>
+                  {/* Authentication buttons removed */}
                 </>
               )}
             </nav>

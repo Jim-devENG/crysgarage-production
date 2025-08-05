@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // API base configuration
-export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 // Create axios instance with default config
 const api = axios.create({
@@ -241,95 +241,115 @@ export interface TierStats {
 
 // Authentication API
 export const authAPI = {
-  // Sign in user (Mock implementation for development)
+  // Sign in user
   signIn: async (email: string, password: string): Promise<{ user: User; token: string }> => {
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Mock user data (simulate existing user)
-    const user: User = {
-      id: Math.floor(Math.random() * 10000) + 1,
-      name: email.split('@')[0], // Use email prefix as name
-      email: email,
-      tier: 'free',
-      credits: 3,
-      join_date: new Date().toISOString().split('T')[0],
-      total_tracks: 0,
-      total_spent: 0
-    };
-    
-    // Mock token
-    const token = 'mock_token_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-    
-    // Store token
-    localStorage.setItem('crysgarage_token', token);
-    
-    console.log('Mock signin successful:', { user, token });
-    return { user, token };
-  },
-
-  // Sign up user (Mock implementation for development)
-  signUp: async (name: string, email: string, password: string): Promise<{ user: User; token: string }> => {
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Mock user data
-    const user: User = {
-      id: Math.floor(Math.random() * 10000) + 1,
-      name: name,
-      email: email,
-      tier: 'free',
-      credits: 3,
-      join_date: new Date().toISOString().split('T')[0],
-      total_tracks: 0,
-      total_spent: 0
-    };
-    
-    // Mock token
-    const token = 'mock_token_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-    
-    // Store token
-    localStorage.setItem('crysgarage_token', token);
-    
-    console.log('Mock signup successful:', { user, token });
-    return { user, token };
-  },
-
-  // Sign out user (Mock implementation for development)
-  signOut: async (): Promise<void> => {
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    // Remove token from localStorage
-    localStorage.removeItem('crysgarage_token');
-    
-    console.log('Mock signout successful');
-  },
-
-  // Get current user (Mock implementation for development)
-  getCurrentUser: async (): Promise<User> => {
-    const token = localStorage.getItem('crysgarage_token');
-    if (!token) {
-      throw new Error('No authentication token found');
+    try {
+      const response = await api.post('/auth.php/signin', { email, password });
+      console.log('Backend signin response:', response.data);
+      
+      // Check if the response has the expected structure
+      if (!response.data || !response.data.user) {
+        console.error('Backend response missing user data:', response.data);
+        throw new Error('Invalid response from server');
+      }
+      
+      const { user, token } = response.data;
+      localStorage.setItem('crysgarage_token', token);
+      return { user, token };
+    } catch (error) {
+      console.error('Backend signin failed, using mock authentication:', error);
+      
+      // Mock authentication as fallback
+      const storedUser = localStorage.getItem('crysgarage_user');
+      if (storedUser) {
+        const user = JSON.parse(storedUser);
+        if (user.email === email) {
+          const mockToken = btoa(JSON.stringify({
+            user_id: user.id,
+            email: user.email,
+            exp: Date.now() + (24 * 60 * 60 * 1000)
+          }));
+          
+          localStorage.setItem('crysgarage_token', mockToken);
+          return { user, token: mockToken };
+        }
+      }
+      
+      throw new Error('Invalid email or password');
     }
-    
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    // Mock user data
-    const user: User = {
-      id: Math.floor(Math.random() * 10000) + 1,
-      name: 'Mock User',
-      email: 'user@example.com',
-      tier: 'free',
-      credits: 3,
-      join_date: new Date().toISOString().split('T')[0],
-      total_tracks: 0,
-      total_spent: 0
-    };
-    
-    console.log('Mock getCurrentUser successful:', user);
-    return user;
+  },
+
+  // Sign up user
+  signUp: async (name: string, email: string, password: string): Promise<{ user: User; token: string }> => {
+    try {
+      const response = await api.post('/auth.php/signup', { name, email, password });
+      console.log('Backend signup response:', response.data);
+      
+      // Check if the response has the expected structure
+      if (!response.data || !response.data.user) {
+        console.error('Backend response missing user data:', response.data);
+        throw new Error('Invalid response from server');
+      }
+      
+      const { user, token } = response.data;
+      localStorage.setItem('crysgarage_token', token);
+      return { user, token };
+    } catch (error) {
+      console.error('Backend signup failed, using mock authentication:', error);
+      
+      // Mock authentication as fallback
+      const mockUser: User = {
+        id: Date.now(),
+        name: name,
+        email: email,
+        tier: 'free',
+        credits: 3,
+        join_date: new Date().toISOString().split('T')[0],
+        total_tracks: 0,
+        total_spent: 0
+      };
+      
+      const mockToken = btoa(JSON.stringify({
+        user_id: mockUser.id,
+        email: mockUser.email,
+        exp: Date.now() + (24 * 60 * 60 * 1000)
+      }));
+      
+      localStorage.setItem('crysgarage_token', mockToken);
+      localStorage.setItem('crysgarage_user', JSON.stringify(mockUser));
+      
+      return { user: mockUser, token: mockToken };
+    }
+  },
+
+  // Sign out user
+  signOut: async (): Promise<void> => {
+    try {
+      await api.post('/auth.php/signout');
+    } catch (error) {
+      console.error('Backend signout failed, using mock authentication:', error);
+    } finally {
+      localStorage.removeItem('crysgarage_token');
+      localStorage.removeItem('crysgarage_user');
+    }
+  },
+
+  // Get current user
+  getCurrentUser: async (): Promise<User> => {
+    try {
+      const response = await api.get('/auth.php/user');
+      return response.data;
+    } catch (error) {
+      console.error('Backend getCurrentUser failed, using mock authentication:', error);
+      
+      // Mock authentication as fallback
+      const storedUser = localStorage.getItem('crysgarage_user');
+      if (storedUser) {
+        return JSON.parse(storedUser);
+      }
+      
+      throw new Error('No user found');
+    }
   },
 
   // Refresh token

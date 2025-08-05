@@ -41,6 +41,27 @@ function AppContent() {
   const [showProfileEditModal, setShowProfileEditModal] = useState(false);
     const [selectedTier, setSelectedTier] = useState<string>('free'); // Add selected tier state 
 
+  // Authentication wrapper functions
+  const handleSignIn = async (email: string, password: string) => {
+    try {
+      await signIn(email, password);
+      setCurrentPage('dashboard'); // Redirect to dashboard
+    } catch (error) {
+      // Error is handled by the context
+      console.error('Sign in error:', error);
+    }
+  };
+
+  const handleSignUp = async (name: string, email: string, password: string) => {
+    try {
+      await signUp(name, email, password);
+      setCurrentPage('dashboard'); // Redirect to dashboard
+    } catch (error) {
+      // Error is handled by the context
+      console.error('Sign up error:', error);
+    }
+  };
+
   // URL-based routing
   useEffect(() => {
     const path = window.location.pathname;
@@ -95,9 +116,8 @@ function AppContent() {
   const handleTierSelection = (tierId: string) => {
     setSelectedTier(tierId);
     
-    // For all tiers, require authentication
-    setAuthMode('signup');
-    setShowAuthModal(true);
+    // No authentication required - go directly to dashboard
+    setCurrentPage('dashboard');
   };
 
   // Loading state
@@ -231,13 +251,13 @@ function AppContent() {
           
           {currentPage === 'help' && (
             <HelpPage 
-              onGetStarted={() => setShowAuthModal(true)}
+              onGetStarted={() => setCurrentPage('dashboard')}
             />
           )}
           
             {currentPage === 'courses' && (
               <CoursesPage 
-              onGetStarted={() => setShowAuthModal(true)}
+              onGetStarted={() => setCurrentPage('dashboard')}
             />
           )}
           
@@ -312,14 +332,7 @@ function AppContent() {
         )}
         
         {/* Auth Modal for authenticated users */}
-        {showAuthModal && (
-          <AuthModal 
-            initialMode={authMode}
-            onSignIn={signIn}
-            onSignUp={signUp}
-            onClose={() => setShowAuthModal(false)}
-          />
-        )}
+              {/* Authentication modal removed for now */}
                 </div>
     );
   }
@@ -340,12 +353,10 @@ function AppContent() {
         {currentPage === 'landing' && (
           <LandingPage 
             onGetStarted={() => {
-              setAuthMode('signup');
-              setShowAuthModal(true);
+              setCurrentPage('dashboard');
             }}
             onTryMastering={() => {
-              setAuthMode('signin');
-              setShowAuthModal(true);
+              setCurrentPage('dashboard');
             }}
           />
         )}
@@ -353,12 +364,10 @@ function AppContent() {
       {currentPage === 'home' && (
         <LandingPage 
           onGetStarted={() => {
-            setAuthMode('signup');
-            setShowAuthModal(true);
+            setCurrentPage('dashboard');
           }}
           onTryMastering={() => {
-            setAuthMode('signin');
-            setShowAuthModal(true);
+            setCurrentPage('dashboard');
           }}
         />
       )}
@@ -368,55 +377,32 @@ function AppContent() {
           currentTier="free"
           onSelectTier={handleTierSelection}
           onGoToDashboard={() => {
-            if (!isAuthenticated) {
-              setAuthMode('signup');
-              setShowAuthModal(true);
-            } else {
-              setCurrentPage('dashboard');
-            }
+            setCurrentPage('dashboard');
           }}
         />
       )}
       
       {currentPage === 'help' && (
         <HelpPage 
-          onGetStarted={() => setShowAuthModal(true)}
+          onGetStarted={() => setCurrentPage('dashboard')}
         />
       )}
       
         {currentPage === 'courses' && (
           <CoursesPage 
-            onGetStarted={() => setShowAuthModal(true)}
+            onGetStarted={() => setCurrentPage('dashboard')}
           />
         )}
         
         {currentPage === 'dashboard' && !isAuthenticated && (
-          <div className="min-h-screen flex items-center justify-center">
-            <div className="bg-audio-panel-bg border border-audio-panel-border rounded-xl p-8 max-w-md w-full text-center">
-              <h2 className="text-crys-white text-xl font-semibold mb-4">Authentication Required</h2>
-              <p className="text-crys-light-grey mb-6">Please sign in or create an account to access the dashboard.</p>
-              <div className="space-y-3">
-                <button
-                  onClick={() => {
-                    setAuthMode('signin');
-                    setShowAuthModal(true);
-                  }}
-                  className="w-full bg-crys-gold text-crys-black px-6 py-3 rounded-lg font-semibold hover:bg-crys-gold/90 transition-colors"
-                >
-                  Sign In
-                </button>
-                <button
-                  onClick={() => {
-                    setAuthMode('signup');
-                    setShowAuthModal(true);
-                  }}
-                  className="w-full border border-crys-gold/30 text-crys-gold px-6 py-3 rounded-lg font-semibold hover:bg-crys-gold/10 transition-colors"
-                >
-                  Create Account
-                </button>
-              </div>
-            </div>
-          </div>
+          <FreeTierDashboard 
+            onFileUpload={(file) => {
+              console.log('Free tier file upload:', file);
+            }}
+            onUpgrade={() => setShowPaymentModal(true)}
+            credits={3}
+            isAuthenticated={false}
+          />
         )}
 
         {currentPage === 'admin' && (
