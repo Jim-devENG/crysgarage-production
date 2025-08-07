@@ -1226,6 +1226,7 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
                     genreName={selectedGenre?.name}
                     audioUrl={processedAudioUrl}
                     isPlaying={isPlayingProcessed}
+                    isProcessing={isProcessing}
                   />
                 </div>
               </div>

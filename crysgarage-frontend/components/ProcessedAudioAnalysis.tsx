@@ -24,13 +24,15 @@ interface ProcessedAudioAnalysisProps {
   genreName: string | undefined;
   audioUrl?: string;
   isPlaying?: boolean;
+  isProcessing?: boolean;
 }
 
 const ProcessedAudioAnalysis: React.FC<ProcessedAudioAnalysisProps> = ({ 
   analysis, 
   genreName, 
   audioUrl, 
-  isPlaying = false 
+  isPlaying = false,
+  isProcessing = false
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -212,7 +214,42 @@ const ProcessedAudioAnalysis: React.FC<ProcessedAudioAnalysisProps> = ({
     });
   };
 
-  if (!analysis) return null;
+  if (!analysis) {
+    return (
+      <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
+        <div className="flex items-center space-x-2 mb-4">
+          <Activity className={`w-5 h-5 ${isProcessing ? 'text-green-400 animate-pulse' : 'text-gray-400'}`} />
+          <h4 className={`text-lg font-semibold ${isProcessing ? 'text-green-400' : 'text-gray-400'}`}>
+            Real-Time Analysis
+          </h4>
+          {isProcessing && (
+            <div className="flex space-x-1">
+              <div className="w-1 h-4 bg-green-400 rounded-full animate-pulse"></div>
+              <div className="w-1 h-4 bg-green-400 rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
+              <div className="w-1 h-4 bg-green-400 rounded-full animate-pulse" style={{ animationDelay: '0.4s' }}></div>
+            </div>
+          )}
+        </div>
+        <div className="text-center py-8">
+          <div className="text-gray-500 mb-4">
+            <BarChart3 className="w-12 h-12 mx-auto mb-2" />
+            <p>
+              {isProcessing 
+                ? 'Processing your audio... Analysis will appear here shortly'
+                : 'Analysis will appear here after processing your audio'
+              }
+            </p>
+          </div>
+          <div className="text-sm text-gray-600">
+            {isProcessing 
+              ? 'Please wait while we analyze and process your audio file'
+              : 'Upload an audio file and select a genre to see real-time analysis'
+            }
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const getQualityColor = (value: number, max: number = 100) => {
     const percentage = (value / max) * 100;
