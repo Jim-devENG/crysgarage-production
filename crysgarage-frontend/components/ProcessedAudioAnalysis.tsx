@@ -48,7 +48,9 @@ const ProcessedAudioAnalysis: React.FC<ProcessedAudioAnalysisProps> = ({
     currentTreble: 0,
     currentVolume: 0,
     peakFrequency: 0,
-    rmsLevel: 0
+    rmsLevel: 0,
+    lufs: -70,
+    peak: -70
   });
 
   // Initialize real-time analysis using existing audio element
@@ -145,13 +147,33 @@ const ProcessedAudioAnalysis: React.FC<ProcessedAudioAnalysisProps> = ({
       }
       const peakFrequency = maxIndex * audioContextRef.current!.sampleRate / (2 * bufferLength);
 
+      // Calculate LUFS (simplified K-weighting)
+      const kWeightedSum = dataArray.slice(0, Math.floor(bufferLength * 0.1)).reduce((a, b) => a + b, 0) * 1.4 + // Bass boost
+                          dataArray.slice(Math.floor(bufferLength * 0.1), Math.floor(bufferLength * 0.5)).reduce((a, b) => a + b, 0) + // Mid
+                          dataArray.slice(Math.floor(bufferLength * 0.5)).reduce((a, b) => a + b, 0) * 1.2; // Treble boost
+      
+      const kWeightedAverage = kWeightedSum / bufferLength;
+      const lufs = 20 * Math.log10(kWeightedAverage / 255) - 70; // Convert to LUFS scale
+      
+      // Calculate Peak
+      let peak = -70;
+      for (let i = 0; i < timeDataArray.length; i++) {
+        const sample = Math.abs((timeDataArray[i] - 128) / 128);
+        const sampleDb = 20 * Math.log10(sample);
+        if (sampleDb > peak) {
+          peak = sampleDb;
+        }
+      }
+
       setRealTimeData({
         currentBass,
         currentMid,
         currentTreble,
         currentVolume: rms * 100,
         peakFrequency,
-        rmsLevel: rms * 100
+        rmsLevel: rms * 100,
+        lufs: Math.max(-70, lufs),
+        peak: Math.max(-70, peak)
       });
 
       // Draw frequency spectrum
@@ -312,6 +334,22 @@ const ProcessedAudioAnalysis: React.FC<ProcessedAudioAnalysisProps> = ({
         </div>
       </div>
 
+      {/* LUFS and Peak Metrics */}
+      <div className="grid grid-cols-2 gap-2 mb-3">
+        <div className="bg-gray-700 rounded p-2 text-center">
+          <div className="text-xs text-gray-400">LUFS</div>
+          <div className={`text-sm font-bold ${realTimeData.lufs > -14 ? 'text-red-400' : realTimeData.lufs > -16 ? 'text-yellow-400' : 'text-green-400'}`}>
+            {realTimeData.lufs.toFixed(1)}
+          </div>
+        </div>
+        <div className="bg-gray-700 rounded p-2 text-center">
+          <div className="text-xs text-gray-400">Peak</div>
+          <div className={`text-sm font-bold ${realTimeData.peak > -1 ? 'text-red-400' : realTimeData.peak > -3 ? 'text-yellow-400' : 'text-green-400'}`}>
+            {realTimeData.peak.toFixed(1)}
+          </div>
+        </div>
+      </div>
+
       {/* Mini Frequency Spectrum */}
       <div className="mb-3">
         <div className="text-xs text-gray-400 mb-1">Frequency Spectrum</div>
@@ -336,6 +374,16 @@ const ProcessedAudioAnalysis: React.FC<ProcessedAudioAnalysisProps> = ({
             <div className="bg-gray-700 rounded p-2">
               <div className="text-gray-400">Rhythm</div>
               <div className="font-bold text-green-400">{analysis.rhythmComplexity.toFixed(0)}%</div>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-2 text-xs">
+            <div className="bg-gray-700 rounded p-2">
+              <div className="text-gray-400">Target LUFS</div>
+              <div className="font-bold text-purple-400">-14.0</div>
+            </div>
+            <div className="bg-gray-700 rounded p-2">
+              <div className="text-gray-400">Target Peak</div>
+              <div className="font-bold text-orange-400">-1.0</div>
             </div>
           </div>
           <div className="bg-gray-700 rounded p-2 text-xs">
