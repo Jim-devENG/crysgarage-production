@@ -578,7 +578,22 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
       };
       setProcessedAudioAnalysis(initialAnalysis);
       try {
-        const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+        // Check for mobile device and handle audio context accordingly
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+        
+        if (!AudioContextClass) {
+          throw new Error('Web Audio API not supported on this device');
+        }
+        
+        const audioContext = new AudioContextClass();
+        
+        // For mobile devices, ensure audio context is resumed
+        if (isMobile && audioContext.state === 'suspended') {
+          console.log('Mobile device detected - audio context suspended, waiting for user interaction');
+          // The audio context will be resumed when user interacts with the audio element
+        }
+        
         const arrayBuffer = await selectedFile.arrayBuffer();
         const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
         
@@ -672,12 +687,36 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
             const audio = new Audio(url);
             audio.addEventListener('timeupdate', () => setCurrentTimeProcessed(audio.currentTime));
             audio.addEventListener('ended', () => setIsPlayingProcessed(false));
+            
+            // Mobile-specific audio setup
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            if (isMobile) {
+              // Set mobile-specific audio properties
+              audio.preload = 'metadata';
+              audio.crossOrigin = 'anonymous';
+              
+              // Add mobile-specific event listeners
+              audio.addEventListener('canplay', () => {
+                console.log('Mobile audio ready to play');
+              });
+              
+              audio.addEventListener('error', (e) => {
+                console.error('Mobile audio error:', e);
+              });
+            }
+            
             processedAudioRef.current = audio;
-            audio.play().then(() => {
-              setIsPlayingProcessed(true);
-            }).catch(error => {
-              console.log('Auto-play prevented by browser:', error);
-            });
+            
+            // For mobile, don't auto-play - let user interact first
+            if (!isMobile) {
+              audio.play().then(() => {
+                setIsPlayingProcessed(true);
+              }).catch(error => {
+                console.log('Auto-play prevented by browser:', error);
+              });
+            } else {
+              console.log('Mobile device detected - waiting for user interaction to play audio');
+            }
           }
         }, 100);
         
@@ -726,16 +765,60 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
       const audio = new Audio(processedAudioUrl);
       audio.addEventListener('timeupdate', () => setCurrentTimeProcessed(audio.currentTime));
       audio.addEventListener('ended', () => setIsPlayingProcessed(false));
+      
+      // Mobile-specific audio setup
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      if (isMobile) {
+        audio.preload = 'metadata';
+        audio.crossOrigin = 'anonymous';
+        
+        audio.addEventListener('canplay', () => {
+          console.log('Mobile audio ready to play');
+        });
+        
+        audio.addEventListener('error', (e) => {
+          console.error('Mobile audio error:', e);
+        });
+      }
+      
       processedAudioRef.current = audio;
-      audio.play();
-      setIsPlayingProcessed(true);
+      
+      // For mobile, ensure audio context is resumed before playing
+      if (isMobile) {
+        // Resume any suspended audio context
+        const audioContext = window.AudioContext || (window as any).webkitAudioContext;
+        if (audioContext && audioContext.state === 'suspended') {
+          audioContext.resume().then(() => {
+            audio.play().then(() => {
+              setIsPlayingProcessed(true);
+            }).catch(error => {
+              console.error('Mobile audio play failed:', error);
+            });
+          });
+        } else {
+          audio.play().then(() => {
+            setIsPlayingProcessed(true);
+          }).catch(error => {
+            console.error('Mobile audio play failed:', error);
+          });
+        }
+      } else {
+        audio.play().then(() => {
+          setIsPlayingProcessed(true);
+        }).catch(error => {
+          console.error('Audio play failed:', error);
+        });
+      }
     } else if (processedAudioRef.current) {
       if (isPlayingProcessed) {
         processedAudioRef.current.pause();
         setIsPlayingProcessed(false);
       } else {
-        processedAudioRef.current.play();
-        setIsPlayingProcessed(true);
+        processedAudioRef.current.play().then(() => {
+          setIsPlayingProcessed(true);
+        }).catch(error => {
+          console.error('Audio play failed:', error);
+        });
       }
     }
   };
@@ -759,33 +842,33 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black text-white">
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black text-white" style={{ marginTop: '-120px', paddingTop: '60px' }}>
       {/* Header */}
-      <div className="bg-black/20 backdrop-blur-sm border-b border-gray-700">
-        <div className="max-w-7xl mx-auto px-4 py-4">
+      <div className="border-b border-gray-700/30">
+        <div className="max-w-7xl mx-auto px-4 py-0.5">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-gradient-to-r from-crys-gold to-yellow-500 rounded-lg flex items-center justify-center">
-                <Music className="w-6 h-6 text-black" />
+              <div className="w-6 h-6 bg-gradient-to-r from-crys-gold/90 to-yellow-500/80 rounded-md flex items-center justify-center">
+                <Music className="w-4 h-4 text-black/90" />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-crys-gold">Professional Tier</h1>
-                <p className="text-sm text-gray-400">Advanced Audio Mastering</p>
+                <h1 className="text-base font-bold text-crys-gold leading-none mb-0.5">Professional Tier</h1>
+                <p className="text-[10px] text-gray-400 leading-none">Advanced Audio Mastering</p>
               </div>
             </div>
             <div className="flex items-center space-x-4">
               <div className="text-right">
-                <p className="text-sm text-gray-400">Step {currentStep} of 5</p>
-                <div className="w-32 h-2 bg-gray-700 rounded-full overflow-hidden">
+                <p className="text-[10px] text-gray-400 leading-none mb-0.5">Step {currentStep} of 5</p>
+                <div className="w-20 h-1 bg-gray-700/40 rounded-full overflow-hidden">
                   <div 
-                    className="h-full bg-gradient-to-r from-crys-gold to-yellow-500 transition-all duration-500"
+                    className="h-full bg-gradient-to-r from-crys-gold/90 to-yellow-500/80 transition-all duration-500"
                     style={{ width: `${(currentStep / 5) * 100}%` }}
                   />
                 </div>
               </div>
               <div className="text-right">
-                <p className="text-sm text-gray-400">Credits</p>
-                <p className="text-lg font-bold text-crys-gold">{credits}</p>
+                <p className="text-[10px] text-gray-400 leading-none mb-0.5">Credits</p>
+                <p className="text-sm font-bold text-crys-gold leading-none">{credits}</p>
               </div>
             </div>
           </div>
@@ -793,7 +876,7 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
       </div>
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 py-8">
+      <div className="max-w-7xl mx-auto px-4 py-2">
         <>
           {/* Step 1: Upload */}
         {currentStep === 1 && (

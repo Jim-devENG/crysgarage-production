@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Activity, BarChart3, Gauge, Zap, Music2, Volume2 } from 'lucide-react';
+import { Activity, BarChart3, Gauge, Zap, Music2, Volume2, Smartphone } from 'lucide-react';
 
 interface ProcessedAudioAnalysisProps {
   analysis: {
@@ -52,10 +52,42 @@ const ProcessedAudioAnalysis: React.FC<ProcessedAudioAnalysisProps> = ({
     lufs: -70,
     peak: -70
   });
+  const [isMobile, setIsMobile] = useState(false);
+  const [mobileAudioSupported, setMobileAudioSupported] = useState(true);
+  const [userInteracted, setUserInteracted] = useState(false);
+
+  // Detect mobile device and audio support
+  useEffect(() => {
+    const checkMobileSupport = () => {
+      const mobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      setIsMobile(mobile);
+      
+      // Check if Web Audio API is supported
+      const audioSupported = !!(window.AudioContext || (window as any).webkitAudioContext);
+      setMobileAudioSupported(audioSupported);
+      
+      console.log('Mobile detection:', { mobile, audioSupported });
+    };
+    
+    checkMobileSupport();
+  }, []);
+
+  // Handle user interaction for mobile audio context
+  const handleUserInteraction = async () => {
+    if (!userInteracted && audioContextRef.current && audioContextRef.current.state === 'suspended') {
+      try {
+        await audioContextRef.current.resume();
+        setUserInteracted(true);
+        console.log('Audio context resumed after user interaction');
+      } catch (error) {
+        console.error('Failed to resume audio context:', error);
+      }
+    }
+  };
 
   // Initialize real-time analysis using existing audio element
   useEffect(() => {
-    if (!audioElement) {
+    if (!audioElement || !mobileAudioSupported) {
       return;
     }
 
@@ -63,7 +95,8 @@ const ProcessedAudioAnalysis: React.FC<ProcessedAudioAnalysisProps> = ({
       try {
         // Only create audio context if it doesn't exist
         if (!audioContextRef.current) {
-          const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+          const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+          const audioContext = new AudioContextClass();
           audioContextRef.current = audioContext;
 
           // Create analyser
@@ -77,20 +110,29 @@ const ProcessedAudioAnalysis: React.FC<ProcessedAudioAnalysisProps> = ({
           source.connect(analyser);
           analyser.connect(audioContext.destination);
           sourceRef.current = source as any;
+
+          console.log('Audio context initialized:', audioContext.state);
         }
 
-        // Resume audio context if it's suspended
-        if (audioContextRef.current.state === 'suspended') {
+        // For mobile, we need user interaction to resume audio context
+        if (isMobile && audioContextRef.current.state === 'suspended') {
+          console.log('Mobile device detected - waiting for user interaction');
+          return;
+        }
+
+        // Resume audio context if it's suspended (desktop)
+        if (!isMobile && audioContextRef.current.state === 'suspended') {
           await audioContextRef.current.resume();
         }
 
-        // Start analysis if playing
-        if (isPlaying) {
+        // Start analysis if playing and context is running
+        if (isPlaying && audioContextRef.current.state === 'running') {
           startRealTimeAnalysis();
         }
 
       } catch (error) {
         console.error('Error initializing real-time analysis:', error);
+        setMobileAudioSupported(false);
       }
     };
 
@@ -101,18 +143,28 @@ const ProcessedAudioAnalysis: React.FC<ProcessedAudioAnalysisProps> = ({
         cancelAnimationFrame(animationRef.current);
       }
     };
-  }, [audioElement]);
+  }, [audioElement, mobileAudioSupported, isMobile]);
 
   // Handle play/pause state changes
   useEffect(() => {
-    if (!audioContextRef.current || !analyserRef.current) {
+    if (!audioContextRef.current || !analyserRef.current || !mobileAudioSupported) {
       return;
     }
 
     if (isPlaying) {
+      // For mobile, ensure user has interacted
+      if (isMobile && !userInteracted) {
+        console.log('Mobile: Waiting for user interaction before starting analysis');
+        return;
+      }
+
       // Resume audio context and start analysis
       audioContextRef.current.resume().then(() => {
-        startRealTimeAnalysis();
+        if (audioContextRef.current?.state === 'running') {
+          startRealTimeAnalysis();
+        }
+      }).catch(error => {
+        console.error('Failed to resume audio context:', error);
       });
     } else {
       // Stop analysis but don't close the context
@@ -120,7 +172,7 @@ const ProcessedAudioAnalysis: React.FC<ProcessedAudioAnalysisProps> = ({
         cancelAnimationFrame(animationRef.current);
       }
     }
-  }, [isPlaying]);
+  }, [isPlaying, mobileAudioSupported, isMobile, userInteracted]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -266,46 +318,99 @@ const ProcessedAudioAnalysis: React.FC<ProcessedAudioAnalysisProps> = ({
     });
   };
 
-    if (!analysis) {
+    // Mobile audio context interaction prompt
+  if (isMobile && !userInteracted && audioContextRef.current?.state === 'suspended') {
     return (
-      <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
-        <div className="flex items-center space-x-2 mb-4">
-          <Activity className={`w-5 h-5 ${isProcessing ? 'text-green-400 animate-pulse' : 'text-gray-400'}`} />
-          <h4 className={`text-lg font-semibold ${isProcessing ? 'text-green-400' : 'text-gray-400'}`}>
+      <div className="bg-gray-800 rounded-xl p-4 border border-gray-700">
+        <div className="flex items-center space-x-2 mb-3">
+          <Smartphone className="w-4 h-4 text-yellow-400" />
+          <h4 className="text-sm font-semibold text-yellow-400">Mobile Audio Setup</h4>
+        </div>
+        <div className="text-center py-4">
+          <div className="text-gray-400 mb-3">
+            <p className="text-sm font-medium mb-2">
+              Tap to enable audio analysis
+            </p>
+            <p className="text-xs text-gray-500">
+              Mobile browsers require user interaction to start audio processing
+            </p>
+          </div>
+          <button
+            onClick={handleUserInteraction}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+          >
+            Enable Audio Analysis
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Audio not supported on this device
+  if (!mobileAudioSupported) {
+    return (
+      <div className="bg-gray-800 rounded-xl p-4 border border-gray-700">
+        <div className="flex items-center space-x-2 mb-3">
+          <Smartphone className="w-4 h-4 text-red-400" />
+          <h4 className="text-sm font-semibold text-red-400">Audio Not Supported</h4>
+        </div>
+        <div className="text-center py-4">
+          <div className="text-gray-400 mb-3">
+            <p className="text-sm font-medium mb-2">
+              Web Audio API not supported
+            </p>
+            <p className="text-xs text-gray-500">
+              Your browser doesn't support real-time audio analysis
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!analysis) {
+    return (
+      <div className="bg-gray-800 rounded-xl p-4 border border-gray-700">
+        <div className="flex items-center space-x-2 mb-3">
+          <Activity className={`w-4 h-4 ${isProcessing ? 'text-green-400 animate-pulse' : 'text-gray-400'}`} />
+          <h4 className={`text-sm font-semibold ${isProcessing ? 'text-green-400' : 'text-gray-400'}`}>
             Real-Time Analysis
           </h4>
           {isProcessing && (
             <div className="flex space-x-1">
-              <div className="w-1 h-4 bg-green-400 rounded-full animate-pulse"></div>
-              <div className="w-1 h-4 bg-green-400 rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
-              <div className="w-1 h-4 bg-green-400 rounded-full animate-pulse" style={{ animationDelay: '0.4s' }}></div>
+              <div className="w-1 h-3 bg-green-400 rounded-full animate-pulse"></div>
+              <div className="w-1 h-3 bg-green-400 rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
+              <div className="w-1 h-3 bg-green-400 rounded-full animate-pulse" style={{ animationDelay: '0.4s' }}></div>
             </div>
           )}
         </div>
-        <div className="text-center py-8">
-          <div className="text-gray-500 mb-4">
-            <BarChart3 className="w-12 h-12 mx-auto mb-2" />
-            <p className="text-lg font-medium">
+        <div className="text-center py-4">
+          <div className="text-gray-500 mb-3">
+            <BarChart3 className="w-8 h-8 mx-auto mb-2" />
+            <p className="text-sm font-medium">
               {isProcessing
                 ? 'Processing your audio... Analysis will appear here shortly'
                 : 'Analysis will appear here after processing your audio'
               }
             </p>
           </div>
-          <div className="text-sm text-gray-600">
+          <div className="text-xs text-gray-600">
             {isProcessing
               ? 'Please wait while we analyze and process your audio file'
               : 'Upload an audio file and select a genre to see real-time analysis'
             }
           </div>
           {/* Debug info */}
-          <div className="mt-4 p-3 bg-gray-700 rounded text-xs text-gray-400">
+          <div className="mt-3 p-2 bg-gray-700 rounded text-xs text-gray-400">
             <div>Debug: Analysis is null</div>
             <div>Is Processing: {isProcessing ? 'Yes' : 'No'}</div>
             <div>Genre: {genreName || 'None'}</div>
             <div>Audio URL: {audioUrl ? 'Present' : 'None'}</div>
             <div>Is Playing: {isPlaying ? 'Yes' : 'No'}</div>
             <div>Audio Element: {audioElement ? 'Present' : 'None'}</div>
+            <div>Mobile: {isMobile ? 'Yes' : 'No'}</div>
+            <div>Audio Supported: {mobileAudioSupported ? 'Yes' : 'No'}</div>
+            <div>User Interacted: {userInteracted ? 'Yes' : 'No'}</div>
           </div>
         </div>
       </div>

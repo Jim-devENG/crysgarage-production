@@ -306,7 +306,7 @@ export function FreeTierDashboard({ onFileUpload, onUpgrade, credits, isAuthenti
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-crys-black via-crys-graphite to-crys-black text-crys-white">
+    <div className="min-h-screen bg-gradient-to-br from-crys-black via-crys-graphite to-crys-black text-crys-white" style={{ marginTop: '-80px', paddingTop: '80px' }}>
       {/* Navigation Tabs */}
       <div className="border-b border-audio-panel-border/30 -mt-16">
         <div className="max-w-7xl mx-auto px-6 py-0">
