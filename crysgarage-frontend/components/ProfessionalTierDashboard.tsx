@@ -1028,6 +1028,7 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
                   audioUrl={processedAudioUrl}
                   isPlaying={isPlayingProcessed}
                   isProcessing={isProcessing}
+                  audioElement={processedAudioRef.current}
                 />
               </div>
             </div>

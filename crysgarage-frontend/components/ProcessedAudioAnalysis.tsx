@@ -25,6 +25,7 @@ interface ProcessedAudioAnalysisProps {
   audioUrl?: string;
   isPlaying?: boolean;
   isProcessing?: boolean;
+  audioElement?: HTMLAudioElement | null;
 }
 
 const ProcessedAudioAnalysis: React.FC<ProcessedAudioAnalysisProps> = ({ 
@@ -32,7 +33,8 @@ const ProcessedAudioAnalysis: React.FC<ProcessedAudioAnalysisProps> = ({
   genreName, 
   audioUrl, 
   isPlaying = false,
-  isProcessing = false
+  isProcessing = false,
+  audioElement = null
 }) => {
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -49,9 +51,9 @@ const ProcessedAudioAnalysis: React.FC<ProcessedAudioAnalysisProps> = ({
     rmsLevel: 0
   });
 
-  // Initialize real-time analysis
+  // Initialize real-time analysis using existing audio element
   useEffect(() => {
-    if (!audioUrl || !isPlaying) {
+    if (!audioElement || !isPlaying) {
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current);
       }
@@ -70,20 +72,13 @@ const ProcessedAudioAnalysis: React.FC<ProcessedAudioAnalysisProps> = ({
         analyser.smoothingTimeConstant = 0.8;
         analyserRef.current = analyser;
 
-        // Fetch and decode audio
-        const response = await fetch(audioUrl);
-        const arrayBuffer = await response.arrayBuffer();
-        const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-
-        // Create source and connect
-        const source = audioContext.createBufferSource();
-        source.buffer = audioBuffer;
+        // Create media element source from existing audio element
+        const source = audioContext.createMediaElementSource(audioElement);
         source.connect(analyser);
         analyser.connect(audioContext.destination);
-        sourceRef.current = source;
+        sourceRef.current = source as any;
 
-        // Start playback and analysis
-        source.start(0);
+        // Start analysis
         startRealTimeAnalysis();
 
       } catch (error) {
@@ -101,7 +96,7 @@ const ProcessedAudioAnalysis: React.FC<ProcessedAudioAnalysisProps> = ({
         audioContextRef.current.close();
       }
     };
-  }, [audioUrl, isPlaying]);
+  }, [audioElement, isPlaying]);
 
   const startRealTimeAnalysis = () => {
     if (!analyserRef.current || !canvasRef.current) return;
@@ -215,7 +210,7 @@ const ProcessedAudioAnalysis: React.FC<ProcessedAudioAnalysisProps> = ({
     });
   };
 
-  if (!analysis) {
+    if (!analysis) {
     return (
       <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
         <div className="flex items-center space-x-2 mb-4">
@@ -235,17 +230,26 @@ const ProcessedAudioAnalysis: React.FC<ProcessedAudioAnalysisProps> = ({
           <div className="text-gray-500 mb-4">
             <BarChart3 className="w-12 h-12 mx-auto mb-2" />
             <p className="text-lg font-medium">
-              {isProcessing 
+              {isProcessing
                 ? 'Processing your audio... Analysis will appear here shortly'
                 : 'Analysis will appear here after processing your audio'
               }
             </p>
           </div>
           <div className="text-sm text-gray-600">
-            {isProcessing 
+            {isProcessing
               ? 'Please wait while we analyze and process your audio file'
               : 'Upload an audio file and select a genre to see real-time analysis'
             }
+          </div>
+          {/* Debug info */}
+          <div className="mt-4 p-3 bg-gray-700 rounded text-xs text-gray-400">
+            <div>Debug: Analysis is null</div>
+            <div>Is Processing: {isProcessing ? 'Yes' : 'No'}</div>
+            <div>Genre: {genreName || 'None'}</div>
+            <div>Audio URL: {audioUrl ? 'Present' : 'None'}</div>
+            <div>Is Playing: {isPlaying ? 'Yes' : 'No'}</div>
+            <div>Audio Element: {audioElement ? 'Present' : 'None'}</div>
           </div>
         </div>
       </div>
