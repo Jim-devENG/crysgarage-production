@@ -1020,6 +1020,15 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
                     </div>
                   </div>
                 )}
+
+                {/* Real-Time Audio Analysis */}
+                <ProcessedAudioAnalysis 
+                  analysis={processedAudioAnalysis} 
+                  genreName={selectedGenre?.name}
+                  audioUrl={processedAudioUrl}
+                  isPlaying={isPlayingProcessed}
+                  isProcessing={isProcessing}
+                />
               </div>
             </div>
             
@@ -1220,14 +1229,7 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
                     {Math.floor((processedAudioRef.current?.duration || 0) / 60)}:{((processedAudioRef.current?.duration || 0) % 60).toFixed(0).padStart(2, '0')}
                   </div>
                   
-                  {/* Real-Time Analysis Display */}
-                  <ProcessedAudioAnalysis 
-                    analysis={processedAudioAnalysis} 
-                    genreName={selectedGenre?.name}
-                    audioUrl={processedAudioUrl}
-                    isPlaying={isPlayingProcessed}
-                    isProcessing={isProcessing}
-                  />
+
                 </div>
               </div>
             </div>
