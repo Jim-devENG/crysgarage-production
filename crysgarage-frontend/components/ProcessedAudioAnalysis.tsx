@@ -271,203 +271,75 @@ const ProcessedAudioAnalysis: React.FC<ProcessedAudioAnalysisProps> = ({
   };
 
   return (
-    <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
-      <div className="flex items-center space-x-2 mb-4">
-        <Activity className="w-5 h-5 text-green-400 animate-pulse" />
-        <h4 className="text-lg font-semibold text-green-400">Real-Time Analysis</h4>
+    <div className="bg-gray-800 rounded-xl p-4 border border-gray-700">
+      <div className="flex items-center space-x-2 mb-3">
+        <Activity className="w-4 h-4 text-green-400 animate-pulse" />
+        <h4 className="text-sm font-semibold text-green-400">Real-Time Analysis</h4>
         {isPlaying && (
           <div className="flex space-x-1">
-            <div className="w-1 h-4 bg-green-400 rounded-full animate-pulse"></div>
-            <div className="w-1 h-4 bg-green-400 rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
-            <div className="w-1 h-4 bg-green-400 rounded-full animate-pulse" style={{ animationDelay: '0.4s' }}></div>
+            <div className="w-1 h-3 bg-green-400 rounded-full animate-pulse"></div>
+            <div className="w-1 h-3 bg-green-400 rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
+            <div className="w-1 h-3 bg-green-400 rounded-full animate-pulse" style={{ animationDelay: '0.4s' }}></div>
           </div>
         )}
       </div>
 
-      {/* Real-time Frequency Spectrum */}
-      <div className="mb-6">
-        <div className="flex items-center space-x-2 mb-2">
-          <BarChart3 className="w-4 h-4 text-blue-400" />
-          <span className="text-sm font-medium text-gray-300">Live Frequency Spectrum</span>
+      {/* Compact Real-time Metrics */}
+      <div className="grid grid-cols-4 gap-2 mb-3">
+        <div className="bg-gray-700 rounded p-2 text-center">
+          <div className="text-xs text-gray-400">Bass</div>
+          <div className={`text-sm font-bold ${getQualityColor(realTimeData.currentBass)}`}>
+            {realTimeData.currentBass.toFixed(0)}
+          </div>
         </div>
-        <div className="bg-gray-900 rounded-lg p-2">
+        <div className="bg-gray-700 rounded p-2 text-center">
+          <div className="text-xs text-gray-400">Mid</div>
+          <div className={`text-sm font-bold ${getQualityColor(realTimeData.currentMid)}`}>
+            {realTimeData.currentMid.toFixed(0)}
+          </div>
+        </div>
+        <div className="bg-gray-700 rounded p-2 text-center">
+          <div className="text-xs text-gray-400">Treble</div>
+          <div className={`text-sm font-bold ${getQualityColor(realTimeData.currentTreble)}`}>
+            {realTimeData.currentTreble.toFixed(0)}
+          </div>
+        </div>
+        <div className="bg-gray-700 rounded p-2 text-center">
+          <div className="text-xs text-gray-400">Vol</div>
+          <div className={`text-sm font-bold ${getQualityColor(realTimeData.currentVolume, 50)}`}>
+            {realTimeData.currentVolume.toFixed(1)}dB
+          </div>
+        </div>
+      </div>
+
+      {/* Mini Frequency Spectrum */}
+      <div className="mb-3">
+        <div className="text-xs text-gray-400 mb-1">Frequency Spectrum</div>
+        <div className="bg-gray-900 rounded p-1">
           <canvas
             ref={canvasRef}
-            width={400}
-            height={120}
-            className="w-full h-30 rounded"
+            width={300}
+            height={60}
+            className="w-full h-15 rounded"
           />
         </div>
       </div>
 
-      {/* Real-time Metrics Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        {/* Bass Level */}
-        <div className="bg-gray-700 rounded-lg p-3">
-          <div className="flex items-center space-x-2 mb-2">
-            <Volume2 className="w-4 h-4 text-blue-400" />
-            <span className="text-xs text-gray-400">Bass</span>
-          </div>
-          <div className={`text-lg font-bold ${getQualityColor(realTimeData.currentBass)}`}>
-            {realTimeData.currentBass.toFixed(0)}
-          </div>
-          <div className="w-full bg-gray-600 rounded-full h-1 mt-1">
-            <div 
-              className={`h-1 rounded-full transition-all duration-100 ${getQualityBarColor(realTimeData.currentBass)}`}
-              style={{ width: `${Math.min(realTimeData.currentBass / 2, 100)}%` }}
-            />
-          </div>
-        </div>
-
-        {/* Mid Level */}
-        <div className="bg-gray-700 rounded-lg p-3">
-          <div className="flex items-center space-x-2 mb-2">
-            <BarChart3 className="w-4 h-4 text-yellow-400" />
-            <span className="text-xs text-gray-400">Mid</span>
-          </div>
-          <div className={`text-lg font-bold ${getQualityColor(realTimeData.currentMid)}`}>
-            {realTimeData.currentMid.toFixed(0)}
-          </div>
-          <div className="w-full bg-gray-600 rounded-full h-1 mt-1">
-            <div 
-              className={`h-1 rounded-full transition-all duration-100 ${getQualityBarColor(realTimeData.currentMid)}`}
-              style={{ width: `${Math.min(realTimeData.currentMid / 2, 100)}%` }}
-            />
-          </div>
-        </div>
-
-        {/* Treble Level */}
-        <div className="bg-gray-700 rounded-lg p-3">
-          <div className="flex items-center space-x-2 mb-2">
-            <Zap className="w-4 h-4 text-purple-400" />
-            <span className="text-xs text-gray-400">Treble</span>
-          </div>
-          <div className={`text-lg font-bold ${getQualityColor(realTimeData.currentTreble)}`}>
-            {realTimeData.currentTreble.toFixed(0)}
-          </div>
-          <div className="w-full bg-gray-600 rounded-full h-1 mt-1">
-            <div 
-              className={`h-1 rounded-full transition-all duration-100 ${getQualityBarColor(realTimeData.currentTreble)}`}
-              style={{ width: `${Math.min(realTimeData.currentTreble / 2, 100)}%` }}
-            />
-          </div>
-        </div>
-
-        {/* Volume Level */}
-        <div className="bg-gray-700 rounded-lg p-3">
-          <div className="flex items-center space-x-2 mb-2">
-            <Gauge className="w-4 h-4 text-red-400" />
-            <span className="text-xs text-gray-400">Volume</span>
-          </div>
-          <div className={`text-lg font-bold ${getQualityColor(realTimeData.currentVolume, 50)}`}>
-            {realTimeData.currentVolume.toFixed(1)}dB
-          </div>
-          <div className="w-full bg-gray-600 rounded-full h-1 mt-1">
-            <div 
-              className={`h-1 rounded-full transition-all duration-100 ${getQualityBarColor(realTimeData.currentVolume, 50)}`}
-              style={{ width: `${Math.min(realTimeData.currentVolume * 2, 100)}%` }}
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Analysis Results */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Frequency Analysis */}
-        <div className="space-y-3">
-          <h5 className="text-md font-semibold text-blue-400 flex items-center space-x-2">
-            <Music2 className="w-4 h-4" />
-            <span>Frequency Analysis</span>
-          </h5>
-          <div className="space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span className="text-gray-400">Peak Frequency:</span>
-              <span className="text-white font-mono">
-                {realTimeData.peakFrequency > 0 ? `${realTimeData.peakFrequency.toFixed(0)} Hz` : 'N/A'}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-400">Dominant Freq:</span>
-              <span className="text-white font-mono">
-                {analysis.dominantFrequencies[0]?.toFixed(0) || 'N/A'} Hz
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-400">Dynamic Range:</span>
-              <span className="text-white">{analysis.dynamicRange.toFixed(1)} dB</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-400">Rhythm Complexity:</span>
-              <span className="text-white">{analysis.rhythmComplexity.toFixed(3)}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Content Analysis */}
-        <div className="space-y-3">
-          <h5 className="text-md font-semibold text-green-400">Content Analysis</h5>
-          <div className="space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span className="text-gray-400">Bass Content:</span>
-              <span className="text-white">{analysis.bassContent.toFixed(1)}%</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-400">Mid Content:</span>
-              <span className="text-white">{analysis.midContent.toFixed(1)}%</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-400">Treble Content:</span>
-              <span className="text-white">{analysis.trebleContent.toFixed(1)}%</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-400">Vocal Presence:</span>
-              <span className="text-white">{analysis.vocalPresence.toFixed(1)}%</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-400">Genre:</span>
-              <span className="text-white">{genreName || 'N/A'}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Applied Settings */}
-      {genreName && analysis.appliedSettings && (
-        <div className="mt-6 pt-4 border-t border-gray-600">
-          <h5 className="text-md font-semibold mb-3 text-indigo-400">Applied Processing Settings</h5>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+      {/* Compact Analysis Results */}
+      {analysis && (
+        <div className="space-y-2">
+          <div className="grid grid-cols-2 gap-2 text-xs">
             <div className="bg-gray-700 rounded p-2">
-              <div className="text-gray-400">Gain</div>
-              <div className="text-white font-mono">{analysis.appliedSettings.gain.toFixed(1)}x</div>
+              <div className="text-gray-400">Dynamic Range</div>
+              <div className="font-bold text-blue-400">{analysis.dynamicRange.toFixed(1)} dB</div>
             </div>
             <div className="bg-gray-700 rounded p-2">
-              <div className="text-gray-400">Bass Boost</div>
-              <div className="text-white font-mono">{analysis.appliedSettings.bassBoost.toFixed(1)}dB</div>
+              <div className="text-gray-400">Rhythm</div>
+              <div className="font-bold text-green-400">{analysis.rhythmComplexity.toFixed(0)}%</div>
             </div>
-            <div className="bg-gray-700 rounded p-2">
-              <div className="text-gray-400">Mid Cut</div>
-              <div className="text-white font-mono">{analysis.appliedSettings.midCut.toFixed(1)}dB</div>
-            </div>
-            <div className="bg-gray-700 rounded p-2">
-              <div className="text-gray-400">Presence</div>
-              <div className="text-white font-mono">{analysis.appliedSettings.presenceBoost.toFixed(1)}dB</div>
-            </div>
-            <div className="bg-gray-700 rounded p-2">
-              <div className="text-gray-400">Clarity</div>
-              <div className="text-white font-mono">{analysis.appliedSettings.clarityBoost.toFixed(1)}dB</div>
-            </div>
-            <div className="bg-gray-700 rounded p-2">
-              <div className="text-gray-400">Air</div>
-              <div className="text-white font-mono">{analysis.appliedSettings.airBoost.toFixed(1)}dB</div>
-            </div>
-            <div className="bg-gray-700 rounded p-2">
-              <div className="text-gray-400">Comp Threshold</div>
-              <div className="text-white font-mono">{analysis.appliedSettings.compressionThreshold.toFixed(1)}dB</div>
-            </div>
-            <div className="bg-gray-700 rounded p-2">
-              <div className="text-gray-400">Comp Ratio</div>
-              <div className="text-white font-mono">{analysis.appliedSettings.compressionRatio.toFixed(1)}:1</div>
-            </div>
+          </div>
+          <div className="bg-gray-700 rounded p-2 text-xs">
+            <div className="text-gray-400 mb-1">Applied: Gain +{analysis.appliedSettings.gain}dB | Bass +{analysis.appliedSettings.bassBoost}dB</div>
           </div>
         </div>
       )}

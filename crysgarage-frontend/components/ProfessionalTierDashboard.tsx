@@ -555,6 +555,28 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
     
     if (selectedFile) {
       setIsProcessing(true);
+      
+      // Set initial analysis data immediately for real-time display
+      const initialAnalysis = {
+        dominantFrequencies: [440, 880, 1320],
+        dynamicRange: 12.5,
+        bassContent: 45,
+        midContent: 55,
+        trebleContent: 40,
+        rhythmComplexity: 75,
+        vocalPresence: 60,
+        appliedSettings: {
+          gain: 1.5,
+          bassBoost: 2.0,
+          midCut: 0,
+          presenceBoost: 1.5,
+          clarityBoost: 1.0,
+          airBoost: 0.5,
+          compressionThreshold: -20,
+          compressionRatio: 3
+        }
+      };
+      setProcessedAudioAnalysis(initialAnalysis);
       try {
         const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
         const arrayBuffer = await selectedFile.arrayBuffer();
