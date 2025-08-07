@@ -3,7 +3,8 @@ import { AppProvider, useApp } from './contexts/AppContext';
 import { LandingPage } from './components/LandingPage';
 import { AuthModal } from './components/AuthPages';
 import { FreeTierDashboard } from './components/FreeTierDashboard';
-import { ProfessionalTierDashboard } from './components/ProfessionalTierDashboard';
+import ProfessionalTierDashboard from './components/ProfessionalTierDashboard';
+
 import { AdvancedTierDashboard } from './components/AdvancedTierDashboard';
 import { Header } from './components/Header';
 import { ProcessingPage } from './components/ProcessingPage';
@@ -35,7 +36,7 @@ function AppContent() {
 
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
-  const [currentPage, setCurrentPage] = useState<'landing' | 'home' | 'dashboard' | 'processing' | 'results' | 'pricing' | 'help' | 'courses' | 'marketplace' | 'profile' | 'admin'>('landing');
+  const [currentPage, setCurrentPage] = useState<'landing' | 'home' | 'dashboard' | 'professional' | 'processing' | 'results' | 'pricing' | 'help' | 'courses' | 'marketplace' | 'profile' | 'admin'>('landing');
   const [showBillingModal, setShowBillingModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showProfileEditModal, setShowProfileEditModal] = useState(false);
@@ -71,6 +72,8 @@ function AppContent() {
       setCurrentPage('admin');
     } else if (path === '/dashboard') {
       setCurrentPage('dashboard');
+    } else if (path === '/professional') {
+      setCurrentPage('professional');
     } else if (path === '/pricing') {
       setCurrentPage('pricing');
     } else if (path === '/help') {
@@ -212,6 +215,17 @@ function AppContent() {
                 />
               )}
             </>
+          )}
+          
+          {currentPage === 'professional' && (
+            <ProfessionalTierDashboard 
+              onFileUpload={(file) => {
+                // Handle file upload for professional tier
+                console.log('Professional tier file upload:', file);
+                // You can add upload logic here or call a function from context
+              }}
+              credits={user.credits || 0}
+            />
           )}
           
           {currentPage === 'processing' && currentSession && (
@@ -402,6 +416,15 @@ function AppContent() {
             onUpgrade={() => setShowPaymentModal(true)}
             credits={3}
             isAuthenticated={false}
+          />
+        )}
+
+        {currentPage === 'professional' && !isAuthenticated && (
+          <ProfessionalTierDashboard 
+            onFileUpload={(file) => {
+              console.log('Professional tier file upload:', file);
+            }}
+            credits={0}
           />
         )}
 
