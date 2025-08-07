@@ -897,6 +897,18 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
                   )}
                 </div>
               )}
+
+              {/* Test ProcessedAudioAnalysis component in Step 1 */}
+              <div className="mt-8">
+                <h4 className="font-semibold text-crys-gold mb-4">🧪 Test: Real-Time Analysis Component</h4>
+                <ProcessedAudioAnalysis 
+                  analysis={processedAudioAnalysis} 
+                  genreName={selectedGenre?.name}
+                  audioUrl={processedAudioUrl}
+                  isPlaying={isPlayingProcessed}
+                  isProcessing={isProcessing}
+                />
+              </div>
             </div>
           </div>
         )}

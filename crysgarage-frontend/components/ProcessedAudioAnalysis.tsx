@@ -34,6 +34,15 @@ const ProcessedAudioAnalysis: React.FC<ProcessedAudioAnalysisProps> = ({
   isPlaying = false,
   isProcessing = false
 }) => {
+  // Add debugging
+  console.log('ProcessedAudioAnalysis render:', { 
+    hasAnalysis: !!analysis, 
+    genreName, 
+    audioUrl, 
+    isPlaying, 
+    isProcessing 
+  });
+
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
@@ -233,7 +242,7 @@ const ProcessedAudioAnalysis: React.FC<ProcessedAudioAnalysisProps> = ({
         <div className="text-center py-8">
           <div className="text-gray-500 mb-4">
             <BarChart3 className="w-12 h-12 mx-auto mb-2" />
-            <p>
+            <p className="text-lg font-medium">
               {isProcessing 
                 ? 'Processing your audio... Analysis will appear here shortly'
                 : 'Analysis will appear here after processing your audio'
@@ -245,6 +254,15 @@ const ProcessedAudioAnalysis: React.FC<ProcessedAudioAnalysisProps> = ({
               ? 'Please wait while we analyze and process your audio file'
               : 'Upload an audio file and select a genre to see real-time analysis'
             }
+          </div>
+          {/* Debug info */}
+          <div className="mt-4 p-3 bg-gray-700 rounded text-xs text-gray-400">
+            <div>Debug: Component is rendering</div>
+            <div>Analysis: {analysis ? 'Present' : 'Null'}</div>
+            <div>Genre: {genreName || 'None'}</div>
+            <div>Audio URL: {audioUrl ? 'Present' : 'None'}</div>
+            <div>Is Playing: {isPlaying ? 'Yes' : 'No'}</div>
+            <div>Is Processing: {isProcessing ? 'Yes' : 'No'}</div>
           </div>
         </div>
       </div>
