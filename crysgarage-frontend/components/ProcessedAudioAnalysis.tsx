@@ -55,33 +55,39 @@ const ProcessedAudioAnalysis: React.FC<ProcessedAudioAnalysisProps> = ({
 
   // Initialize real-time analysis using existing audio element
   useEffect(() => {
-    if (!audioElement || !isPlaying) {
-      if (animationRef.current) {
-        cancelAnimationFrame(animationRef.current);
-      }
+    if (!audioElement) {
       return;
     }
 
     const initRealTimeAnalysis = async () => {
       try {
-        // Create audio context
-        const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-        audioContextRef.current = audioContext;
+        // Only create audio context if it doesn't exist
+        if (!audioContextRef.current) {
+          const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+          audioContextRef.current = audioContext;
 
-        // Create analyser
-        const analyser = audioContext.createAnalyser();
-        analyser.fftSize = 2048;
-        analyser.smoothingTimeConstant = 0.8;
-        analyserRef.current = analyser;
+          // Create analyser
+          const analyser = audioContext.createAnalyser();
+          analyser.fftSize = 2048;
+          analyser.smoothingTimeConstant = 0.8;
+          analyserRef.current = analyser;
 
-        // Create media element source from existing audio element
-        const source = audioContext.createMediaElementSource(audioElement);
-        source.connect(analyser);
-        analyser.connect(audioContext.destination);
-        sourceRef.current = source as any;
+          // Create media element source from existing audio element
+          const source = audioContext.createMediaElementSource(audioElement);
+          source.connect(analyser);
+          analyser.connect(audioContext.destination);
+          sourceRef.current = source as any;
+        }
 
-        // Start analysis
-        startRealTimeAnalysis();
+        // Resume audio context if it's suspended
+        if (audioContextRef.current.state === 'suspended') {
+          await audioContextRef.current.resume();
+        }
+
+        // Start analysis if playing
+        if (isPlaying) {
+          startRealTimeAnalysis();
+        }
 
       } catch (error) {
         console.error('Error initializing real-time analysis:', error);
@@ -94,11 +100,39 @@ const ProcessedAudioAnalysis: React.FC<ProcessedAudioAnalysisProps> = ({
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current);
       }
+    };
+  }, [audioElement]);
+
+  // Handle play/pause state changes
+  useEffect(() => {
+    if (!audioContextRef.current || !analyserRef.current) {
+      return;
+    }
+
+    if (isPlaying) {
+      // Resume audio context and start analysis
+      audioContextRef.current.resume().then(() => {
+        startRealTimeAnalysis();
+      });
+    } else {
+      // Stop analysis but don't close the context
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+      }
+    }
+  }, [isPlaying]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+      }
       if (audioContextRef.current) {
         audioContextRef.current.close();
       }
     };
-  }, [audioElement, isPlaying]);
+  }, []);
 
   const startRealTimeAnalysis = () => {
     if (!analyserRef.current || !canvasRef.current) return;
