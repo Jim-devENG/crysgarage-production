@@ -443,13 +443,7 @@ const ProcessedAudioAnalysis: React.FC<ProcessedAudioAnalysisProps> = ({
             <div className="w-1 h-3 bg-green-400 rounded-full animate-pulse" style={{ animationDelay: '0.4s' }}></div>
           </div>
         )}
-<<<<<<< HEAD
-        </div>
-        
-=======
       </div>
-
->>>>>>> a737561bdc9ab295a029fca984b2847febdeeaec
       {/* Compact Real-time Metrics */}
       <div className="grid grid-cols-4 gap-2 mb-3">
         <div className="bg-gray-700 rounded p-2 text-center">

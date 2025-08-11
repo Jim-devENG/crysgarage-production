@@ -21,10 +21,6 @@ interface PricingPageProps {
 
 export function PricingPage({ onSelectTier, onGoToDashboard }: PricingPageProps) {
   const handleTierSelection = (tierId: string) => {
-<<<<<<< HEAD
-    onSelectTier(tierId);
-    // Don't call onGoToDashboard() here as the tier selection will handle routing
-=======
     if (tierId === 'free') {
       // Free tier - direct access
       onSelectTier(tierId);
@@ -37,7 +33,6 @@ export function PricingPage({ onSelectTier, onGoToDashboard }: PricingPageProps)
       onSelectTier(tierId);
       onGoToDashboard();
     }
->>>>>>> a737561bdc9ab295a029fca984b2847febdeeaec
   };
 
   const pricingTiers = [
