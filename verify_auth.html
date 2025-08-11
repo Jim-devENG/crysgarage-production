@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Auth Verification</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+      }
+      .success {
+        color: green;
+      }
+      .error {
+        color: red;
+      }
+      .info {
+        color: blue;
+      }
+      button {
+        padding: 10px 20px;
+        margin: 5px;
+      }
+      #output {
+        margin-top: 20px;
+        padding: 10px;
+        border: 1px solid #ccc;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>🔐 Authentication Verification</h1>
+
+    <button onclick="testAuth()">Test Authentication</button>
+    <button onclick="clearAuth()">Clear Authentication</button>
+    <button onclick="checkStatus()">Check Status</button>
+
+    <div id="output"></div>
+
+    <script>
+      const API_BASE_URL = "http://localhost:8000/api";
+
+      function log(message, type = "info") {
+        const output = document.getElementById("output");
+        const timestamp = new Date().toLocaleTimeString();
+        const color =
+          type === "error" ? "red" : type === "success" ? "green" : "blue";
+        output.innerHTML += `<p style="color: ${color}; margin: 5px 0;"><strong>[${timestamp}]</strong> ${message}</p>`;
+        output.scrollTop = output.scrollHeight;
+      }
+
+      async function testAuth() {
+        log("🔐 Testing authentication...");
+
+        try {
+          // Sign in with demo credentials
+          const response = await fetch(`${API_BASE_URL}/auth/signin`, {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({
+              email: "demo.free@crysgarage.com",
+              password: "password",
+            }),
+          });
+
+          if (!response.ok) {
+            throw new Error(`Sign in failed: ${response.status}`);
+          }
+
+          const data = await response.json();
+          localStorage.setItem("crysgarage_token", data.token);
+
+          log("✅ Authentication successful!", "success");
+          log(`👤 User: ${data.user.name}`, "success");
+          log(`💰 Credits: ${data.user.credits}`, "success");
+          log(`🎫 Token stored`, "success");
+        } catch (error) {
+          log(`❌ Authentication failed: ${error.message}`, "error");
+        }
+      }
+
+      function clearAuth() {
+        localStorage.removeItem("crysgarage_token");
+        log("🗑️ Authentication cleared", "info");
+      }
+
+      async function checkStatus() {
+        const token = localStorage.getItem("crysgarage_token");
+
+        if (!token) {
+          log("❌ No authentication token found", "error");
+          return;
+        }
+
+        try {
+          const response = await fetch(`${API_BASE_URL}/user`, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          });
+
+          if (!response.ok) {
+            throw new Error(`Status check failed: ${response.status}`);
+          }
+
+          const user = await response.json();
+          log("✅ Authentication status: VALID", "success");
+          log(`👤 User: ${user.name}`, "success");
+          log(`💰 Credits: ${user.credits}`, "success");
+          log(`🏷️ Tier: ${user.tier}`, "success");
+        } catch (error) {
+          log(`❌ Status check failed: ${error.message}`, "error");
+        }
+      }
+
+      // Auto-check on page load
+      window.onload = function () {
+        log("🚀 Auth verification page loaded", "info");
+        log('💡 Click "Test Authentication" to sign in', "info");
+      };
+    </script>
+  </body>
+</html>

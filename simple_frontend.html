@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Crys Garage</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 20px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        min-height: 100vh;
+      }
+      .container {
+        max-width: 800px;
+        margin: 0 auto;
+        text-align: center;
+        padding-top: 50px;
+      }
+      h1 {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+      }
+      p {
+        font-size: 1.2rem;
+        margin-bottom: 2rem;
+      }
+      .btn {
+        display: inline-block;
+        padding: 12px 24px;
+        background: rgba(255, 255, 255, 0.2);
+        color: white;
+        text-decoration: none;
+        border-radius: 8px;
+        margin: 10px;
+        transition: all 0.3s;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+      }
+      .btn:hover {
+        background: rgba(255, 255, 255, 0.3);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+      }
+      .status {
+        background: rgba(255, 255, 255, 0.1);
+        padding: 20px;
+        border-radius: 10px;
+        margin: 20px 0;
+        backdrop-filter: blur(10px);
+      }
+      .status p {
+        margin: 8px 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>🎵 Crys Garage</h1>
+      <p>Professional Audio Mastering Platform</p>
+      <div class="status">
+        <h3>🚀 Deployment Status</h3>
+        <p>✅ Frontend: Deployed</p>
+        <p>✅ Backend: Running on port 8000</p>
+        <p>✅ Audio Processing: Running on port 4567</p>
+        <p>✅ Nginx: Configured and Running</p>
+      </div>
+      <a href="/api" class="btn">Test API</a>
+      <a href="/audio" class="btn">Test Audio Service</a>
+      <div style="margin-top: 40px; opacity: 0.8">
+        <p>Your Crys Garage application is now live!</p>
+        <p>Domain: crysgarage.studio</p>
+        <p>Server: 209.74.80.162</p>
+      </div>
+    </div>
+  </body>
+</html>

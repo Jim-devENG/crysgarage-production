@@ -1,0 +1,61 @@
+version: '3.8'
+
+services:
+  frontend:
+    build: ./crysgarage-frontend
+    container_name: crysgarage-frontend
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./crysgarage-frontend:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+    networks:
+      - crysgarage-network
+    restart: unless-stopped
+
+  backend:
+    build: ./crysgarage-backend
+    container_name: crysgarage-backend
+    ports:
+      - "8001:8000"
+    volumes:
+      - ./crysgarage-backend:/var/www
+    environment:
+      - APP_ENV=production
+    networks:
+      - crysgarage-network
+    restart: unless-stopped
+
+  ruby-service:
+    build: ./crysgarage-ruby
+    container_name: crysgarage-ruby
+    ports:
+      - "4568:4567"
+    volumes:
+      - ./crysgarage-ruby:/app
+    networks:
+      - crysgarage-network
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:alpine
+    container_name: crysgarage-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx-docker.conf:/etc/nginx/nginx.conf:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+    networks:
+      - crysgarage-network
+    restart: unless-stopped
+    depends_on:
+      - frontend
+      - backend
+      - ruby-service
+
+networks:
+  crysgarage-network:
+    driver: bridge 

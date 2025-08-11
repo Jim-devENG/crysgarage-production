@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Audio Debug Test</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background: #1a1a1a;
+        color: #ffffff;
+        margin: 0;
+        padding: 20px;
+      }
+      .container {
+        max-width: 800px;
+        margin: 0 auto;
+      }
+      .test-section {
+        background: #2a2a2a;
+        border: 1px solid #fbbf24;
+        border-radius: 8px;
+        padding: 20px;
+        margin: 20px 0;
+      }
+      .audio-player {
+        width: 100%;
+        margin: 10px 0;
+      }
+      .button {
+        background: #fbbf24;
+        color: #000;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-weight: bold;
+        margin: 5px;
+      }
+      .button:hover {
+        background: #f59e0b;
+      }
+      .status {
+        background: #333;
+        padding: 10px;
+        border-radius: 5px;
+        margin: 10px 0;
+        font-family: monospace;
+      }
+      .error {
+        background: #7f1d1d;
+        color: #fca5a5;
+      }
+      .success {
+        background: #14532d;
+        color: #86efac;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>🔧 Audio Debug Test</h1>
+
+      <div class="test-section">
+        <h2>Audio URL Test</h2>
+        <p>
+          This test checks if the audio URL is accessible and can be loaded.
+        </p>
+
+        <div class="status" id="urlStatus">Checking audio URL...</div>
+
+        <audio id="testAudio" controls class="audio-player">
+          <source src="" type="audio/wav" />
+          Your browser does not support the audio element.
+        </audio>
+
+        <div style="margin: 20px 0">
+          <button class="button" onclick="testAudioURL()">
+            Test Audio URL
+          </button>
+          <button class="button" onclick="testWebAudioAPI()">
+            Test Web Audio API
+          </button>
+          <button class="button" onclick="testAudioPlayback()">
+            Test Audio Playback
+          </button>
+        </div>
+      </div>
+
+      <div class="test-section">
+        <h2>Test Audio Files</h2>
+        <p>Try these test audio files to verify the system works:</p>
+
+        <div style="margin: 10px 0">
+          <button
+            class="button"
+            onclick="loadTestAudio('https://www.soundjay.com/misc/sounds/bell-ringing-05.wav')"
+          >
+            Test Audio 1 (Bell)
+          </button>
+          <button
+            class="button"
+            onclick="loadTestAudio('https://www.soundjay.com/misc/sounds/fail-buzzer-02.wav')"
+          >
+            Test Audio 2 (Buzzer)
+          </button>
+          <button
+            class="button"
+            onclick="loadTestAudio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLZiTYIG2m98OScTgwOUarm7blmGgU7k9n1unEiBC13yO/eizEIHWq+8+OWT')"
+          >
+            Test Audio 3 (Base64)
+          </button>
+        </div>
+      </div>
+
+      <div class="test-section">
+        <h2>Debug Information</h2>
+        <div class="status" id="debugInfo">Loading debug information...</div>
+      </div>
+    </div>
+
+    <script>
+      const audioElement = document.getElementById("testAudio");
+      const urlStatus = document.getElementById("urlStatus");
+      const debugInfo = document.getElementById("debugInfo");
+
+      // Update debug information
+      function updateDebugInfo() {
+        const info = {
+          userAgent: navigator.userAgent,
+          audioSupport: !!window.AudioContext || !!window.webkitAudioContext,
+          audioElement: {
+            readyState: audioElement.readyState,
+            networkState: audioElement.networkState,
+            src: audioElement.src,
+            duration: audioElement.duration,
+            currentTime: audioElement.currentTime,
+            paused: audioElement.paused,
+            ended: audioElement.ended,
+            error: audioElement.error,
+          },
+          audioContext: {
+            state: window.audioContext
+              ? window.audioContext.state
+              : "Not created",
+          },
+        };
+
+        debugInfo.innerHTML = `
+                <strong>Browser Info:</strong><br>
+                User Agent: ${info.userAgent}<br>
+                Audio Context Support: ${info.audioSupport}<br><br>
+                
+                <strong>Audio Element State:</strong><br>
+                Ready State: ${info.audioElement.readyState}<br>
+                Network State: ${info.audioElement.networkState}<br>
+                Source: ${info.audioElement.src || "None"}<br>
+                Duration: ${info.audioElement.duration || "Unknown"}<br>
+                Current Time: ${info.audioElement.currentTime}<br>
+                Paused: ${info.audioElement.paused}<br>
+                Ended: ${info.audioElement.ended}<br>
+                Error: ${
+                  info.audioElement.error
+                    ? info.audioElement.error.message
+                    : "None"
+                }<br><br>
+                
+                <strong>Audio Context State:</strong><br>
+                State: ${info.audioContext.state}
+            `;
+      }
+
+      // Test audio URL
+      async function testAudioURL() {
+        const currentSrc = audioElement.src;
+        if (!currentSrc) {
+          urlStatus.textContent = "❌ No audio URL set";
+          urlStatus.className = "status error";
+          return;
+        }
+
+        urlStatus.textContent = "🔄 Testing audio URL...";
+        urlStatus.className = "status";
+
+        try {
+          const response = await fetch(currentSrc);
+          if (response.ok) {
+            urlStatus.textContent = `✅ Audio URL accessible (${response.status})`;
+            urlStatus.className = "status success";
+          } else {
+            urlStatus.textContent = `❌ Audio URL not accessible (${response.status})`;
+            urlStatus.className = "status error";
+          }
+        } catch (error) {
+          urlStatus.textContent = `❌ Error accessing audio URL: ${error.message}`;
+          urlStatus.className = "status error";
+        }
+      }
+
+      // Test Web Audio API
+      function testWebAudioAPI() {
+        try {
+          if (!window.AudioContext && !window.webkitAudioContext) {
+            urlStatus.textContent =
+              "❌ Web Audio API not supported in this browser";
+            urlStatus.className = "status error";
+            return;
+          }
+
+          const AudioContextClass =
+            window.AudioContext || window.webkitAudioContext;
+          const audioContext = new AudioContextClass();
+
+          if (audioContext.state === "suspended") {
+            audioContext.resume().then(() => {
+              urlStatus.textContent =
+                "✅ Web Audio API working (resumed from suspended)";
+              urlStatus.className = "status success";
+            });
+          } else {
+            urlStatus.textContent = "✅ Web Audio API working";
+            urlStatus.className = "status success";
+          }
+
+          window.audioContext = audioContext;
+        } catch (error) {
+          urlStatus.textContent = `❌ Web Audio API error: ${error.message}`;
+          urlStatus.className = "status error";
+        }
+      }
+
+      // Test audio playback
+      function testAudioPlayback() {
+        if (!audioElement.src) {
+          urlStatus.textContent = "❌ No audio source set";
+          urlStatus.className = "status error";
+          return;
+        }
+
+        audioElement
+          .play()
+          .then(() => {
+            urlStatus.textContent = "✅ Audio playback started successfully";
+            urlStatus.className = "status success";
+          })
+          .catch((error) => {
+            urlStatus.textContent = `❌ Audio playback failed: ${error.message}`;
+            urlStatus.className = "status error";
+          });
+      }
+
+      // Load test audio
+      function loadTestAudio(url) {
+        audioElement.src = url;
+        audioElement.load();
+        urlStatus.textContent = `🔄 Loading test audio: ${url}`;
+        urlStatus.className = "status";
+
+        audioElement.onloadeddata = () => {
+          urlStatus.textContent = "✅ Test audio loaded successfully";
+          urlStatus.className = "status success";
+        };
+
+        audioElement.onerror = () => {
+          urlStatus.textContent = "❌ Failed to load test audio";
+          urlStatus.className = "status error";
+        };
+      }
+
+      // Event listeners
+      audioElement.addEventListener("loadstart", updateDebugInfo);
+      audioElement.addEventListener("loadedmetadata", updateDebugInfo);
+      audioElement.addEventListener("loadeddata", updateDebugInfo);
+      audioElement.addEventListener("canplay", updateDebugInfo);
+      audioElement.addEventListener("play", updateDebugInfo);
+      audioElement.addEventListener("pause", updateDebugInfo);
+      audioElement.addEventListener("ended", updateDebugInfo);
+      audioElement.addEventListener("error", updateDebugInfo);
+
+      // Initial debug info
+      updateDebugInfo();
+      setInterval(updateDebugInfo, 1000);
+    </script>
+  </body>
+</html>

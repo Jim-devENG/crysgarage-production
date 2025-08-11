@@ -1,0 +1,20 @@
+[33m84c94e8[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmaster[m[33m, [m[1;31morigin/master[m[33m, [m[1;31morigin/HEAD[m[33m)[m HEAD@{0}: commit: Complete component restoration: Fixed TypeScript errors, restored navigation, integrated all services, added deployment scripts
+[33m2f9c3ee[m HEAD@{1}: commit: Quick deploy: Tue 29/07/2025 15:15:05.84
+[33m5e5f189[m HEAD@{2}: commit: Quick deploy: Tue 29/07/2025 15:03:55.06
+[33m91f689c[m HEAD@{3}: commit: Update: Tue 29/07/2025 14:53:20.53
+[33mb0a6be7[m HEAD@{4}: commit: Fix nginx API proxy configuration - resolve 404 errors for frontend API calls
+[33m92930da[m HEAD@{5}: commit: Remove debug logging from public status endpoint - issue resolved
+[33m638681a[m HEAD@{6}: commit: Fix checkRubyStatus method to use correct path and add better error handling
+[33mb32780f[m HEAD@{7}: commit: Fix double path issue in public status endpoint - use file_put_contents instead of Storage::disk
+[33m1266615[m HEAD@{8}: commit: Add debugging to public status endpoint to identify path issue
+[33med11a9a[m HEAD@{9}: commit: Fix public status endpoint - use correct path and add dedicated method
+[33m9fcdd40[m HEAD@{10}: commit: Add public status endpoint for free tier - fix 75% stuck issue
+[33m48e2789[m HEAD@{11}: commit: Fix 75% stuck issue - properly check Ruby status and update processing data
+[33ma054797[m HEAD@{12}: commit: Fix 401 authentication error - add public upload for free tier
+[33m55fd54c[m HEAD@{13}: commit: Remove timeout completely and enable actual Ruby processing - fix 75% stuck issue
+[33m8a90023[m HEAD@{14}: commit: Update: Tue 29/07/2025 12:21:36.81
+[33m141e884[m HEAD@{15}: commit: Remove timeout fix for free tier - revert to 30 seconds
+[33m156ca28[m HEAD@{16}: commit: Fix mastering processing issues - Add public upload endpoint, fix timeout, and implement immediate completion
+[33m8a19675[m HEAD@{17}: commit: Update: Tue 29/07/2025 9:05:56.50
+[33m5736664[m HEAD@{18}: commit: Update: Tue 29/07/2025 8:41:01.78
+[33mc02f530[m HEAD@{19}: commit: Update: Tue 29/07/2025 8:19:19.75

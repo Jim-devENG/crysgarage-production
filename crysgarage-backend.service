@@ -1,0 +1,15 @@
+[Unit]
+Description=Crys Garage Backend (Laravel)
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/var/www/crysgarage-deploy/crysgarage-backend
+ExecStart=/usr/bin/php artisan serve --host=0.0.0.0 --port=8000
+Restart=always
+RestartSec=10
+Environment=APP_ENV=production
+
+[Install]
+WantedBy=multi-user.target 

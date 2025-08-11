@@ -1,0 +1,15 @@
+[Unit]
+Description=Crys Garage Ruby Audio Service
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/var/www/crysgarage-deploy/crysgarage-ruby
+ExecStart=/usr/bin/ruby simple_ruby_service.rb
+Restart=always
+RestartSec=10
+Environment=RUBY_ENV=production
+
+[Install]
+WantedBy=multi-user.target 

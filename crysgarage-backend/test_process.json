@@ -1,0 +1,12 @@
+{
+  "input_file": "/test/audio.wav",
+  "audio_id": "test123",
+  "genre": "afrobeats",
+  "tier": "free",
+  "config": {
+    "target_lufs": -14.0,
+    "true_peak": -1.0,
+    "sample_rate": 44100,
+    "bit_depth": 24
+  }
+}

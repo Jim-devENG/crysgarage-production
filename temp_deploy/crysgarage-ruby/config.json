@@ -1,0 +1,146 @@
+{
+  "default_config": {
+    "sample_rate": 44100,
+    "bit_depth": 24,
+    "target_lufs": -14.0,
+    "true_peak": -1.0,
+    "genre": "afrobeats",
+    "tier": "professional"
+  },
+  "genres": {
+    "afrobeats": {
+      "description": "Optimized for Afrobeats and African pop music",
+      "eq_settings": {
+        "low_bass_boost": 2.0,
+        "kick_drum_enhance": 1.5,
+        "vocal_clarity": 1.0,
+        "high_end_sparkle": 0.5
+      },
+      "compression": {
+        "ratio": 3.0,
+        "threshold": -18.0,
+        "attack": 5.0,
+        "release": 100.0
+      },
+      "stereo_width": 1.2,
+      "limiter_threshold": -1.0
+    },
+    "gospel": {
+      "description": "Optimized for Gospel and Christian music",
+      "eq_settings": {
+        "warm_lows": 1.5,
+        "vocal_presence": 2.0,
+        "choir_clarity": 1.5,
+        "organ_enhance": 1.0
+      },
+      "compression": {
+        "ratio": 2.5,
+        "threshold": -20.0,
+        "attack": 10.0,
+        "release": 150.0
+      },
+      "stereo_width": 1.1,
+      "limiter_threshold": -0.8
+    },
+    "hip_hop": {
+      "description": "Optimized for Hip-Hop and Rap music",
+      "eq_settings": {
+        "bass_boost": 3.0,
+        "kick_punch": 2.0,
+        "snare_crack": 1.5,
+        "vocal_clarity": 1.0
+      },
+      "compression": {
+        "ratio": 4.0,
+        "threshold": -16.0,
+        "attack": 3.0,
+        "release": 80.0
+      },
+      "stereo_width": 1.3,
+      "limiter_threshold": -1.2
+    },
+    "highlife": {
+      "description": "Optimized for Highlife and traditional African music",
+      "eq_settings": {
+        "percussion_enhance": 1.8,
+        "guitar_clarity": 1.2,
+        "brass_presence": 1.5,
+        "vocal_warmth": 1.0
+      },
+      "compression": {
+        "ratio": 2.8,
+        "threshold": -19.0,
+        "attack": 8.0,
+        "release": 120.0
+      },
+      "stereo_width": 1.15,
+      "limiter_threshold": -0.9
+    }
+  },
+  "tiers": {
+    "free": {
+      "description": "Free tier with basic processing",
+      "processing_steps": [
+        "noise_reduction",
+        "eq_adjustment",
+        "compression",
+        "loudness_normalization"
+      ],
+      "max_file_size": 50,
+      "output_formats": ["mp3"]
+    },
+    "professional": {
+      "description": "Professional tier with advanced processing",
+      "processing_steps": [
+        "noise_reduction",
+        "eq_adjustment",
+        "compression",
+        "stereo_enhancement",
+        "limiting",
+        "loudness_normalization"
+      ],
+      "max_file_size": 100,
+      "output_formats": ["wav", "mp3", "flac"]
+    },
+    "advanced": {
+      "description": "Advanced tier with manual controls",
+      "processing_steps": [
+        "noise_reduction",
+        "eq_adjustment",
+        "compression",
+        "stereo_enhancement",
+        "limiting",
+        "loudness_normalization"
+      ],
+      "max_file_size": 200,
+      "output_formats": ["wav", "mp3", "flac", "aiff"],
+      "manual_controls": true
+    }
+  },
+  "processing_pipeline": {
+    "noise_reduction": {
+      "algorithm": "spectral_subtraction",
+      "sensitivity": 0.7
+    },
+    "eq_adjustment": {
+      "bands": [32, 64, 125, 250, 500, 1000, 2000, 4000, 8000, 16000],
+      "q_factor": 1.0
+    },
+    "compression": {
+      "lookahead": 5,
+      "knee": 6
+    },
+    "stereo_enhancement": {
+      "width": 1.2,
+      "phase_correction": true
+    },
+    "limiting": {
+      "true_peak_limiting": true,
+      "oversampling": 4
+    },
+    "loudness_normalization": {
+      "algorithm": "ebu_r128",
+      "gating": "relative"
+    }
+  }
+} 
