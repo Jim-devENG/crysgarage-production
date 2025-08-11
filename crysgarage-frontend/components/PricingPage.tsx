@@ -21,8 +21,23 @@ interface PricingPageProps {
 
 export function PricingPage({ onSelectTier, onGoToDashboard }: PricingPageProps) {
   const handleTierSelection = (tierId: string) => {
+<<<<<<< HEAD
     onSelectTier(tierId);
     // Don't call onGoToDashboard() here as the tier selection will handle routing
+=======
+    if (tierId === 'free') {
+      // Free tier - direct access
+      onSelectTier(tierId);
+      onGoToDashboard();
+    } else {
+      // Pro/Advanced tiers require payment
+      // For now, we'll simulate payment and then redirect
+      // In production, this would integrate with Stripe
+      alert(`Payment required for ${tierId} tier. Redirecting to payment...`);
+      onSelectTier(tierId);
+      onGoToDashboard();
+    }
+>>>>>>> a737561bdc9ab295a029fca984b2847febdeeaec
   };
 
   const pricingTiers = [
