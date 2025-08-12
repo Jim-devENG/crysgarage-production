@@ -121,6 +121,198 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
           </div>
         )}
 
+        {currentStep === 2 && (
+          <div className="space-y-8">
+            <div className="text-center">
+              <h2 className="text-3xl font-bold text-crys-gold mb-4">Select Genre</h2>
+              <p className="text-gray-400 text-lg">Choose the genre that best matches your audio for optimal mastering</p>
+            </div>
+            
+            <div className="max-w-4xl mx-auto">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {[
+                  { name: 'Afrobeats', description: 'High energy, rhythmic patterns', color: 'bg-orange-500' },
+                  { name: 'Gospel', description: 'Spiritual, uplifting vocals', color: 'bg-purple-500' },
+                  { name: 'Hip-Hop', description: 'Bass-heavy, rhythmic beats', color: 'bg-red-500' },
+                  { name: 'Pop', description: 'Mainstream, radio-friendly', color: 'bg-pink-500' },
+                  { name: 'Rock', description: 'Guitar-driven, powerful sound', color: 'bg-gray-500' },
+                  { name: 'Reggae', description: 'Laid-back, rhythmic groove', color: 'bg-green-500' }
+                ].map((genre) => (
+                  <button
+                    key={genre.name}
+                    onClick={() => setSelectedGenre(genre)}
+                    className={`p-6 rounded-xl border-2 transition-all duration-300 text-left ${
+                      selectedGenre?.name === genre.name
+                        ? 'border-crys-gold bg-crys-gold/10'
+                        : 'border-gray-600 hover:border-gray-500'
+                    }`}
+                  >
+                    <div className={`w-12 h-12 ${genre.color} rounded-lg mb-4`}></div>
+                    <h3 className="text-lg font-semibold mb-2">{genre.name}</h3>
+                    <p className="text-sm text-gray-400">{genre.description}</p>
+                  </button>
+                ))}
+              </div>
+              
+              {selectedGenre && (
+                <div className="mt-8 flex justify-center space-x-4">
+                  <button
+                    onClick={prevStep}
+                    className="bg-gray-700 hover:bg-gray-600 text-white px-6 py-2 rounded-lg font-semibold transition-colors flex items-center space-x-2"
+                  >
+                    <ArrowLeft className="w-4 h-4" />
+                    <span>Back</span>
+                  </button>
+                  <button
+                    onClick={nextStep}
+                    className="bg-crys-gold text-black px-8 py-3 rounded-lg font-semibold hover:bg-yellow-400 transition-colors flex items-center space-x-2"
+                  >
+                    <span>Next</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {currentStep === 3 && (
+          <div className="space-y-8">
+            <div className="text-center">
+              <h2 className="text-3xl font-bold text-crys-gold mb-4">Processing Settings</h2>
+              <p className="text-gray-400 text-lg">Configure your audio processing parameters</p>
+            </div>
+            
+            <div className="max-w-2xl mx-auto">
+              <div className="bg-gray-800 rounded-xl p-8">
+                <div className="space-y-6">
+                  <div>
+                    <h3 className="text-xl font-semibold mb-4">Sample Rate</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      {(['44.1kHz', '48kHz'] as const).map((rate) => (
+                        <button
+                          key={rate}
+                          onClick={() => setProcessingSettings(prev => ({ ...prev, sampleRate: rate }))}
+                          className={`p-4 rounded-lg border-2 transition-all duration-300 ${
+                            processingSettings.sampleRate === rate
+                              ? 'border-crys-gold bg-crys-gold/10'
+                              : 'border-gray-600 hover:border-gray-500'
+                          }`}
+                        >
+                          <div className="text-center">
+                            <div className="text-lg font-semibold">{rate}</div>
+                            <div className="text-sm text-gray-400">
+                              {rate === '44.1kHz' ? 'CD Quality' : 'Professional Quality'}
+                            </div>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <h3 className="text-xl font-semibold mb-4">Resolution</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      {(['16bit', '32bit'] as const).map((resolution) => (
+                        <button
+                          key={resolution}
+                          onClick={() => setProcessingSettings(prev => ({ ...prev, resolution }))}
+                          className={`p-4 rounded-lg border-2 transition-all duration-300 ${
+                            processingSettings.resolution === resolution
+                              ? 'border-crys-gold bg-crys-gold/10'
+                              : 'border-gray-600 hover:border-gray-500'
+                          }`}
+                        >
+                          <div className="text-center">
+                            <div className="text-lg font-semibold">{resolution}</div>
+                            <div className="text-sm text-gray-400">
+                              {resolution === '16bit' ? 'Standard Quality' : 'High Quality'}
+                            </div>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="mt-8 flex justify-center space-x-4">
+                <button
+                  onClick={prevStep}
+                  className="bg-gray-700 hover:bg-gray-600 text-white px-6 py-2 rounded-lg font-semibold transition-colors flex items-center space-x-2"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  <span>Back</span>
+                </button>
+                <button
+                  onClick={nextStep}
+                  className="bg-crys-gold text-black px-8 py-3 rounded-lg font-semibold hover:bg-yellow-400 transition-colors flex items-center space-x-2"
+                >
+                  <span>Next</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {currentStep === 4 && (
+          <div className="space-y-8">
+            <div className="text-center">
+              <h2 className="text-3xl font-bold text-crys-gold mb-4">Processing Your Audio</h2>
+              <p className="text-gray-400 text-lg">Your audio is being mastered with professional quality</p>
+            </div>
+            
+            <div className="max-w-2xl mx-auto">
+              <div className="bg-gray-800 rounded-xl p-8">
+                <div className="text-center space-y-6">
+                  <div className="w-16 h-16 border-4 border-crys-gold border-t-transparent rounded-full animate-spin mx-auto"></div>
+                  <div>
+                    <h3 className="text-xl font-semibold mb-2">Mastering in Progress</h3>
+                    <p className="text-gray-400">Applying professional mastering techniques...</p>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span>Noise Reduction</span>
+                      <span className="text-crys-gold">✓ Complete</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span>EQ Adjustment</span>
+                      <span className="text-crys-gold">✓ Complete</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span>Compression</span>
+                      <span className="text-crys-gold">✓ Complete</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span>Loudness Normalization</span>
+                      <span className="text-crys-gold">✓ Complete</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="mt-8 flex justify-center space-x-4">
+                <button
+                  onClick={prevStep}
+                  className="bg-gray-700 hover:bg-gray-600 text-white px-6 py-2 rounded-lg font-semibold transition-colors flex items-center space-x-2"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  <span>Back</span>
+                </button>
+                <button
+                  onClick={nextStep}
+                  className="bg-crys-gold text-black px-8 py-3 rounded-lg font-semibold hover:bg-yellow-400 transition-colors flex items-center space-x-2"
+                >
+                  <span>Continue to Download</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {currentStep === 5 && (
           <div className="space-y-8">
             <div className="text-center">
@@ -167,7 +359,14 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
               </div>
             </div>
             
-            <div className="flex justify-center">
+            <div className="flex justify-center space-x-4">
+              <button
+                onClick={prevStep}
+                className="bg-gray-700 hover:bg-gray-600 text-white px-6 py-2 rounded-lg font-semibold transition-colors flex items-center space-x-2"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                <span>Back</span>
+              </button>
               <button
                 onClick={() => setCurrentStep(1)}
                 className="bg-gray-700 hover:bg-gray-600 text-white px-6 py-2 rounded-lg font-semibold transition-colors"
