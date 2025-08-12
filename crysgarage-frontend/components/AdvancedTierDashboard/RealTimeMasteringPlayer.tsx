@@ -414,16 +414,43 @@ const RealTimeMasteringPlayer: React.FC<RealTimeMasteringPlayerProps> = ({
 
     // Calculate correlation (stereo)
     let correlation = 0;
+    let leftLevel = 0;
+    let rightLevel = 0;
+    
     if (timeData.length >= 2) {
       const left = timeData.slice(0, timeData.length / 2);
       const right = timeData.slice(timeData.length / 2);
+      
+      // Calculate RMS levels for left and right channels
       let sumL = 0, sumR = 0, sumLR = 0;
       for (let i = 0; i < left.length; i++) {
-        sumL += left[i] * left[i];
-        sumR += right[i] * right[i];
-        sumLR += left[i] * right[i];
+        const leftSample = (left[i] - 128) / 128;
+        const rightSample = (right[i] - 128) / 128;
+        
+        sumL += leftSample * leftSample;
+        sumR += rightSample * rightSample;
+        sumLR += leftSample * rightSample;
       }
+      
+      leftLevel = Math.sqrt(sumL / left.length);
+      rightLevel = Math.sqrt(sumR / right.length);
       correlation = sumLR / Math.sqrt(sumL * sumR);
+    }
+
+    // Create enhanced goniometer data for better visualization
+    const goniometerData = [];
+    if (timeData.length >= 2) {
+      const left = timeData.slice(0, timeData.length / 2);
+      const right = timeData.slice(timeData.length / 2);
+      
+      // Sample every 4th point to reduce data density
+      for (let i = 0; i < Math.min(left.length, 256); i += 4) {
+        const leftSample = (left[i] - 128) / 128;
+        const rightSample = (right[i] - 128) / 128;
+        
+        // Add left and right samples to the array
+        goniometerData.push(leftSample, rightSample);
+      }
     }
 
     // Update meter data
@@ -432,10 +459,10 @@ const RealTimeMasteringPlayer: React.FC<RealTimeMasteringPlayerProps> = ({
       peak: peak,
       rms: rms / 128,
       correlation: correlation,
-      leftLevel: rms / 128,
-      rightLevel: rms / 128,
+      leftLevel: leftLevel,
+      rightLevel: rightLevel,
       frequencyData: Array.from(frequencyData),
-      goniometerData: Array.from(timeData)
+      goniometerData: goniometerData
     });
 
   }, [onMeterUpdate]);
