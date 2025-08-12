@@ -579,6 +579,8 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
                        audioElement={originalAudioElement}
                        isPlaying={isPlayingOriginal}
                        title="Original Frequency Spectrum"
+                       targetLufs={selectedGenre ? GENRE_PRESETS[selectedGenre.id].targetLufs : undefined}
+                       targetTruePeak={selectedGenre ? GENRE_PRESETS[selectedGenre.id].truePeak : undefined}
                      />
                      
                      <div className="text-center">
@@ -625,6 +627,8 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
                            audioElement={masteredAudioElement}
                            isPlaying={isPlayingMastered}
                            title={`${selectedGenre?.name || 'Mastered'} Frequency Spectrum`}
+                           targetLufs={selectedGenre ? GENRE_PRESETS[selectedGenre.id].targetLufs : undefined}
+                           targetTruePeak={selectedGenre ? GENRE_PRESETS[selectedGenre.id].truePeak : undefined}
                          />
                        </>
                      ) : (

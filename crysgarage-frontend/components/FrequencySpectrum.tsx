@@ -5,13 +5,17 @@ interface FrequencySpectrumProps {
   isPlaying: boolean;
   title: string;
   className?: string;
+  targetLufs?: number;
+  targetTruePeak?: number;
 }
 
 const FrequencySpectrum: React.FC<FrequencySpectrumProps> = ({ 
   audioElement, 
   isPlaying, 
   title,
-  className = "" 
+  className = "",
+  targetLufs,
+  targetTruePeak
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationRef = useRef<number>();
@@ -184,6 +188,11 @@ const FrequencySpectrum: React.FC<FrequencySpectrumProps> = ({
                <span className="text-xs font-medium text-crys-gold">
                  {lufsValue.toFixed(1)} dB
                </span>
+               {targetLufs && (
+                 <span className="text-xs text-gray-400">
+                   (Target: {targetLufs} dB)
+                 </span>
+               )}
              </div>
            )}
            {isAnalyzing && peakValue !== null && (
@@ -192,6 +201,11 @@ const FrequencySpectrum: React.FC<FrequencySpectrumProps> = ({
                <span className="text-xs font-medium text-red-400">
                  {peakValue.toFixed(1)} dB
                </span>
+               {targetTruePeak && (
+                 <span className="text-xs text-gray-400">
+                   (Target: {targetTruePeak} dB)
+                 </span>
+               )}
              </div>
            )}
            <div className="flex items-center space-x-2">
