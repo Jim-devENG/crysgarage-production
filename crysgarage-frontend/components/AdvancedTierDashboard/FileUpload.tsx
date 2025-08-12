@@ -66,66 +66,66 @@ const FileUpload: React.FC<FileUploadProps> = ({
               <p className="text-green-400 text-sm font-medium">✅ File uploaded successfully!</p>
             </div>
           )}
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center space-x-3">
-                <FileAudio className="w-6 h-6 text-crys-gold" />
-                <div>
-                  <h4 className="font-semibold text-white">{selectedFile?.name || fileInfo?.name}</h4>
-                  <p className="text-sm text-gray-400">
-                    {selectedFile 
-                      ? (selectedFile.size / 1024 / 1024).toFixed(2) 
-                      : fileInfo 
-                        ? (fileInfo.size / 1024 / 1024).toFixed(2) 
-                        : '0'
-                    } MB
+          
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center space-x-3">
+              <FileAudio className="w-6 h-6 text-crys-gold" />
+              <div>
+                <h4 className="font-semibold text-white">{selectedFile?.name || fileInfo?.name}</h4>
+                <p className="text-sm text-gray-400">
+                  {selectedFile 
+                    ? (selectedFile.size / 1024 / 1024).toFixed(2) 
+                    : fileInfo 
+                      ? (fileInfo.size / 1024 / 1024).toFixed(2) 
+                      : '0'
+                  } MB
+                </p>
+                {!selectedFile && fileInfo && (
+                  <p className="text-xs text-yellow-400 mt-1">
+                    ⚠️ File needs to be re-uploaded to continue
                   </p>
-                  {!selectedFile && fileInfo && (
-                    <p className="text-xs text-yellow-400 mt-1">
-                      ⚠️ File needs to be re-uploaded to continue
-                    </p>
-                  )}
-                </div>
+                )}
               </div>
             </div>
+          </div>
+          
+          {/* Prominent Next Button */}
+          <div className="text-center">
+            <button
+              onClick={() => {
+                console.log('Enter Studio button clicked!');
+                console.log('selectedFile:', selectedFile);
+                console.log('fileInfo:', fileInfo);
+                onContinue();
+              }}
+              disabled={!selectedFile}
+              className={`px-8 py-4 rounded-xl font-bold text-lg transition-all transform hover:scale-105 flex items-center space-x-3 mx-auto ${
+                selectedFile 
+                  ? 'bg-gradient-to-r from-crys-gold to-yellow-400 text-black shadow-lg hover:shadow-xl border-2 border-yellow-300 animate-pulse' 
+                  : 'bg-gray-600 text-gray-400 cursor-not-allowed'
+              }`}
+              style={{
+                boxShadow: selectedFile ? '0 0 20px rgba(251, 191, 36, 0.5)' : 'none'
+              }}
+            >
+              <span className="text-xl">Enter Studio</span>
+              <Zap className="w-6 h-6" />
+            </button>
+            {selectedFile && (
+              <p className="text-sm text-gray-400 mt-3">
+                Ready to start mastering your audio
+              </p>
+            )}
+            {!selectedFile && (
+              <p className="text-sm text-red-400 mt-3">
+                Please upload a file first
+              </p>
+            )}
             
-            {/* Prominent Next Button */}
-            <div className="text-center">
-              <button
-                onClick={() => {
-                  console.log('Enter Studio button clicked!');
-                  console.log('selectedFile:', selectedFile);
-                  console.log('fileInfo:', fileInfo);
-                  onContinue();
-                }}
-                disabled={!selectedFile}
-                className={`px-8 py-4 rounded-xl font-bold text-lg transition-all transform hover:scale-105 flex items-center space-x-3 mx-auto ${
-                  selectedFile 
-                    ? 'bg-gradient-to-r from-crys-gold to-yellow-400 text-black shadow-lg hover:shadow-xl border-2 border-yellow-300 animate-pulse' 
-                    : 'bg-gray-600 text-gray-400 cursor-not-allowed'
-                }`}
-                style={{
-                  boxShadow: selectedFile ? '0 0 20px rgba(251, 191, 36, 0.5)' : 'none'
-                }}
-              >
-                <span className="text-xl">Enter Studio</span>
-                <Zap className="w-6 h-6" />
-              </button>
-              {selectedFile && (
-                <p className="text-sm text-gray-400 mt-3">
-                  Ready to start mastering your audio
-                </p>
-              )}
-              {!selectedFile && (
-                <p className="text-sm text-red-400 mt-3">
-                  Please upload a file first
-                </p>
-              )}
-              
-              {/* Debug info */}
-              <div className="mt-4 p-2 bg-gray-900 rounded text-xs text-gray-500">
-                Debug: selectedFile = {selectedFile ? selectedFile.name : 'null'}, 
-                fileInfo = {fileInfo ? fileInfo.name : 'null'}
-              </div>
+            {/* Debug info */}
+            <div className="mt-4 p-2 bg-gray-900 rounded text-xs text-gray-500">
+              Debug: selectedFile = {selectedFile ? selectedFile.name : 'null'}, 
+              fileInfo = {fileInfo ? fileInfo.name : 'null'}
             </div>
           </div>
         </div>
