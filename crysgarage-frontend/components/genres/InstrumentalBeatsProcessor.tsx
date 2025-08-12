@@ -1,4 +1,8 @@
-import { Genre } from '../ProfessionalTierDashboard';
+interface Genre {
+  name: string;
+  description: string;
+  color: string;
+}
 
 export const InstrumentalBeatsProcessor = {
   name: 'Instrumentals & Beats',

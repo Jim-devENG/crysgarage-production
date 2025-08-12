@@ -210,7 +210,7 @@ const CustomAudioPlayer = forwardRef<HTMLDivElement, CustomAudioPlayerProps>(({
       </div>
 
       {/* Custom Slider Styles */}
-      <style jsx>{`
+      <style>{`
         .slider::-webkit-slider-thumb {
           appearance: none;
           height: 16px;

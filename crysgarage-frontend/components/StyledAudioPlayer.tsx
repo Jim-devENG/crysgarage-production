@@ -45,7 +45,7 @@ const StyledAudioPlayer = forwardRef<HTMLDivElement, StyledAudioPlayerProps>(({
       </div>
 
       {/* Custom Styles */}
-      <style jsx>{`
+      <style>{`
         .styled-audio-player {
           background: linear-gradient(135deg, #374151 0%, #1f2937 100%);
           border-radius: 12px;

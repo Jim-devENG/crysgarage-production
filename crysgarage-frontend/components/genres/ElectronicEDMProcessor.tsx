@@ -1,4 +1,5 @@
-import { AudioContext, AudioBufferSourceNode, GainNode, DynamicsCompressorNode, BiquadFilterNode, StereoPannerNode, WaveShaperNode, AudioNode, BaseAudioContext } from 'standardized-audio-context';
+// Temporarily disabled due to audio context type issues
+// import { AudioContext, AudioBufferSourceNode, GainNode, DynamicsCompressorNode, BiquadFilterNode, StereoPannerNode, WaveShaperNode, IAudioNode, IBaseAudioContext } from 'standardized-audio-context';
 
 export const ElectronicEDMProcessor = {
   name: 'Electronic / EDM (House, Techno, Trance, Dubstep, Drum & Bass, Electro)',

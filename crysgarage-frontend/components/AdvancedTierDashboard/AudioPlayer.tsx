@@ -135,7 +135,7 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({
         <span className="text-xs text-gray-400 w-8">{Math.round(volume * 100)}%</span>
       </div>
 
-      <style jsx>{`
+      <style>{`
         .slider::-webkit-slider-thumb {
           appearance: none;
           height: 16px;

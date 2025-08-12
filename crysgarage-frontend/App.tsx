@@ -5,7 +5,7 @@ import { AuthModal } from './components/AuthPages';
 import { FreeTierDashboard } from './components/FreeTierDashboard';
 import ProfessionalTierDashboard from './components/ProfessionalTierDashboard';
 
-import AdvancedTierDashboard from './components/AdvancedTierDashboard';
+import AdvancedTierDashboard from './components/AdvancedTierDashboard/index';
 import { Header } from './components/Header';
 import { ProcessingPage } from './components/ProcessingPage';
 import { MasteringResults } from './components/MasteringResults';
