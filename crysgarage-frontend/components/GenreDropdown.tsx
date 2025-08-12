@@ -65,6 +65,13 @@ export const availableGenres: Genre[] = [
     description: 'Complex harmonies with improvisation and swing',
     price: 0,
     characteristics: ['Complex harmonies', 'Improvisation', 'Swing rhythm']
+  },
+  {
+    id: 'pop',
+    name: 'Pop',
+    description: 'Mainstream popular music with catchy melodies',
+    price: 0,
+    characteristics: ['Catchy melodies', 'Clean production', 'Radio-friendly']
   }
 ];
 

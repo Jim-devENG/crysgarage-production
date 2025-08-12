@@ -75,6 +75,91 @@
       },
       "stereo_width": 1.15,
       "limiter_threshold": -0.9
+    },
+    "amapiano": {
+      "description": "Optimized for Amapiano and South African house music",
+      "eq_settings": {
+        "piano_enhance": 2.2,
+        "bass_clarity": 1.8,
+        "percussion_punch": 1.5,
+        "high_end_air": 1.0
+      },
+      "compression": {
+        "ratio": 3.5,
+        "threshold": -19.0,
+        "attack": 3.0,
+        "release": 180.0
+      },
+      "stereo_width": 1.25,
+      "limiter_threshold": -1.1
+    },
+    "reggae": {
+      "description": "Optimized for Reggae and Jamaican music",
+      "eq_settings": {
+        "bass_warmth": 2.5,
+        "guitar_skank": 1.2,
+        "vocal_presence": 1.0,
+        "high_end_rolloff": 0.6
+      },
+      "compression": {
+        "ratio": 2.8,
+        "threshold": -21.0,
+        "attack": 8.0,
+        "release": 300.0
+      },
+      "stereo_width": 1.1,
+      "limiter_threshold": -0.7
+    },
+    "soul": {
+      "description": "Optimized for Soul and R&B music",
+      "eq_settings": {
+        "warm_lows": 1.2,
+        "vocal_clarity": 2.5,
+        "mid_presence": 1.8,
+        "smooth_highs": 1.0
+      },
+      "compression": {
+        "ratio": 2.2,
+        "threshold": -23.0,
+        "attack": 15.0,
+        "release": 200.0
+      },
+      "stereo_width": 1.05,
+      "limiter_threshold": -0.6
+    },
+    "jazz": {
+      "description": "Optimized for Jazz and instrumental music",
+      "eq_settings": {
+        "natural_lows": 1.0,
+        "mid_clarity": 1.8,
+        "high_end_sparkle": 2.0,
+        "room_ambience": 1.2
+      },
+      "compression": {
+        "ratio": 2.0,
+        "threshold": -25.0,
+        "attack": 20.0,
+        "release": 400.0
+      },
+      "stereo_width": 1.0,
+      "limiter_threshold": -0.5
+    },
+    "pop": {
+      "description": "Optimized for Pop and mainstream music",
+      "eq_settings": {
+        "balanced_lows": 1.5,
+        "vocal_clarity": 1.0,
+        "mid_presence": 1.2,
+        "radio_ready_highs": 1.2
+      },
+      "compression": {
+        "ratio": 3.0,
+        "threshold": -20.0,
+        "attack": 3.0,
+        "release": 250.0
+      },
+      "stereo_width": 1.15,
+      "limiter_threshold": -0.8
     }
   },
   "tiers": {

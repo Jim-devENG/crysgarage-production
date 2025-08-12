@@ -2,6 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Upload, FileAudio, ArrowRight, ArrowLeft, Download, Music, Play, Pause, Volume2, VolumeX, Music2, Music3, Music4 } from 'lucide-react';
 import { availableGenres, Genre as GenreType } from './GenreDropdown';
+import FrequencySpectrum from './FrequencySpectrum';
 
 interface Genre {
   name: string;
@@ -72,6 +73,11 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
       gain: 1.2,
       compression: { threshold: -25, ratio: 2.0, attack: 0.02, release: 0.4 },
       eq: { low: 1.0, mid: 1.8, high: 2.0 }
+    },
+    pop: {
+      gain: 1.5,
+      compression: { threshold: -20, ratio: 3, attack: 0.003, release: 0.25 },
+      eq: { low: 1.5, mid: 1.0, high: 1.2 }
     }
   };
 
@@ -290,20 +296,21 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
                  {availableGenres.map((genre) => {
                    const isSelected = selectedGenre?.id === genre.id;
                    
-                   // Define unique gradient colors for each genre
-                   const getGenreGradient = (genreId: string) => {
-                     const gradients = {
-                       afrobeats: 'from-orange-500 to-red-600',
-                       gospel: 'from-blue-500 to-purple-600',
-                       'hip-hop': 'from-yellow-500 to-orange-600',
-                       highlife: 'from-green-500 to-teal-600',
-                       amapiano: 'from-pink-500 to-purple-600',
-                       reggae: 'from-green-400 to-yellow-500',
-                       soul: 'from-purple-500 to-pink-600',
-                       jazz: 'from-indigo-500 to-blue-600'
-                     };
-                     return gradients[genreId as keyof typeof gradients] || 'from-gray-500 to-gray-600';
-                   };
+                                       // Define unique gradient colors for each genre
+                    const getGenreGradient = (genreId: string) => {
+                      const gradients = {
+                        afrobeats: 'from-orange-500 to-red-600',
+                        gospel: 'from-blue-500 to-purple-600',
+                        'hip-hop': 'from-yellow-500 to-orange-600',
+                        highlife: 'from-green-500 to-teal-600',
+                        amapiano: 'from-pink-500 to-purple-600',
+                        reggae: 'from-green-400 to-yellow-500',
+                        soul: 'from-purple-500 to-pink-600',
+                        jazz: 'from-indigo-500 to-blue-600',
+                        pop: 'from-cyan-500 to-blue-600'
+                      };
+                      return gradients[genreId as keyof typeof gradients] || 'from-gray-500 to-gray-600';
+                    };
                    
                    return (
                      <button
@@ -347,22 +354,29 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
                       </div>
                     </div>
                     
-                    <audio
-                      ref={(el) => setOriginalAudioElement(el)}
-                      controls
-                      className="w-full"
-                      src={selectedFile ? URL.createObjectURL(selectedFile) : undefined}
-                      onPlay={() => {
-                        setIsPlayingOriginal(true);
-                        if (masteredAudioElement) masteredAudioElement.pause();
-                        setIsPlayingMastered(false);
-                      }}
-                      onPause={() => setIsPlayingOriginal(false)}
-                    />
-                    
-                    <div className="text-center">
-                      <p className="text-xs text-gray-400">Original, unprocessed audio</p>
-                    </div>
+                                         <audio
+                       ref={(el) => setOriginalAudioElement(el)}
+                       controls
+                       className="w-full"
+                       src={selectedFile ? URL.createObjectURL(selectedFile) : undefined}
+                       onPlay={() => {
+                         setIsPlayingOriginal(true);
+                         if (masteredAudioElement) masteredAudioElement.pause();
+                         setIsPlayingMastered(false);
+                       }}
+                       onPause={() => setIsPlayingOriginal(false)}
+                     />
+                     
+                     {/* Frequency Spectrum Analysis for Original */}
+                     <FrequencySpectrum
+                       audioElement={originalAudioElement}
+                       isPlaying={isPlayingOriginal}
+                       title="Original Frequency Spectrum"
+                     />
+                     
+                     <div className="text-center">
+                       <p className="text-xs text-gray-400">Original, unprocessed audio</p>
+                     </div>
                   </div>
                 </div>
 
@@ -397,61 +411,136 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
                       </div>
                     )}
                     
-                    {processedAudioUrl ? (
-                      <audio
-                        ref={(el) => setMasteredAudioElement(el)}
-                        controls
-                        className="w-full"
-                        src={processedAudioUrl}
-                        onPlay={() => {
-                          setIsPlayingMastered(true);
-                          if (originalAudioElement) originalAudioElement.pause();
-                          setIsPlayingOriginal(false);
-                        }}
-                        onPause={() => setIsPlayingMastered(false)}
-                      />
-                    ) : (
-                      <div className="bg-gray-700 rounded-lg p-6 text-center">
-                        {isProcessing ? (
-                          <>
-                            <div className="w-6 h-6 border-2 border-crys-gold border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
-                            <p className="text-xs text-gray-400">Processing audio...</p>
-                          </>
-                        ) : (
-                          <p className="text-xs text-gray-400">Select a genre to process</p>
-                        )}
-                      </div>
-                    )}
-                    
-                    <div className="text-center">
-                      <p className="text-xs text-crys-gold">
-                        {selectedGenre ? `Mastered with ${selectedGenre.name} preset` : 'Mastered audio'}
-                      </p>
-                    </div>
+                                         {processedAudioUrl ? (
+                       <>
+                         <audio
+                           ref={(el) => setMasteredAudioElement(el)}
+                           controls
+                           className="w-full"
+                           src={processedAudioUrl}
+                           onPlay={() => {
+                             setIsPlayingMastered(true);
+                             if (originalAudioElement) originalAudioElement.pause();
+                             setIsPlayingOriginal(false);
+                           }}
+                           onPause={() => setIsPlayingMastered(false)}
+                         />
+                         
+                         {/* Frequency Spectrum Analysis for Mastered */}
+                         <FrequencySpectrum
+                           audioElement={masteredAudioElement}
+                           isPlaying={isPlayingMastered}
+                           title={`${selectedGenre?.name || 'Mastered'} Frequency Spectrum`}
+                         />
+                       </>
+                     ) : (
+                       <div className="bg-gray-700 rounded-lg p-6 text-center">
+                         {isProcessing ? (
+                           <>
+                             <div className="w-6 h-6 border-2 border-crys-gold border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+                             <p className="text-xs text-gray-400">Processing audio...</p>
+                           </>
+                         ) : (
+                           <p className="text-xs text-gray-400">Select a genre to process</p>
+                         )}
+                       </div>
+                     )}
+                     
+                     <div className="text-center">
+                       <p className="text-xs text-crys-gold">
+                         {selectedGenre ? `Mastered with ${selectedGenre.name} preset` : 'Mastered audio'}
+                       </p>
+                     </div>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Navigation */}
-            <div className="flex justify-center space-x-4">
-              <button
-                onClick={prevStep}
-                className="bg-gray-700 hover:bg-gray-600 text-white px-6 py-2 rounded-lg font-semibold transition-colors flex items-center space-x-2"
-              >
-                <ArrowLeft className="w-4 h-4" />
-                <span>Back</span>
-              </button>
-              {processedAudioUrl && (
-                <button
-                  onClick={nextStep}
-                  className="bg-crys-gold text-black px-6 py-2 rounded-lg font-semibold hover:bg-yellow-400 transition-colors flex items-center space-x-2"
-                >
-                  <span>Continue to Download</span>
-                  <ArrowRight className="w-4 h-4" />
-                </button>
-              )}
-            </div>
+                         {/* Analysis Summary */}
+             {processedAudioUrl && selectedGenre && (
+               <div className="bg-gray-800 rounded-xl p-6">
+                 <h3 className="text-lg font-semibold mb-4 text-center text-crys-gold">
+                   Mastering Analysis Summary
+                 </h3>
+                 <div className="grid md:grid-cols-2 gap-6">
+                   <div className="space-y-3">
+                     <h4 className="font-medium text-white">Applied Processing</h4>
+                     <div className="space-y-2">
+                       <div className="flex justify-between text-sm">
+                         <span className="text-gray-300">Genre Preset:</span>
+                         <span className="text-crys-gold font-medium">{selectedGenre.name}</span>
+                       </div>
+                       <div className="flex justify-between text-sm">
+                         <span className="text-gray-300">Gain Applied:</span>
+                         <span className="text-crys-gold font-medium">
+                           +{Math.round((GENRE_PRESETS[selectedGenre.id].gain - 1) * 100)}%
+                         </span>
+                       </div>
+                       <div className="flex justify-between text-sm">
+                         <span className="text-gray-300">Compression:</span>
+                         <span className="text-crys-gold font-medium">
+                           {GENRE_PRESETS[selectedGenre.id].compression.ratio}:1
+                         </span>
+                       </div>
+                       <div className="flex justify-between text-sm">
+                         <span className="text-gray-300">Threshold:</span>
+                         <span className="text-crys-gold font-medium">
+                           {GENRE_PRESETS[selectedGenre.id].compression.threshold}dB
+                         </span>
+                       </div>
+                     </div>
+                   </div>
+                   
+                   <div className="space-y-3">
+                     <h4 className="font-medium text-white">Frequency Enhancements</h4>
+                     <div className="space-y-2">
+                       <div className="flex justify-between text-sm">
+                         <span className="text-gray-300">Low Frequencies:</span>
+                         <span className="text-crys-gold font-medium">
+                           +{Math.round(GENRE_PRESETS[selectedGenre.id].eq.low * 100)}%
+                         </span>
+                       </div>
+                       <div className="flex justify-between text-sm">
+                         <span className="text-gray-300">Mid Frequencies:</span>
+                         <span className="text-crys-gold font-medium">
+                           +{Math.round(GENRE_PRESETS[selectedGenre.id].eq.mid * 100)}%
+                         </span>
+                       </div>
+                       <div className="flex justify-between text-sm">
+                         <span className="text-gray-300">High Frequencies:</span>
+                         <span className="text-crys-gold font-medium">
+                           +{Math.round(GENRE_PRESETS[selectedGenre.id].eq.high * 100)}%
+                         </span>
+                       </div>
+                       <div className="flex justify-between text-sm">
+                         <span className="text-gray-300">Processing:</span>
+                         <span className="text-green-400 font-medium">Complete</span>
+                       </div>
+                     </div>
+                   </div>
+                 </div>
+               </div>
+             )}
+
+             {/* Navigation */}
+             <div className="flex justify-center space-x-4">
+               <button
+                 onClick={prevStep}
+                 className="bg-gray-700 hover:bg-gray-600 text-white px-6 py-2 rounded-lg font-semibold transition-colors flex items-center space-x-2"
+               >
+                 <ArrowLeft className="w-4 h-4" />
+                 <span>Back</span>
+               </button>
+               {processedAudioUrl && (
+                 <button
+                   onClick={nextStep}
+                   className="bg-crys-gold text-black px-6 py-2 rounded-lg font-semibold hover:bg-yellow-400 transition-colors flex items-center space-x-2"
+                 >
+                   <span>Continue to Download</span>
+                   <ArrowRight className="w-4 h-4" />
+                 </button>
+               )}
+             </div>
           </div>
         )}
 
