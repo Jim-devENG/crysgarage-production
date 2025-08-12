@@ -5,7 +5,7 @@ import { AuthModal } from './components/AuthPages';
 import { FreeTierDashboard } from './components/FreeTierDashboard';
 import ProfessionalTierDashboard from './components/ProfessionalTierDashboard';
 
-import { AdvancedTierDashboard } from './components/AdvancedTierDashboard';
+import AdvancedTierDashboard from './components/AdvancedTierDashboard';
 import { Header } from './components/Header';
 import { ProcessingPage } from './components/ProcessingPage';
 import { MasteringResults } from './components/MasteringResults';
@@ -212,27 +212,34 @@ function AppContent() {
 
   // Loading state
   if (isLoading) {
+    console.log('App is loading...');
     return (
-      <div className="min-h-screen bg-gradient-to-br from-crys-black via-crys-graphite to-crys-black flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black flex items-center justify-center">
         <div className="text-center">
-          <div className="w-16 h-16 border-4 border-crys-gold border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <h2 className="text-crys-white text-xl font-semibold">Loading Crys Garage...</h2>
-          <p className="text-crys-light-grey mt-2">Preparing your audio mastering experience</p>
-          </div>
-          </div>
+          <div className="w-16 h-16 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <h2 className="text-white text-xl font-semibold">Loading Crys Garage...</h2>
+          <p className="text-gray-400 mt-2">Preparing your audio mastering experience</p>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="mt-4 bg-yellow-500 text-black px-4 py-2 rounded"
+          >
+            Force Reload
+          </button>
+        </div>
+      </div>
     );
   }
 
   // Error state
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-crys-black via-crys-graphite to-crys-black flex items-center justify-center p-4">
-        <div className="bg-audio-panel-bg border border-audio-panel-border rounded-xl p-6 max-w-md w-full text-center">
-          <h2 className="text-crys-white text-xl font-semibold mb-4">Something went wrong</h2>
-          <p className="text-crys-light-grey mb-4">{error}</p>
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black flex items-center justify-center p-4">
+        <div className="bg-gray-800 border border-gray-600 rounded-xl p-6 max-w-md w-full text-center">
+          <h2 className="text-white text-xl font-semibold mb-4">Something went wrong</h2>
+          <p className="text-gray-400 mb-4">{error}</p>
           <button
             onClick={clearError}
-            className="bg-crys-gold text-crys-black px-6 py-2 rounded-lg font-semibold hover:bg-crys-gold/90 transition-colors"
+            className="bg-yellow-500 text-black px-6 py-2 rounded-lg font-semibold hover:bg-yellow-400 transition-colors"
           >
             Try Again
           </button>
@@ -242,11 +249,12 @@ function AppContent() {
   }
 
   // Authenticated user - show dashboard
+  console.log('App state:', { isAuthenticated, isLoading, currentPage, user: !!user });
   if (isAuthenticated && user) {
   return (
-      <div className="min-h-screen bg-gradient-to-br from-crys-black via-crys-graphite to-crys-black relative">
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black relative">
         {/* Background overlay to cover gaps */}
-        <div className="absolute inset-0 bg-gradient-to-br from-crys-black via-crys-graphite to-crys-black -z-10" style={{ top: '-80px', height: 'calc(100% + 80px)' }}></div>
+        <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-gray-800 to-black -z-10" style={{ top: '-80px', height: 'calc(100% + 80px)' }}></div>
         <Header 
           user={user}
           onSignOut={signOut}
@@ -426,10 +434,11 @@ function AppContent() {
   }
 
   // Not authenticated - show landing page
+  console.log('Showing landing page for non-authenticated user');
   return (
-    <div className="min-h-screen bg-gradient-to-br from-crys-black via-crys-graphite to-crys-black relative">
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black relative">
         {/* Background overlay to cover gaps */}
-        <div className="absolute inset-0 bg-gradient-to-br from-crys-black via-crys-graphite to-crys-black -z-10" style={{ top: '-80px', height: 'calc(100% + 80px)' }}></div>
+        <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-gray-800 to-black -z-10" style={{ top: '-80px', height: 'calc(100% + 80px)' }}></div>
       <Header 
         user={null}
         onNavigate={handleNavigation}
