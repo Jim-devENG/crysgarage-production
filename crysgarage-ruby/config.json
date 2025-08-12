@@ -9,157 +9,372 @@
   },
   "genres": {
     "afrobeats": {
-      "description": "Optimized for Afrobeats and African pop music",
+      "description": "Modern African pop with heavy bass and percussion",
       "eq_settings": {
-        "low_bass_boost": 2.0,
-        "kick_drum_enhance": 1.5,
-        "vocal_clarity": 1.0,
-        "high_end_sparkle": 0.5
+        "low": 2.0,
+        "mid": 1.0,
+        "high": 0.5
       },
       "compression": {
-        "ratio": 3.0,
-        "threshold": -18.0,
-        "attack": 5.0,
-        "release": 100.0
+        "threshold": -18,
+        "ratio": 4,
+        "attack": 0.002,
+        "release": 0.2
       },
       "stereo_width": 1.2,
       "limiter_threshold": -1.0
     },
-    "gospel": {
-      "description": "Optimized for Gospel and Christian music",
+    "trap": {
+      "description": "High-energy hip-hop with heavy 808s and hi-hats",
       "eq_settings": {
-        "warm_lows": 1.5,
-        "vocal_presence": 2.0,
-        "choir_clarity": 1.5,
-        "organ_enhance": 1.0
+        "low": 3.5,
+        "mid": 1.2,
+        "high": 0.6
       },
       "compression": {
-        "ratio": 2.5,
-        "threshold": -20.0,
-        "attack": 10.0,
-        "release": 150.0
+        "threshold": -14,
+        "ratio": 6,
+        "attack": 0.001,
+        "release": 0.08
       },
-      "stereo_width": 1.1,
-      "limiter_threshold": -0.8
+      "stereo_width": 1.4,
+      "limiter_threshold": -1.0
     },
-    "hip_hop": {
-      "description": "Optimized for Hip-Hop and Rap music",
+    "drill": {
+      "description": "UK/NY/Africa drill with aggressive beats and flows",
       "eq_settings": {
-        "bass_boost": 3.0,
-        "kick_punch": 2.0,
-        "snare_crack": 1.5,
-        "vocal_clarity": 1.0
+        "low": 3.0,
+        "mid": 1.8,
+        "high": 0.7
       },
       "compression": {
-        "ratio": 4.0,
-        "threshold": -16.0,
-        "attack": 3.0,
-        "release": 80.0
+        "threshold": -16,
+        "ratio": 5,
+        "attack": 0.001,
+        "release": 0.1
       },
       "stereo_width": 1.3,
-      "limiter_threshold": -1.2
+      "limiter_threshold": -1.0
     },
-    "highlife": {
-      "description": "Optimized for Highlife and traditional African music",
+    "dubstep": {
+      "description": "Electronic music with heavy bass drops and wobbles",
       "eq_settings": {
-        "percussion_enhance": 1.8,
-        "guitar_clarity": 1.2,
-        "brass_presence": 1.5,
-        "vocal_warmth": 1.0
+        "low": 4.0,
+        "mid": 1.0,
+        "high": 0.8
       },
       "compression": {
-        "ratio": 2.8,
-        "threshold": -19.0,
-        "attack": 8.0,
-        "release": 120.0
+        "threshold": -12,
+        "ratio": 8,
+        "attack": 0.001,
+        "release": 0.05
       },
-      "stereo_width": 1.15,
-      "limiter_threshold": -0.9
+      "stereo_width": 1.5,
+      "limiter_threshold": -1.0
     },
-    "amapiano": {
-      "description": "Optimized for Amapiano and South African house music",
+    "gospel": {
+      "description": "Spiritual music with rich harmonies and dynamic range",
       "eq_settings": {
-        "piano_enhance": 2.2,
-        "bass_clarity": 1.8,
-        "percussion_punch": 1.5,
-        "high_end_air": 1.0
+        "low": 1.5,
+        "mid": 2.0,
+        "high": 1.0
       },
       "compression": {
-        "ratio": 3.5,
-        "threshold": -19.0,
-        "attack": 3.0,
-        "release": 180.0
-      },
-      "stereo_width": 1.25,
-      "limiter_threshold": -1.1
-    },
-    "reggae": {
-      "description": "Optimized for Reggae and Jamaican music",
-      "eq_settings": {
-        "bass_warmth": 2.5,
-        "guitar_skank": 1.2,
-        "vocal_presence": 1.0,
-        "high_end_rolloff": 0.6
-      },
-      "compression": {
-        "ratio": 2.8,
-        "threshold": -21.0,
-        "attack": 8.0,
-        "release": 300.0
+        "threshold": -22,
+        "ratio": 2.5,
+        "attack": 0.01,
+        "release": 0.15
       },
       "stereo_width": 1.1,
-      "limiter_threshold": -0.7
+      "limiter_threshold": -1.0
     },
-    "soul": {
-      "description": "Optimized for Soul and R&B music",
+    "r-b": {
+      "description": "Smooth soulful music with emotional vocals",
       "eq_settings": {
-        "warm_lows": 1.2,
-        "vocal_clarity": 2.5,
-        "mid_presence": 1.8,
-        "smooth_highs": 1.0
+        "low": 1.2,
+        "mid": 2.5,
+        "high": 1.8
       },
       "compression": {
+        "threshold": -24,
         "ratio": 2.2,
-        "threshold": -23.0,
-        "attack": 15.0,
-        "release": 200.0
-      },
-      "stereo_width": 1.05,
-      "limiter_threshold": -0.6
-    },
-    "jazz": {
-      "description": "Optimized for Jazz and instrumental music",
-      "eq_settings": {
-        "natural_lows": 1.0,
-        "mid_clarity": 1.8,
-        "high_end_sparkle": 2.0,
-        "room_ambience": 1.2
-      },
-      "compression": {
-        "ratio": 2.0,
-        "threshold": -25.0,
-        "attack": 20.0,
-        "release": 400.0
+        "attack": 0.015,
+        "release": 0.2
       },
       "stereo_width": 1.0,
-      "limiter_threshold": -0.5
+      "limiter_threshold": -1.0
     },
-    "pop": {
-      "description": "Optimized for Pop and mainstream music",
+    "lofi-hiphop": {
+      "description": "Chill instrumental hip-hop with relaxed vibes",
       "eq_settings": {
-        "balanced_lows": 1.5,
-        "vocal_clarity": 1.0,
-        "mid_presence": 1.2,
-        "radio_ready_highs": 1.2
+        "low": 0.8,
+        "mid": 1.5,
+        "high": 1.2
       },
       "compression": {
-        "ratio": 3.0,
-        "threshold": -20.0,
-        "attack": 3.0,
-        "release": 250.0
+        "threshold": -26,
+        "ratio": 1.8,
+        "attack": 0.025,
+        "release": 0.3
       },
-      "stereo_width": 1.15,
-      "limiter_threshold": -0.8
+      "stereo_width": 0.9,
+      "limiter_threshold": -1.0
+    },
+    "hip-hop": {
+      "description": "Urban music with strong beats and vocal clarity",
+      "eq_settings": {
+        "low": 3.0,
+        "mid": 1.5,
+        "high": 0.8
+      },
+      "compression": {
+        "threshold": -16,
+        "ratio": 5,
+        "attack": 0.001,
+        "release": 0.1
+      },
+      "stereo_width": 1.3,
+      "limiter_threshold": -1.0
+    },
+    "house": {
+      "description": "Electronic dance music with four-on-the-floor beats",
+      "eq_settings": {
+        "low": 2.5,
+        "mid": 1.8,
+        "high": 1.0
+      },
+      "compression": {
+        "threshold": -17,
+        "ratio": 4.5,
+        "attack": 0.002,
+        "release": 0.15
+      },
+      "stereo_width": 1.2,
+      "limiter_threshold": -1.0
+    },
+    "techno": {
+      "description": "Industrial electronic music with driving rhythms",
+      "eq_settings": {
+        "low": 3.2,
+        "mid": 1.6,
+        "high": 0.9
+      },
+      "compression": {
+        "threshold": -15,
+        "ratio": 5.5,
+        "attack": 0.001,
+        "release": 0.08
+      },
+      "stereo_width": 1.4,
+      "limiter_threshold": -1.0
+    },
+    "highlife": {
+      "description": "Traditional African music with brass and guitar",
+      "eq_settings": {
+        "low": 1.8,
+        "mid": 2.2,
+        "high": 1.2
+      },
+      "compression": {
+        "threshold": -20,
+        "ratio": 3,
+        "attack": 0.005,
+        "release": 0.25
+      },
+      "stereo_width": 1.1,
+      "limiter_threshold": -1.0
+    },
+    "instrumentals": {
+      "description": "Pure instrumental music without vocals",
+      "eq_settings": {
+        "low": 1.5,
+        "mid": 2.0,
+        "high": 1.5
+      },
+      "compression": {
+        "threshold": -21,
+        "ratio": 2.8,
+        "attack": 0.008,
+        "release": 0.25
+      },
+      "stereo_width": 1.1,
+      "limiter_threshold": -1.0
+    },
+    "beats": {
+      "description": "Production beats for rappers and vocalists",
+      "eq_settings": {
+        "low": 2.2,
+        "mid": 1.8,
+        "high": 1.0
+      },
+      "compression": {
+        "threshold": -19,
+        "ratio": 3.5,
+        "attack": 0.003,
+        "release": 0.2
+      },
+      "stereo_width": 1.2,
+      "limiter_threshold": -1.0
+    },
+    "amapiano": {
+      "description": "South African house with piano melodies",
+      "eq_settings": {
+        "low": 2.2,
+        "mid": 1.8,
+        "high": 1.5
+      },
+      "compression": {
+        "threshold": -19,
+        "ratio": 3.5,
+        "attack": 0.003,
+        "release": 0.18
+      },
+      "stereo_width": 1.2,
+      "limiter_threshold": -1.0
+    },
+    "trance": {
+      "description": "Uplifting electronic music with melodic leads",
+      "eq_settings": {
+        "low": 2.0,
+        "mid": 1.5,
+        "high": 1.8
+      },
+      "compression": {
+        "threshold": -18,
+        "ratio": 4,
+        "attack": 0.002,
+        "release": 0.2
+      },
+      "stereo_width": 1.3,
+      "limiter_threshold": -1.0
+    },
+    "drum-bass": {
+      "description": "Fast-paced electronic music with breakbeats",
+      "eq_settings": {
+        "low": 3.8,
+        "mid": 1.4,
+        "high": 1.0
+      },
+      "compression": {
+        "threshold": -13,
+        "ratio": 7,
+        "attack": 0.001,
+        "release": 0.06
+      },
+      "stereo_width": 1.4,
+      "limiter_threshold": -1.0
+    },
+    "reggae": {
+      "description": "Jamaican music with offbeat rhythm and bass",
+      "eq_settings": {
+        "low": 2.5,
+        "mid": 1.2,
+        "high": 0.6
+      },
+      "compression": {
+        "threshold": -21,
+        "ratio": 2.8,
+        "attack": 0.008,
+        "release": 0.3
+      },
+      "stereo_width": 1.1,
+      "limiter_threshold": -1.0
+    },
+    "voice-over": {
+      "description": "Professional voice recordings for media",
+      "eq_settings": {
+        "low": 0.8,
+        "mid": 2.8,
+        "high": 2.2
+      },
+      "compression": {
+        "threshold": -25,
+        "ratio": 2.0,
+        "attack": 0.02,
+        "release": 0.4
+      },
+      "stereo_width": 1.0,
+      "limiter_threshold": -1.0
+    },
+    "journalist": {
+      "description": "News and documentary voice recordings",
+      "eq_settings": {
+        "low": 0.6,
+        "mid": 3.0,
+        "high": 2.5
+      },
+      "compression": {
+        "threshold": -26,
+        "ratio": 1.8,
+        "attack": 0.025,
+        "release": 0.5
+      },
+      "stereo_width": 1.0,
+      "limiter_threshold": -1.0
+    },
+    "soul": {
+      "description": "Emotional music with warm vocals and groove",
+      "eq_settings": {
+        "low": 1.2,
+        "mid": 2.5,
+        "high": 1.8
+      },
+      "compression": {
+        "threshold": -23,
+        "ratio": 2.2,
+        "attack": 0.015,
+        "release": 0.2
+      },
+      "stereo_width": 1.0,
+      "limiter_threshold": -1.0
+    },
+    "content-creator": {
+      "description": "Audio optimized for social media and content",
+      "eq_settings": {
+        "low": 1.5,
+        "mid": 2.0,
+        "high": 1.5
+      },
+      "compression": {
+        "threshold": -20,
+        "ratio": 3,
+        "attack": 0.005,
+        "release": 0.25
+      },
+      "stereo_width": 1.1,
+      "limiter_threshold": -1.0
+    },
+    "pop": {
+      "description": "Mainstream popular music with catchy melodies",
+      "eq_settings": {
+        "low": 1.5,
+        "mid": 1.0,
+        "high": 1.2
+      },
+      "compression": {
+        "threshold": -20,
+        "ratio": 3,
+        "attack": 0.003,
+        "release": 0.25
+      },
+      "stereo_width": 1.1,
+      "limiter_threshold": -1.0
+    },
+    "jazz": {
+      "description": "Complex harmonies with improvisation and swing",
+      "eq_settings": {
+        "low": 1.0,
+        "mid": 1.8,
+        "high": 2.0
+      },
+      "compression": {
+        "threshold": -25,
+        "ratio": 2.0,
+        "attack": 0.02,
+        "release": 0.4
+      },
+      "stereo_width": 1.0,
+      "limiter_threshold": -1.0
     }
   },
   "tiers": {

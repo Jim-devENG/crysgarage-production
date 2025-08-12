@@ -10,6 +10,7 @@ export interface Genre {
 }
 
 export const availableGenres: Genre[] = [
+  // RED - High Energy, Bass Heavy
   {
     id: 'afrobeats',
     name: 'Afrobeats',
@@ -18,12 +19,51 @@ export const availableGenres: Genre[] = [
     characteristics: ['Heavy bass', 'Percussion focus', 'Modern pop elements']
   },
   {
+    id: 'trap',
+    name: 'Trap',
+    description: 'High-energy hip-hop with heavy 808s and hi-hats',
+    price: 0,
+    characteristics: ['808 bass', 'Hi-hat rolls', 'Dark atmosphere']
+  },
+  {
+    id: 'drill',
+    name: 'Drill',
+    description: 'UK/NY/Africa drill with aggressive beats and flows',
+    price: 0,
+    characteristics: ['Aggressive beats', 'Dark melodies', 'Hard-hitting']
+  },
+  {
+    id: 'dubstep',
+    name: 'Dubstep',
+    description: 'Electronic music with heavy bass drops and wobbles',
+    price: 0,
+    characteristics: ['Bass drops', 'Wobble bass', 'Electronic elements']
+  },
+  
+  // BLUE - Smooth, Melodic
+  {
     id: 'gospel',
     name: 'Gospel',
     description: 'Spiritual music with rich harmonies and dynamic range',
     price: 0,
     characteristics: ['Rich harmonies', 'Dynamic range', 'Spiritual focus']
   },
+  {
+    id: 'r-b',
+    name: 'R&B',
+    description: 'Smooth soulful music with emotional vocals',
+    price: 0,
+    characteristics: ['Smooth vocals', 'Emotional depth', 'Soulful melodies']
+  },
+  {
+    id: 'lofi-hiphop',
+    name: 'Lo-Fi Hip-Hop',
+    description: 'Chill instrumental hip-hop with relaxed vibes',
+    price: 0,
+    characteristics: ['Chill vibes', 'Lo-fi aesthetic', 'Relaxed tempo']
+  },
+  
+  // ORANGE - Energetic, Dynamic
   {
     id: 'hip-hop',
     name: 'Hip-Hop',
@@ -32,12 +72,44 @@ export const availableGenres: Genre[] = [
     characteristics: ['Strong beats', 'Vocal clarity', 'Urban sound']
   },
   {
+    id: 'house',
+    name: 'House',
+    description: 'Electronic dance music with four-on-the-floor beats',
+    price: 0,
+    characteristics: ['Four-on-floor', 'Electronic beats', 'Dance energy']
+  },
+  {
+    id: 'techno',
+    name: 'Techno',
+    description: 'Industrial electronic music with driving rhythms',
+    price: 0,
+    characteristics: ['Industrial sounds', 'Driving rhythms', 'Electronic']
+  },
+  
+  // GREEN - Natural, Organic
+  {
     id: 'highlife',
     name: 'Highlife',
     description: 'Traditional African music with brass and guitar',
     price: 0,
     characteristics: ['Brass instruments', 'Guitar focus', 'Traditional elements']
   },
+  {
+    id: 'instrumentals',
+    name: 'Instrumentals',
+    description: 'Pure instrumental music without vocals',
+    price: 0,
+    characteristics: ['No vocals', 'Musical focus', 'Melodic instruments']
+  },
+  {
+    id: 'beats',
+    name: 'Beats',
+    description: 'Production beats for rappers and vocalists',
+    price: 0,
+    characteristics: ['Beat focus', 'Vocal ready', 'Production quality']
+  },
+  
+  // PURPLE - Creative, Artistic
   {
     id: 'amapiano',
     name: 'Amapiano',
@@ -46,12 +118,44 @@ export const availableGenres: Genre[] = [
     characteristics: ['Piano melodies', 'House elements', 'South African style']
   },
   {
+    id: 'trance',
+    name: 'Trance',
+    description: 'Uplifting electronic music with melodic leads',
+    price: 0,
+    characteristics: ['Melodic leads', 'Uplifting energy', 'Electronic']
+  },
+  {
+    id: 'drum-bass',
+    name: 'Drum & Bass',
+    description: 'Fast-paced electronic music with breakbeats',
+    price: 0,
+    characteristics: ['Fast tempo', 'Breakbeats', 'High energy']
+  },
+  
+  // YELLOW - Bright, Clear
+  {
     id: 'reggae',
     name: 'Reggae',
     description: 'Jamaican music with offbeat rhythm and bass',
     price: 0,
     characteristics: ['Offbeat rhythm', 'Bass focus', 'Jamaican style']
   },
+  {
+    id: 'voice-over',
+    name: 'Voice Over',
+    description: 'Professional voice recordings for media',
+    price: 0,
+    characteristics: ['Clear vocals', 'Professional quality', 'Media ready']
+  },
+  {
+    id: 'journalist',
+    name: 'Journalist',
+    description: 'News and documentary voice recordings',
+    price: 0,
+    characteristics: ['Clear speech', 'Professional tone', 'News quality']
+  },
+  
+  // PINK - Warm, Emotional
   {
     id: 'soul',
     name: 'Soul',
@@ -60,11 +164,11 @@ export const availableGenres: Genre[] = [
     characteristics: ['Warm vocals', 'Groove focus', 'Emotional depth']
   },
   {
-    id: 'jazz',
-    name: 'Jazz',
-    description: 'Complex harmonies with improvisation and swing',
+    id: 'content-creator',
+    name: 'Content Creator',
+    description: 'Audio optimized for social media and content',
     price: 0,
-    characteristics: ['Complex harmonies', 'Improvisation', 'Swing rhythm']
+    characteristics: ['Social media ready', 'Engaging audio', 'Content optimized']
   },
   {
     id: 'pop',
@@ -72,6 +176,15 @@ export const availableGenres: Genre[] = [
     description: 'Mainstream popular music with catchy melodies',
     price: 0,
     characteristics: ['Catchy melodies', 'Clean production', 'Radio-friendly']
+  },
+  
+  // INDIGO - Sophisticated, Complex
+  {
+    id: 'jazz',
+    name: 'Jazz',
+    description: 'Complex harmonies with improvisation and swing',
+    price: 0,
+    characteristics: ['Complex harmonies', 'Improvisation', 'Swing rhythm']
   }
 ];
 

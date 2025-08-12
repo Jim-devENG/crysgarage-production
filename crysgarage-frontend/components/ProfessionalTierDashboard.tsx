@@ -32,52 +32,137 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
   const [masteredAudioElement, setMasteredAudioElement] = useState<HTMLAudioElement | null>(null);
   const [downloadFormat, setDownloadFormat] = useState<'wav' | 'mp3'>('wav');
 
-  // Genre presets with processing details
+  // Genre presets with processing details - 7 Color System
   const GENRE_PRESETS: Record<string, any> = {
+    // RED - High Energy, Bass Heavy
     afrobeats: {
       gain: 1.8,
       compression: { threshold: -18, ratio: 4, attack: 0.002, release: 0.2 },
       eq: { low: 2.0, mid: 1.0, high: 0.5 }
     },
+    trap: {
+      gain: 2.2,
+      compression: { threshold: -14, ratio: 6, attack: 0.001, release: 0.08 },
+      eq: { low: 3.5, mid: 1.2, high: 0.6 }
+    },
+    drill: {
+      gain: 2.0,
+      compression: { threshold: -16, ratio: 5, attack: 0.001, release: 0.1 },
+      eq: { low: 3.0, mid: 1.8, high: 0.7 }
+    },
+    dubstep: {
+      gain: 2.5,
+      compression: { threshold: -12, ratio: 8, attack: 0.001, release: 0.05 },
+      eq: { low: 4.0, mid: 1.0, high: 0.8 }
+    },
+    
+    // BLUE - Smooth, Melodic
     gospel: {
       gain: 1.4,
       compression: { threshold: -22, ratio: 2.5, attack: 0.01, release: 0.15 },
       eq: { low: 1.5, mid: 2.0, high: 1.0 }
     },
+    'r-b': {
+      gain: 1.3,
+      compression: { threshold: -24, ratio: 2.2, attack: 0.015, release: 0.2 },
+      eq: { low: 1.2, mid: 2.5, high: 1.8 }
+    },
+    'lofi-hiphop': {
+      gain: 1.1,
+      compression: { threshold: -26, ratio: 1.8, attack: 0.025, release: 0.3 },
+      eq: { low: 0.8, mid: 1.5, high: 1.2 }
+    },
+    
+    // ORANGE - Energetic, Dynamic
     'hip-hop': {
       gain: 2.0,
       compression: { threshold: -16, ratio: 5, attack: 0.001, release: 0.1 },
       eq: { low: 3.0, mid: 1.5, high: 0.8 }
     },
+    house: {
+      gain: 1.9,
+      compression: { threshold: -17, ratio: 4.5, attack: 0.002, release: 0.15 },
+      eq: { low: 2.5, mid: 1.8, high: 1.0 }
+    },
+    techno: {
+      gain: 2.1,
+      compression: { threshold: -15, ratio: 5.5, attack: 0.001, release: 0.08 },
+      eq: { low: 3.2, mid: 1.6, high: 0.9 }
+    },
+    
+    // GREEN - Natural, Organic
     highlife: {
       gain: 1.6,
       compression: { threshold: -20, ratio: 3, attack: 0.005, release: 0.25 },
       eq: { low: 1.8, mid: 2.2, high: 1.2 }
     },
+    instrumentals: {
+      gain: 1.4,
+      compression: { threshold: -21, ratio: 2.8, attack: 0.008, release: 0.25 },
+      eq: { low: 1.5, mid: 2.0, high: 1.5 }
+    },
+    beats: {
+      gain: 1.7,
+      compression: { threshold: -19, ratio: 3.5, attack: 0.003, release: 0.2 },
+      eq: { low: 2.2, mid: 1.8, high: 1.0 }
+    },
+    
+    // PURPLE - Creative, Artistic
     amapiano: {
       gain: 1.7,
       compression: { threshold: -19, ratio: 3.5, attack: 0.003, release: 0.18 },
       eq: { low: 2.2, mid: 1.8, high: 1.5 }
     },
+    trance: {
+      gain: 1.8,
+      compression: { threshold: -18, ratio: 4, attack: 0.002, release: 0.2 },
+      eq: { low: 2.0, mid: 1.5, high: 1.8 }
+    },
+    'drum-bass': {
+      gain: 2.3,
+      compression: { threshold: -13, ratio: 7, attack: 0.001, release: 0.06 },
+      eq: { low: 3.8, mid: 1.4, high: 1.0 }
+    },
+    
+    // YELLOW - Bright, Clear
     reggae: {
       gain: 1.5,
       compression: { threshold: -21, ratio: 2.8, attack: 0.008, release: 0.3 },
       eq: { low: 2.5, mid: 1.2, high: 0.6 }
     },
+    'voice-over': {
+      gain: 1.2,
+      compression: { threshold: -25, ratio: 2.0, attack: 0.02, release: 0.4 },
+      eq: { low: 0.8, mid: 2.8, high: 2.2 }
+    },
+    journalist: {
+      gain: 1.1,
+      compression: { threshold: -26, ratio: 1.8, attack: 0.025, release: 0.5 },
+      eq: { low: 0.6, mid: 3.0, high: 2.5 }
+    },
+    
+    // PINK - Warm, Emotional
     soul: {
       gain: 1.3,
       compression: { threshold: -23, ratio: 2.2, attack: 0.015, release: 0.2 },
       eq: { low: 1.2, mid: 2.5, high: 1.8 }
     },
-    jazz: {
-      gain: 1.2,
-      compression: { threshold: -25, ratio: 2.0, attack: 0.02, release: 0.4 },
-      eq: { low: 1.0, mid: 1.8, high: 2.0 }
+    'content-creator': {
+      gain: 1.6,
+      compression: { threshold: -20, ratio: 3, attack: 0.005, release: 0.25 },
+      eq: { low: 1.5, mid: 2.0, high: 1.5 }
     },
     pop: {
       gain: 1.5,
       compression: { threshold: -20, ratio: 3, attack: 0.003, release: 0.25 },
       eq: { low: 1.5, mid: 1.0, high: 1.2 }
+    },
+    
+    // INDIGO - Sophisticated, Complex
+    jazz: {
+      gain: 1.2,
+      compression: { threshold: -25, ratio: 2.0, attack: 0.02, release: 0.4 },
+      eq: { low: 1.0, mid: 1.8, high: 2.0 }
     }
   };
 
@@ -296,20 +381,50 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
                  {availableGenres.map((genre) => {
                    const isSelected = selectedGenre?.id === genre.id;
                    
-                                       // Define unique gradient colors for each genre
+                                       // 7-Color System for Genres
                     const getGenreGradient = (genreId: string) => {
-                      const gradients = {
-                        afrobeats: 'from-orange-500 to-red-600',
-                        gospel: 'from-blue-500 to-purple-600',
-                        'hip-hop': 'from-yellow-500 to-orange-600',
-                        highlife: 'from-green-500 to-teal-600',
-                        amapiano: 'from-pink-500 to-purple-600',
-                        reggae: 'from-green-400 to-yellow-500',
-                        soul: 'from-purple-500 to-pink-600',
-                        jazz: 'from-indigo-500 to-blue-600',
-                        pop: 'from-cyan-500 to-blue-600'
+                      const colorMap: Record<string, string> = {
+                        // RED - High Energy, Bass Heavy
+                        afrobeats: 'from-red-500 to-red-700',
+                        trap: 'from-red-400 to-red-600',
+                        drill: 'from-red-600 to-red-800',
+                        dubstep: 'from-red-300 to-red-500',
+                        
+                        // BLUE - Smooth, Melodic
+                        gospel: 'from-blue-500 to-blue-700',
+                        'r-b': 'from-blue-400 to-blue-600',
+                        'lofi-hiphop': 'from-blue-600 to-blue-800',
+                        
+                        // ORANGE - Energetic, Dynamic
+                        'hip-hop': 'from-orange-500 to-orange-700',
+                        house: 'from-orange-400 to-orange-600',
+                        techno: 'from-orange-600 to-orange-800',
+                        
+                        // GREEN - Natural, Organic
+                        highlife: 'from-green-500 to-green-700',
+                        instrumentals: 'from-green-400 to-green-600',
+                        beats: 'from-green-600 to-green-800',
+                        
+                        // PURPLE - Creative, Artistic
+                        amapiano: 'from-purple-500 to-purple-700',
+                        trance: 'from-purple-400 to-purple-600',
+                        'drum-bass': 'from-purple-600 to-purple-800',
+                        
+                        // YELLOW - Bright, Clear
+                        reggae: 'from-yellow-500 to-yellow-700',
+                        'voice-over': 'from-yellow-400 to-yellow-600',
+                        journalist: 'from-yellow-600 to-yellow-800',
+                        
+                        // PINK - Warm, Emotional
+                        soul: 'from-pink-500 to-pink-700',
+                        'content-creator': 'from-pink-400 to-pink-600',
+                        pop: 'from-pink-600 to-pink-800',
+                        
+                        // INDIGO - Sophisticated, Complex
+                        jazz: 'from-indigo-500 to-indigo-700'
                       };
-                      return gradients[genreId as keyof typeof gradients] || 'from-gray-500 to-gray-600';
+                      
+                      return colorMap[genreId] || 'from-gray-500 to-gray-600';
                     };
                    
                    return (
@@ -512,10 +627,18 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
                            +{Math.round(GENRE_PRESETS[selectedGenre.id].eq.high * 100)}%
                          </span>
                        </div>
-                       <div className="flex justify-between text-sm">
-                         <span className="text-gray-300">Processing:</span>
-                         <span className="text-green-400 font-medium">Complete</span>
-                       </div>
+                                               <div className="flex justify-between text-sm">
+                          <span className="text-gray-300">Processing:</span>
+                          <span className="text-green-400 font-medium">Complete</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-300">Target LUFS:</span>
+                          <span className="text-crys-gold font-medium">-14.0 dB</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-300">True Peak:</span>
+                          <span className="text-crys-gold font-medium">-1.0 dB</span>
+                        </div>
                      </div>
                    </div>
                  </div>

@@ -19,6 +19,8 @@ const FrequencySpectrum: React.FC<FrequencySpectrumProps> = ({
   const analyserRef = useRef<AnalyserNode | null>(null);
   const sourceRef = useRef<MediaElementAudioSourceNode | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [lufsValue, setLufsValue] = useState<number | null>(null);
+  const [peakValue, setPeakValue] = useState<number | null>(null);
 
   useEffect(() => {
     if (!audioElement || !canvasRef.current) return;
@@ -77,12 +79,28 @@ const FrequencySpectrum: React.FC<FrequencySpectrumProps> = ({
     const bufferLength = analyser.frequencyBinCount;
     const dataArray = new Uint8Array(bufferLength);
 
-    const draw = () => {
-      if (!isPlaying) return;
+         const draw = () => {
+       if (!isPlaying) return;
 
-      animationRef.current = requestAnimationFrame(draw);
-      
-      analyser.getByteFrequencyData(dataArray);
+       animationRef.current = requestAnimationFrame(draw);
+       
+       analyser.getByteFrequencyData(dataArray);
+
+       // Calculate LUFS and Peak values
+       let sum = 0;
+       let peak = 0;
+       for (let i = 0; i < bufferLength; i++) {
+         const value = dataArray[i] / 255;
+         sum += value * value;
+         if (value > peak) peak = value;
+       }
+       
+       // Calculate RMS (Root Mean Square) for LUFS approximation
+       const rms = Math.sqrt(sum / bufferLength);
+       const lufs = 20 * Math.log10(rms) - 70; // Approximate LUFS calculation
+       
+       setLufsValue(lufs);
+       setPeakValue(20 * Math.log10(peak) - 70);
 
       // Clear canvas
       ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -157,15 +175,33 @@ const FrequencySpectrum: React.FC<FrequencySpectrumProps> = ({
 
   return (
     <div className={`bg-gray-700 rounded-lg p-3 ${className}`}>
-      <div className="flex items-center justify-between mb-2">
-        <h4 className="text-sm font-medium text-white">{title}</h4>
-        <div className="flex items-center space-x-2">
-          <div className={`w-2 h-2 rounded-full ${isAnalyzing ? 'bg-green-400 animate-pulse' : 'bg-gray-400'}`}></div>
-          <span className="text-xs text-gray-300">
-            {isAnalyzing ? 'Live' : 'Ready'}
-          </span>
-        </div>
-      </div>
+             <div className="flex items-center justify-between mb-2">
+         <h4 className="text-sm font-medium text-white">{title}</h4>
+         <div className="flex items-center space-x-4">
+           {isAnalyzing && lufsValue !== null && (
+             <div className="flex items-center space-x-2">
+               <span className="text-xs text-gray-300">LUFS:</span>
+               <span className="text-xs font-medium text-crys-gold">
+                 {lufsValue.toFixed(1)} dB
+               </span>
+             </div>
+           )}
+           {isAnalyzing && peakValue !== null && (
+             <div className="flex items-center space-x-2">
+               <span className="text-xs text-gray-300">Peak:</span>
+               <span className="text-xs font-medium text-red-400">
+                 {peakValue.toFixed(1)} dB
+               </span>
+             </div>
+           )}
+           <div className="flex items-center space-x-2">
+             <div className={`w-2 h-2 rounded-full ${isAnalyzing ? 'bg-green-400 animate-pulse' : 'bg-gray-400'}`}></div>
+             <span className="text-xs text-gray-300">
+               {isAnalyzing ? 'Live' : 'Ready'}
+             </span>
+           </div>
+         </div>
+       </div>
       
       <div className="relative">
         <canvas
