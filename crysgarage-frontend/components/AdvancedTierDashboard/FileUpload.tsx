@@ -93,14 +93,19 @@ const FileUpload: React.FC<FileUploadProps> = ({
               <button
                 onClick={() => {
                   console.log('Enter Studio button clicked!');
+                  console.log('selectedFile:', selectedFile);
+                  console.log('fileInfo:', fileInfo);
                   onContinue();
                 }}
                 disabled={!selectedFile}
                 className={`px-8 py-4 rounded-xl font-bold text-lg transition-all transform hover:scale-105 flex items-center space-x-3 mx-auto ${
                   selectedFile 
-                    ? 'bg-gradient-to-r from-crys-gold to-yellow-400 text-black shadow-lg hover:shadow-xl border-2 border-yellow-300' 
+                    ? 'bg-gradient-to-r from-crys-gold to-yellow-400 text-black shadow-lg hover:shadow-xl border-2 border-yellow-300 animate-pulse' 
                     : 'bg-gray-600 text-gray-400 cursor-not-allowed'
                 }`}
+                style={{
+                  boxShadow: selectedFile ? '0 0 20px rgba(251, 191, 36, 0.5)' : 'none'
+                }}
               >
                 <span className="text-xl">Enter Studio</span>
                 <Zap className="w-6 h-6" />
