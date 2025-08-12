@@ -9,7 +9,7 @@ export interface Genre {
   characteristics: string[];
 }
 
-const availableGenres: Genre[] = [
+export const availableGenres: Genre[] = [
   {
     id: 'afrobeats',
     name: 'Afrobeats',

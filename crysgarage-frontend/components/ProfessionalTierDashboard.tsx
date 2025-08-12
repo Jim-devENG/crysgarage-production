@@ -1,6 +1,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Upload, FileAudio, ArrowRight, ArrowLeft, Download, Music, Play, Pause, Volume2, VolumeX } from 'lucide-react';
+import { Upload, FileAudio, ArrowRight, ArrowLeft, Download, Music, Play, Pause, Volume2, VolumeX, Music2, Music3, Music4 } from 'lucide-react';
+import { availableGenres, Genre as GenreType } from './GenreDropdown';
 
 interface Genre {
   name: string;
@@ -21,56 +22,64 @@ interface ProfessionalTierDashboardProps {
 const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ onFileUpload, credits = 0 }) => {
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [selectedGenre, setSelectedGenre] = useState<Genre | null>(null);
-  const [processingSettings, setProcessingSettings] = useState<ProcessingSettings>({
-    sampleRate: '44.1kHz',
-    resolution: '16bit'
-  });
-  const [downloadFormat, setDownloadFormat] = useState<'wav' | 'mp3'>('wav');
+  const [selectedGenre, setSelectedGenre] = useState<GenreType | null>(null);
   const [processedAudioUrl, setProcessedAudioUrl] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isPlayingOriginal, setIsPlayingOriginal] = useState(false);
   const [isPlayingMastered, setIsPlayingMastered] = useState(false);
   const [originalAudioElement, setOriginalAudioElement] = useState<HTMLAudioElement | null>(null);
   const [masteredAudioElement, setMasteredAudioElement] = useState<HTMLAudioElement | null>(null);
+  const [downloadFormat, setDownloadFormat] = useState<'wav' | 'mp3'>('wav');
 
-  // Pop genre preset with free tier processing details
-  const POP_PRESET = {
-    sampleRate: '44.1kHz' as const,
-    resolution: '16bit' as const,
-    // Free tier processing settings
-    gain: 1.5, // Boost volume by 50%
-    compression: {
-      threshold: -20,
-      knee: 10,
-      ratio: 3,
-      attack: 0.003,
-      release: 0.25
+  // Genre presets with processing details
+  const GENRE_PRESETS: Record<string, any> = {
+    afrobeats: {
+      gain: 1.8,
+      compression: { threshold: -18, ratio: 4, attack: 0.002, release: 0.2 },
+      eq: { low: 2.0, mid: 1.0, high: 0.5 }
     },
-    eq: {
-      low: 0,
-      lowMid: 0,
-      mid: 0,
-      highMid: 0,
-      high: 0,
-      presence: 0,
-      air: 0,
-      sub: 0
+    gospel: {
+      gain: 1.4,
+      compression: { threshold: -22, ratio: 2.5, attack: 0.01, release: 0.15 },
+      eq: { low: 1.5, mid: 2.0, high: 1.0 }
+    },
+    'hip-hop': {
+      gain: 2.0,
+      compression: { threshold: -16, ratio: 5, attack: 0.001, release: 0.1 },
+      eq: { low: 3.0, mid: 1.5, high: 0.8 }
+    },
+    highlife: {
+      gain: 1.6,
+      compression: { threshold: -20, ratio: 3, attack: 0.005, release: 0.25 },
+      eq: { low: 1.8, mid: 2.2, high: 1.2 }
+    },
+    amapiano: {
+      gain: 1.7,
+      compression: { threshold: -19, ratio: 3.5, attack: 0.003, release: 0.18 },
+      eq: { low: 2.2, mid: 1.8, high: 1.5 }
+    },
+    reggae: {
+      gain: 1.5,
+      compression: { threshold: -21, ratio: 2.8, attack: 0.008, release: 0.3 },
+      eq: { low: 2.5, mid: 1.2, high: 0.6 }
+    },
+    soul: {
+      gain: 1.3,
+      compression: { threshold: -23, ratio: 2.2, attack: 0.015, release: 0.2 },
+      eq: { low: 1.2, mid: 2.5, high: 1.8 }
+    },
+    jazz: {
+      gain: 1.2,
+      compression: { threshold: -25, ratio: 2.0, attack: 0.02, release: 0.4 },
+      eq: { low: 1.0, mid: 1.8, high: 2.0 }
     }
-  };
-
-  const applyPopPreset = () => {
-    setProcessingSettings({
-      sampleRate: POP_PRESET.sampleRate,
-      resolution: POP_PRESET.resolution
-    });
-    console.log('Applied Pop preset:', POP_PRESET);
   };
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
       setSelectedFile(file);
+      setProcessedAudioUrl(null); // Clear previous processed audio
       if (onFileUpload) {
         onFileUpload(file);
       }
@@ -78,7 +87,7 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
   };
 
   const nextStep = () => {
-    if (currentStep < 5) {
+    if (currentStep < 3) {
       setCurrentStep(currentStep + 1);
     }
   };
@@ -89,13 +98,14 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
     }
   };
 
-  const processAudioWithPopPreset = async () => {
+  const processAudioWithGenre = async (genre: GenreType) => {
     if (!selectedFile) return;
     
     setIsProcessing(true);
+    setSelectedGenre(genre);
     
     try {
-      console.log('Starting Pop preset audio processing...');
+      console.log(`Starting ${genre.name} audio processing...`);
       const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
       const response = await fetch(URL.createObjectURL(selectedFile));
       const arrayBuffer = await response.arrayBuffer();
@@ -114,22 +124,25 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
       const source = offlineContext.createBufferSource();
       source.buffer = audioBuffer;
       
-      // Apply Pop preset processing
-      const gainNode = offlineContext.createGain();
-      gainNode.gain.value = POP_PRESET.gain; // 50% volume boost
+      // Get genre preset
+      const preset = GENRE_PRESETS[genre.id] || GENRE_PRESETS.afrobeats;
       
-      // Add compression with Pop preset settings
+      // Apply genre-specific processing
+      const gainNode = offlineContext.createGain();
+      gainNode.gain.value = preset.gain;
+      
+      // Add compression with genre-specific settings
       const compressor = offlineContext.createDynamicsCompressor();
-      compressor.threshold.value = POP_PRESET.compression.threshold;
-      compressor.knee.value = POP_PRESET.compression.knee;
-      compressor.ratio.value = POP_PRESET.compression.ratio;
-      compressor.attack.value = POP_PRESET.compression.attack;
-      compressor.release.value = POP_PRESET.compression.release;
+      compressor.threshold.value = preset.compression.threshold;
+      compressor.knee.value = 10;
+      compressor.ratio.value = preset.compression.ratio;
+      compressor.attack.value = preset.compression.attack;
+      compressor.release.value = preset.compression.release;
       
       // Connect the processing chain
       source.connect(compressor).connect(gainNode).connect(offlineContext.destination);
       
-      console.log('Starting rendering with Pop preset...');
+      console.log(`Starting rendering with ${genre.name} preset...`);
       source.start(0);
       
       // Render the processed audio
@@ -141,11 +154,11 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
       const masteredUrl = URL.createObjectURL(wavBlob);
       setProcessedAudioUrl(masteredUrl);
       
-      console.log('Pop preset mastered audio created successfully:', masteredUrl);
+      console.log(`${genre.name} preset mastered audio created successfully:`, masteredUrl);
       audioContext.close();
       
     } catch (error) {
-      console.error('Error processing audio with Pop preset:', error);
+      console.error(`Error processing audio with ${genre.name} preset:`, error);
     } finally {
       setIsProcessing(false);
     }
@@ -203,24 +216,25 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
     }
   };
 
-  return (
+    return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black text-white">
-      <div className="max-w-7xl mx-auto px-4 py-2">
-        <h1 className="text-3xl font-bold text-crys-gold mb-4">Professional Tier Dashboard</h1>
-        <p className="text-gray-400">Step {currentStep} of 5</p>
+      <div className="max-w-7xl mx-auto px-4 py-6">
+        <h1 className="text-3xl font-bold text-crys-gold mb-6">Professional Tier Dashboard</h1>
+        <p className="text-gray-400 mb-6">Step {currentStep} of 3</p>
         
+        {/* Step 1: File Upload */}
         {currentStep === 1 && (
           <div className="space-y-8">
-            <div className="text-center">
-              <h2 className="text-3xl font-bold text-crys-gold mb-4">Upload Your Audio</h2>
-              <p className="text-gray-400 text-lg">Select your audio file to begin professional mastering</p>
+            <div className="text-center mb-6">
+              <h2 className="text-2xl font-bold text-crys-gold mb-2">Upload Your Audio</h2>
+              <p className="text-gray-400">Select your audio file to begin professional mastering</p>
             </div>
             
             <div className="max-w-2xl mx-auto">
-              <div className="border-2 border-dashed border-gray-600 rounded-xl p-12 text-center hover:border-crys-gold transition-colors">
-                <Upload className="w-16 h-16 text-gray-400 mx-auto mb-6" />
-                <h3 className="text-xl font-semibold mb-4">Drop your audio file here</h3>
-                <p className="text-gray-400 mb-6">Supports WAV, MP3, FLAC, and other audio formats</p>
+              <div className="border-2 border-dashed border-gray-600 rounded-xl p-8 text-center hover:border-crys-gold transition-colors">
+                <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold mb-2">Drop your audio file here</h3>
+                <p className="text-gray-400 mb-4">Supports WAV, MP3, FLAC, and other audio formats</p>
                 <input
                   type="file"
                   accept="audio/*"
@@ -230,31 +244,31 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
                 />
                 <label
                   htmlFor="audio-upload"
-                  className="bg-crys-gold text-black px-8 py-3 rounded-lg font-semibold hover:bg-yellow-400 transition-colors cursor-pointer"
+                  className="bg-crys-gold text-black px-6 py-2 rounded-lg font-semibold hover:bg-yellow-400 transition-colors cursor-pointer"
                 >
                   Choose File
                 </label>
               </div>
               
               {selectedFile && (
-                <div className="mt-8 space-y-6">
-                  <div className="bg-gray-800 rounded-xl p-6">
-                    <div className="flex items-center space-x-4">
-                      <FileAudio className="w-8 h-8 text-crys-gold" />
-                      <div className="flex-1">
+                <div className="mt-6 bg-gray-800 rounded-xl p-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <FileAudio className="w-6 h-6 text-crys-gold" />
+                      <div>
                         <h4 className="font-semibold">{selectedFile.name}</h4>
                         <p className="text-sm text-gray-400">
                           {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
                         </p>
                       </div>
-                      <button
-                        onClick={nextStep}
-                        className="bg-crys-gold text-black px-6 py-2 rounded-lg font-semibold hover:bg-yellow-400 transition-colors flex items-center space-x-2"
-                      >
-                        <span>Next</span>
-                        <ArrowRight className="w-4 h-4" />
-                      </button>
                     </div>
+                    <button
+                      onClick={nextStep}
+                      className="bg-crys-gold text-black px-6 py-2 rounded-lg font-semibold hover:bg-yellow-400 transition-colors flex items-center space-x-2"
+                    >
+                      <span>Next</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </button>
                   </div>
                 </div>
               )}
@@ -262,171 +276,67 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
           </div>
         )}
 
+        {/* Step 2: Genre Selection + Audio Comparison */}
         {currentStep === 2 && (
           <div className="space-y-8">
-            <div className="text-center">
-              <h2 className="text-3xl font-bold text-crys-gold mb-4">Select Genre</h2>
-              <p className="text-gray-400 text-lg">Choose the genre that best matches your audio for optimal mastering</p>
-            </div>
-            
-            <div className="max-w-4xl mx-auto">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <div className="max-w-md mx-auto">
-                  <button
-                    onClick={() => {
-                      setSelectedGenre({ name: 'Pop', description: 'Mainstream, radio-friendly', color: 'bg-pink-500' });
-                      applyPopPreset();
-                      // Move to the next step automatically once Pop is chosen
-                      setCurrentStep(3);
-                    }}
-                    className="p-8 rounded-xl border-2 border-crys-gold bg-crys-gold/10 transition-all duration-300 text-center w-full"
-                  >
-                    <div className="w-16 h-16 bg-pink-500 rounded-lg mb-6 mx-auto"></div>
-                    <h3 className="text-2xl font-semibold mb-3">Pop</h3>
-                    <p className="text-gray-400 mb-4">Mainstream, radio-friendly mastering</p>
-                    <div className="text-sm text-crys-gold">
-                      <p>• 50% volume boost</p>
-                      <p>• Professional compression</p>
-                      <p>• Radio-ready loudness</p>
-                    </div>
-                  </button>
-                </div>
+            {/* Genre Selection */}
+            <div>
+              <div className="text-center mb-6">
+                <h2 className="text-2xl font-bold text-crys-gold mb-2">Select Genre & Process</h2>
+                <p className="text-gray-400">Click a genre to apply its preset and process your audio</p>
               </div>
               
-              {selectedGenre && (
-                <div className="mt-8 flex justify-center space-x-4">
-                  <button
-                    onClick={prevStep}
-                    className="bg-gray-700 hover:bg-gray-600 text-white px-6 py-2 rounded-lg font-semibold transition-colors flex items-center space-x-2"
-                  >
-                    <ArrowLeft className="w-4 h-4" />
-                    <span>Back</span>
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {currentStep === 3 && (
-          <div className="space-y-8">
-            <div className="text-center">
-              <h2 className="text-3xl font-bold text-crys-gold mb-4">Processing Settings</h2>
-              <p className="text-gray-400 text-lg">Configure your audio processing parameters</p>
-              {selectedGenre && (
-                <p className="text-sm text-crys-gold mt-2">
-                  Preset applied for {selectedGenre.name}: {processingSettings.sampleRate}, {processingSettings.resolution}
-                </p>
-              )}
-            </div>
-            
-            <div className="max-w-2xl mx-auto">
-              <div className="bg-gray-800 rounded-xl p-8">
-                <div className="space-y-6">
-                  <div>
-                    <h3 className="text-xl font-semibold mb-4">Sample Rate</h3>
-                    <div className="grid grid-cols-2 gap-4">
-                      {(['44.1kHz', '48kHz'] as const).map((rate) => (
-                        <button
-                          key={rate}
-                          onClick={() => setProcessingSettings(prev => ({ ...prev, sampleRate: rate }))}
-                          className={`p-4 rounded-lg border-2 transition-all duration-300 ${
-                            processingSettings.sampleRate === rate
-                              ? 'border-crys-gold bg-crys-gold/10'
-                              : 'border-gray-600 hover:border-gray-500'
-                          }`}
-                        >
-                          <div className="text-center">
-                            <div className="text-lg font-semibold">{rate}</div>
-                            <div className="text-sm text-gray-400">
-                              {rate === '44.1kHz' ? 'CD Quality' : 'Professional Quality'}
-                            </div>
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                {availableGenres.map((genre) => {
+                  const preset = GENRE_PRESETS[genre.id];
+                  const isSelected = selectedGenre?.id === genre.id;
                   
-                  <div>
-                    <h3 className="text-xl font-semibold mb-4">Resolution</h3>
-                    <div className="grid grid-cols-2 gap-4">
-                      {(['16bit', '32bit'] as const).map((resolution) => (
-                        <button
-                          key={resolution}
-                          onClick={() => setProcessingSettings(prev => ({ ...prev, resolution }))}
-                          className={`p-4 rounded-lg border-2 transition-all duration-300 ${
-                            processingSettings.resolution === resolution
-                              ? 'border-crys-gold bg-crys-gold/10'
-                              : 'border-gray-600 hover:border-gray-500'
-                          }`}
-                        >
-                          <div className="text-center">
-                            <div className="text-lg font-semibold">{resolution}</div>
-                            <div className="text-sm text-gray-400">
-                              {resolution === '16bit' ? 'Standard Quality' : 'High Quality'}
-                            </div>
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
+                  return (
+                    <button
+                      key={genre.id}
+                      onClick={() => processAudioWithGenre(genre)}
+                      disabled={isProcessing}
+                      className={`p-4 rounded-xl border-2 transition-all duration-300 text-center ${
+                        isSelected
+                          ? 'border-crys-gold bg-crys-gold/10'
+                          : 'border-gray-600 hover:border-gray-500'
+                      } disabled:opacity-50 disabled:cursor-not-allowed`}
+                    >
+                      <div className="w-8 h-8 bg-gradient-to-br from-pink-500 to-purple-600 rounded-lg mb-3 mx-auto"></div>
+                      <h3 className="font-semibold mb-1">{genre.name}</h3>
+                      <p className="text-xs text-gray-400 mb-2">{genre.description}</p>
+                      {preset && (
+                        <div className="text-xs text-crys-gold">
+                          <p>Gain: +{Math.round((preset.gain - 1) * 100)}%</p>
+                          <p>Ratio: {preset.compression.ratio}:1</p>
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Audio Comparison */}
+            <div>
+              <div className="text-center mb-6">
+                <h2 className="text-2xl font-bold text-crys-gold mb-2">Before & After Comparison</h2>
+                <p className="text-gray-400">Compare your original audio with the mastered version</p>
               </div>
               
-                             <div className="mt-8 flex justify-center space-x-4">
-                 <button
-                   onClick={prevStep}
-                   className="bg-gray-700 hover:bg-gray-600 text-white px-6 py-2 rounded-lg font-semibold transition-colors flex items-center space-x-2"
-                 >
-                   <ArrowLeft className="w-4 h-4" />
-                   <span>Back</span>
-                 </button>
-                 <button
-                   onClick={async () => {
-                     await processAudioWithPopPreset();
-                     setCurrentStep(4);
-                   }}
-                   disabled={isProcessing}
-                   className="bg-crys-gold text-black px-8 py-3 rounded-lg font-semibold hover:bg-yellow-400 transition-colors flex items-center space-x-2 disabled:bg-gray-600 disabled:cursor-not-allowed"
-                 >
-                   {isProcessing ? (
-                     <>
-                       <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin"></div>
-                       <span>Processing...</span>
-                     </>
-                   ) : (
-                     <>
-                       <span>Process Audio</span>
-                       <ArrowRight className="w-4 h-4" />
-                     </>
-                   )}
-                 </button>
-               </div>
-            </div>
-          </div>
-        )}
-
-        {currentStep === 4 && (
-          <div className="space-y-8">
-            <div className="text-center">
-              <h2 className="text-3xl font-bold text-crys-gold mb-4">Before & After Comparison</h2>
-              <p className="text-gray-400 text-lg">Compare your original audio with the Pop preset mastered version</p>
-            </div>
-            
-            <div className="max-w-4xl mx-auto">
-              <div className="grid md:grid-cols-2 gap-8">
+              <div className="grid md:grid-cols-2 gap-6">
                 {/* Original Audio */}
                 <div className="bg-gray-800 rounded-xl p-6">
-                  <h3 className="text-xl font-semibold mb-4 text-center">Original Audio</h3>
+                  <h3 className="text-lg font-semibold mb-4 text-center">Original Audio</h3>
                   <div className="space-y-4">
-                    <div className="bg-gray-700 rounded-lg p-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm text-gray-400">File</span>
-                        <span className="text-sm font-medium">{selectedFile?.name}</span>
+                    <div className="bg-gray-700 rounded-lg p-3">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs text-gray-400">File</span>
+                        <span className="text-xs font-medium">{selectedFile?.name}</span>
                       </div>
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm text-gray-400">Size</span>
-                        <span className="text-sm font-medium">{(selectedFile?.size / 1024 / 1024).toFixed(2)} MB</span>
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-gray-400">Size</span>
+                        <span className="text-xs font-medium">{(selectedFile?.size / 1024 / 1024).toFixed(2)} MB</span>
                       </div>
                     </div>
                     
@@ -444,29 +354,41 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
                     />
                     
                     <div className="text-center">
-                      <p className="text-sm text-gray-400">Original, unprocessed audio</p>
+                      <p className="text-xs text-gray-400">Original, unprocessed audio</p>
                     </div>
                   </div>
                 </div>
 
                 {/* Mastered Audio */}
                 <div className="bg-gray-800 rounded-xl p-6">
-                  <h3 className="text-xl font-semibold mb-4 text-center text-crys-gold">Pop Preset Mastered</h3>
+                  <h3 className="text-lg font-semibold mb-4 text-center text-crys-gold">
+                    {selectedGenre ? `${selectedGenre.name} Mastered` : 'Mastered Audio'}
+                  </h3>
                   <div className="space-y-4">
-                    <div className="bg-gray-700 rounded-lg p-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm text-gray-400">Processing</span>
-                        <span className="text-sm font-medium text-crys-gold">Pop Preset Applied</span>
+                    {selectedGenre && (
+                      <div className="bg-gray-700 rounded-lg p-3">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-xs text-gray-400">Genre</span>
+                          <span className="text-xs font-medium text-crys-gold">{selectedGenre.name}</span>
+                        </div>
+                        {GENRE_PRESETS[selectedGenre.id] && (
+                          <>
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-xs text-gray-400">Gain</span>
+                              <span className="text-xs font-medium text-crys-gold">
+                                +{Math.round((GENRE_PRESETS[selectedGenre.id].gain - 1) * 100)}%
+                              </span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs text-gray-400">Compression</span>
+                              <span className="text-xs font-medium text-crys-gold">
+                                {GENRE_PRESETS[selectedGenre.id].compression.ratio}:1
+                              </span>
+                            </div>
+                          </>
+                        )}
                       </div>
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm text-gray-400">Gain</span>
-                        <span className="text-sm font-medium text-crys-gold">+50%</span>
-                      </div>
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm text-gray-400">Compression</span>
-                        <span className="text-sm font-medium text-crys-gold">Radio Ready</span>
-                      </div>
-                    </div>
+                    )}
                     
                     {processedAudioUrl ? (
                       <audio
@@ -482,45 +404,56 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
                         onPause={() => setIsPlayingMastered(false)}
                       />
                     ) : (
-                      <div className="bg-gray-700 rounded-lg p-8 text-center">
-                        <div className="w-8 h-8 border-2 border-crys-gold border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                        <p className="text-gray-400">Processing audio...</p>
+                      <div className="bg-gray-700 rounded-lg p-6 text-center">
+                        {isProcessing ? (
+                          <>
+                            <div className="w-6 h-6 border-2 border-crys-gold border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+                            <p className="text-xs text-gray-400">Processing audio...</p>
+                          </>
+                        ) : (
+                          <p className="text-xs text-gray-400">Select a genre to process</p>
+                        )}
                       </div>
                     )}
                     
                     <div className="text-center">
-                      <p className="text-sm text-crys-gold">Mastered with Pop preset</p>
+                      <p className="text-xs text-crys-gold">
+                        {selectedGenre ? `Mastered with ${selectedGenre.name} preset` : 'Mastered audio'}
+                      </p>
                     </div>
                   </div>
                 </div>
               </div>
-              
-              <div className="mt-8 flex justify-center space-x-4">
-                <button
-                  onClick={prevStep}
-                  className="bg-gray-700 hover:bg-gray-600 text-white px-6 py-2 rounded-lg font-semibold transition-colors flex items-center space-x-2"
-                >
-                  <ArrowLeft className="w-4 h-4" />
-                  <span>Back</span>
-                </button>
+            </div>
+
+            {/* Navigation */}
+            <div className="flex justify-center space-x-4">
+              <button
+                onClick={prevStep}
+                className="bg-gray-700 hover:bg-gray-600 text-white px-6 py-2 rounded-lg font-semibold transition-colors flex items-center space-x-2"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                <span>Back</span>
+              </button>
+              {processedAudioUrl && (
                 <button
                   onClick={nextStep}
-                  disabled={!processedAudioUrl}
-                  className="bg-crys-gold text-black px-8 py-3 rounded-lg font-semibold hover:bg-yellow-400 transition-colors flex items-center space-x-2 disabled:bg-gray-600 disabled:cursor-not-allowed"
+                  className="bg-crys-gold text-black px-6 py-2 rounded-lg font-semibold hover:bg-yellow-400 transition-colors flex items-center space-x-2"
                 >
                   <span>Continue to Download</span>
                   <ArrowRight className="w-4 h-4" />
                 </button>
-              </div>
+              )}
             </div>
           </div>
         )}
 
-        {currentStep === 5 && (
+        {/* Step 3: Download */}
+        {currentStep === 3 && (
           <div className="space-y-8">
-            <div className="text-center">
-              <h2 className="text-3xl font-bold text-crys-gold mb-4">Download Your Mastered Audio</h2>
-              <p className="text-gray-400 text-lg">Choose your preferred format and download</p>
+            <div className="text-center mb-6">
+              <h2 className="text-2xl font-bold text-crys-gold mb-2">Download Your Mastered Audio</h2>
+              <p className="text-gray-400">Choose your preferred format and download</p>
             </div>
             
             <div className="max-w-2xl mx-auto">
