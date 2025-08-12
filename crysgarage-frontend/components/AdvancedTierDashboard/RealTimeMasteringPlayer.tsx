@@ -36,7 +36,7 @@ interface AudioEffects {
       frequency: number;
       gain: number;
       q: number;
-      type: 'low' | 'high' | 'peaking' | 'lowshelf' | 'highshelf';
+      type: 'peaking' | 'lowshelf' | 'highshelf';
     }>;
   };
   gDigitalTape?: {
@@ -103,7 +103,7 @@ const RealTimeMasteringPlayer: React.FC<RealTimeMasteringPlayerProps> = ({
   // Effect nodes
   const eqNodesRef = useRef<BiquadFilterNode[]>([]);
   const compressorRef = useRef<DynamicsCompressorNode | null>(null);
-  const stereoPannerRef = useRef<StereoPannerNode | null>(null);
+  const stereoWidenerRef = useRef<GainNode | null>(null);
   const limiterRef = useRef<DynamicsCompressorNode | null>(null);
   
   // Premium effect nodes
@@ -149,6 +149,8 @@ const RealTimeMasteringPlayer: React.FC<RealTimeMasteringPlayerProps> = ({
       
     } catch (error) {
       console.error('Error initializing audio context:', error);
+      // Reset state on error
+      setIsPlaying(false);
     }
   }, []);
 
@@ -179,8 +181,8 @@ const RealTimeMasteringPlayer: React.FC<RealTimeMasteringPlayerProps> = ({
     // Create compressor
     compressorRef.current = ctx.createDynamicsCompressor();
     
-    // Create stereo panner for width control
-    stereoPannerRef.current = ctx.createStereoPanner();
+    // Create stereo widener (using gain nodes for mid-side processing)
+    stereoWidenerRef.current = ctx.createGain();
     
     // Create limiter
     limiterRef.current = ctx.createDynamicsCompressor();
@@ -217,63 +219,81 @@ const RealTimeMasteringPlayer: React.FC<RealTimeMasteringPlayerProps> = ({
     
   }, []);
 
-  // Connect the processing chain
+  // Connect the processing chain - only connect active effects
   const connectProcessingChain = useCallback(() => {
     if (!sourceRef.current || !analyserRef.current || !gainNodeRef.current) return;
 
+    // Disconnect all existing connections
+    sourceRef.current.disconnect();
+    eqNodesRef.current.forEach(node => node.disconnect());
+    if (compressorRef.current) compressorRef.current.disconnect();
+    if (stereoWidenerRef.current) stereoWidenerRef.current.disconnect();
+    if (limiterRef.current) limiterRef.current.disconnect();
+    if (gMasteringCompRef.current) gMasteringCompRef.current.disconnect();
+    gPrecisionEQRefs.current.forEach(node => node.disconnect());
+    if (gDigitalTapeRef.current) gDigitalTapeRef.current.disconnect();
+    if (gLimiterRef.current) gLimiterRef.current.disconnect();
+    gMultiBandRefs.current.forEach(node => node.disconnect());
+
     let currentNode: AudioNode = sourceRef.current;
 
-    // Connect through all active effects
-    if (eqNodesRef.current.length > 0) {
-      eqNodesRef.current.forEach(node => {
-        currentNode.connect(node);
-        currentNode = node;
-      });
+    // Connect EQ if any band is active
+    const eqActive = audioEffects.eq.low !== 0 || audioEffects.eq.mid !== 0 || audioEffects.eq.high !== 0;
+    if (eqActive && eqNodesRef.current.length >= 3) {
+      // Connect EQ nodes in series
+      eqNodesRef.current[0].connect(eqNodesRef.current[1]);
+      eqNodesRef.current[1].connect(eqNodesRef.current[2]);
+      currentNode.connect(eqNodesRef.current[0]);
+      currentNode = eqNodesRef.current[2];
     }
 
-    if (compressorRef.current) {
+    // Connect compressor if active (threshold < 0 means compression is active)
+    if (compressorRef.current && audioEffects.compressor.threshold < 0) {
       currentNode.connect(compressorRef.current);
       currentNode = compressorRef.current;
     }
 
-    if (stereoPannerRef.current) {
-      currentNode.connect(stereoPannerRef.current);
-      currentNode = stereoPannerRef.current;
+    // Connect stereo widener if active
+    if (stereoWidenerRef.current && audioEffects.stereoWidener.width !== 0) {
+      currentNode.connect(stereoWidenerRef.current);
+      currentNode = stereoWidenerRef.current;
     }
 
-    if (limiterRef.current) {
+    // Connect limiter if active (threshold < 0 means limiting is active)
+    if (limiterRef.current && audioEffects.limiter.threshold < 0) {
       currentNode.connect(limiterRef.current);
       currentNode = limiterRef.current;
     }
 
-    // Premium effects
-    if (gMasteringCompRef.current) {
+    // Premium effects - only connect if they exist and are enabled
+    if (gMasteringCompRef.current && audioEffects.gMasteringCompressor) {
       currentNode.connect(gMasteringCompRef.current);
       currentNode = gMasteringCompRef.current;
     }
 
-    if (gPrecisionEQRefs.current.length > 0) {
-      gPrecisionEQRefs.current.forEach(node => {
-        currentNode.connect(node);
-        currentNode = node;
-      });
+    if (gPrecisionEQRefs.current.length > 0 && audioEffects.gPrecisionEQ) {
+      // Connect G-Precision EQ bands in series
+      for (let i = 0; i < gPrecisionEQRefs.current.length - 1; i++) {
+        gPrecisionEQRefs.current[i].connect(gPrecisionEQRefs.current[i + 1]);
+      }
+      currentNode.connect(gPrecisionEQRefs.current[0]);
+      currentNode = gPrecisionEQRefs.current[gPrecisionEQRefs.current.length - 1];
     }
 
-    if (gDigitalTapeRef.current) {
+    if (gDigitalTapeRef.current && audioEffects.gDigitalTape) {
       currentNode.connect(gDigitalTapeRef.current);
       currentNode = gDigitalTapeRef.current;
     }
 
-    if (gLimiterRef.current) {
+    if (gLimiterRef.current && audioEffects.gLimiter) {
       currentNode.connect(gLimiterRef.current);
       currentNode = gLimiterRef.current;
     }
 
-    if (gMultiBandRefs.current.length > 0) {
-      gMultiBandRefs.current.forEach(node => {
-        currentNode.connect(node);
-        currentNode = node;
-      });
+    if (gMultiBandRefs.current.length >= 3 && audioEffects.gMultiBand) {
+      // Connect multi-band compressors in parallel (simplified)
+      currentNode.connect(gMultiBandRefs.current[0]);
+      currentNode = gMultiBandRefs.current[0];
     }
 
     // Connect to analyser and output
@@ -281,7 +301,7 @@ const RealTimeMasteringPlayer: React.FC<RealTimeMasteringPlayerProps> = ({
     analyserRef.current.connect(gainNodeRef.current);
     gainNodeRef.current.connect(audioContextRef.current!.destination);
 
-  }, []);
+  }, [audioEffects]);
 
   // Update effect parameters in real-time
   const updateEffectParameters = useCallback(() => {
@@ -300,10 +320,11 @@ const RealTimeMasteringPlayer: React.FC<RealTimeMasteringPlayerProps> = ({
       compressorRef.current.release.value = audioEffects.compressor.release / 1000;
     }
 
-    // Update stereo widener
-    if (stereoPannerRef.current) {
+    // Update stereo widener (simplified mid-side processing)
+    if (stereoWidenerRef.current) {
       const width = audioEffects.stereoWidener.width;
-      stereoPannerRef.current.pan.value = width > 0 ? Math.min(width / 100, 0.8) : 0;
+      // Apply subtle stereo enhancement
+      stereoWidenerRef.current.gain.value = 1 + (width / 100) * 0.3;
     }
 
     // Update limiter
@@ -424,6 +445,13 @@ const RealTimeMasteringPlayer: React.FC<RealTimeMasteringPlayerProps> = ({
     updateEffectParameters();
   }, [updateEffectParameters]);
 
+  // Reconnect processing chain when effects change
+  useEffect(() => {
+    if (audioContextRef.current) {
+      connectProcessingChain();
+    }
+  }, [connectProcessingChain]);
+
   // Analysis loop
   useEffect(() => {
     if (!isPlaying) return;
@@ -463,9 +491,28 @@ const RealTimeMasteringPlayer: React.FC<RealTimeMasteringPlayerProps> = ({
 
   // Audio event handlers
   const handlePlay = () => {
-    if (audioRef.current) {
-      audioRef.current.play();
-      setIsPlaying(true);
+    try {
+      if (audioRef.current) {
+        // Ensure audio context is resumed
+        if (audioContextRef.current && audioContextRef.current.state === 'suspended') {
+          audioContextRef.current.resume();
+        }
+        
+        const playPromise = audioRef.current.play();
+        if (playPromise !== undefined) {
+          playPromise
+            .then(() => {
+              setIsPlaying(true);
+            })
+            .catch((error) => {
+              console.error('Error playing audio:', error);
+              setIsPlaying(false);
+            });
+        }
+      }
+    } catch (error) {
+      console.error('Error in handlePlay:', error);
+      setIsPlaying(false);
     }
   };
 

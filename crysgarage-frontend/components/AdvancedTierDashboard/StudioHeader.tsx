@@ -31,12 +31,20 @@ const StudioHeader: React.FC<StudioHeaderProps> = ({
               <span className="text-crys-gold font-bold">{credits}</span>
             </div>
             {currentStep > 1 && (
-              <button
-                onClick={onNewSession}
-                className="bg-gray-700 text-white px-4 py-2 rounded-lg font-semibold hover:bg-gray-600 transition-colors"
-              >
-                New Session
-              </button>
+              <>
+                <button
+                  onClick={onNewSession}
+                  className="bg-gray-700 text-white px-4 py-2 rounded-lg font-semibold hover:bg-gray-600 transition-colors"
+                >
+                  New Session
+                </button>
+                <button
+                  onClick={onNewSession}
+                  className="bg-red-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-red-700 transition-colors"
+                >
+                  Reset
+                </button>
+              </>
             )}
           </div>
         </div>

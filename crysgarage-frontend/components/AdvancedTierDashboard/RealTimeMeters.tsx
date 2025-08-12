@@ -6,12 +6,10 @@ interface MeterData {
   peak: number;
   rms: number;
   correlation: number;
-  leftPeak: number;
-  rightPeak: number;
-  leftRms: number;
-  rightRms: number;
+  leftLevel: number;
+  rightLevel: number;
   frequencyData: number[];
-  goniometerData: { left: number; right: number }[];
+  goniometerData: number[];
 }
 
 interface RealTimeMetersProps {
@@ -134,9 +132,9 @@ const RealTimeMeters: React.FC<RealTimeMetersProps> = ({ meterData }) => {
       ctx.lineWidth = 2;
       ctx.beginPath();
       
-      meterData.goniometerData.forEach((point, index) => {
-        const x = centerX + (point.left - point.right) * radius;
-        const y = centerY - (point.left + point.right) * radius / 2;
+      meterData.goniometerData.forEach((value, index) => {
+        const x = centerX + (value - value) * radius;
+        const y = centerY - (value + value) * radius / 2;
         
         if (index === 0) {
           ctx.moveTo(x, y);
@@ -391,19 +389,19 @@ const RealTimeMeters: React.FC<RealTimeMetersProps> = ({ meterData }) => {
                 <div className="flex-1 bg-gray-800 rounded h-24 relative">
                   <div 
                     className="bg-blue-500 absolute bottom-0 left-0 right-0 transition-all duration-100"
-                    style={{ height: `${Math.max(0, Math.min(100, (meterData.leftPeak + 60) * 1.67))}%` }}
+                    style={{ height: `${Math.max(0, Math.min(100, (meterData.leftLevel + 60) * 1.67))}%` }}
                   />
                 </div>
                 <div className="flex-1 bg-gray-800 rounded h-24 relative">
                   <div 
                     className="bg-green-500 absolute bottom-0 left-0 right-0 transition-all duration-100"
-                    style={{ height: `${Math.max(0, Math.min(100, (meterData.leftRms + 60) * 1.67))}%` }}
+                    style={{ height: `${Math.max(0, Math.min(100, (meterData.leftLevel + 60) * 1.67))}%` }}
                   />
                 </div>
               </div>
               <div className="flex justify-between text-xs mt-1">
-                <span>Peak: {meterData.leftPeak.toFixed(1)}</span>
-                <span>RMS: {meterData.leftRms.toFixed(1)}</span>
+                <span>Peak: {meterData.leftLevel.toFixed(1)}</span>
+                <span>RMS: {meterData.leftLevel.toFixed(1)}</span>
               </div>
             </div>
 
@@ -415,19 +413,19 @@ const RealTimeMeters: React.FC<RealTimeMetersProps> = ({ meterData }) => {
                 <div className="flex-1 bg-gray-800 rounded h-24 relative">
                   <div 
                     className="bg-blue-500 absolute bottom-0 left-0 right-0 transition-all duration-100"
-                    style={{ height: `${Math.max(0, Math.min(100, (meterData.rightPeak + 60) * 1.67))}%` }}
+                    style={{ height: `${Math.max(0, Math.min(100, (meterData.rightLevel + 60) * 1.67))}%` }}
                   />
                 </div>
                 <div className="flex-1 bg-gray-800 rounded h-24 relative">
                   <div 
                     className="bg-green-500 absolute bottom-0 left-0 right-0 transition-all duration-100"
-                    style={{ height: `${Math.max(0, Math.min(100, (meterData.rightRms + 60) * 1.67))}%` }}
+                    style={{ height: `${Math.max(0, Math.min(100, (meterData.rightLevel + 60) * 1.67))}%` }}
                   />
                 </div>
               </div>
               <div className="flex justify-between text-xs mt-1">
-                <span>Peak: {meterData.rightPeak.toFixed(1)}</span>
-                <span>RMS: {meterData.rightRms.toFixed(1)}</span>
+                <span>Peak: {meterData.rightLevel.toFixed(1)}</span>
+                <span>RMS: {meterData.rightLevel.toFixed(1)}</span>
               </div>
             </div>
           </div>

@@ -21,26 +21,15 @@ interface AdvancedTierDashboardProps {
   credits?: number;
 }
 
-interface AudioEffect {
-  id: string;
-  name: string;
-  type: 'free' | 'paid';
-  price?: number;
-  enabled: boolean;
-  settings: any;
-}
-
 interface MeterData {
   lufs: number;
   peak: number;
   rms: number;
   correlation: number;
-  leftPeak: number;
-  rightPeak: number;
-  leftRms: number;
-  rightRms: number;
+  leftLevel: number;
+  rightLevel: number;
   frequencyData: number[];
-  goniometerData: { left: number; right: number }[];
+  goniometerData: number[];
 }
 
 const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({ 
@@ -65,22 +54,20 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
     peak: -6,
     rms: -12,
     correlation: 0.8,
-    leftPeak: -6,
-    rightPeak: -6,
-    leftRms: -12,
-    rightRms: -12,
+    leftLevel: -6,
+    rightLevel: -6,
     frequencyData: new Array(256).fill(0),
-    goniometerData: []
+    goniometerData: new Array(256).fill(0)
   });
 
   // Audio effects state - structured for real-time processing
   const [audioEffects, setAudioEffects] = useState({
     // Free effects
     eq: { low: 0, mid: 0, high: 0 },
-    compressor: { threshold: -20, ratio: 4, attack: 10, release: 100 },
+    compressor: { threshold: 0, ratio: 1, attack: 10, release: 100 },
     stereoWidener: { width: 0 },
     loudness: { volume: 1 },
-    limiter: { threshold: -1.0, ceiling: -0.1 },
+    limiter: { threshold: 0, ceiling: -0.1 },
     
     // Premium effects (optional)
     gMasteringCompressor: undefined as any,
@@ -93,7 +80,7 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
     gSurround: false,
     gTuner: { enabled: false, frequency: 444 },
     solfagio: { enabled: false, frequency: 432 }
-  });
+  } as any);
 
   const [surroundEnabled, setSurroundEnabled] = useState(false);
   const [tunerEnabled, setTunerEnabled] = useState(false);
@@ -105,87 +92,43 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
   const analyserRef = useRef<AnalyserNode | null>(null);
   const animationRef = useRef<number>();
 
-  // Load state from sessionStorage
-  const loadStateFromStorage = () => {
-    try {
-      const savedState = sessionStorage.getItem('advancedTierState');
-      if (savedState) {
-        const parsed = JSON.parse(savedState);
-        return {
-          currentStep: parsed.currentStep || 1,
-          processedAudioUrl: parsed.processedAudioUrl || null,
-          isProcessing: false,
-          downloadFormat: parsed.downloadFormat || 'wav16',
-          fileInfo: parsed.fileInfo || null,
-          audioEffects: parsed.audioEffects || [],
-          sampleRate: parsed.sampleRate || '44.1kHz',
-          selectedGenre: parsed.selectedGenre || ''
-        };
-      }
-    } catch (error) {
-      console.error('Error loading state from storage:', error);
-    }
-    return {
-      currentStep: 1,
-      processedAudioUrl: null,
-      isProcessing: false,
-      downloadFormat: 'wav16',
-      fileInfo: null,
-      audioEffects: [],
-      sampleRate: '44.1kHz',
-      selectedGenre: ''
-    };
-  };
-
-  // Initialize state from storage
-  useEffect(() => {
-    const savedState = loadStateFromStorage();
-    setCurrentStep(savedState.currentStep);
-    setProcessedAudioUrl(savedState.processedAudioUrl);
-    setDownloadFormat(savedState.downloadFormat);
-    setFileInfo(savedState.fileInfo);
-    setAudioEffects(savedState.audioEffects);
-    setSampleRate(savedState.sampleRate);
-    setSelectedGenre(savedState.selectedGenre);
-  }, []);
-
-  // Save state to sessionStorage
-  const saveStateToStorage = useCallback((state: any) => {
-    try {
-      sessionStorage.setItem('advancedTierState', JSON.stringify(state));
-    } catch (error) {
-      console.error('Error saving state to storage:', error);
-    }
-  }, []);
-
-  // Save state whenever relevant state changes
-  useEffect(() => {
-    saveStateToStorage({
-      currentStep,
-      processedAudioUrl,
-      isProcessing,
-      downloadFormat,
-      fileInfo,
-      audioEffects,
-      sampleRate,
-      selectedGenre
-    });
-  }, [currentStep, processedAudioUrl, isProcessing, downloadFormat, fileInfo, audioEffects, sampleRate, selectedGenre, saveStateToStorage]);
-
-  // Clear state function
+  // Clear state function with error handling
   const clearState = () => {
-    sessionStorage.removeItem('advancedTierState');
-    setCurrentStep(1);
-    setSelectedFile(null);
-    setFileInfo(null);
-    setProcessedAudioUrl(null);
-    setIsProcessing(false);
-    setOriginalAudioElement(null);
-    setMasteredAudioElement(null);
-    setDownloadFormat('wav16');
-    setAudioEffects(audioEffects.map(effect => ({ ...effect, enabled: false })));
-    setSampleRate('44.1kHz');
-    setSelectedGenre('');
+    try {
+      sessionStorage.removeItem('advancedTierState');
+      setCurrentStep(1);
+      setSelectedFile(null);
+      setFileInfo(null);
+      setProcessedAudioUrl(null);
+      setIsProcessing(false);
+      setOriginalAudioElement(null);
+      setMasteredAudioElement(null);
+      setDownloadFormat('wav16');
+      // Reset audio effects to initial state
+      setAudioEffects({
+        eq: { low: 0, mid: 0, high: 0 },
+        compressor: { threshold: 0, ratio: 1, attack: 10, release: 100 },
+        stereoWidener: { width: 0 },
+        loudness: { volume: 1 },
+        limiter: { threshold: 0, ceiling: -0.1 },
+        gMasteringCompressor: undefined,
+        gPrecisionEQ: undefined,
+        gDigitalTape: undefined,
+        gLimiter: undefined,
+        gMultiBand: undefined,
+        gSurround: false,
+        gTuner: { enabled: false, frequency: 444 },
+        solfagio: { enabled: false, frequency: 432 }
+      });
+      setSampleRate('44.1kHz');
+      setSelectedGenre('');
+      setIsRealTimeMode(false);
+    } catch (error) {
+      console.error('Error clearing state:', error);
+      // Force reset to step 1
+      setCurrentStep(1);
+      setSelectedFile(null);
+    }
   };
 
   // File upload handler
@@ -207,74 +150,6 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
       }
     }
   };
-
-  // Real-time meter analysis
-  const updateMeters = useCallback(() => {
-    if (!analyserRef.current) return;
-
-    const dataArray = new Uint8Array(analyserRef.current.frequencyBinCount);
-    analyserRef.current.getByteFrequencyData(dataArray);
-
-    // Calculate RMS
-    let sum = 0;
-    for (let i = 0; i < dataArray.length; i++) {
-      sum += (dataArray[i] / 255) ** 2;
-    }
-    const rms = Math.sqrt(sum / dataArray.length);
-    const rmsDb = 20 * Math.log10(rms);
-
-    // Calculate peak
-    const peak = Math.max(...Array.from(dataArray).map(val => val / 255));
-    const peakDb = 20 * Math.log10(peak);
-
-    // Simulate LUFS (simplified)
-    const lufs = rmsDb - 3;
-
-    // Simulate correlation (simplified)
-    const correlation = 0.5 + 0.5 * Math.sin(Date.now() * 0.001);
-
-    // Generate goniometer data
-    const goniometerData = Array.from({ length: 100 }, (_, i) => ({
-      left: 0.5 + 0.3 * Math.sin(Date.now() * 0.001 + i * 0.1),
-      right: 0.5 + 0.3 * Math.cos(Date.now() * 0.001 + i * 0.1)
-    }));
-
-    setMeterData({
-      lufs,
-      peak: peakDb,
-      rms: rmsDb,
-      correlation,
-      leftPeak: peakDb - 0.5,
-      rightPeak: peakDb + 0.3,
-      leftRms: rmsDb - 0.8,
-      rightRms: rmsDb + 0.2,
-      frequencyData: Array.from(dataArray),
-      goniometerData
-    });
-
-    animationRef.current = requestAnimationFrame(updateMeters);
-  }, []);
-
-  // Start real-time analysis
-  useEffect(() => {
-    if (originalAudioElement && !audioContextRef.current) {
-      audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
-      analyserRef.current = audioContextRef.current.createAnalyser();
-      analyserRef.current.fftSize = 2048;
-      
-      const source = audioContextRef.current.createMediaElementSource(originalAudioElement);
-      source.connect(analyserRef.current);
-      analyserRef.current.connect(audioContextRef.current.destination);
-      
-      updateMeters();
-    }
-
-    return () => {
-      if (animationRef.current) {
-        cancelAnimationFrame(animationRef.current);
-      }
-    };
-  }, [originalAudioElement, updateMeters]);
 
   // Update effect settings for real-time processing
   const updateEffectSettings = (effectType: string, settings: any) => {
@@ -370,12 +245,12 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
     // Format cost
     if (downloadFormat === 'wav32') total += 2;
     
-    // Paid effects cost
-    audioEffects.forEach(effect => {
-      if (effect.enabled && effect.type === 'paid' && effect.price) {
-        total += effect.price;
-      }
-    });
+    // Premium effects cost
+    if (audioEffects.gMasteringCompressor) total += 5;
+    if (audioEffects.gPrecisionEQ) total += 5;
+    if (audioEffects.gDigitalTape) total += 5;
+    if (audioEffects.gLimiter) total += 5;
+    if (audioEffects.gMultiBand) total += 5;
     
     // Additional features
     if (surroundEnabled) total += 5;
@@ -464,8 +339,8 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
                   audioFile={selectedFile}
                   audioEffects={audioEffects}
                   meterData={meterData}
-                  onMeterUpdate={setMeterData}
-                  onEffectChange={setAudioEffects}
+                  onMeterUpdate={(data) => setMeterData(data)}
+                  onEffectChange={(effects) => setAudioEffects(effects)}
                   isProcessing={isProcessing}
                 />
               )}
