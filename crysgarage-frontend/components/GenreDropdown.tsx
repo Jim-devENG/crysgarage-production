@@ -126,7 +126,7 @@ export const availableGenres: Genre[] = [
   },
   {
     id: 'drum-bass',
-    name: 'Drum & Bass',
+    name: 'Modern Pop Special',
     description: 'Fast-paced electronic music with breakbeats',
     price: 0,
     characteristics: ['Fast tempo', 'Breakbeats', 'High energy']

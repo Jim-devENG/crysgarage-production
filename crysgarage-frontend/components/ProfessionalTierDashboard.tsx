@@ -3,6 +3,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Upload, FileAudio, ArrowRight, ArrowLeft, Download, Music, Play, Pause, Volume2, VolumeX, Music2, Music3, Music4 } from 'lucide-react';
 import { availableGenres, Genre as GenreType } from './GenreDropdown';
 import FrequencySpectrum from './FrequencySpectrum';
+import StyledAudioPlayer from './StyledAudioPlayer';
 
 interface Genre {
   name: string;
@@ -31,6 +32,12 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
   const [originalAudioElement, setOriginalAudioElement] = useState<HTMLAudioElement | null>(null);
   const [masteredAudioElement, setMasteredAudioElement] = useState<HTMLAudioElement | null>(null);
   const [downloadFormat, setDownloadFormat] = useState<'wav' | 'mp3'>('wav');
+
+  // Debug audio elements
+  useEffect(() => {
+    console.log('Original audio element:', originalAudioElement);
+    console.log('Mastered audio element:', masteredAudioElement);
+  }, [originalAudioElement, masteredAudioElement]);
 
   // Genre presets with processing details - 7 Color System
   const GENRE_PRESETS: Record<string, any> = {
@@ -171,6 +178,8 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
     if (file) {
       setSelectedFile(file);
       setProcessedAudioUrl(null); // Clear previous processed audio
+      setOriginalAudioElement(null); // Clear previous audio elements
+      setMasteredAudioElement(null);
       if (onFileUpload) {
         onFileUpload(file);
       }
@@ -194,6 +203,7 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
     
     setIsProcessing(true);
     setSelectedGenre(genre);
+    setMasteredAudioElement(null); // Clear mastered audio element when processing starts
     
     try {
       console.log(`Starting ${genre.name} audio processing...`);
@@ -296,14 +306,47 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
     return new Blob([arrayBuffer], { type: 'audio/wav' });
   };
 
-  const handleDownload = () => {
-    if (processedAudioUrl) {
-      const link = document.createElement('a');
-      link.href = processedAudioUrl;
-      link.download = `mastered_${selectedFile?.name.replace(/\.[^\/.]+$/, '')}.${downloadFormat}`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+  const handleDownload = async () => {
+    if (processedAudioUrl && selectedFile) {
+      try {
+        // Fetch the processed audio data
+        const response = await fetch(processedAudioUrl);
+        const audioBlob = await response.blob();
+        
+        // Create the appropriate file format
+        let finalBlob = audioBlob;
+        let fileName = `mastered_${selectedFile.name.replace(/\.[^\/.]+$/, '')}`;
+        
+        if (downloadFormat === 'mp3') {
+          // For MP3, we need to ensure it's properly encoded
+          fileName += '.mp3';
+          finalBlob = new Blob([audioBlob], { type: 'audio/mpeg' });
+        } else {
+          // For WAV, ensure it's properly formatted
+          fileName += '.wav';
+          finalBlob = new Blob([audioBlob], { type: 'audio/wav' });
+        }
+        
+        // Create download link
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(finalBlob);
+        link.download = fileName;
+        link.style.display = 'none';
+        
+        // Trigger download
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        // Clean up the object URL
+        setTimeout(() => {
+          URL.revokeObjectURL(link.href);
+        }, 100);
+        
+      } catch (error) {
+        console.error('Error downloading file:', error);
+        alert('Error downloading file. Please try again.');
+      }
     }
   };
 
@@ -469,18 +512,21 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
                       </div>
                     </div>
                     
-                                         <audio
-                       ref={(el) => setOriginalAudioElement(el)}
-                       controls
-                       className="w-full"
-                       src={selectedFile ? URL.createObjectURL(selectedFile) : undefined}
-                       onPlay={() => {
-                         setIsPlayingOriginal(true);
-                         if (masteredAudioElement) masteredAudioElement.pause();
-                         setIsPlayingMastered(false);
-                       }}
-                       onPause={() => setIsPlayingOriginal(false)}
-                     />
+                                                               <StyledAudioPlayer
+                        src={selectedFile ? URL.createObjectURL(selectedFile) : ''}
+                        title="Original Audio"
+                        onPlay={() => {
+                          setIsPlayingOriginal(true);
+                          if (masteredAudioElement) masteredAudioElement.pause();
+                          setIsPlayingMastered(false);
+                        }}
+                        onPause={() => setIsPlayingOriginal(false)}
+                        className="w-full"
+                        onAudioElementReady={(audioElement) => {
+                          console.log('Original audio element ready:', audioElement);
+                          setOriginalAudioElement(audioElement);
+                        }}
+                      />
                      
                      {/* Frequency Spectrum Analysis for Original */}
                      <FrequencySpectrum
@@ -501,45 +547,32 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
                     {selectedGenre ? `${selectedGenre.name} Mastered` : 'Mastered Audio'}
                   </h3>
                   <div className="space-y-4">
-                    {selectedGenre && (
-                      <div className="bg-gray-700 rounded-lg p-3">
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-xs text-gray-400">Genre</span>
-                          <span className="text-xs font-medium text-crys-gold">{selectedGenre.name}</span>
-                        </div>
-                        {GENRE_PRESETS[selectedGenre.id] && (
-                          <>
-                            <div className="flex items-center justify-between mb-1">
-                              <span className="text-xs text-gray-400">Gain</span>
-                              <span className="text-xs font-medium text-crys-gold">
-                                +{Math.round((GENRE_PRESETS[selectedGenre.id].gain - 1) * 100)}%
-                              </span>
-                            </div>
-                            <div className="flex items-center justify-between">
-                              <span className="text-xs text-gray-400">Compression</span>
-                              <span className="text-xs font-medium text-crys-gold">
-                                {GENRE_PRESETS[selectedGenre.id].compression.ratio}:1
-                              </span>
-                            </div>
-                          </>
-                        )}
-                      </div>
-                    )}
+                                         {selectedGenre && (
+                       <div className="bg-gray-700 rounded-lg p-3">
+                         <div className="flex items-center justify-between">
+                           <span className="text-xs text-gray-400">File</span>
+                           <span className="text-xs font-medium text-crys-gold">mastered_{selectedFile?.name.replace(/\.[^\/.]+$/, '')}</span>
+                         </div>
+                       </div>
+                     )}
                     
                                          {processedAudioUrl ? (
                        <>
-                         <audio
-                           ref={(el) => setMasteredAudioElement(el)}
-                           controls
-                           className="w-full"
-                           src={processedAudioUrl}
-                           onPlay={() => {
-                             setIsPlayingMastered(true);
-                             if (originalAudioElement) originalAudioElement.pause();
-                             setIsPlayingOriginal(false);
-                           }}
-                           onPause={() => setIsPlayingMastered(false)}
-                         />
+                                                   <StyledAudioPlayer
+                            src={processedAudioUrl}
+                            title="Mastered Audio"
+                            onPlay={() => {
+                              setIsPlayingMastered(true);
+                              if (originalAudioElement) originalAudioElement.pause();
+                              setIsPlayingOriginal(false);
+                            }}
+                            onPause={() => setIsPlayingMastered(false)}
+                            className="w-full"
+                            onAudioElementReady={(audioElement) => {
+                              console.log('Mastered audio element ready:', audioElement);
+                              setMasteredAudioElement(audioElement);
+                            }}
+                          />
                          
                          {/* Frequency Spectrum Analysis for Mastered */}
                          <FrequencySpectrum
@@ -578,33 +611,19 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
                    Mastering Analysis Summary
                  </h3>
                  <div className="grid md:grid-cols-2 gap-6">
-                   <div className="space-y-3">
-                     <h4 className="font-medium text-white">Applied Processing</h4>
-                     <div className="space-y-2">
-                       <div className="flex justify-between text-sm">
-                         <span className="text-gray-300">Genre Preset:</span>
-                         <span className="text-crys-gold font-medium">{selectedGenre.name}</span>
-                       </div>
-                       <div className="flex justify-between text-sm">
-                         <span className="text-gray-300">Gain Applied:</span>
-                         <span className="text-crys-gold font-medium">
-                           +{Math.round((GENRE_PRESETS[selectedGenre.id].gain - 1) * 100)}%
-                         </span>
-                       </div>
-                       <div className="flex justify-between text-sm">
-                         <span className="text-gray-300">Compression:</span>
-                         <span className="text-crys-gold font-medium">
-                           {GENRE_PRESETS[selectedGenre.id].compression.ratio}:1
-                         </span>
-                       </div>
-                       <div className="flex justify-between text-sm">
-                         <span className="text-gray-300">Threshold:</span>
-                         <span className="text-crys-gold font-medium">
-                           {GENRE_PRESETS[selectedGenre.id].compression.threshold}dB
-                         </span>
-                       </div>
-                     </div>
-                   </div>
+                                       <div className="space-y-3">
+                      <h4 className="font-medium text-white">Applied Processing</h4>
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-300">Genre Preset:</span>
+                          <span className="text-crys-gold font-medium">{selectedGenre.name}</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-300">Processing:</span>
+                          <span className="text-green-400 font-medium">Complete</span>
+                        </div>
+                      </div>
+                    </div>
                    
                    <div className="space-y-3">
                      <h4 className="font-medium text-white">Frequency Enhancements</h4>
@@ -667,13 +686,13 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
           </div>
         )}
 
-        {/* Step 3: Download */}
-        {currentStep === 3 && (
-          <div className="space-y-8">
-            <div className="text-center mb-6">
-              <h2 className="text-2xl font-bold text-crys-gold mb-2">Download Your Mastered Audio</h2>
-              <p className="text-gray-400">Choose your preferred format and download</p>
-            </div>
+                 {/* Step 3: Export Gate */}
+         {currentStep === 3 && (
+           <div className="space-y-8">
+             <div className="text-center mb-6">
+               <h2 className="text-2xl font-bold text-crys-gold mb-2">Export Gate</h2>
+               <p className="text-gray-400">Choose your preferred format and export your mastered audio</p>
+             </div>
             
             <div className="max-w-2xl mx-auto">
               <div className="bg-gray-800 rounded-xl p-8">
@@ -702,14 +721,14 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
                     </div>
                   </div>
                   
-                  <button
-                    onClick={handleDownload}
-                    disabled={!processedAudioUrl}
-                    className="w-full bg-crys-gold text-black py-4 rounded-lg font-semibold hover:bg-yellow-400 transition-colors flex items-center justify-center space-x-2 disabled:bg-gray-600 disabled:cursor-not-allowed"
-                  >
-                    <Download className="w-5 h-5" />
-                    <span>Download Mastered Audio</span>
-                  </button>
+                                     <button
+                     onClick={handleDownload}
+                     disabled={!processedAudioUrl}
+                     className="w-full bg-crys-gold text-black py-4 rounded-lg font-semibold hover:bg-yellow-400 transition-colors flex items-center justify-center space-x-2 disabled:bg-gray-600 disabled:cursor-not-allowed"
+                   >
+                     <Download className="w-5 h-5" />
+                     <span>Export Mastered Audio</span>
+                   </button>
                 </div>
               </div>
             </div>
