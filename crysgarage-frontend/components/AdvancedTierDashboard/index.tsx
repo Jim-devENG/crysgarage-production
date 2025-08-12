@@ -4,7 +4,8 @@ import {
   Upload, 
   Music,
   Zap,
-  Download
+  Download,
+  Settings
 } from 'lucide-react';
 import StudioHeader from './StudioHeader';
 import FileUpload from './FileUpload';
@@ -13,6 +14,7 @@ import AudioEffects from './AudioEffects';
 import ExportSettings from './ExportSettings';
 import AudioPlayer from './AudioPlayer';
 import FrequencySpectrum from './FrequencySpectrum';
+import RealTimeMasteringPlayer from './RealTimeMasteringPlayer';
 
 interface AdvancedTierDashboardProps {
   onFileUpload?: (file: File) => void;
@@ -71,26 +73,32 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
     goniometerData: []
   });
 
-  // Audio effects state
-  const [audioEffects, setAudioEffects] = useState<AudioEffect[]>([
+  // Audio effects state - structured for real-time processing
+  const [audioEffects, setAudioEffects] = useState({
     // Free effects
-    { id: 'eq3band', name: '3-Band EQ', type: 'free', enabled: false, settings: { low: 0, mid: 0, high: 0 } },
-    { id: 'compressor', name: 'Compressor', type: 'free', enabled: false, settings: { threshold: -20, ratio: 4, attack: 0.01, release: 0.1 } },
-    { id: 'stereoWidener', name: 'Stereo Widener', type: 'free', enabled: false, settings: { width: 1.2 } },
-    { id: 'loudness', name: 'Loudness', type: 'free', enabled: false, settings: { gain: 0 } },
-    { id: 'limiter', name: 'Limiter', type: 'free', enabled: false, settings: { threshold: -1.0 } },
+    eq: { low: 0, mid: 0, high: 0 },
+    compressor: { threshold: -20, ratio: 4, attack: 10, release: 100 },
+    stereoWidener: { width: 0 },
+    loudness: { volume: 1 },
+    limiter: { threshold: -1.0, ceiling: -0.1 },
     
-    // Paid effects
-    { id: 'gMasteringComp', name: 'G-Mastering Compressor', type: 'paid', price: 5, enabled: false, settings: { threshold: -18, ratio: 3, attack: 0.005, release: 0.15 } },
-    { id: 'gPrecisionEq', name: 'G-Precision 8-Band EQ', type: 'paid', price: 5, enabled: false, settings: { bands: [0, 0, 0, 0, 0, 0, 0, 0] } },
-    { id: 'gDigitalTape', name: 'G-Digital Tape Machine', type: 'paid', price: 5, enabled: false, settings: { saturation: 0.5, warmth: 0.3 } },
-    { id: 'gLimiter', name: 'G-Limiter', type: 'paid', price: 5, enabled: false, settings: { threshold: -0.1, release: 0.05 } },
-    { id: 'gMultiband', name: 'G-Multi-Band', type: 'paid', price: 5, enabled: false, settings: { low: { threshold: -20, ratio: 4 }, mid: { threshold: -20, ratio: 4 }, high: { threshold: -20, ratio: 4 } } },
-  ]);
+    // Premium effects (optional)
+    gMasteringCompressor: undefined as any,
+    gPrecisionEQ: undefined as any,
+    gDigitalTape: undefined as any,
+    gLimiter: undefined as any,
+    gMultiBand: undefined as any,
+    
+    // Advanced features
+    gSurround: false,
+    gTuner: { enabled: false, frequency: 444 },
+    solfagio: { enabled: false, frequency: 432 }
+  });
 
   const [surroundEnabled, setSurroundEnabled] = useState(false);
   const [tunerEnabled, setTunerEnabled] = useState(false);
   const [solfagioEnabled, setSolfagioEnabled] = useState(false);
+  const [isRealTimeMode, setIsRealTimeMode] = useState(false);
 
   // Refs for real-time analysis
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -266,22 +274,36 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
     };
   }, [originalAudioElement, updateMeters]);
 
-  // Effect toggle handler
-  const toggleEffect = (effectId: string) => {
-    setAudioEffects(prev => prev.map(effect => 
-      effect.id === effectId 
-        ? { ...effect, enabled: !effect.enabled }
-        : effect
-    ));
+  // Update effect settings for real-time processing
+  const updateEffectSettings = (effectType: string, settings: any) => {
+    setAudioEffects(prev => ({
+      ...prev,
+      [effectType]: { ...prev[effectType as keyof typeof prev], ...settings }
+    }));
   };
 
-  // Update effect settings
-  const updateEffectSettings = (effectId: string, settings: any) => {
-    setAudioEffects(prev => prev.map(effect => 
-      effect.id === effectId 
-        ? { ...effect, settings: { ...effect.settings, ...settings } }
-        : effect
-    ));
+  // Toggle premium effects
+  const togglePremiumEffect = (effectType: string, enabled: boolean) => {
+    if (enabled) {
+      // Initialize premium effect with default settings
+      const defaultSettings = {
+        gMasteringCompressor: { threshold: -18, ratio: 3, attack: 5, release: 150, makeup: 0 },
+        gPrecisionEQ: { bands: Array.from({ length: 8 }, () => ({ frequency: 1000, gain: 0, q: 1, type: 'peaking' as const })) },
+        gDigitalTape: { saturation: 50, warmth: 30, compression: 20 },
+        gLimiter: { threshold: -0.1, ceiling: -0.01, release: 5 },
+        gMultiBand: { low: { threshold: -20, ratio: 4 }, mid: { threshold: -20, ratio: 4 }, high: { threshold: -20, ratio: 4 } }
+      };
+      
+      setAudioEffects(prev => ({
+        ...prev,
+        [effectType]: defaultSettings[effectType as keyof typeof defaultSettings]
+      }));
+    } else {
+      setAudioEffects(prev => ({
+        ...prev,
+        [effectType]: undefined
+      }));
+    }
   };
 
   // Genre selection handler
@@ -416,11 +438,54 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
             {/* Real-time Meters */}
             <RealTimeMeters meterData={meterData} />
 
+            {/* Real-Time Mastering Player */}
+            <div className="bg-gradient-to-br from-gray-800 to-gray-700 rounded-xl p-6 border border-gray-600">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-xl font-semibold text-white">Real-Time Mastering</h3>
+                <button
+                  onClick={() => setIsRealTimeMode(!isRealTimeMode)}
+                  className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                    isRealTimeMode 
+                      ? 'bg-green-600 hover:bg-green-700 text-white' 
+                      : 'bg-gray-600 hover:bg-gray-500 text-gray-300'
+                  }`}
+                >
+                  {isRealTimeMode ? 'Real-Time Active' : 'Enable Real-Time'}
+                </button>
+              </div>
+              
+              {isRealTimeMode && selectedFile && (
+                <RealTimeMasteringPlayer
+                  audioFile={selectedFile}
+                  audioEffects={audioEffects}
+                  meterData={meterData}
+                  onMeterUpdate={setMeterData}
+                  onEffectChange={setAudioEffects}
+                  isProcessing={isProcessing}
+                />
+              )}
+              
+              {!isRealTimeMode && (
+                <div className="text-center py-8">
+                  <div className="text-gray-400 mb-4">
+                    <Settings className="w-12 h-12 mx-auto mb-2" />
+                    <p>Enable real-time mode to hear effects instantly</p>
+                  </div>
+                  <button
+                    onClick={() => setIsRealTimeMode(true)}
+                    className="bg-crys-gold text-black px-6 py-2 rounded-lg font-medium hover:bg-yellow-400 transition-colors"
+                  >
+                    Start Real-Time Mastering
+                  </button>
+                </div>
+              )}
+            </div>
+
             {/* Audio Effects */}
             <AudioEffects 
               audioEffects={audioEffects}
-              onToggleEffect={toggleEffect}
               onUpdateEffectSettings={updateEffectSettings}
+              onTogglePremiumEffect={togglePremiumEffect}
               surroundEnabled={surroundEnabled}
               tunerEnabled={tunerEnabled}
               solfagioEnabled={solfagioEnabled}
