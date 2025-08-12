@@ -15,6 +15,7 @@ import ExportSettings from './ExportSettings';
 import AudioPlayer from './AudioPlayer';
 import FrequencySpectrum from './FrequencySpectrum';
 import RealTimeMasteringPlayer from './RealTimeMasteringPlayer';
+import StudioDashboard from './StudioDashboard';
 
 interface AdvancedTierDashboardProps {
   onFileUpload?: (file: File) => void;
@@ -315,9 +316,6 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
         {/* Step 2: Studio Processing */}
         {currentStep === 2 && (
           <div className="space-y-6">
-            {/* Real-time Meters */}
-            <RealTimeMeters meterData={meterData} />
-
             {/* Real-Time Mastering Player */}
             <div className="bg-gradient-to-br from-gray-800 to-gray-700 rounded-xl p-6 border border-gray-600">
               <div className="flex items-center justify-between mb-4">
@@ -361,20 +359,33 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
               )}
             </div>
 
-            {/* Audio Effects */}
-            <AudioEffects 
-              audioEffects={audioEffects}
-              onUpdateEffectSettings={updateEffectSettings}
-              onTogglePremiumEffect={togglePremiumEffect}
-              surroundEnabled={surroundEnabled}
-              tunerEnabled={tunerEnabled}
-              solfagioEnabled={solfagioEnabled}
-              onToggleSurround={() => setSurroundEnabled(!surroundEnabled)}
-              onToggleTuner={() => setTunerEnabled(!tunerEnabled)}
-              onToggleSolfagio={() => setSolfagioEnabled(!solfagioEnabled)}
-              selectedGenre={selectedGenre}
-              onGenreSelect={handleGenreSelect}
-            />
+            {/* Modular Studio Dashboard */}
+            {isRealTimeMode && (
+              <StudioDashboard
+                audioEffects={audioEffects}
+                onUpdateEffectSettings={updateEffectSettings}
+                onTogglePremiumEffect={togglePremiumEffect}
+                selectedGenre={selectedGenre}
+                onGenreSelect={handleGenreSelect}
+                meterData={meterData}
+                isPlaying={isPlayingMastered}
+                onPlay={() => masteredAudioElement?.play()}
+                onPause={() => masteredAudioElement?.pause()}
+                currentTime={masteredAudioElement?.currentTime || 0}
+                duration={masteredAudioElement?.duration || 0}
+                volume={masteredAudioElement?.volume || 1}
+                onVolumeChange={(volume) => {
+                  if (masteredAudioElement) {
+                    masteredAudioElement.volume = volume;
+                  }
+                }}
+                onSeek={(time) => {
+                  if (masteredAudioElement) {
+                    masteredAudioElement.currentTime = time;
+                  }
+                }}
+              />
+            )}
 
             {/* Export Settings */}
             <ExportSettings 
@@ -477,6 +488,117 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
           </div>
         )}
       </div>
+
+      {/* Hardware Studio Styles */}
+      <style>{`
+        .knob-input {
+          -webkit-appearance: none;
+          appearance: none;
+          width: 100%;
+          height: 100%;
+          background: transparent;
+          outline: none;
+          cursor: pointer;
+          position: absolute;
+          top: 0;
+          left: 0;
+          opacity: 0;
+        }
+        
+        .knob-input::-webkit-slider-thumb {
+          -webkit-appearance: none;
+          appearance: none;
+          width: 0;
+          height: 0;
+          background: transparent;
+          cursor: pointer;
+        }
+        
+        .knob-input::-moz-range-thumb {
+          width: 0;
+          height: 0;
+          background: transparent;
+          cursor: pointer;
+          border: none;
+        }
+        
+        .knob-input:focus {
+          outline: none;
+        }
+        
+        .hardware-slider {
+          -webkit-appearance: none;
+          appearance: none;
+          background: transparent;
+          outline: none;
+          cursor: pointer;
+        }
+        
+        .slider-vertical {
+          writing-mode: bt-lr;
+          -webkit-appearance: slider-vertical;
+          width: 8px;
+          height: 128px;
+          background: #374151;
+          outline: none;
+          border-radius: 4px;
+          cursor: pointer;
+        }
+        
+        .slider-vertical::-webkit-slider-thumb {
+          -webkit-appearance: none;
+          appearance: none;
+          width: 20px;
+          height: 20px;
+          border-radius: 50%;
+          background: #f59e0b;
+          cursor: pointer;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+          border: 2px solid #d97706;
+        }
+        
+        .slider-vertical::-moz-range-thumb {
+          width: 20px;
+          height: 20px;
+          border-radius: 50%;
+          background: #f59e0b;
+          cursor: pointer;
+          border: 2px solid #d97706;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .slider-horizontal {
+          -webkit-appearance: none;
+          appearance: none;
+          height: 8px;
+          background: #374151;
+          outline: none;
+          border-radius: 4px;
+          cursor: pointer;
+        }
+        
+        .slider-horizontal::-webkit-slider-thumb {
+          -webkit-appearance: none;
+          appearance: none;
+          width: 20px;
+          height: 20px;
+          border-radius: 50%;
+          background: #f59e0b;
+          cursor: pointer;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+          border: 2px solid #d97706;
+        }
+        
+        .slider-horizontal::-moz-range-thumb {
+          width: 20px;
+          height: 20px;
+          border-radius: 50%;
+          background: #f59e0b;
+          cursor: pointer;
+          border: 2px solid #d97706;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+      `}</style>
     </div>
   );
 };
