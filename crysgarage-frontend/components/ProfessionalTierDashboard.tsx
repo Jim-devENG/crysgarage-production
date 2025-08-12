@@ -286,35 +286,42 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
                 <p className="text-gray-400">Click a genre to apply its preset and process your audio</p>
               </div>
               
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-                {availableGenres.map((genre) => {
-                  const preset = GENRE_PRESETS[genre.id];
-                  const isSelected = selectedGenre?.id === genre.id;
-                  
-                  return (
-                    <button
-                      key={genre.id}
-                      onClick={() => processAudioWithGenre(genre)}
-                      disabled={isProcessing}
-                      className={`p-4 rounded-xl border-2 transition-all duration-300 text-center ${
-                        isSelected
-                          ? 'border-crys-gold bg-crys-gold/10'
-                          : 'border-gray-600 hover:border-gray-500'
-                      } disabled:opacity-50 disabled:cursor-not-allowed`}
-                    >
-                      <div className="w-8 h-8 bg-gradient-to-br from-pink-500 to-purple-600 rounded-lg mb-3 mx-auto"></div>
-                      <h3 className="font-semibold mb-1">{genre.name}</h3>
-                      <p className="text-xs text-gray-400 mb-2">{genre.description}</p>
-                      {preset && (
-                        <div className="text-xs text-crys-gold">
-                          <p>Gain: +{Math.round((preset.gain - 1) * 100)}%</p>
-                          <p>Ratio: {preset.compression.ratio}:1</p>
-                        </div>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
+                             <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 mb-8">
+                 {availableGenres.map((genre) => {
+                   const isSelected = selectedGenre?.id === genre.id;
+                   
+                   // Define unique gradient colors for each genre
+                   const getGenreGradient = (genreId: string) => {
+                     const gradients = {
+                       afrobeats: 'from-orange-500 to-red-600',
+                       gospel: 'from-blue-500 to-purple-600',
+                       'hip-hop': 'from-yellow-500 to-orange-600',
+                       highlife: 'from-green-500 to-teal-600',
+                       amapiano: 'from-pink-500 to-purple-600',
+                       reggae: 'from-green-400 to-yellow-500',
+                       soul: 'from-purple-500 to-pink-600',
+                       jazz: 'from-indigo-500 to-blue-600'
+                     };
+                     return gradients[genreId as keyof typeof gradients] || 'from-gray-500 to-gray-600';
+                   };
+                   
+                   return (
+                     <button
+                       key={genre.id}
+                       onClick={() => processAudioWithGenre(genre)}
+                       disabled={isProcessing}
+                       className={`px-4 py-3 rounded-lg border-2 transition-all duration-300 text-center hover:scale-105 bg-gradient-to-br ${getGenreGradient(genre.id)} ${
+                         isSelected
+                           ? 'border-crys-gold shadow-lg shadow-crys-gold/30 scale-105'
+                           : 'border-white/20 hover:border-white/40 hover:scale-110'
+                       } disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100`}
+                     >
+                       <h3 className="font-semibold text-sm mb-1 text-white drop-shadow-sm">{genre.name}</h3>
+                       <p className="text-xs text-white/80 leading-tight drop-shadow-sm">{genre.description}</p>
+                     </button>
+                   );
+                 })}
+               </div>
             </div>
 
             {/* Audio Comparison */}
