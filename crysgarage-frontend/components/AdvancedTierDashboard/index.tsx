@@ -359,132 +359,160 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
               )}
             </div>
 
-            {/* Modular Studio Dashboard */}
-            {isRealTimeMode && (
-              <StudioDashboard
-                audioEffects={audioEffects}
-                onUpdateEffectSettings={updateEffectSettings}
-                onTogglePremiumEffect={togglePremiumEffect}
-                selectedGenre={selectedGenre}
-                onGenreSelect={handleGenreSelect}
-                meterData={meterData}
-                isPlaying={isPlayingMastered}
-                onPlay={() => masteredAudioElement?.play()}
-                onPause={() => masteredAudioElement?.pause()}
-                currentTime={masteredAudioElement?.currentTime || 0}
-                duration={masteredAudioElement?.duration || 0}
-                volume={masteredAudioElement?.volume || 1}
-                onVolumeChange={(volume) => {
-                  if (masteredAudioElement) {
-                    masteredAudioElement.volume = volume;
-                  }
-                }}
-                onSeek={(time) => {
-                  if (masteredAudioElement) {
-                    masteredAudioElement.currentTime = time;
-                  }
-                }}
-              />
-            )}
+                         {/* Modular Studio Dashboard */}
+             {isRealTimeMode && (
+               <StudioDashboard
+                 audioEffects={audioEffects}
+                 onUpdateEffectSettings={updateEffectSettings}
+                 onTogglePremiumEffect={togglePremiumEffect}
+                 selectedGenre={selectedGenre}
+                 onGenreSelect={handleGenreSelect}
+                 meterData={meterData}
+                 isPlaying={isPlayingMastered}
+                 onPlay={() => masteredAudioElement?.play()}
+                 onPause={() => masteredAudioElement?.pause()}
+                 currentTime={masteredAudioElement?.currentTime || 0}
+                 duration={masteredAudioElement?.duration || 0}
+                 volume={masteredAudioElement?.volume || 1}
+                 onVolumeChange={(volume) => {
+                   if (masteredAudioElement) {
+                     masteredAudioElement.volume = volume;
+                   }
+                 }}
+                 onSeek={(time) => {
+                   if (masteredAudioElement) {
+                     masteredAudioElement.currentTime = time;
+                   }
+                 }}
+               />
+             )}
 
-            {/* Export Settings */}
-            <ExportSettings 
-              downloadFormat={downloadFormat}
-              sampleRate={sampleRate}
-              onFormatChange={setDownloadFormat}
-              onSampleRateChange={setSampleRate}
-              totalCost={calculateTotalCost()}
-            />
-
-            {/* Process Button */}
-            <div className="text-center">
-              <button
-                onClick={processAudio}
-                disabled={isProcessing}
-                className="bg-gradient-to-r from-crys-gold to-yellow-500 text-black px-8 py-4 rounded-xl font-bold text-lg hover:from-yellow-400 hover:to-yellow-300 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isProcessing ? (
-                  <div className="flex items-center space-x-2">
-                    <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin" />
-                    <span>Processing...</span>
-                  </div>
-                ) : (
-                  <div className="flex items-center space-x-2">
-                    <Zap className="w-5 h-5" />
-                    <span>Process Audio</span>
-                  </div>
-                )}
-              </button>
-            </div>
+             {/* Next Button to Export Settings */}
+             <div className="text-center">
+               <button
+                 onClick={() => setCurrentStep(3)}
+                 className="bg-gradient-to-r from-crys-gold to-yellow-500 text-black px-8 py-4 rounded-xl font-bold text-lg hover:from-yellow-400 hover:to-yellow-300 transition-all"
+               >
+                 <div className="flex items-center space-x-2">
+                   <Zap className="w-5 h-5" />
+                   <span>Next: Export Settings</span>
+                 </div>
+               </button>
+             </div>
           </div>
         )}
 
-        {/* Step 3: Export */}
+        {/* Step 3: Export Settings & Processing */}
         {currentStep === 3 && (
-          <div className="max-w-4xl mx-auto">
+          <div className="max-w-6xl mx-auto">
             <div className="text-center mb-8">
-              <h2 className="text-3xl font-bold text-crys-gold mb-4">Export Your Mastered Audio</h2>
-              <p className="text-gray-400">Your audio has been processed with professional studio tools</p>
+              <h2 className="text-3xl font-bold text-crys-gold mb-4">Export Settings & Processing</h2>
+              <p className="text-gray-400">Configure your export settings and process your mastered audio</p>
             </div>
 
-            <div className="bg-gradient-to-br from-gray-800 to-gray-700 rounded-xl p-8 border border-gray-600">
-              {/* Audio Players */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                <div>
-                  <h3 className="text-lg font-semibold mb-3">Original Audio</h3>
-                  <AudioPlayer
-                    src={selectedFile ? URL.createObjectURL(selectedFile) : ''}
-                    title="Original"
-                    onAudioElementReady={setOriginalAudioElement}
-                    onPlay={() => setIsPlayingOriginal(true)}
-                    onPause={() => setIsPlayingOriginal(false)}
-                  />
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold mb-3">Mastered Audio</h3>
-                  <AudioPlayer
-                    src={processedAudioUrl || ''}
-                    title="Mastered"
-                    onAudioElementReady={setMasteredAudioElement}
-                    onPlay={() => setIsPlayingMastered(true)}
-                    onPause={() => setIsPlayingMastered(false)}
-                  />
-                </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              {/* Export Settings */}
+              <div className="bg-gradient-to-br from-gray-800 to-gray-700 rounded-xl p-6 border border-gray-600">
+                <h3 className="text-xl font-semibold mb-6 text-white">Export Configuration</h3>
+                <ExportSettings 
+                  downloadFormat={downloadFormat}
+                  sampleRate={sampleRate}
+                  onFormatChange={setDownloadFormat}
+                  onSampleRateChange={setSampleRate}
+                  totalCost={calculateTotalCost()}
+                />
               </div>
 
-              {/* Frequency Spectrum */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                <div>
-                  <h3 className="text-lg font-semibold mb-3">Original Spectrum</h3>
-                  <FrequencySpectrum
-                    audioElement={originalAudioElement}
-                    isPlaying={isPlayingOriginal}
-                    title="Original"
-                  />
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold mb-3">Mastered Spectrum</h3>
-                  <FrequencySpectrum
-                    audioElement={masteredAudioElement}
-                    isPlaying={isPlayingMastered}
-                    title="Mastered"
-                  />
-                </div>
-              </div>
-
-              {/* Download Section */}
-              <div className="text-center">
-                <button
-                  onClick={handleDownload}
-                  className="bg-gradient-to-r from-crys-gold to-yellow-500 text-black px-8 py-4 rounded-xl font-bold text-lg hover:from-yellow-400 hover:to-yellow-300 transition-all"
-                >
-                  <div className="flex items-center space-x-2">
-                    <Download className="w-5 h-5" />
-                    <span>Download Mastered Audio</span>
+              {/* Processing & Preview */}
+              <div className="bg-gradient-to-br from-gray-800 to-gray-700 rounded-xl p-6 border border-gray-600">
+                <h3 className="text-xl font-semibold mb-6 text-white">Audio Preview</h3>
+                
+                {/* Audio Players */}
+                <div className="space-y-6 mb-6">
+                  <div>
+                    <h4 className="text-lg font-medium mb-3 text-gray-300">Original Audio</h4>
+                    <AudioPlayer
+                      src={selectedFile ? URL.createObjectURL(selectedFile) : ''}
+                      title="Original"
+                      onAudioElementReady={setOriginalAudioElement}
+                      onPlay={() => setIsPlayingOriginal(true)}
+                      onPause={() => setIsPlayingOriginal(false)}
+                    />
                   </div>
-                </button>
+                  <div>
+                    <h4 className="text-lg font-medium mb-3 text-gray-300">Mastered Audio</h4>
+                    <AudioPlayer
+                      src={processedAudioUrl || ''}
+                      title="Mastered"
+                      onAudioElementReady={setMasteredAudioElement}
+                      onPlay={() => setIsPlayingMastered(true)}
+                      onPause={() => setIsPlayingMastered(false)}
+                    />
+                  </div>
+                </div>
+
+                {/* Process Button */}
+                <div className="text-center mb-6">
+                  <button
+                    onClick={processAudio}
+                    disabled={isProcessing}
+                    className="bg-gradient-to-r from-crys-gold to-yellow-500 text-black px-8 py-4 rounded-xl font-bold text-lg hover:from-yellow-400 hover:to-yellow-300 transition-all disabled:opacity-50 disabled:cursor-not-allowed w-full"
+                  >
+                    {isProcessing ? (
+                      <div className="flex items-center justify-center space-x-2">
+                        <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin" />
+                        <span>Processing...</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-center space-x-2">
+                        <Zap className="w-5 h-5" />
+                        <span>Process Audio</span>
+                      </div>
+                    )}
+                  </button>
+                </div>
+
+                {/* Download Button (only show after processing) */}
+                {processedAudioUrl && (
+                  <div className="text-center">
+                    <button
+                      onClick={handleDownload}
+                      className="bg-gradient-to-r from-green-500 to-green-600 text-white px-8 py-4 rounded-xl font-bold text-lg hover:from-green-400 hover:to-green-500 transition-all w-full"
+                    >
+                      <div className="flex items-center justify-center space-x-2">
+                        <Download className="w-5 h-5" />
+                        <span>Download Mastered Audio</span>
+                      </div>
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
+
+            {/* Frequency Spectrum Analysis */}
+            {processedAudioUrl && (
+              <div className="mt-8 bg-gradient-to-br from-gray-800 to-gray-700 rounded-xl p-6 border border-gray-600">
+                <h3 className="text-xl font-semibold mb-6 text-white text-center">Frequency Analysis</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <h4 className="text-lg font-medium mb-3 text-gray-300">Original Spectrum</h4>
+                    <FrequencySpectrum
+                      audioElement={originalAudioElement}
+                      isPlaying={isPlayingOriginal}
+                      title="Original"
+                    />
+                  </div>
+                  <div>
+                    <h4 className="text-lg font-medium mb-3 text-gray-300">Mastered Spectrum</h4>
+                    <FrequencySpectrum
+                      audioElement={masteredAudioElement}
+                      isPlaying={isPlayingMastered}
+                      title="Mastered"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
