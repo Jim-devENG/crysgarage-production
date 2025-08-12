@@ -29,6 +29,30 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
   const [downloadFormat, setDownloadFormat] = useState<'wav' | 'mp3'>('wav');
   const [processedAudioUrl, setProcessedAudioUrl] = useState<string | null>(null);
 
+  // Simple genre presets that auto-apply basic processing settings when a genre is selected
+  const GENRE_PRESETS: Record<string, ProcessingSettings> = {
+    afrobeats: { sampleRate: '44.1kHz', resolution: '16bit' },
+    gospel: { sampleRate: '48kHz', resolution: '16bit' },
+    'hip-hop': { sampleRate: '44.1kHz', resolution: '32bit' },
+    pop: { sampleRate: '44.1kHz', resolution: '16bit' },
+    rock: { sampleRate: '48kHz', resolution: '32bit' },
+    reggae: { sampleRate: '44.1kHz', resolution: '16bit' },
+  };
+
+  const normalizeGenreKey = (name: string) =>
+    name.trim().toLowerCase();
+
+  const applyGenrePreset = (genreName: string) => {
+    const key = normalizeGenreKey(genreName);
+    const preset = GENRE_PRESETS[key];
+    if (preset) {
+      setProcessingSettings(preset);
+      console.log('Applied preset for genre:', genreName, preset);
+    } else {
+      console.log('No preset found for genre, keeping defaults:', genreName);
+    }
+  };
+
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
@@ -140,7 +164,12 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
                 ].map((genre) => (
                   <button
                     key={genre.name}
-                    onClick={() => setSelectedGenre(genre)}
+                    onClick={() => {
+                      setSelectedGenre(genre);
+                      applyGenrePreset(genre.name);
+                      // Move to the next step automatically once a genre is chosen
+                      setCurrentStep(3);
+                    }}
                     className={`p-6 rounded-xl border-2 transition-all duration-300 text-left ${
                       selectedGenre?.name === genre.name
                         ? 'border-crys-gold bg-crys-gold/10'
@@ -163,13 +192,6 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
                     <ArrowLeft className="w-4 h-4" />
                     <span>Back</span>
                   </button>
-                  <button
-                    onClick={nextStep}
-                    className="bg-crys-gold text-black px-8 py-3 rounded-lg font-semibold hover:bg-yellow-400 transition-colors flex items-center space-x-2"
-                  >
-                    <span>Next</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </button>
                 </div>
               )}
             </div>
@@ -181,6 +203,11 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
             <div className="text-center">
               <h2 className="text-3xl font-bold text-crys-gold mb-4">Processing Settings</h2>
               <p className="text-gray-400 text-lg">Configure your audio processing parameters</p>
+              {selectedGenre && (
+                <p className="text-sm text-crys-gold mt-2">
+                  Preset applied for {selectedGenre.name}: {processingSettings.sampleRate}, {processingSettings.resolution}
+                </p>
+              )}
             </div>
             
             <div className="max-w-2xl mx-auto">
