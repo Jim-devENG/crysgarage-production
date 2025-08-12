@@ -22,7 +22,11 @@ const FileUpload: React.FC<FileUploadProps> = ({
       </div>
       
       <div className="bg-gradient-to-br from-gray-800 to-gray-700 rounded-xl p-8 border border-gray-600">
-        <div className="border-2 border-dashed border-gray-500 rounded-lg p-8 text-center hover:border-crys-gold transition-colors">
+        <div className={`border-2 border-dashed rounded-lg p-8 text-center transition-all ${
+          selectedFile 
+            ? 'border-green-500 bg-green-900/20' 
+            : 'border-gray-500 hover:border-crys-gold'
+        }`}>
           <input
             type="file"
             accept="audio/*"
@@ -31,22 +35,37 @@ const FileUpload: React.FC<FileUploadProps> = ({
             id="file-upload"
           />
           <label htmlFor="file-upload" className="cursor-pointer">
-            <Upload className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold mb-2">Choose Audio File</h3>
-            <p className="text-gray-400 mb-4">WAV, MP3, FLAC, or other audio formats</p>
-            <div className="bg-crys-gold text-black px-6 py-2 rounded-lg font-semibold hover:bg-yellow-400 transition-colors inline-block">
-              Browse Files
-            </div>
+            {selectedFile ? (
+              <>
+                <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <FileAudio className="w-8 h-8 text-white" />
+                </div>
+                <h3 className="text-xl font-semibold mb-2 text-green-400">File Uploaded Successfully!</h3>
+                <p className="text-gray-400 mb-4">Click "Enter Studio" to start mastering</p>
+                <div className="bg-gray-600 text-gray-400 px-6 py-2 rounded-lg font-semibold inline-block">
+                  Change File
+                </div>
+              </>
+            ) : (
+              <>
+                <Upload className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-xl font-semibold mb-2">Choose Audio File</h3>
+                <p className="text-gray-400 mb-4">WAV, MP3, FLAC, or other audio formats</p>
+                <div className="bg-crys-gold text-black px-6 py-2 rounded-lg font-semibold hover:bg-yellow-400 transition-colors inline-block">
+                  Browse Files
+                </div>
+              </>
+            )}
           </label>
         </div>
         
         {(selectedFile || fileInfo) && (
           <div className="mt-6 bg-gray-800 rounded-xl p-6">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between mb-4">
               <div className="flex items-center space-x-3">
                 <FileAudio className="w-6 h-6 text-crys-gold" />
                 <div>
-                  <h4 className="font-semibold">{selectedFile?.name || fileInfo?.name}</h4>
+                  <h4 className="font-semibold text-white">{selectedFile?.name || fileInfo?.name}</h4>
                   <p className="text-sm text-gray-400">
                     {selectedFile 
                       ? (selectedFile.size / 1024 / 1024).toFixed(2) 
@@ -62,18 +81,27 @@ const FileUpload: React.FC<FileUploadProps> = ({
                   )}
                 </div>
               </div>
+            </div>
+            
+            {/* Prominent Next Button */}
+            <div className="text-center">
               <button
                 onClick={onContinue}
                 disabled={!selectedFile}
-                className={`px-6 py-2 rounded-lg font-semibold transition-colors flex items-center space-x-2 ${
+                className={`px-8 py-3 rounded-lg font-semibold transition-all transform hover:scale-105 flex items-center space-x-3 mx-auto ${
                   selectedFile 
-                    ? 'bg-crys-gold text-black hover:bg-yellow-400' 
+                    ? 'bg-gradient-to-r from-crys-gold to-yellow-400 text-black shadow-lg hover:shadow-xl' 
                     : 'bg-gray-600 text-gray-400 cursor-not-allowed'
                 }`}
               >
-                <span>Enter Studio</span>
-                <Zap className="w-4 h-4" />
+                <span className="text-lg">Enter Studio</span>
+                <Zap className="w-5 h-5" />
               </button>
+              {selectedFile && (
+                <p className="text-sm text-gray-400 mt-2">
+                  Ready to start mastering your audio
+                </p>
+              )}
             </div>
           </div>
         )}

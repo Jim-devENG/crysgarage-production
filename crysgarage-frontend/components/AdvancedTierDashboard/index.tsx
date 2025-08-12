@@ -199,7 +199,7 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
         size: file.size,
         type: file.type
       });
-      setCurrentStep(2);
+      // Don't automatically proceed - let user click "Enter Studio" button
       if (onFileUpload) {
         onFileUpload(file);
       }
