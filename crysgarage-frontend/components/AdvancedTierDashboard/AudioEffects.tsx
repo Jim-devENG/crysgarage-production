@@ -440,23 +440,264 @@ const AudioEffects: React.FC<AudioEffectsProps> = ({
               </div>
 
               {/* G-Precision 8-Band EQ */}
-              <div className="bg-gray-900 rounded-lg p-4 border border-gray-600">
-                <div className="flex items-center justify-between mb-3">
-                  <h4 className="font-medium text-white">G-Precision 8-Band EQ</h4>
+              <div className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 rounded-xl p-6 border border-gray-600 shadow-2xl">
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center space-x-3">
+                    <div className="bg-gradient-to-r from-crys-gold to-yellow-500 p-2 rounded-lg">
+                      <Filter className="w-5 h-5 text-gray-900" />
+                    </div>
+                    <div>
+                      <h4 className="text-lg font-bold text-white">G-Precision 8-Band EQ</h4>
+                      <p className="text-sm text-gray-400">Professional Parametric Equalizer</p>
+                    </div>
+                  </div>
                   <button
                     onClick={() => onTogglePremiumEffect('gPrecisionEQ', !audioEffects.gPrecisionEQ)}
-                    className={`px-3 py-1 rounded text-xs font-medium ${
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
                       audioEffects.gPrecisionEQ
-                        ? 'bg-green-600 text-white'
+                        ? 'bg-green-600 text-white shadow-lg'
                         : 'bg-gray-600 text-gray-300 hover:bg-gray-500'
                     }`}
                   >
-                    {audioEffects.gPrecisionEQ ? 'Active' : 'Enable'}
+                    {audioEffects.gPrecisionEQ ? 'ACTIVE' : 'ENABLE'}
                   </button>
                 </div>
+                
                 {audioEffects.gPrecisionEQ && (
-                  <div className="text-sm text-gray-400">
-                    8-band parametric EQ with precise frequency control
+                  <div className="space-y-6">
+                    {/* EQ Rack Unit */}
+                    <div className="bg-gradient-to-b from-gray-800 to-gray-900 rounded-lg p-6 border border-gray-700 shadow-inner">
+                      {/* EQ Bands */}
+                      <div className="grid grid-cols-8 gap-4 mb-6">
+                        {audioEffects.gPrecisionEQ.bands.map((band, index) => (
+                          <div key={index} className="flex flex-col items-center">
+                            {/* Frequency Display */}
+                            <div className="bg-black rounded-lg p-2 mb-2 w-full text-center">
+                              <div className="text-xs text-gray-400">FREQ</div>
+                              <div className="text-sm font-bold text-crys-gold">
+                                {band.frequency >= 1000 
+                                  ? `${(band.frequency / 1000).toFixed(1)}k` 
+                                  : band.frequency}
+                              </div>
+                            </div>
+                            
+                            {/* Gain Slider */}
+                            <div className="relative h-32 mb-3">
+                              <input
+                                type="range"
+                                min="-12"
+                                max="12"
+                                step="0.1"
+                                value={band.gain}
+                                onChange={(e) => {
+                                  const newBands = [...audioEffects.gPrecisionEQ.bands];
+                                  newBands[index].gain = parseFloat(e.target.value);
+                                  onUpdateEffectSettings('gPrecisionEQ', { bands: newBands });
+                                }}
+                                className="slider-vertical"
+                                style={{
+                                  background: `linear-gradient(to top, 
+                                    ${band.gain > 0 ? '#10b981' : '#ef4444'} 0%, 
+                                    ${band.gain > 0 ? '#10b981' : '#ef4444'} ${Math.abs(band.gain) / 12 * 100}%, 
+                                    #374151 ${Math.abs(band.gain) / 12 * 100}%, 
+                                    #374151 100%)`
+                                }}
+                              />
+                              <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+                                <div className="bg-gray-800 rounded-full w-8 h-8 flex items-center justify-center border-2 border-gray-600">
+                                  <span className="text-xs font-bold text-white">
+                                    {band.gain > 0 ? '+' : ''}{band.gain.toFixed(1)}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                            
+                            {/* Q Control Knob */}
+                            <div className="relative">
+                              <div className="w-12 h-12 bg-gradient-to-br from-gray-700 to-gray-800 rounded-full border-2 border-gray-600 flex items-center justify-center shadow-inner">
+                                <div className="w-8 h-8 bg-gradient-to-br from-gray-600 to-gray-700 rounded-full border border-gray-500 relative">
+                                  <input
+                                    type="range"
+                                    min="0.1"
+                                    max="10"
+                                    step="0.1"
+                                    value={band.q}
+                                    onChange={(e) => {
+                                      const newBands = [...audioEffects.gPrecisionEQ.bands];
+                                      newBands[index].q = parseFloat(e.target.value);
+                                      onUpdateEffectSettings('gPrecisionEQ', { bands: newBands });
+                                    }}
+                                    className="knob-input"
+                                  />
+                                  <div className="absolute inset-0 flex items-center justify-center">
+                                    <div className="w-1 h-3 bg-crys-gold rounded-full transform origin-bottom" 
+                                         style={{ transform: `rotate(${(band.q / 10) * 270 - 135}deg)` }}>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="text-center mt-1">
+                                <div className="text-xs text-gray-400">Q</div>
+                                <div className="text-xs font-bold text-white">{band.q.toFixed(1)}</div>
+                              </div>
+                            </div>
+                            
+                            {/* Frequency Control Knob */}
+                            <div className="relative mt-2">
+                              <div className="w-12 h-12 bg-gradient-to-br from-gray-700 to-gray-800 rounded-full border-2 border-gray-600 flex items-center justify-center shadow-inner">
+                                <div className="w-8 h-8 bg-gradient-to-br from-gray-600 to-gray-700 rounded-full border border-gray-500 relative">
+                                  <input
+                                    type="range"
+                                    min="20"
+                                    max="20000"
+                                    step="1"
+                                    value={band.frequency}
+                                    onChange={(e) => {
+                                      const newBands = [...audioEffects.gPrecisionEQ.bands];
+                                      newBands[index].frequency = parseFloat(e.target.value);
+                                      onUpdateEffectSettings('gPrecisionEQ', { bands: newBands });
+                                    }}
+                                    className="knob-input"
+                                  />
+                                  <div className="absolute inset-0 flex items-center justify-center">
+                                    <div className="w-1 h-3 bg-blue-500 rounded-full transform origin-bottom" 
+                                         style={{ transform: `rotate(${(Math.log10(band.frequency) - Math.log10(20)) / (Math.log10(20000) - Math.log10(20)) * 270 - 135}deg)` }}>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="text-center mt-1">
+                                <div className="text-xs text-gray-400">FREQ</div>
+                              </div>
+                            </div>
+                            
+                            {/* Band Type Selector */}
+                            <div className="mt-2">
+                              <select
+                                value={band.type}
+                                onChange={(e) => {
+                                  const newBands = [...audioEffects.gPrecisionEQ.bands];
+                                  newBands[index].type = e.target.value as 'peaking' | 'lowshelf' | 'highshelf';
+                                  onUpdateEffectSettings('gPrecisionEQ', { bands: newBands });
+                                }}
+                                className="bg-gray-800 text-white text-xs rounded px-2 py-1 border border-gray-600 focus:border-crys-gold focus:outline-none"
+                              >
+                                <option value="peaking">PEAK</option>
+                                <option value="lowshelf">LOW</option>
+                                <option value="highshelf">HIGH</option>
+                              </select>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      
+                      {/* EQ Response Display */}
+                      <div className="bg-black rounded-lg p-4 border border-gray-700">
+                        <div className="text-center mb-2">
+                          <span className="text-sm font-medium text-gray-300">FREQUENCY RESPONSE</span>
+                        </div>
+                        <div className="h-24 bg-gradient-to-b from-gray-900 to-gray-800 rounded border border-gray-700 relative overflow-hidden">
+                          {/* Simulated EQ curve */}
+                          <svg className="w-full h-full" viewBox="0 0 100 24">
+                            <path
+                              d="M 0 12 Q 10 8 20 10 Q 30 12 40 8 Q 50 4 60 6 Q 70 8 80 4 Q 90 2 100 6"
+                              stroke="#f59e0b"
+                              strokeWidth="0.5"
+                              fill="none"
+                            />
+                            <path
+                              d="M 0 12 Q 10 16 20 14 Q 30 12 40 16 Q 50 20 60 18 Q 70 16 80 20 Q 90 22 100 18"
+                              stroke="#ef4444"
+                              strokeWidth="0.5"
+                              fill="none"
+                            />
+                          </svg>
+                          {/* Frequency markers */}
+                          <div className="absolute bottom-0 left-0 right-0 flex justify-between text-xs text-gray-500 px-2">
+                            <span>20Hz</span>
+                            <span>200Hz</span>
+                            <span>2kHz</span>
+                            <span>20kHz</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Preset Buttons */}
+                    <div className="grid grid-cols-4 gap-3">
+                      <button
+                        onClick={() => {
+                          const presets = [
+                            { frequency: 60, gain: 0, q: 1, type: 'lowshelf' as const },
+                            { frequency: 150, gain: 0, q: 1, type: 'peaking' as const },
+                            { frequency: 400, gain: 0, q: 1, type: 'peaking' as const },
+                            { frequency: 1000, gain: 0, q: 1, type: 'peaking' as const },
+                            { frequency: 2500, gain: 0, q: 1, type: 'peaking' as const },
+                            { frequency: 6000, gain: 0, q: 1, type: 'peaking' as const },
+                            { frequency: 12000, gain: 0, q: 1, type: 'peaking' as const },
+                            { frequency: 16000, gain: 0, q: 1, type: 'highshelf' as const }
+                          ];
+                          onUpdateEffectSettings('gPrecisionEQ', { bands: presets });
+                        }}
+                        className="bg-gray-700 hover:bg-gray-600 text-white text-xs py-2 px-3 rounded border border-gray-600 transition-colors"
+                      >
+                        FLAT
+                      </button>
+                      <button
+                        onClick={() => {
+                          const presets = [
+                            { frequency: 60, gain: 3, q: 1, type: 'lowshelf' as const },
+                            { frequency: 150, gain: 2, q: 1, type: 'peaking' as const },
+                            { frequency: 400, gain: 1, q: 1, type: 'peaking' as const },
+                            { frequency: 1000, gain: 0, q: 1, type: 'peaking' as const },
+                            { frequency: 2500, gain: 1, q: 1, type: 'peaking' as const },
+                            { frequency: 6000, gain: 2, q: 1, type: 'peaking' as const },
+                            { frequency: 12000, gain: 3, q: 1, type: 'peaking' as const },
+                            { frequency: 16000, gain: 2, q: 1, type: 'highshelf' as const }
+                          ];
+                          onUpdateEffectSettings('gPrecisionEQ', { bands: presets });
+                        }}
+                        className="bg-gray-700 hover:bg-gray-600 text-white text-xs py-2 px-3 rounded border border-gray-600 transition-colors"
+                      >
+                        SMILE
+                      </button>
+                      <button
+                        onClick={() => {
+                          const presets = [
+                            { frequency: 60, gain: -2, q: 1, type: 'lowshelf' as const },
+                            { frequency: 150, gain: -1, q: 1, type: 'peaking' as const },
+                            { frequency: 400, gain: 0, q: 1, type: 'peaking' as const },
+                            { frequency: 1000, gain: 2, q: 1, type: 'peaking' as const },
+                            { frequency: 2500, gain: 3, q: 1, type: 'peaking' as const },
+                            { frequency: 6000, gain: 2, q: 1, type: 'peaking' as const },
+                            { frequency: 12000, gain: -1, q: 1, type: 'peaking' as const },
+                            { frequency: 16000, gain: -2, q: 1, type: 'highshelf' as const }
+                          ];
+                          onUpdateEffectSettings('gPrecisionEQ', { bands: presets });
+                        }}
+                        className="bg-gray-700 hover:bg-gray-600 text-white text-xs py-2 px-3 rounded border border-gray-600 transition-colors"
+                      >
+                        PRESENCE
+                      </button>
+                      <button
+                        onClick={() => {
+                          const presets = [
+                            { frequency: 60, gain: 4, q: 1, type: 'lowshelf' as const },
+                            { frequency: 150, gain: 2, q: 1, type: 'peaking' as const },
+                            { frequency: 400, gain: 0, q: 1, type: 'peaking' as const },
+                            { frequency: 1000, gain: -1, q: 1, type: 'peaking' as const },
+                            { frequency: 2500, gain: -2, q: 1, type: 'peaking' as const },
+                            { frequency: 6000, gain: -1, q: 1, type: 'peaking' as const },
+                            { frequency: 12000, gain: 0, q: 1, type: 'peaking' as const },
+                            { frequency: 16000, gain: 1, q: 1, type: 'highshelf' as const }
+                          ];
+                          onUpdateEffectSettings('gPrecisionEQ', { bands: presets });
+                        }}
+                        className="bg-gray-700 hover:bg-gray-600 text-white text-xs py-2 px-3 rounded border border-gray-600 transition-colors"
+                      >
+                        BASS
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
@@ -661,6 +902,77 @@ const AudioEffects: React.FC<AudioEffectsProps> = ({
           ))}
         </div>
       )}
+
+      {/* Hardware EQ Styles */}
+      <style>{`
+        .slider-vertical {
+          writing-mode: bt-lr;
+          -webkit-appearance: slider-vertical;
+          width: 8px;
+          height: 128px;
+          background: #374151;
+          outline: none;
+          border-radius: 4px;
+          cursor: pointer;
+        }
+        
+        .slider-vertical::-webkit-slider-thumb {
+          -webkit-appearance: none;
+          appearance: none;
+          width: 20px;
+          height: 20px;
+          border-radius: 50%;
+          background: #f59e0b;
+          cursor: pointer;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+          border: 2px solid #d97706;
+        }
+        
+        .slider-vertical::-moz-range-thumb {
+          width: 20px;
+          height: 20px;
+          border-radius: 50%;
+          background: #f59e0b;
+          cursor: pointer;
+          border: 2px solid #d97706;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .knob-input {
+          -webkit-appearance: none;
+          appearance: none;
+          width: 100%;
+          height: 100%;
+          background: transparent;
+          outline: none;
+          cursor: pointer;
+          position: absolute;
+          top: 0;
+          left: 0;
+          opacity: 0;
+        }
+        
+        .knob-input::-webkit-slider-thumb {
+          -webkit-appearance: none;
+          appearance: none;
+          width: 0;
+          height: 0;
+          background: transparent;
+          cursor: pointer;
+        }
+        
+        .knob-input::-moz-range-thumb {
+          width: 0;
+          height: 0;
+          background: transparent;
+          cursor: pointer;
+          border: none;
+        }
+        
+        .knob-input:focus {
+          outline: none;
+        }
+      `}</style>
     </div>
   );
 };
