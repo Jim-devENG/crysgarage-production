@@ -2,22 +2,18 @@ import React from 'react';
 import { Download } from 'lucide-react';
 
 interface ExportSettingsProps {
-  downloadFormat: 'wav' | 'mp3';
+  downloadFormat: 'mp3' | 'wav16' | 'wav24' | 'wav32';
   sampleRate: '44.1kHz' | '48kHz' | '88.2kHz' | '96kHz' | '192kHz';
-  bitDepth: '16bit' | '24bit' | '32bit';
-  onFormatChange: (format: 'wav' | 'mp3') => void;
+  onFormatChange: (format: 'mp3' | 'wav16' | 'wav24' | 'wav32') => void;
   onSampleRateChange: (rate: '44.1kHz' | '48kHz' | '88.2kHz' | '96kHz' | '192kHz') => void;
-  onBitDepthChange: (depth: '16bit' | '24bit' | '32bit') => void;
   totalCost: number;
 }
 
 const ExportSettings: React.FC<ExportSettingsProps> = ({
   downloadFormat,
   sampleRate,
-  bitDepth,
   onFormatChange,
   onSampleRateChange,
-  onBitDepthChange,
   totalCost
 }) => {
   return (
@@ -38,7 +34,7 @@ const ExportSettings: React.FC<ExportSettingsProps> = ({
                 name="format"
                 value="mp3"
                 checked={downloadFormat === 'mp3'}
-                onChange={(e) => onFormatChange(e.target.value as 'wav' | 'mp3')}
+                onChange={(e) => onFormatChange(e.target.value as 'mp3' | 'wav16' | 'wav24' | 'wav32')}
                 className="text-crys-gold"
               />
               <span>MP3 (320kbps) - Free</span>
@@ -47,9 +43,9 @@ const ExportSettings: React.FC<ExportSettingsProps> = ({
               <input
                 type="radio"
                 name="format"
-                value="wav"
-                checked={downloadFormat === 'wav'}
-                onChange={(e) => onFormatChange(e.target.value as 'wav' | 'mp3')}
+                value="wav16"
+                checked={downloadFormat === 'wav16'}
+                onChange={(e) => onFormatChange(e.target.value as 'mp3' | 'wav16' | 'wav24' | 'wav32')}
                 className="text-crys-gold"
               />
               <span>WAV (16bit) - Free</span>
@@ -58,9 +54,9 @@ const ExportSettings: React.FC<ExportSettingsProps> = ({
               <input
                 type="radio"
                 name="format"
-                value="wav"
-                checked={downloadFormat === 'wav'}
-                onChange={(e) => onFormatChange(e.target.value as 'wav' | 'mp3')}
+                value="wav24"
+                checked={downloadFormat === 'wav24'}
+                onChange={(e) => onFormatChange(e.target.value as 'mp3' | 'wav16' | 'wav24' | 'wav32')}
                 className="text-crys-gold"
               />
               <span>WAV (24bit) - Free</span>
@@ -69,9 +65,9 @@ const ExportSettings: React.FC<ExportSettingsProps> = ({
               <input
                 type="radio"
                 name="format"
-                value="wav"
-                checked={downloadFormat === 'wav'}
-                onChange={(e) => onFormatChange(e.target.value as 'wav' | 'mp3')}
+                value="wav32"
+                checked={downloadFormat === 'wav32'}
+                onChange={(e) => onFormatChange(e.target.value as 'mp3' | 'wav16' | 'wav24' | 'wav32')}
                 className="text-crys-gold"
               />
               <span>WAV (32bit) - $2</span>
