@@ -33,7 +33,8 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
           selectedGenre: parsed.selectedGenre || null,
           processedAudioUrl: parsed.processedAudioUrl || null,
           isProcessing: false, // Always reset processing state
-          downloadFormat: parsed.downloadFormat || 'wav'
+          downloadFormat: parsed.downloadFormat || 'wav',
+          fileInfo: parsed.fileInfo || null
         };
       }
     } catch (error) {
@@ -44,12 +45,14 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
       selectedGenre: null,
       processedAudioUrl: null,
       isProcessing: false,
-      downloadFormat: 'wav'
+      downloadFormat: 'wav',
+      fileInfo: null
     };
   };
 
   const [currentStep, setCurrentStep] = useState(loadStateFromStorage().currentStep);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [fileInfo, setFileInfo] = useState<{name: string, size: number, type: string} | null>(loadStateFromStorage().fileInfo);
   const [selectedGenre, setSelectedGenre] = useState<GenreType | null>(loadStateFromStorage().selectedGenre);
   const [processedAudioUrl, setProcessedAudioUrl] = useState<string | null>(loadStateFromStorage().processedAudioUrl);
   const [isProcessing, setIsProcessing] = useState(loadStateFromStorage().isProcessing);
@@ -75,9 +78,10 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
       selectedGenre,
       processedAudioUrl,
       isProcessing,
-      downloadFormat
+      downloadFormat,
+      fileInfo
     });
-  }, [currentStep, selectedGenre, processedAudioUrl, isProcessing, downloadFormat]);
+  }, [currentStep, selectedGenre, processedAudioUrl, isProcessing, downloadFormat, fileInfo]);
 
   // Debug audio elements
   useEffect(() => {
@@ -269,6 +273,7 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
     sessionStorage.removeItem('professionalTierState');
     setCurrentStep(1);
     setSelectedFile(null);
+    setFileInfo(null);
     setSelectedGenre(null);
     setProcessedAudioUrl(null);
     setIsProcessing(false);
@@ -283,6 +288,11 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
       // Clear previous state when starting a new session
       clearState();
       setSelectedFile(file);
+      setFileInfo({
+        name: file.name,
+        size: file.size,
+        type: file.type
+      });
       setCurrentStep(2);
       if (onFileUpload) {
         onFileUpload(file);
@@ -500,21 +510,36 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
                 </label>
               </div>
               
-              {selectedFile && (
+              {(selectedFile || fileInfo) && (
                 <div className="mt-6 bg-gray-800 rounded-xl p-6">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-3">
                       <FileAudio className="w-6 h-6 text-crys-gold" />
                       <div>
-                        <h4 className="font-semibold">{selectedFile.name}</h4>
+                        <h4 className="font-semibold">{selectedFile?.name || fileInfo?.name}</h4>
                         <p className="text-sm text-gray-400">
-                          {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+                          {selectedFile 
+                            ? (selectedFile.size / 1024 / 1024).toFixed(2) 
+                            : fileInfo 
+                              ? (fileInfo.size / 1024 / 1024).toFixed(2) 
+                              : '0'
+                          } MB
                         </p>
+                        {!selectedFile && fileInfo && (
+                          <p className="text-xs text-yellow-400 mt-1">
+                            ⚠️ File needs to be re-uploaded to continue
+                          </p>
+                        )}
                       </div>
                     </div>
                     <button
                       onClick={nextStep}
-                      className="bg-crys-gold text-black px-6 py-2 rounded-lg font-semibold hover:bg-yellow-400 transition-colors flex items-center space-x-2"
+                      disabled={!selectedFile}
+                      className={`px-6 py-2 rounded-lg font-semibold transition-colors flex items-center space-x-2 ${
+                        selectedFile 
+                          ? 'bg-crys-gold text-black hover:bg-yellow-400' 
+                          : 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                      }`}
                     >
                       <span>Next</span>
                       <ArrowRight className="w-4 h-4" />
