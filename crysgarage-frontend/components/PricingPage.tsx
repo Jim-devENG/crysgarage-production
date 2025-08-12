@@ -21,18 +21,10 @@ interface PricingPageProps {
 
 export function PricingPage({ onSelectTier, onGoToDashboard }: PricingPageProps) {
   const handleTierSelection = (tierId: string) => {
-    if (tierId === 'free') {
-      // Free tier - direct access
-      onSelectTier(tierId);
-      onGoToDashboard();
-    } else {
-      // Pro/Advanced tiers require payment
-      // For now, we'll simulate payment and then redirect
-      // In production, this would integrate with Stripe
-      alert(`Payment required for ${tierId} tier. Redirecting to payment...`);
-      onSelectTier(tierId);
-      onGoToDashboard();
-    }
+    console.log('PricingPage: Tier selection clicked:', tierId);
+    // Direct access to all tiers without payment popup
+    onSelectTier(tierId);
+    // Don't call onGoToDashboard here - let the App.tsx handle routing based on tier
   };
 
   const pricingTiers = [
@@ -57,7 +49,7 @@ export function PricingPage({ onSelectTier, onGoToDashboard }: PricingPageProps)
         "Limited file size"
       ],
       icon: <Star className="w-6 h-6" />,
-      buttonText: "Start Free Trial",
+      buttonText: "Try Free Trial",
       buttonVariant: "outline" as const,
       popular: false
     },
@@ -84,7 +76,7 @@ export function PricingPage({ onSelectTier, onGoToDashboard }: PricingPageProps)
         "Limited to 100 credits"
       ],
       icon: <Zap className="w-6 h-6" />,
-      buttonText: "Choose Professional",
+      buttonText: "Try Professional",
       buttonVariant: "default" as const,
       popular: true
     },
@@ -111,7 +103,7 @@ export function PricingPage({ onSelectTier, onGoToDashboard }: PricingPageProps)
       ],
       limitations: [],
       icon: <Crown className="w-6 h-6" />,
-      buttonText: "Go Advanced",
+      buttonText: "Try Advanced",
       buttonVariant: "default" as const,
       popular: false
     }

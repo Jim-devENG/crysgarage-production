@@ -72,8 +72,6 @@ function AppContent() {
       setCurrentPage('admin');
     } else if (path === '/dashboard') {
       setCurrentPage('dashboard');
-    } else if (path === '/professional') {
-      setCurrentPage('professional');
     } else if (path === '/pricing') {
       setCurrentPage('pricing');
     } else if (path === '/help') {
@@ -85,6 +83,7 @@ function AppContent() {
     } else if (path === '/') {
       setCurrentPage('landing');
     }
+    // Note: /professional and /advanced routes are removed to prevent direct access
   }, []);
 
   // Handle navigation with proper type conversion
@@ -113,24 +112,30 @@ function AppContent() {
           console.log('Setting current page to:', section);
           setCurrentPage(section);
     }
+    // Note: 'professional' and 'advanced' are intentionally excluded to prevent direct navigation
   };
 
   // Handle tier selection
   const handleTierSelection = (tierId: string) => {
+    console.log('Tier selection triggered:', tierId);
     setSelectedTier(tierId);
     
     // Route to appropriate dashboard based on tier
     switch (tierId) {
       case 'free':
+        console.log('Routing to free dashboard');
         setCurrentPage('dashboard'); // Free tier dashboard
         break;
       case 'professional':
+        console.log('Routing to professional dashboard');
         setCurrentPage('professional'); // Professional tier dashboard
         break;
       case 'advanced':
+        console.log('Routing to advanced dashboard');
         setCurrentPage('advanced'); // Advanced tier dashboard
         break;
       default:
+        console.log('Routing to default dashboard');
         setCurrentPage('dashboard');
     }
   };
@@ -194,39 +199,16 @@ function AppContent() {
           )}
           
           {currentPage === 'dashboard' && (
-            <>
-              {user.tier === 'free' && (
-                <FreeTierDashboard 
-                  onFileUpload={(file) => {
-                    // Handle file upload for free tier
-                    console.log('Free tier file upload:', file);
-                    // You can add upload logic here or call a function from context
-                  }}
-                  onUpgrade={() => setShowPaymentModal(true)}
-                  credits={user.credits || 0}
-                  isAuthenticated={true} // Pass authentication status
-                />
-              )}
-              {user.tier === 'pro' && (
-                <ProfessionalTierDashboard 
-                  onFileUpload={(file) => {
-                    // Handle file upload for professional tier
-                    console.log('Professional tier file upload:', file);
-                    // You can add upload logic here or call a function from context
-                  }}
-                  credits={user.credits || 0}
-                />
-              )}
-              {user.tier === 'advanced' && (
-                <AdvancedTierDashboard 
-                  onFileUpload={(file) => {
-                    // Handle file upload for advanced tier
-                    console.log('Advanced tier file upload:', file);
-                    // You can add upload logic here or call a function from context
-                  }}
-                />
-              )}
-            </>
+            <FreeTierDashboard 
+              onFileUpload={(file) => {
+                // Handle file upload for free tier
+                console.log('Free tier file upload:', file);
+                // You can add upload logic here or call a function from context
+              }}
+              onUpgrade={() => setShowPaymentModal(true)}
+              credits={user.credits || 0}
+              isAuthenticated={true} // Pass authentication status
+            />
           )}
           
           {currentPage === 'professional' && (
