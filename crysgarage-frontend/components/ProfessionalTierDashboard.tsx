@@ -22,16 +22,62 @@ interface ProfessionalTierDashboardProps {
 }
 
 const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ onFileUpload, credits = 0 }) => {
-  const [currentStep, setCurrentStep] = useState(1);
+  // Load state from sessionStorage on component mount
+  const loadStateFromStorage = () => {
+    try {
+      const savedState = sessionStorage.getItem('professionalTierState');
+      if (savedState) {
+        const parsed = JSON.parse(savedState);
+        return {
+          currentStep: parsed.currentStep || 1,
+          selectedGenre: parsed.selectedGenre || null,
+          processedAudioUrl: parsed.processedAudioUrl || null,
+          isProcessing: false, // Always reset processing state
+          downloadFormat: parsed.downloadFormat || 'wav'
+        };
+      }
+    } catch (error) {
+      console.error('Error loading state from storage:', error);
+    }
+    return {
+      currentStep: 1,
+      selectedGenre: null,
+      processedAudioUrl: null,
+      isProcessing: false,
+      downloadFormat: 'wav'
+    };
+  };
+
+  const [currentStep, setCurrentStep] = useState(loadStateFromStorage().currentStep);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [selectedGenre, setSelectedGenre] = useState<GenreType | null>(null);
-  const [processedAudioUrl, setProcessedAudioUrl] = useState<string | null>(null);
-  const [isProcessing, setIsProcessing] = useState(false);
+  const [selectedGenre, setSelectedGenre] = useState<GenreType | null>(loadStateFromStorage().selectedGenre);
+  const [processedAudioUrl, setProcessedAudioUrl] = useState<string | null>(loadStateFromStorage().processedAudioUrl);
+  const [isProcessing, setIsProcessing] = useState(loadStateFromStorage().isProcessing);
   const [isPlayingOriginal, setIsPlayingOriginal] = useState(false);
   const [isPlayingMastered, setIsPlayingMastered] = useState(false);
   const [originalAudioElement, setOriginalAudioElement] = useState<HTMLAudioElement | null>(null);
   const [masteredAudioElement, setMasteredAudioElement] = useState<HTMLAudioElement | null>(null);
-  const [downloadFormat, setDownloadFormat] = useState<'wav' | 'mp3'>('wav');
+  const [downloadFormat, setDownloadFormat] = useState<'wav' | 'mp3'>(loadStateFromStorage().downloadFormat);
+
+  // Save state to sessionStorage whenever it changes
+  const saveStateToStorage = (state: any) => {
+    try {
+      sessionStorage.setItem('professionalTierState', JSON.stringify(state));
+    } catch (error) {
+      console.error('Error saving state to storage:', error);
+    }
+  };
+
+  // Save state whenever relevant state changes
+  useEffect(() => {
+    saveStateToStorage({
+      currentStep,
+      selectedGenre,
+      processedAudioUrl,
+      isProcessing,
+      downloadFormat
+    });
+  }, [currentStep, selectedGenre, processedAudioUrl, isProcessing, downloadFormat]);
 
   // Debug audio elements
   useEffect(() => {
@@ -219,13 +265,25 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
     }
   };
 
+  const clearState = () => {
+    sessionStorage.removeItem('professionalTierState');
+    setCurrentStep(1);
+    setSelectedFile(null);
+    setSelectedGenre(null);
+    setProcessedAudioUrl(null);
+    setIsProcessing(false);
+    setOriginalAudioElement(null);
+    setMasteredAudioElement(null);
+    setDownloadFormat('wav');
+  };
+
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
+      // Clear previous state when starting a new session
+      clearState();
       setSelectedFile(file);
-      setProcessedAudioUrl(null); // Clear previous processed audio
-      setOriginalAudioElement(null); // Clear previous audio elements
-      setMasteredAudioElement(null);
+      setCurrentStep(2);
       if (onFileUpload) {
         onFileUpload(file);
       }
@@ -399,8 +457,20 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
     return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black text-white">
       <div className="max-w-7xl mx-auto px-4 py-6">
-        <h1 className="text-3xl font-bold text-crys-gold mb-6">Professional Tier Dashboard</h1>
-        <p className="text-gray-400 mb-6">Step {currentStep} of 3</p>
+        <div className="flex justify-between items-center mb-6">
+          <div>
+            <h1 className="text-3xl font-bold text-crys-gold">Professional Tier Dashboard</h1>
+            <p className="text-gray-400">Step {currentStep} of 3</p>
+          </div>
+          {currentStep > 1 && (
+            <button
+              onClick={clearState}
+              className="bg-gray-700 text-white px-4 py-2 rounded-lg font-semibold hover:bg-gray-600 transition-colors"
+            >
+              Start New Session
+            </button>
+          )}
+        </div>
         
         {/* Step 1: File Upload */}
         {currentStep === 1 && (
