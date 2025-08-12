@@ -191,6 +191,7 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
   // File upload handler
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
+    console.log('File upload triggered:', file);
     if (file) {
       clearState();
       setSelectedFile(file);
@@ -199,6 +200,7 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
         size: file.size,
         type: file.type
       });
+      console.log('File set successfully:', file.name);
       // Don't automatically proceed - let user click "Enter Studio" button
       if (onFileUpload) {
         onFileUpload(file);
@@ -428,7 +430,10 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
             selectedFile={selectedFile}
             fileInfo={fileInfo}
             onFileUpload={handleFileUpload}
-            onContinue={() => setCurrentStep(2)}
+            onContinue={() => {
+              console.log('onContinue called, setting currentStep to 2');
+              setCurrentStep(2);
+            }}
           />
         )}
 

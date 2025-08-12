@@ -59,8 +59,13 @@ const FileUpload: React.FC<FileUploadProps> = ({
           </label>
         </div>
         
-        {(selectedFile || fileInfo) && (
-          <div className="mt-6 bg-gray-800 rounded-xl p-6">
+        {/* Always show file info section when file is uploaded */}
+        <div className="mt-6 bg-gray-800 rounded-xl p-6">
+          {selectedFile && (
+            <div className="mb-4 p-3 bg-green-900/30 border border-green-500 rounded-lg">
+              <p className="text-green-400 text-sm font-medium">✅ File uploaded successfully!</p>
+            </div>
+          )}
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center space-x-3">
                 <FileAudio className="w-6 h-6 text-crys-gold" />
@@ -86,22 +91,36 @@ const FileUpload: React.FC<FileUploadProps> = ({
             {/* Prominent Next Button */}
             <div className="text-center">
               <button
-                onClick={onContinue}
+                onClick={() => {
+                  console.log('Enter Studio button clicked!');
+                  onContinue();
+                }}
                 disabled={!selectedFile}
-                className={`px-8 py-3 rounded-lg font-semibold transition-all transform hover:scale-105 flex items-center space-x-3 mx-auto ${
+                className={`px-8 py-4 rounded-xl font-bold text-lg transition-all transform hover:scale-105 flex items-center space-x-3 mx-auto ${
                   selectedFile 
-                    ? 'bg-gradient-to-r from-crys-gold to-yellow-400 text-black shadow-lg hover:shadow-xl' 
+                    ? 'bg-gradient-to-r from-crys-gold to-yellow-400 text-black shadow-lg hover:shadow-xl border-2 border-yellow-300' 
                     : 'bg-gray-600 text-gray-400 cursor-not-allowed'
                 }`}
               >
-                <span className="text-lg">Enter Studio</span>
-                <Zap className="w-5 h-5" />
+                <span className="text-xl">Enter Studio</span>
+                <Zap className="w-6 h-6" />
               </button>
               {selectedFile && (
-                <p className="text-sm text-gray-400 mt-2">
+                <p className="text-sm text-gray-400 mt-3">
                   Ready to start mastering your audio
                 </p>
               )}
+              {!selectedFile && (
+                <p className="text-sm text-red-400 mt-3">
+                  Please upload a file first
+                </p>
+              )}
+              
+              {/* Debug info */}
+              <div className="mt-4 p-2 bg-gray-900 rounded text-xs text-gray-500">
+                Debug: selectedFile = {selectedFile ? selectedFile.name : 'null'}, 
+                fileInfo = {fileInfo ? fileInfo.name : 'null'}
+              </div>
             </div>
           </div>
         )}
