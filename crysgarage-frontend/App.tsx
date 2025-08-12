@@ -63,30 +63,61 @@ function AppContent() {
     }
   };
 
-  // URL-based routing
+  // URL-based routing with browser history support
   useEffect(() => {
-    const path = window.location.pathname;
-    console.log('Current path:', path);
-    
-    if (path === '/admin') {
-      setCurrentPage('admin');
-    } else if (path === '/dashboard') {
-      setCurrentPage('dashboard');
-    } else if (path === '/pricing') {
-      setCurrentPage('pricing');
-    } else if (path === '/help') {
-      setCurrentPage('help');
-    } else if (path === '/courses') {
-      setCurrentPage('courses');
-    } else if (path === '/profile') {
-      setCurrentPage('profile');
-    } else if (path === '/') {
-      setCurrentPage('landing');
-    }
-    // Note: /professional and /advanced routes are removed to prevent direct access
-  }, []);
+    const handleRouteChange = () => {
+      const path = window.location.pathname;
+      console.log('Current path:', path);
+      
+      if (path === '/admin') {
+        setCurrentPage('admin');
+      } else if (path === '/dashboard') {
+        setCurrentPage('dashboard');
+      } else if (path === '/professional') {
+        setCurrentPage('professional');
+      } else if (path === '/advanced') {
+        setCurrentPage('advanced');
+      } else if (path === '/pricing') {
+        setCurrentPage('pricing');
+      } else if (path === '/help') {
+        setCurrentPage('help');
+      } else if (path === '/courses') {
+        setCurrentPage('courses');
+      } else if (path === '/profile') {
+        setCurrentPage('profile');
+      } else if (path === '/') {
+        setCurrentPage('landing');
+      } else {
+        // Default to landing page for unknown routes
+        setCurrentPage('landing');
+      }
+    };
 
-  // Handle navigation with proper type conversion
+    // Handle initial route
+    handleRouteChange();
+
+    // Listen for browser navigation (back/forward buttons)
+    window.addEventListener('popstate', handleRouteChange);
+
+    // Prevent accidental page closure during processing
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (currentPage === 'professional' || currentPage === 'advanced') {
+        const message = 'Are you sure you want to leave? Your audio processing progress may be lost.';
+        e.preventDefault();
+        e.returnValue = message;
+        return message;
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener('popstate', handleRouteChange);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [currentPage]);
+
+  // Handle navigation with proper type conversion and browser history
   const handleNavigation = (section: string) => {
     console.log('Navigation requested to:', section);
     
@@ -105,17 +136,52 @@ function AppContent() {
       return;
     }
     
-    // Handle page navigation
-    if (section === 'landing' || section === 'home' || section === 'dashboard' || section === 'processing' || 
-        section === 'results' || section === 'pricing' || section === 'help' || 
-        section === 'courses' || section === 'marketplace' || section === 'profile' || section === 'admin') {
-          console.log('Setting current page to:', section);
-          setCurrentPage(section);
+    // Handle page navigation with browser history
+    if (section === 'landing' || section === 'home') {
+      console.log('Setting current page to: landing');
+      setCurrentPage('landing');
+      window.history.pushState({}, '', '/');
+    } else if (section === 'dashboard') {
+      console.log('Setting current page to: dashboard');
+      setCurrentPage('dashboard');
+      window.history.pushState({}, '', '/dashboard');
+    } else if (section === 'processing') {
+      console.log('Setting current page to: processing');
+      setCurrentPage('processing');
+      window.history.pushState({}, '', '/processing');
+    } else if (section === 'results') {
+      console.log('Setting current page to: results');
+      setCurrentPage('results');
+      window.history.pushState({}, '', '/results');
+    } else if (section === 'pricing') {
+      console.log('Setting current page to: pricing');
+      setCurrentPage('pricing');
+      window.history.pushState({}, '', '/pricing');
+    } else if (section === 'help') {
+      console.log('Setting current page to: help');
+      setCurrentPage('help');
+      window.history.pushState({}, '', '/help');
+    } else if (section === 'courses') {
+      console.log('Setting current page to: courses');
+      setCurrentPage('courses');
+      window.history.pushState({}, '', '/courses');
+    } else if (section === 'marketplace') {
+      console.log('Setting current page to: marketplace');
+      setCurrentPage('marketplace');
+      window.history.pushState({}, '', '/marketplace');
+    } else if (section === 'profile') {
+      console.log('Setting current page to: profile');
+      setCurrentPage('profile');
+      window.history.pushState({}, '', '/profile');
+    } else if (section === 'admin') {
+      console.log('Setting current page to: admin');
+      setCurrentPage('admin');
+      window.history.pushState({}, '', '/admin');
     }
     // Note: 'professional' and 'advanced' are intentionally excluded to prevent direct navigation
   };
 
-  // Handle tier selection
+  // Handle tier selection with browser history
   const handleTierSelection = (tierId: string) => {
     console.log('Tier selection triggered:', tierId);
     setSelectedTier(tierId);
@@ -125,18 +191,22 @@ function AppContent() {
       case 'free':
         console.log('Routing to free dashboard');
         setCurrentPage('dashboard'); // Free tier dashboard
+        window.history.pushState({}, '', '/dashboard');
         break;
       case 'professional':
         console.log('Routing to professional dashboard');
         setCurrentPage('professional'); // Professional tier dashboard
+        window.history.pushState({}, '', '/professional');
         break;
       case 'advanced':
         console.log('Routing to advanced dashboard');
         setCurrentPage('advanced'); // Advanced tier dashboard
+        window.history.pushState({}, '', '/advanced');
         break;
       default:
         console.log('Routing to default dashboard');
         setCurrentPage('dashboard');
+        window.history.pushState({}, '', '/dashboard');
     }
   };
 
