@@ -117,12 +117,12 @@ const StudioDashboard: React.FC<StudioDashboardProps> = ({
         )}
 
         {activeTab === 'advanced' && (
-          <AdvancedFeatures
-            audioEffects={audioEffects}
-            onUpdateEffectSettings={onUpdateEffectSettings}
-            onToggleEffect={onToggleEffect}
-            onManualInit={onManualInit}
-          />
+                      <AdvancedFeatures
+              audioEffects={audioEffects}
+              onUpdateEffectSettings={onUpdateEffectSettings}
+              onTogglePremiumEffect={onToggleEffect}
+              onManualInit={onManualInit}
+            />
         )}
       </div>
     </div>

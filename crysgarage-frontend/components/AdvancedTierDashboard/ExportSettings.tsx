@@ -1,5 +1,5 @@
 import React from 'react';
-import { Download } from 'lucide-react';
+import { Download, Settings, DollarSign } from 'lucide-react';
 
 interface ExportSettingsProps {
   downloadFormat: 'mp3' | 'wav16' | 'wav24' | 'wav32';
@@ -17,18 +17,42 @@ const ExportSettings: React.FC<ExportSettingsProps> = ({
   totalCost
 }) => {
   return (
-    <div className="bg-gradient-to-br from-gray-800 to-gray-700 rounded-xl p-6 border border-gray-600">
-      <h3 className="text-xl font-bold text-crys-gold mb-4 flex items-center">
-        <Download className="w-5 h-5 mr-2" />
-        Export Settings
-      </h3>
+    <div className="space-y-3">
+      {/* Export Settings Header */}
+      <div className="text-center mb-4">
+        <h3 className="text-lg font-bold text-white mb-2">Export Gate</h3>
+        <p className="text-sm text-gray-400">Professional audio export settings</p>
+      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Format Selection */}
-        <div>
-          <h4 className="text-lg font-semibold mb-3">Format</h4>
+      {/* Format Selection - Compact Card */}
+      <div className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 rounded-lg border border-gray-700 shadow-lg overflow-hidden w-full max-w-sm mx-auto">
+        {/* Header */}
+        <div className="bg-gradient-to-r from-gray-800 to-gray-700 p-2 border-b border-gray-600">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-1.5">
+              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse shadow-sm"></div>
+              <div className="flex items-center space-x-1">
+                <div className="bg-gradient-to-r from-crys-gold to-yellow-500 p-0.5 rounded">
+                  <Download className="w-2.5 h-2.5 text-gray-900" />
+                </div>
+                <div>
+                  <h3 className="text-xs font-bold text-white">CRYS GARAGE STUDIO</h3>
+                  <p className="text-[8px] text-gray-400">EXPORT FORMAT</p>
+                </div>
+              </div>
+            </div>
+            <div className="flex space-x-0.5">
+              <div className="w-1 h-1 bg-gray-600 rounded-full border border-gray-500"></div>
+              <div className="w-1 h-1 bg-gray-600 rounded-full border border-gray-500"></div>
+              <div className="w-1 h-1 bg-gray-600 rounded-full border border-gray-500"></div>
+            </div>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="p-3">
           <div className="space-y-2">
-            <label className="flex items-center space-x-3 cursor-pointer">
+            <label className="flex items-center space-x-2 cursor-pointer p-1.5 rounded hover:bg-gray-800 transition-colors">
               <input
                 type="radio"
                 name="format"
@@ -37,9 +61,10 @@ const ExportSettings: React.FC<ExportSettingsProps> = ({
                 onChange={(e) => onFormatChange(e.target.value as 'mp3' | 'wav16' | 'wav24' | 'wav32')}
                 className="text-crys-gold"
               />
-              <span>MP3 (320kbps) - Free</span>
+              <span className="text-xs text-white">MP3 (320kbps)</span>
+              <span className="text-[8px] text-green-400 ml-auto">FREE</span>
             </label>
-            <label className="flex items-center space-x-3 cursor-pointer">
+            <label className="flex items-center space-x-2 cursor-pointer p-1.5 rounded hover:bg-gray-800 transition-colors">
               <input
                 type="radio"
                 name="format"
@@ -48,9 +73,10 @@ const ExportSettings: React.FC<ExportSettingsProps> = ({
                 onChange={(e) => onFormatChange(e.target.value as 'mp3' | 'wav16' | 'wav24' | 'wav32')}
                 className="text-crys-gold"
               />
-              <span>WAV (16bit) - Free</span>
+              <span className="text-xs text-white">WAV (16bit)</span>
+              <span className="text-[8px] text-green-400 ml-auto">FREE</span>
             </label>
-            <label className="flex items-center space-x-3 cursor-pointer">
+            <label className="flex items-center space-x-2 cursor-pointer p-1.5 rounded hover:bg-gray-800 transition-colors">
               <input
                 type="radio"
                 name="format"
@@ -59,9 +85,10 @@ const ExportSettings: React.FC<ExportSettingsProps> = ({
                 onChange={(e) => onFormatChange(e.target.value as 'mp3' | 'wav16' | 'wav24' | 'wav32')}
                 className="text-crys-gold"
               />
-              <span>WAV (24bit) - Free</span>
+              <span className="text-xs text-white">WAV (24bit)</span>
+              <span className="text-[8px] text-green-400 ml-auto">FREE</span>
             </label>
-            <label className="flex items-center space-x-3 cursor-pointer">
+            <label className="flex items-center space-x-2 cursor-pointer p-1.5 rounded hover:bg-gray-800 transition-colors">
               <input
                 type="radio"
                 name="format"
@@ -70,16 +97,59 @@ const ExportSettings: React.FC<ExportSettingsProps> = ({
                 onChange={(e) => onFormatChange(e.target.value as 'mp3' | 'wav16' | 'wav24' | 'wav32')}
                 className="text-crys-gold"
               />
-              <span>WAV (32bit) - $2</span>
+              <span className="text-xs text-white">WAV (32bit)</span>
+              <span className="text-[8px] text-crys-gold ml-auto">$2</span>
             </label>
           </div>
         </div>
 
-        {/* Sample Rate Selection */}
-        <div>
-          <h4 className="text-lg font-semibold mb-3">Sample Rate</h4>
+        {/* Footer */}
+        <div className="bg-gradient-to-r from-gray-700 to-gray-800 p-1.5 border-t border-gray-600">
+          <div className="flex justify-between items-center">
+            <div className="flex space-x-0.5">
+              <div className="w-0.5 h-0.5 bg-gray-500 rounded-full"></div>
+              <div className="w-0.5 h-0.5 bg-gray-500 rounded-full"></div>
+              <div className="w-0.5 h-0.5 bg-gray-500 rounded-full"></div>
+            </div>
+            <div className="text-[6px] text-gray-500">CRYS GARAGE EXPORT FORMAT v1.0.0</div>
+            <div className="flex space-x-0.5">
+              <div className="w-0.5 h-0.5 bg-gray-500 rounded-full"></div>
+              <div className="w-0.5 h-0.5 bg-gray-500 rounded-full"></div>
+              <div className="w-0.5 h-0.5 bg-gray-500 rounded-full"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Sample Rate Selection - Compact Card */}
+      <div className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 rounded-lg border border-gray-700 shadow-lg overflow-hidden w-full max-w-sm mx-auto">
+        {/* Header */}
+        <div className="bg-gradient-to-r from-gray-800 to-gray-700 p-2 border-b border-gray-600">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-1.5">
+              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse shadow-sm"></div>
+              <div className="flex items-center space-x-1">
+                <div className="bg-gradient-to-r from-crys-gold to-yellow-500 p-0.5 rounded">
+                  <Settings className="w-2.5 h-2.5 text-gray-900" />
+                </div>
+                <div>
+                  <h3 className="text-xs font-bold text-white">CRYS GARAGE STUDIO</h3>
+                  <p className="text-[8px] text-gray-400">SAMPLE RATE</p>
+                </div>
+              </div>
+            </div>
+            <div className="flex space-x-0.5">
+              <div className="w-1 h-1 bg-gray-600 rounded-full border border-gray-500"></div>
+              <div className="w-1 h-1 bg-gray-600 rounded-full border border-gray-500"></div>
+              <div className="w-1 h-1 bg-gray-600 rounded-full border border-gray-500"></div>
+            </div>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="p-3">
           <div className="space-y-2">
-            <label className="flex items-center space-x-3 cursor-pointer">
+            <label className="flex items-center space-x-2 cursor-pointer p-1.5 rounded hover:bg-gray-800 transition-colors">
               <input
                 type="radio"
                 name="sampleRate"
@@ -88,9 +158,10 @@ const ExportSettings: React.FC<ExportSettingsProps> = ({
                 onChange={(e) => onSampleRateChange(e.target.value as any)}
                 className="text-crys-gold"
               />
-              <span>44.1kHz - Free</span>
+              <span className="text-xs text-white">44.1kHz</span>
+              <span className="text-[8px] text-green-400 ml-auto">FREE</span>
             </label>
-            <label className="flex items-center space-x-3 cursor-pointer">
+            <label className="flex items-center space-x-2 cursor-pointer p-1.5 rounded hover:bg-gray-800 transition-colors">
               <input
                 type="radio"
                 name="sampleRate"
@@ -99,9 +170,10 @@ const ExportSettings: React.FC<ExportSettingsProps> = ({
                 onChange={(e) => onSampleRateChange(e.target.value as any)}
                 className="text-crys-gold"
               />
-              <span>48kHz - Free</span>
+              <span className="text-xs text-white">48kHz</span>
+              <span className="text-[8px] text-green-400 ml-auto">FREE</span>
             </label>
-            <label className="flex items-center space-x-3 cursor-pointer">
+            <label className="flex items-center space-x-2 cursor-pointer p-1.5 rounded hover:bg-gray-800 transition-colors">
               <input
                 type="radio"
                 name="sampleRate"
@@ -110,9 +182,10 @@ const ExportSettings: React.FC<ExportSettingsProps> = ({
                 onChange={(e) => onSampleRateChange(e.target.value as any)}
                 className="text-crys-gold"
               />
-              <span>88.2kHz - $3</span>
+              <span className="text-xs text-white">88.2kHz</span>
+              <span className="text-[8px] text-crys-gold ml-auto">$3</span>
             </label>
-            <label className="flex items-center space-x-3 cursor-pointer">
+            <label className="flex items-center space-x-2 cursor-pointer p-1.5 rounded hover:bg-gray-800 transition-colors">
               <input
                 type="radio"
                 name="sampleRate"
@@ -121,9 +194,10 @@ const ExportSettings: React.FC<ExportSettingsProps> = ({
                 onChange={(e) => onSampleRateChange(e.target.value as any)}
                 className="text-crys-gold"
               />
-              <span>96kHz - $5</span>
+              <span className="text-xs text-white">96kHz</span>
+              <span className="text-[8px] text-crys-gold ml-auto">$5</span>
             </label>
-            <label className="flex items-center space-x-3 cursor-pointer">
+            <label className="flex items-center space-x-2 cursor-pointer p-1.5 rounded hover:bg-gray-800 transition-colors">
               <input
                 type="radio"
                 name="sampleRate"
@@ -132,17 +206,78 @@ const ExportSettings: React.FC<ExportSettingsProps> = ({
                 onChange={(e) => onSampleRateChange(e.target.value as any)}
                 className="text-crys-gold"
               />
-              <span>192kHz - $10</span>
+              <span className="text-xs text-white">192kHz</span>
+              <span className="text-[8px] text-crys-gold ml-auto">$10</span>
             </label>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="bg-gradient-to-r from-gray-700 to-gray-800 p-1.5 border-t border-gray-600">
+          <div className="flex justify-between items-center">
+            <div className="flex space-x-0.5">
+              <div className="w-0.5 h-0.5 bg-gray-500 rounded-full"></div>
+              <div className="w-0.5 h-0.5 bg-gray-500 rounded-full"></div>
+              <div className="w-0.5 h-0.5 bg-gray-500 rounded-full"></div>
+            </div>
+            <div className="text-[6px] text-gray-500">CRYS GARAGE SAMPLE RATE v1.0.0</div>
+            <div className="flex space-x-0.5">
+              <div className="w-0.5 h-0.5 bg-gray-500 rounded-full"></div>
+              <div className="w-0.5 h-0.5 bg-gray-500 rounded-full"></div>
+              <div className="w-0.5 h-0.5 bg-gray-500 rounded-full"></div>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Cost Summary */}
-      <div className="mt-6 bg-gray-900 rounded-lg p-4">
-        <div className="flex justify-between items-center">
-          <span className="text-lg font-semibold">Total Cost:</span>
-          <span className="text-2xl font-bold text-crys-gold">${totalCost}</span>
+      {/* Cost Summary - Compact Card */}
+      <div className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 rounded-lg border border-gray-700 shadow-lg overflow-hidden w-full max-w-sm mx-auto">
+        {/* Header */}
+        <div className="bg-gradient-to-r from-gray-800 to-gray-700 p-2 border-b border-gray-600">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-1.5">
+              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse shadow-sm"></div>
+              <div className="flex items-center space-x-1">
+                <div className="bg-gradient-to-r from-crys-gold to-yellow-500 p-0.5 rounded">
+                  <DollarSign className="w-2.5 h-2.5 text-gray-900" />
+                </div>
+                <div>
+                  <h3 className="text-xs font-bold text-white">CRYS GARAGE STUDIO</h3>
+                  <p className="text-[8px] text-gray-400">COST SUMMARY</p>
+                </div>
+              </div>
+            </div>
+            <div className="flex space-x-0.5">
+              <div className="w-1 h-1 bg-gray-600 rounded-full border border-gray-500"></div>
+              <div className="w-1 h-1 bg-gray-600 rounded-full border border-gray-500"></div>
+              <div className="w-1 h-1 bg-gray-600 rounded-full border border-gray-500"></div>
+            </div>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="p-3">
+          <div className="flex justify-between items-center">
+            <span className="text-sm font-semibold text-white">Total Cost:</span>
+            <span className="text-xl font-bold text-crys-gold">${totalCost}</span>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="bg-gradient-to-r from-gray-700 to-gray-800 p-1.5 border-t border-gray-600">
+          <div className="flex justify-between items-center">
+            <div className="flex space-x-0.5">
+              <div className="w-0.5 h-0.5 bg-gray-500 rounded-full"></div>
+              <div className="w-0.5 h-0.5 bg-gray-500 rounded-full"></div>
+              <div className="w-0.5 h-0.5 bg-gray-500 rounded-full"></div>
+            </div>
+            <div className="text-[6px] text-gray-500">CRYS GARAGE COST SUMMARY v1.0.0</div>
+            <div className="flex space-x-0.5">
+              <div className="w-0.5 h-0.5 bg-gray-500 rounded-full"></div>
+              <div className="w-0.5 h-0.5 bg-gray-500 rounded-full"></div>
+              <div className="w-0.5 h-0.5 bg-gray-500 rounded-full"></div>
+            </div>
+          </div>
         </div>
       </div>
     </div>

@@ -61,14 +61,35 @@ const PremiumEffects: React.FC<PremiumEffectsProps> = ({
         />
       </div>
 
-      {/* G-Precision EQ */}
-      <StudioRack title="G-Precision EQ">
-        <div className="p-2 border-b border-gray-700">
-          <div className="flex items-center justify-between mb-2">
-            <h5 className="text-white font-medium text-sm flex items-center">
-              <Settings className="w-3 h-3 mr-1 text-crys-gold" />
-              G-Precision 8-Band EQ
-            </h5>
+      {/* G-Precision EQ - Compact Card */}
+      <div className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 rounded-lg border border-gray-700 shadow-lg overflow-hidden w-full max-w-sm mx-auto">
+        {/* Header */}
+        <div className="bg-gradient-to-r from-gray-800 to-gray-700 p-2 border-b border-gray-600">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-1.5">
+              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse shadow-sm"></div>
+              <div className="flex items-center space-x-1">
+                <div className="bg-gradient-to-r from-crys-gold to-yellow-500 p-0.5 rounded">
+                  <Settings className="w-2.5 h-2.5 text-gray-900" />
+                </div>
+                <div>
+                  <h3 className="text-xs font-bold text-white">CRYS GARAGE STUDIO</h3>
+                  <p className="text-[8px] text-gray-400">G-PRECISION 8-BAND EQ</p>
+                </div>
+              </div>
+            </div>
+            <div className="flex space-x-0.5">
+              <div className="w-1 h-1 bg-gray-600 rounded-full border border-gray-500"></div>
+              <div className="w-1 h-1 bg-gray-600 rounded-full border border-gray-500"></div>
+              <div className="w-1 h-1 bg-gray-600 rounded-full border border-gray-500"></div>
+            </div>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="p-3">
+          <div className="flex items-center justify-between mb-3">
+            <h4 className="text-white font-semibold text-xs">G-Precision EQ</h4>
             <label className="flex items-center">
               <input
                 type="checkbox"
@@ -76,43 +97,91 @@ const PremiumEffects: React.FC<PremiumEffectsProps> = ({
                 onChange={(e) => onTogglePremiumEffect('gPrecisionEQ', e.target.checked)}
                 className="mr-1"
               />
-              <span className="text-gray-300 text-xs">Enable</span>
+              <span className="text-gray-300 text-[10px]">Enable</span>
             </label>
           </div>
+
           {audioEffects.gPrecisionEQ?.enabled && (
             <div className="grid grid-cols-4 gap-1.5">
               {audioEffects.gPrecisionEQ.bands?.map((band: any, index: number) => (
                 <div key={index} className="text-center">
-                  <HardwareKnob
-                    value={band.gain || 0}
-                    onChange={(value) => {
+                  <div className="relative w-10 h-10 mx-auto mb-1">
+                    <div className="w-full h-full rounded-full bg-gradient-to-br from-gray-700 to-gray-800 border border-gray-600 shadow-inner flex items-center justify-center">
+                      <div className="w-7 h-7 rounded-full bg-gradient-to-br from-gray-600 to-gray-700 border border-gray-500 flex items-center justify-center">
+                        <div className="w-0.5 h-3 bg-crys-gold rounded-full transform origin-bottom" 
+                             style={{ transform: `rotate(${(band.gain + 12) * 3}deg)` }}></div>
+                      </div>
+                    </div>
+                    <div className="absolute -bottom-0.5 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-crys-gold rounded-full"></div>
+                  </div>
+                  <div className="text-crys-gold font-mono text-[8px] mb-0.5">{band.gain.toFixed(1)}dB</div>
+                  <div className="text-gray-400 text-[6px]">{band.frequency}Hz</div>
+                  <input
+                    type="range"
+                    min="-12"
+                    max="12"
+                    step="0.5"
+                    value={band.gain}
+                    onChange={(e) => {
                       const newBands = [...audioEffects.gPrecisionEQ.bands];
-                      newBands[index] = { ...band, gain: value };
+                      newBands[index] = { ...band, gain: parseFloat(e.target.value) };
                       onUpdateEffectSettings('gPrecisionEQ', { ...audioEffects.gPrecisionEQ, bands: newBands });
                     }}
-                    min={-12}
-                    max={12}
-                    step={0.5}
-                    label={`${band.frequency}Hz`}
-                    unit="dB"
-                    size="small"
-                    onKnobClick={onManualInit}
+                    className="w-full mt-1"
                   />
                 </div>
               ))}
             </div>
           )}
         </div>
-      </StudioRack>
 
-      {/* G-Digital Tape */}
-      <StudioRack title="G-Digital Tape">
-        <div className="p-2 border-b border-gray-700">
-          <div className="flex items-center justify-between mb-2">
-            <h5 className="text-white font-medium text-sm flex items-center">
-              <Target className="w-3 h-3 mr-1 text-crys-gold" />
-              G-Digital Tape Machine
-            </h5>
+        {/* Footer */}
+        <div className="bg-gradient-to-r from-gray-700 to-gray-800 p-1.5 border-t border-gray-600">
+          <div className="flex justify-between items-center">
+            <div className="flex space-x-0.5">
+              <div className="w-0.5 h-0.5 bg-gray-500 rounded-full"></div>
+              <div className="w-0.5 h-0.5 bg-gray-500 rounded-full"></div>
+              <div className="w-0.5 h-0.5 bg-gray-500 rounded-full"></div>
+            </div>
+            <div className="text-[6px] text-gray-500">CRYS GARAGE G-PRECISION EQ v1.0.0</div>
+            <div className="flex space-x-0.5">
+              <div className="w-0.5 h-0.5 bg-gray-500 rounded-full"></div>
+              <div className="w-0.5 h-0.5 bg-gray-500 rounded-full"></div>
+              <div className="w-0.5 h-0.5 bg-gray-500 rounded-full"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* G-Digital Tape - Compact Card */}
+      <div className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 rounded-lg border border-gray-700 shadow-lg overflow-hidden w-full max-w-sm mx-auto">
+        {/* Header */}
+        <div className="bg-gradient-to-r from-gray-800 to-gray-700 p-2 border-b border-gray-600">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-1.5">
+              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse shadow-sm"></div>
+              <div className="flex items-center space-x-1">
+                <div className="bg-gradient-to-r from-crys-gold to-yellow-500 p-0.5 rounded">
+                  <Target className="w-2.5 h-2.5 text-gray-900" />
+                </div>
+                <div>
+                  <h3 className="text-xs font-bold text-white">CRYS GARAGE STUDIO</h3>
+                  <p className="text-[8px] text-gray-400">G-DIGITAL TAPE MACHINE</p>
+                </div>
+              </div>
+            </div>
+            <div className="flex space-x-0.5">
+              <div className="w-1 h-1 bg-gray-600 rounded-full border border-gray-500"></div>
+              <div className="w-1 h-1 bg-gray-600 rounded-full border border-gray-500"></div>
+              <div className="w-1 h-1 bg-gray-600 rounded-full border border-gray-500"></div>
+            </div>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="p-3">
+          <div className="flex items-center justify-between mb-3">
+            <h4 className="text-white font-semibold text-xs">G-Digital Tape</h4>
             <label className="flex items-center">
               <input
                 type="checkbox"
@@ -120,63 +189,131 @@ const PremiumEffects: React.FC<PremiumEffectsProps> = ({
                 onChange={(e) => onTogglePremiumEffect('gDigitalTape', e.target.checked)}
                 className="mr-1"
               />
-              <span className="text-gray-300 text-xs">Enable</span>
+              <span className="text-gray-300 text-[10px]">Enable</span>
             </label>
           </div>
+
           {audioEffects.gDigitalTape?.enabled && (
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-3 gap-3">
               <div className="text-center">
-                <HardwareKnob
-                  value={audioEffects.gDigitalTape?.saturation || 0}
-                  onChange={(value) => onUpdateEffectSettings('gDigitalTape', { ...audioEffects.gDigitalTape, saturation: value })}
-                  min={0}
-                  max={100}
-                  step={1}
-                  label="Saturation"
-                  unit="%"
-                  size="small"
-                  onKnobClick={onManualInit}
+                <div className="relative w-12 h-12 mx-auto mb-1">
+                  <div className="w-full h-full rounded-full bg-gradient-to-br from-gray-700 to-gray-800 border border-gray-600 shadow-inner flex items-center justify-center">
+                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-gray-600 to-gray-700 border border-gray-500 flex items-center justify-center">
+                      <div className="w-0.5 h-4 bg-crys-gold rounded-full transform origin-bottom" 
+                           style={{ transform: `rotate(${(audioEffects.gDigitalTape.saturation) * 3.6}deg)` }}></div>
+                    </div>
+                  </div>
+                  <div className="absolute -bottom-0.5 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-crys-gold rounded-full"></div>
+                </div>
+                <div className="text-crys-gold font-mono text-xs mb-0.5">{audioEffects.gDigitalTape.saturation}%</div>
+                <div className="text-gray-400 text-[8px]">SAT</div>
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  step="1"
+                  value={audioEffects.gDigitalTape.saturation}
+                  onChange={(e) => onUpdateEffectSettings('gDigitalTape', { ...audioEffects.gDigitalTape, saturation: parseFloat(e.target.value) })}
+                  className="w-full mt-1"
                 />
               </div>
+
               <div className="text-center">
-                <HardwareKnob
-                  value={audioEffects.gDigitalTape?.warmth || 0}
-                  onChange={(value) => onUpdateEffectSettings('gDigitalTape', { ...audioEffects.gDigitalTape, warmth: value })}
-                  min={0}
-                  max={100}
-                  step={1}
-                  label="Warmth"
-                  unit="%"
-                  size="small"
-                  onKnobClick={onManualInit}
+                <div className="relative w-12 h-12 mx-auto mb-1">
+                  <div className="w-full h-full rounded-full bg-gradient-to-br from-gray-700 to-gray-800 border border-gray-600 shadow-inner flex items-center justify-center">
+                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-gray-600 to-gray-700 border border-gray-500 flex items-center justify-center">
+                      <div className="w-0.5 h-4 bg-crys-gold rounded-full transform origin-bottom" 
+                           style={{ transform: `rotate(${(audioEffects.gDigitalTape.warmth) * 3.6}deg)` }}></div>
+                    </div>
+                  </div>
+                  <div className="absolute -bottom-0.5 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-crys-gold rounded-full"></div>
+                </div>
+                <div className="text-crys-gold font-mono text-xs mb-0.5">{audioEffects.gDigitalTape.warmth}%</div>
+                <div className="text-gray-400 text-[8px]">WARM</div>
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  step="1"
+                  value={audioEffects.gDigitalTape.warmth}
+                  onChange={(e) => onUpdateEffectSettings('gDigitalTape', { ...audioEffects.gDigitalTape, warmth: parseFloat(e.target.value) })}
+                  className="w-full mt-1"
                 />
               </div>
+
               <div className="text-center">
-                <HardwareKnob
-                  value={audioEffects.gDigitalTape?.compression || 0}
-                  onChange={(value) => onUpdateEffectSettings('gDigitalTape', { ...audioEffects.gDigitalTape, compression: value })}
-                  min={0}
-                  max={100}
-                  step={1}
-                  label="Compression"
-                  unit="%"
-                  size="small"
-                  onKnobClick={onManualInit}
+                <div className="relative w-12 h-12 mx-auto mb-1">
+                  <div className="w-full h-full rounded-full bg-gradient-to-br from-gray-700 to-gray-800 border border-gray-600 shadow-inner flex items-center justify-center">
+                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-gray-600 to-gray-700 border border-gray-500 flex items-center justify-center">
+                      <div className="w-0.5 h-4 bg-crys-gold rounded-full transform origin-bottom" 
+                           style={{ transform: `rotate(${(audioEffects.gDigitalTape.compression) * 3.6}deg)` }}></div>
+                    </div>
+                  </div>
+                  <div className="absolute -bottom-0.5 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-crys-gold rounded-full"></div>
+                </div>
+                <div className="text-crys-gold font-mono text-xs mb-0.5">{audioEffects.gDigitalTape.compression}%</div>
+                <div className="text-gray-400 text-[8px]">COMP</div>
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  step="1"
+                  value={audioEffects.gDigitalTape.compression}
+                  onChange={(e) => onUpdateEffectSettings('gDigitalTape', { ...audioEffects.gDigitalTape, compression: parseFloat(e.target.value) })}
+                  className="w-full mt-1"
                 />
               </div>
             </div>
           )}
         </div>
-      </StudioRack>
 
-      {/* G-Multi-Band */}
-      <StudioRack title="G-Multi-Band">
-        <div className="p-2 border-b border-gray-700">
-          <div className="flex items-center justify-between mb-2">
-            <h5 className="text-white font-medium text-sm flex items-center">
-              <Activity className="w-3 h-3 mr-1 text-crys-gold" />
-              G-Multi-Band Compressor
-            </h5>
+        {/* Footer */}
+        <div className="bg-gradient-to-r from-gray-700 to-gray-800 p-1.5 border-t border-gray-600">
+          <div className="flex justify-between items-center">
+            <div className="flex space-x-0.5">
+              <div className="w-0.5 h-0.5 bg-gray-500 rounded-full"></div>
+              <div className="w-0.5 h-0.5 bg-gray-500 rounded-full"></div>
+              <div className="w-0.5 h-0.5 bg-gray-500 rounded-full"></div>
+            </div>
+            <div className="text-[6px] text-gray-500">CRYS GARAGE G-DIGITAL TAPE v1.0.0</div>
+            <div className="flex space-x-0.5">
+              <div className="w-0.5 h-0.5 bg-gray-500 rounded-full"></div>
+              <div className="w-0.5 h-0.5 bg-gray-500 rounded-full"></div>
+              <div className="w-0.5 h-0.5 bg-gray-500 rounded-full"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* G-Multi-Band - Compact Card */}
+      <div className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 rounded-lg border border-gray-700 shadow-lg overflow-hidden w-full max-w-sm mx-auto">
+        {/* Header */}
+        <div className="bg-gradient-to-r from-gray-800 to-gray-700 p-2 border-b border-gray-600">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-1.5">
+              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse shadow-sm"></div>
+              <div className="flex items-center space-x-1">
+                <div className="bg-gradient-to-r from-crys-gold to-yellow-500 p-0.5 rounded">
+                  <Activity className="w-2.5 h-2.5 text-gray-900" />
+                </div>
+                <div>
+                  <h3 className="text-xs font-bold text-white">CRYS GARAGE STUDIO</h3>
+                  <p className="text-[8px] text-gray-400">G-MULTI-BAND COMPRESSOR</p>
+                </div>
+              </div>
+            </div>
+            <div className="flex space-x-0.5">
+              <div className="w-1 h-1 bg-gray-600 rounded-full border border-gray-500"></div>
+              <div className="w-1 h-1 bg-gray-600 rounded-full border border-gray-500"></div>
+              <div className="w-1 h-1 bg-gray-600 rounded-full border border-gray-500"></div>
+            </div>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="p-3">
+          <div className="flex items-center justify-between mb-3">
+            <h4 className="text-white font-semibold text-xs">G-Multi-Band</h4>
             <label className="flex items-center">
               <input
                 type="checkbox"
@@ -184,9 +321,10 @@ const PremiumEffects: React.FC<PremiumEffectsProps> = ({
                 onChange={(e) => onTogglePremiumEffect('gMultiBand', e.target.checked)}
                 className="mr-1"
               />
-              <span className="text-gray-300 text-xs">Enable</span>
+              <span className="text-gray-300 text-[10px]">Enable</span>
             </label>
           </div>
+
           {audioEffects.gMultiBand?.enabled && (
             <div className="space-y-2">
               {/* Low Band */}
@@ -194,34 +332,53 @@ const PremiumEffects: React.FC<PremiumEffectsProps> = ({
                 <h6 className="text-xs font-medium text-white mb-2">Low Band</h6>
                 <div className="grid grid-cols-2 gap-1.5">
                   <div className="text-center">
-                    <HardwareKnob
-                      value={audioEffects.gMultiBand?.low?.threshold || -20}
-                      onChange={(value) => onUpdateEffectSettings('gMultiBand', { 
+                    <div className="relative w-10 h-10 mx-auto mb-1">
+                      <div className="w-full h-full rounded-full bg-gradient-to-br from-gray-700 to-gray-800 border border-gray-600 shadow-inner flex items-center justify-center">
+                        <div className="w-7 h-7 rounded-full bg-gradient-to-br from-gray-600 to-gray-700 border border-gray-500 flex items-center justify-center">
+                          <div className="w-0.5 h-3 bg-crys-gold rounded-full transform origin-bottom" 
+                               style={{ transform: `rotate(${(audioEffects.gMultiBand.low.threshold + 60) * 1.5}deg)` }}></div>
+                        </div>
+                      </div>
+                      <div className="absolute -bottom-0.5 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-crys-gold rounded-full"></div>
+                    </div>
+                    <div className="text-crys-gold font-mono text-[8px] mb-0.5">{audioEffects.gMultiBand.low.threshold.toFixed(1)}dB</div>
+                    <div className="text-gray-400 text-[6px]">THRESH</div>
+                    <input
+                      type="range"
+                      min="-60"
+                      max="0"
+                      step="1"
+                      value={audioEffects.gMultiBand.low.threshold}
+                      onChange={(e) => onUpdateEffectSettings('gMultiBand', { 
                         ...audioEffects.gMultiBand, 
-                        low: { ...audioEffects.gMultiBand.low, threshold: value }
+                        low: { ...audioEffects.gMultiBand.low, threshold: parseFloat(e.target.value) }
                       })}
-                      min={-60}
-                      max={0}
-                      step={1}
-                      label="Threshold"
-                      unit="dB"
-                      size="small"
-                      onKnobClick={onManualInit}
+                      className="w-full mt-1"
                     />
                   </div>
                   <div className="text-center">
-                    <HardwareKnob
-                      value={audioEffects.gMultiBand?.low?.ratio || 4}
-                      onChange={(value) => onUpdateEffectSettings('gMultiBand', { 
+                    <div className="relative w-10 h-10 mx-auto mb-1">
+                      <div className="w-full h-full rounded-full bg-gradient-to-br from-gray-700 to-gray-800 border border-gray-600 shadow-inner flex items-center justify-center">
+                        <div className="w-7 h-7 rounded-full bg-gradient-to-br from-gray-600 to-gray-700 border border-gray-500 flex items-center justify-center">
+                          <div className="w-0.5 h-3 bg-crys-gold rounded-full transform origin-bottom" 
+                               style={{ transform: `rotate(${(audioEffects.gMultiBand.low.ratio - 1) * 10}deg)` }}></div>
+                        </div>
+                      </div>
+                      <div className="absolute -bottom-0.5 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-crys-gold rounded-full"></div>
+                    </div>
+                    <div className="text-crys-gold font-mono text-[8px] mb-0.5">{audioEffects.gMultiBand.low.ratio.toFixed(1)}:1</div>
+                    <div className="text-gray-400 text-[6px]">RATIO</div>
+                    <input
+                      type="range"
+                      min="1"
+                      max="20"
+                      step="0.1"
+                      value={audioEffects.gMultiBand.low.ratio}
+                      onChange={(e) => onUpdateEffectSettings('gMultiBand', { 
                         ...audioEffects.gMultiBand, 
-                        low: { ...audioEffects.gMultiBand.low, ratio: value }
+                        low: { ...audioEffects.gMultiBand.low, ratio: parseFloat(e.target.value) }
                       })}
-                      min={1}
-                      max={20}
-                      step={0.1}
-                      label="Ratio"
-                      size="small"
-                      onKnobClick={onManualInit}
+                      className="w-full mt-1"
                     />
                   </div>
                 </div>
@@ -232,34 +389,53 @@ const PremiumEffects: React.FC<PremiumEffectsProps> = ({
                 <h6 className="text-xs font-medium text-white mb-2">Mid Band</h6>
                 <div className="grid grid-cols-2 gap-1.5">
                   <div className="text-center">
-                    <HardwareKnob
-                      value={audioEffects.gMultiBand?.mid?.threshold || -20}
-                      onChange={(value) => onUpdateEffectSettings('gMultiBand', { 
+                    <div className="relative w-10 h-10 mx-auto mb-1">
+                      <div className="w-full h-full rounded-full bg-gradient-to-br from-gray-700 to-gray-800 border border-gray-600 shadow-inner flex items-center justify-center">
+                        <div className="w-7 h-7 rounded-full bg-gradient-to-br from-gray-600 to-gray-700 border border-gray-500 flex items-center justify-center">
+                          <div className="w-0.5 h-3 bg-crys-gold rounded-full transform origin-bottom" 
+                               style={{ transform: `rotate(${(audioEffects.gMultiBand.mid.threshold + 60) * 1.5}deg)` }}></div>
+                        </div>
+                      </div>
+                      <div className="absolute -bottom-0.5 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-crys-gold rounded-full"></div>
+                    </div>
+                    <div className="text-crys-gold font-mono text-[8px] mb-0.5">{audioEffects.gMultiBand.mid.threshold.toFixed(1)}dB</div>
+                    <div className="text-gray-400 text-[6px]">THRESH</div>
+                    <input
+                      type="range"
+                      min="-60"
+                      max="0"
+                      step="1"
+                      value={audioEffects.gMultiBand.mid.threshold}
+                      onChange={(e) => onUpdateEffectSettings('gMultiBand', { 
                         ...audioEffects.gMultiBand, 
-                        mid: { ...audioEffects.gMultiBand.mid, threshold: value }
+                        mid: { ...audioEffects.gMultiBand.mid, threshold: parseFloat(e.target.value) }
                       })}
-                      min={-60}
-                      max={0}
-                      step={1}
-                      label="Threshold"
-                      unit="dB"
-                      size="small"
-                      onKnobClick={onManualInit}
+                      className="w-full mt-1"
                     />
                   </div>
                   <div className="text-center">
-                    <HardwareKnob
-                      value={audioEffects.gMultiBand?.mid?.ratio || 4}
-                      onChange={(value) => onUpdateEffectSettings('gMultiBand', { 
+                    <div className="relative w-10 h-10 mx-auto mb-1">
+                      <div className="w-full h-full rounded-full bg-gradient-to-br from-gray-700 to-gray-800 border border-gray-600 shadow-inner flex items-center justify-center">
+                        <div className="w-7 h-7 rounded-full bg-gradient-to-br from-gray-600 to-gray-700 border border-gray-500 flex items-center justify-center">
+                          <div className="w-0.5 h-3 bg-crys-gold rounded-full transform origin-bottom" 
+                               style={{ transform: `rotate(${(audioEffects.gMultiBand.mid.ratio - 1) * 10}deg)` }}></div>
+                        </div>
+                      </div>
+                      <div className="absolute -bottom-0.5 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-crys-gold rounded-full"></div>
+                    </div>
+                    <div className="text-crys-gold font-mono text-[8px] mb-0.5">{audioEffects.gMultiBand.mid.ratio.toFixed(1)}:1</div>
+                    <div className="text-gray-400 text-[6px]">RATIO</div>
+                    <input
+                      type="range"
+                      min="1"
+                      max="20"
+                      step="0.1"
+                      value={audioEffects.gMultiBand.mid.ratio}
+                      onChange={(e) => onUpdateEffectSettings('gMultiBand', { 
                         ...audioEffects.gMultiBand, 
-                        mid: { ...audioEffects.gMultiBand.mid, ratio: value }
+                        mid: { ...audioEffects.gMultiBand.mid, ratio: parseFloat(e.target.value) }
                       })}
-                      min={1}
-                      max={20}
-                      step={0.1}
-                      label="Ratio"
-                      size="small"
-                      onKnobClick={onManualInit}
+                      className="w-full mt-1"
                     />
                   </div>
                 </div>
@@ -270,34 +446,53 @@ const PremiumEffects: React.FC<PremiumEffectsProps> = ({
                 <h6 className="text-xs font-medium text-white mb-2">High Band</h6>
                 <div className="grid grid-cols-2 gap-1.5">
                   <div className="text-center">
-                    <HardwareKnob
-                      value={audioEffects.gMultiBand?.high?.threshold || -20}
-                      onChange={(value) => onUpdateEffectSettings('gMultiBand', { 
+                    <div className="relative w-10 h-10 mx-auto mb-1">
+                      <div className="w-full h-full rounded-full bg-gradient-to-br from-gray-700 to-gray-800 border border-gray-600 shadow-inner flex items-center justify-center">
+                        <div className="w-7 h-7 rounded-full bg-gradient-to-br from-gray-600 to-gray-700 border border-gray-500 flex items-center justify-center">
+                          <div className="w-0.5 h-3 bg-crys-gold rounded-full transform origin-bottom" 
+                               style={{ transform: `rotate(${(audioEffects.gMultiBand.high.threshold + 60) * 1.5}deg)` }}></div>
+                        </div>
+                      </div>
+                      <div className="absolute -bottom-0.5 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-crys-gold rounded-full"></div>
+                    </div>
+                    <div className="text-crys-gold font-mono text-[8px] mb-0.5">{audioEffects.gMultiBand.high.threshold.toFixed(1)}dB</div>
+                    <div className="text-gray-400 text-[6px]">THRESH</div>
+                    <input
+                      type="range"
+                      min="-60"
+                      max="0"
+                      step="1"
+                      value={audioEffects.gMultiBand.high.threshold}
+                      onChange={(e) => onUpdateEffectSettings('gMultiBand', { 
                         ...audioEffects.gMultiBand, 
-                        high: { ...audioEffects.gMultiBand.high, threshold: value }
+                        high: { ...audioEffects.gMultiBand.high, threshold: parseFloat(e.target.value) }
                       })}
-                      min={-60}
-                      max={0}
-                      step={1}
-                      label="Threshold"
-                      unit="dB"
-                      size="small"
-                      onKnobClick={onManualInit}
+                      className="w-full mt-1"
                     />
                   </div>
                   <div className="text-center">
-                    <HardwareKnob
-                      value={audioEffects.gMultiBand?.high?.ratio || 4}
-                      onChange={(value) => onUpdateEffectSettings('gMultiBand', { 
+                    <div className="relative w-10 h-10 mx-auto mb-1">
+                      <div className="w-full h-full rounded-full bg-gradient-to-br from-gray-700 to-gray-800 border border-gray-600 shadow-inner flex items-center justify-center">
+                        <div className="w-7 h-7 rounded-full bg-gradient-to-br from-gray-600 to-gray-700 border border-gray-500 flex items-center justify-center">
+                          <div className="w-0.5 h-3 bg-crys-gold rounded-full transform origin-bottom" 
+                               style={{ transform: `rotate(${(audioEffects.gMultiBand.high.ratio - 1) * 10}deg)` }}></div>
+                        </div>
+                      </div>
+                      <div className="absolute -bottom-0.5 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-crys-gold rounded-full"></div>
+                    </div>
+                    <div className="text-crys-gold font-mono text-[8px] mb-0.5">{audioEffects.gMultiBand.high.ratio.toFixed(1)}:1</div>
+                    <div className="text-gray-400 text-[6px]">RATIO</div>
+                    <input
+                      type="range"
+                      min="1"
+                      max="20"
+                      step="0.1"
+                      value={audioEffects.gMultiBand.high.ratio}
+                      onChange={(e) => onUpdateEffectSettings('gMultiBand', { 
                         ...audioEffects.gMultiBand, 
-                        high: { ...audioEffects.gMultiBand.high, ratio: value }
+                        high: { ...audioEffects.gMultiBand.high, ratio: parseFloat(e.target.value) }
                       })}
-                      min={1}
-                      max={20}
-                      step={0.1}
-                      label="Ratio"
-                      size="small"
-                      onKnobClick={onManualInit}
+                      className="w-full mt-1"
                     />
                   </div>
                 </div>
@@ -305,7 +500,24 @@ const PremiumEffects: React.FC<PremiumEffectsProps> = ({
             </div>
           )}
         </div>
-      </StudioRack>
+
+        {/* Footer */}
+        <div className="bg-gradient-to-r from-gray-700 to-gray-800 p-1.5 border-t border-gray-600">
+          <div className="flex justify-between items-center">
+            <div className="flex space-x-0.5">
+              <div className="w-0.5 h-0.5 bg-gray-500 rounded-full"></div>
+              <div className="w-0.5 h-0.5 bg-gray-500 rounded-full"></div>
+              <div className="w-0.5 h-0.5 bg-gray-500 rounded-full"></div>
+            </div>
+            <div className="text-[6px] text-gray-500">CRYS GARAGE G-MULTI-BAND v1.0.0</div>
+            <div className="flex space-x-0.5">
+              <div className="w-0.5 h-0.5 bg-gray-500 rounded-full"></div>
+              <div className="w-0.5 h-0.5 bg-gray-500 rounded-full"></div>
+              <div className="w-0.5 h-0.5 bg-gray-500 rounded-full"></div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

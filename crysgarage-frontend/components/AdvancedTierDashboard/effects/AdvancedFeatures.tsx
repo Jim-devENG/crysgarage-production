@@ -1,121 +1,263 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { Globe, Music, Settings } from 'lucide-react';
 import StudioRack from '../StudioRack';
 import HardwareKnob from '../HardwareKnob';
-import { Radio, Music } from 'lucide-react';
 
 interface AdvancedFeaturesProps {
   audioEffects: any;
   onUpdateEffectSettings: (effectType: string, settings: any) => void;
-  onToggleEffect: (effectType: string, enabled: boolean) => void;
+  onTogglePremiumEffect: (effectType: string, enabled: boolean) => void;
   onManualInit?: () => void;
 }
 
 const AdvancedFeatures: React.FC<AdvancedFeaturesProps> = ({
   audioEffects,
   onUpdateEffectSettings,
-  onToggleEffect,
+  onTogglePremiumEffect,
   onManualInit
 }) => {
+  const [showCost, setShowCost] = useState(false);
+
   return (
     <div className="space-y-3">
-      {/* G-Surround */}
-      <StudioRack title="G-Surround">
-        <div className="p-2 border-b border-gray-700">
-          <div className="flex items-center justify-between mb-2">
-            <h5 className="text-white font-medium text-sm flex items-center">
-              <Radio className="w-3 h-3 mr-1 text-crys-gold" />
-              G-Surround
-            </h5>
+      {/* Advanced Features Header */}
+      <div className="text-center mb-4">
+        <h3 className="text-lg font-bold text-white mb-2">Advanced Features</h3>
+        <p className="text-sm text-gray-400">Premium mastering capabilities</p>
+      </div>
+
+      {/* G-Surround - Compact Card */}
+      <div className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 rounded-lg border border-gray-700 shadow-lg overflow-hidden w-full max-w-sm mx-auto">
+        {/* Header */}
+        <div className="bg-gradient-to-r from-gray-800 to-gray-700 p-2 border-b border-gray-600">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-1.5">
+              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse shadow-sm"></div>
+              <div className="flex items-center space-x-1">
+                <div className="bg-gradient-to-r from-crys-gold to-yellow-500 p-0.5 rounded">
+                  <Globe className="w-2.5 h-2.5 text-gray-900" />
+                </div>
+                <div>
+                  <h3 className="text-xs font-bold text-white">CRYS GARAGE STUDIO</h3>
+                  <p className="text-[8px] text-gray-400">G-SURROUND</p>
+                </div>
+              </div>
+            </div>
+            <div className="flex space-x-0.5">
+              <div className="w-1 h-1 bg-gray-600 rounded-full border border-gray-500"></div>
+              <div className="w-1 h-1 bg-gray-600 rounded-full border border-gray-500"></div>
+              <div className="w-1 h-1 bg-gray-600 rounded-full border border-gray-500"></div>
+            </div>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="p-3">
+          <div className="flex items-center justify-between mb-3">
+            <h4 className="text-white font-semibold text-xs">G-Surround</h4>
             <label className="flex items-center">
               <input
                 type="checkbox"
                 checked={audioEffects.gSurround?.enabled || false}
-                onChange={(e) => onToggleEffect('gSurround', e.target.checked)}
+                onChange={(e) => onTogglePremiumEffect('gSurround', e.target.checked)}
                 className="mr-1"
               />
-              <span className="text-gray-300 text-xs">Enable</span>
+              <span className="text-gray-300 text-[10px]">Enable</span>
             </label>
           </div>
+
           {audioEffects.gSurround?.enabled && (
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 gap-3">
               <div className="text-center">
-                <HardwareKnob
-                  value={audioEffects.gSurround?.width || 0}
-                  onChange={(value) => onUpdateEffectSettings('gSurround', { ...audioEffects.gSurround, width: value })}
-                  min={0}
-                  max={100}
-                  step={1}
-                  label="Width"
-                  unit="%"
-                  size="small"
-                  onKnobClick={onManualInit}
+                <div className="relative w-12 h-12 mx-auto mb-1">
+                  <div className="w-full h-full rounded-full bg-gradient-to-br from-gray-700 to-gray-800 border border-gray-600 shadow-inner flex items-center justify-center">
+                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-gray-600 to-gray-700 border border-gray-500 flex items-center justify-center">
+                      <div className="w-0.5 h-4 bg-crys-gold rounded-full transform origin-bottom" 
+                           style={{ transform: `rotate(${(audioEffects.gSurround.width + 100) * 1.8}deg)` }}></div>
+                    </div>
+                  </div>
+                  <div className="absolute -bottom-0.5 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-crys-gold rounded-full"></div>
+                </div>
+                <div className="text-crys-gold font-mono text-xs mb-0.5">{audioEffects.gSurround.width.toFixed(1)}%</div>
+                <div className="text-gray-400 text-[8px]">WIDTH</div>
+                <input
+                  type="range"
+                  min="-100"
+                  max="100"
+                  step="1"
+                  value={audioEffects.gSurround.width}
+                  onChange={(e) => onUpdateEffectSettings('gSurround', { ...audioEffects.gSurround, width: parseFloat(e.target.value) })}
+                  className="w-full mt-1"
                 />
               </div>
+
               <div className="text-center">
-                <HardwareKnob
-                  value={audioEffects.gSurround?.depth || 0}
-                  onChange={(value) => onUpdateEffectSettings('gSurround', { ...audioEffects.gSurround, depth: value })}
-                  min={0}
-                  max={100}
-                  step={1}
-                  label="Depth"
-                  unit="%"
-                  size="small"
-                  onKnobClick={onManualInit}
+                <div className="relative w-12 h-12 mx-auto mb-1">
+                  <div className="w-full h-full rounded-full bg-gradient-to-br from-gray-700 to-gray-800 border border-gray-600 shadow-inner flex items-center justify-center">
+                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-gray-600 to-gray-700 border border-gray-500 flex items-center justify-center">
+                      <div className="w-0.5 h-4 bg-crys-gold rounded-full transform origin-bottom" 
+                           style={{ transform: `rotate(${(audioEffects.gSurround.depth + 100) * 1.8}deg)` }}></div>
+                    </div>
+                  </div>
+                  <div className="absolute -bottom-0.5 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-crys-gold rounded-full"></div>
+                </div>
+                <div className="text-crys-gold font-mono text-xs mb-0.5">{audioEffects.gSurround.depth.toFixed(1)}%</div>
+                <div className="text-gray-400 text-[8px]">DEPTH</div>
+                <input
+                  type="range"
+                  min="-100"
+                  max="100"
+                  step="1"
+                  value={audioEffects.gSurround.depth}
+                  onChange={(e) => onUpdateEffectSettings('gSurround', { ...audioEffects.gSurround, depth: parseFloat(e.target.value) })}
+                  className="w-full mt-1"
                 />
               </div>
             </div>
           )}
         </div>
-      </StudioRack>
 
-      {/* G-Tuner */}
-      <StudioRack title="G-Tuner">
-        <div className="p-2 border-b border-gray-700">
-          <div className="flex items-center justify-between mb-2">
-            <h5 className="text-white font-medium text-sm flex items-center">
-              <Music className="w-3 h-3 mr-1 text-crys-gold" />
-              G-Tuner (444Hz)
-            </h5>
+        {/* Footer */}
+        <div className="bg-gradient-to-r from-gray-700 to-gray-800 p-1.5 border-t border-gray-600">
+          <div className="flex justify-between items-center">
+            <div className="flex space-x-0.5">
+              <div className="w-0.5 h-0.5 bg-gray-500 rounded-full"></div>
+              <div className="w-0.5 h-0.5 bg-gray-500 rounded-full"></div>
+              <div className="w-0.5 h-0.5 bg-gray-500 rounded-full"></div>
+            </div>
+            <div className="text-[6px] text-gray-500">CRYS GARAGE G-SURROUND v1.0.0</div>
+            <div className="flex space-x-0.5">
+              <div className="w-0.5 h-0.5 bg-gray-500 rounded-full"></div>
+              <div className="w-0.5 h-0.5 bg-gray-500 rounded-full"></div>
+              <div className="w-0.5 h-0.5 bg-gray-500 rounded-full"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* G-Tuner - Compact Card */}
+      <div className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 rounded-lg border border-gray-700 shadow-lg overflow-hidden w-full max-w-sm mx-auto">
+        {/* Header */}
+        <div className="bg-gradient-to-r from-gray-800 to-gray-700 p-2 border-b border-gray-600">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-1.5">
+              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse shadow-sm"></div>
+              <div className="flex items-center space-x-1">
+                <div className="bg-gradient-to-r from-crys-gold to-yellow-500 p-0.5 rounded">
+                  <Music className="w-2.5 h-2.5 text-gray-900" />
+                </div>
+                <div>
+                  <h3 className="text-xs font-bold text-white">CRYS GARAGE STUDIO</h3>
+                  <p className="text-[8px] text-gray-400">G-TUNER</p>
+                </div>
+              </div>
+            </div>
+            <div className="flex space-x-0.5">
+              <div className="w-1 h-1 bg-gray-600 rounded-full border border-gray-500"></div>
+              <div className="w-1 h-1 bg-gray-600 rounded-full border border-gray-500"></div>
+              <div className="w-1 h-1 bg-gray-600 rounded-full border border-gray-500"></div>
+            </div>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="p-3">
+          <div className="flex items-center justify-between mb-3">
+            <h4 className="text-white font-semibold text-xs">G-Tuner</h4>
             <label className="flex items-center">
               <input
                 type="checkbox"
                 checked={audioEffects.gTuner?.enabled || false}
-                onChange={(e) => onToggleEffect('gTuner', e.target.checked)}
+                onChange={(e) => onTogglePremiumEffect('gTuner', e.target.checked)}
                 className="mr-1"
               />
-              <span className="text-gray-300 text-xs">Enable</span>
+              <span className="text-gray-300 text-[10px]">Enable</span>
             </label>
           </div>
+
           {audioEffects.gTuner?.enabled && (
             <div className="text-center">
+              {/* Frequency Display */}
               <div className="bg-gray-900 rounded-md p-3 mb-3">
-                <div className="text-xl font-bold text-crys-gold mb-1">
-                  {audioEffects.gTuner?.frequency || 444} Hz
-                </div>
-                <div className="text-xs text-gray-400">
-                  Reference Frequency
-                </div>
+                <div className="text-crys-gold font-mono text-xl mb-1">{audioEffects.gTuner.frequency}Hz</div>
+                <div className="text-gray-400 text-[8px]">REFERENCE FREQUENCY</div>
               </div>
-              <div className="text-[10px] text-gray-500">
-                Each use costs $3
+
+              {/* Depth Control */}
+              <div className="relative w-12 h-12 mx-auto mb-1">
+                <div className="w-full h-full rounded-full bg-gradient-to-br from-gray-700 to-gray-800 border border-gray-600 shadow-inner flex items-center justify-center">
+                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-gray-600 to-gray-700 border border-gray-500 flex items-center justify-center">
+                    <div className="w-0.5 h-4 bg-crys-gold rounded-full transform origin-bottom" 
+                         style={{ transform: `rotate(${(audioEffects.gTuner.depth || 0) * 3.6}deg)` }}></div>
+                  </div>
+                </div>
+                <div className="absolute -bottom-0.5 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-crys-gold rounded-full"></div>
+              </div>
+              <div className="text-crys-gold font-mono text-xs mb-0.5">{(audioEffects.gTuner.depth || 0).toFixed(0)}%</div>
+              <div className="text-gray-400 text-[8px]">DEPTH</div>
+              <input
+                type="range"
+                min="0"
+                max="100"
+                step="1"
+                value={audioEffects.gTuner.depth || 0}
+                onChange={(e) => onUpdateEffectSettings('gTuner', { ...audioEffects.gTuner, depth: parseFloat(e.target.value) })}
+                className="w-full mt-1"
+              />
+
+              {/* Cost Info */}
+              <div className="mt-3 text-center">
+                <div className="text-[8px] text-gray-400">Cost per use: $3</div>
+                <button
+                  onClick={() => setShowCost(!showCost)}
+                  className="text-[8px] text-crys-gold hover:text-yellow-400 mt-1"
+                >
+                  {showCost ? 'Hide Details' : 'Show Details'}
+                </button>
+                {showCost && (
+                  <div className="mt-2 p-2 bg-gray-800 rounded text-[8px] text-gray-300">
+                    <div>• 444Hz reference tone</div>
+                    <div>• Professional tuning</div>
+                    <div>• Real-time frequency analysis</div>
+                  </div>
+                )}
               </div>
             </div>
           )}
         </div>
-      </StudioRack>
 
-      {/* Feature Information */}
-      <div className="bg-gray-900 rounded-md p-3 border border-gray-600">
-        <h6 className="text-white font-medium mb-2 text-sm">Advanced Features Info</h6>
-        <div className="space-y-1 text-xs text-gray-400">
+        {/* Footer */}
+        <div className="bg-gradient-to-r from-gray-700 to-gray-800 p-1.5 border-t border-gray-600">
+          <div className="flex justify-between items-center">
+            <div className="flex space-x-0.5">
+              <div className="w-0.5 h-0.5 bg-gray-500 rounded-full"></div>
+              <div className="w-0.5 h-0.5 bg-gray-500 rounded-full"></div>
+              <div className="w-0.5 h-0.5 bg-gray-500 rounded-full"></div>
+            </div>
+            <div className="text-[6px] text-gray-500">CRYS GARAGE G-TUNER v1.0.0</div>
+            <div className="flex space-x-0.5">
+              <div className="w-0.5 h-0.5 bg-gray-500 rounded-full"></div>
+              <div className="w-0.5 h-0.5 bg-gray-500 rounded-full"></div>
+              <div className="w-0.5 h-0.5 bg-gray-500 rounded-full"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Feature Info */}
+      <div className="bg-gray-900 rounded-md p-3 border border-gray-700">
+        <h5 className="text-white font-medium text-xs mb-2 flex items-center">
+          <Settings className="w-3 h-3 mr-1 text-crys-gold" />
+          Advanced Features Info
+        </h5>
+        <div className="space-y-1 text-[10px] text-gray-300">
           <div className="flex items-center space-x-1.5">
-            <Radio className="w-3 h-3 text-crys-gold" />
-            <span><strong>G-Surround:</strong> Create immersive surround sound experience</span>
+            <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+            <span>G-Surround: Create immersive surround sound</span>
           </div>
           <div className="flex items-center space-x-1.5">
-            <Music className="w-3 h-3 text-crys-gold" />
-            <span><strong>G-Tuner:</strong> 444Hz reference tuning for perfect pitch alignment</span>
+            <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
+            <span>G-Tuner: Professional 444Hz reference tuning</span>
           </div>
         </div>
       </div>
