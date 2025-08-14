@@ -54,8 +54,10 @@ interface AudioEffects {
   };
   gLimiter?: {
     threshold: number;
-    ceiling: number;
-    release: number;
+    inputGain: number;
+    outputGain: number;
+    reduction: number;
+    outputPeak: number;
     enabled: boolean;
   };
   gMultiBand?: {
@@ -440,7 +442,7 @@ const RealTimeMasteringPlayer = forwardRef<RealTimeMasteringPlayerRef, RealTimeM
       const limiter = audioEffects.gLimiter;
       gLimiterRef.current.threshold.value = limiter.threshold;
       gLimiterRef.current.ratio.value = 20;
-      gLimiterRef.current.release.value = limiter.release / 1000;
+      gLimiterRef.current.release.value = 0.01; // Fixed release for advanced limiter
     }
 
     if (gMultiBandRefs.current.length >= 3 && audioEffects.gMultiBand?.enabled) {

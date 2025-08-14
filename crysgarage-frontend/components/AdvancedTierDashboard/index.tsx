@@ -87,7 +87,7 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
       enabled: false 
     },
     gDigitalTape: { saturation: 0, warmth: 0, compression: 0, enabled: false },
-    gLimiter: { threshold: -1, ceiling: -0.1, release: 50, enabled: false },
+    gLimiter: { threshold: -1, inputGain: 0, outputGain: 0, reduction: 0, outputPeak: -20, enabled: false },
     gMultiBand: { 
       low: { threshold: -20, ratio: 4 }, 
       mid: { threshold: -20, ratio: 4 }, 
@@ -232,7 +232,7 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
         enabled: false 
       },
       gDigitalTape: { saturation: 0, warmth: 0, compression: 0, enabled: false },
-      gLimiter: { threshold: -1, ceiling: -0.1, release: 50, enabled: false },
+      gLimiter: { threshold: -1, inputGain: 0, outputGain: 0, reduction: 0, outputPeak: -20, enabled: false },
       gMultiBand: { 
         low: { threshold: -20, ratio: 4 }, 
         mid: { threshold: -20, ratio: 4 }, 

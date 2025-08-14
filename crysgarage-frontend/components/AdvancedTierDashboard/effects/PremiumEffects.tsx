@@ -1,7 +1,8 @@
 import React from 'react';
+import { Zap, Settings, Target, Gauge, Activity } from 'lucide-react';
 import StudioRack from '../StudioRack';
 import HardwareKnob from '../HardwareKnob';
-import { Zap, Settings, Target, Gauge, Activity } from 'lucide-react';
+import AdvancedLimiter from './AdvancedLimiter';
 
 interface PremiumEffectsProps {
   audioEffects: any;
@@ -215,69 +216,19 @@ const PremiumEffects: React.FC<PremiumEffectsProps> = ({
         </div>
       </StudioRack>
 
-      {/* G-Limiter */}
-      <StudioRack title="G-Limiter">
-        <div className="p-2 border-b border-gray-700">
-          <div className="flex items-center justify-between mb-2">
-            <h5 className="text-white font-medium text-sm flex items-center">
-              <Gauge className="w-3 h-3 mr-1 text-crys-gold" />
-              G-Limiter
-            </h5>
-            <label className="flex items-center">
-              <input
-                type="checkbox"
-                checked={audioEffects.gLimiter?.enabled || false}
-                onChange={(e) => onTogglePremiumEffect('gLimiter', e.target.checked)}
-                className="mr-1"
-              />
-              <span className="text-gray-300 text-xs">Enable</span>
-            </label>
-          </div>
-          {audioEffects.gLimiter?.enabled && (
-            <div className="grid grid-cols-3 gap-2">
-              <div className="text-center">
-                <HardwareKnob
-                  value={audioEffects.gLimiter?.threshold || -1}
-                  onChange={(value) => onUpdateEffectSettings('gLimiter', { ...audioEffects.gLimiter, threshold: value })}
-                  min={-10}
-                  max={0}
-                  step={0.1}
-                  label="Threshold"
-                  unit="dB"
-                  size="small"
-                  onKnobClick={onManualInit}
-                />
-              </div>
-              <div className="text-center">
-                <HardwareKnob
-                  value={audioEffects.gLimiter?.ceiling || -0.1}
-                  onChange={(value) => onUpdateEffectSettings('gLimiter', { ...audioEffects.gLimiter, ceiling: value })}
-                  min={-1}
-                  max={0}
-                  step={0.01}
-                  label="Ceiling"
-                  unit="dB"
-                  size="small"
-                  onKnobClick={onManualInit}
-                />
-              </div>
-              <div className="text-center">
-                <HardwareKnob
-                  value={audioEffects.gLimiter?.release || 50}
-                  onChange={(value) => onUpdateEffectSettings('gLimiter', { ...audioEffects.gLimiter, release: value })}
-                  min={1}
-                  max={200}
-                  step={1}
-                  label="Release"
-                  unit="ms"
-                  size="small"
-                  onKnobClick={onManualInit}
-                />
-              </div>
-            </div>
-          )}
-        </div>
-      </StudioRack>
+      {/* Advanced Limiter */}
+      <AdvancedLimiter
+        limitLevel={audioEffects.gLimiter?.threshold || -1}
+        inputGain={audioEffects.gLimiter?.inputGain || 0}
+        outputGain={audioEffects.gLimiter?.outputGain || 0}
+        reduction={audioEffects.gLimiter?.reduction || 0}
+        outputPeak={audioEffects.gLimiter?.outputPeak || -20}
+        onLimitLevelChange={(value) => onUpdateEffectSettings('gLimiter', { ...audioEffects.gLimiter, threshold: value })}
+        onInputGainChange={(value) => onUpdateEffectSettings('gLimiter', { ...audioEffects.gLimiter, inputGain: value })}
+        onOutputGainChange={(value) => onUpdateEffectSettings('gLimiter', { ...audioEffects.gLimiter, outputGain: value })}
+        enabled={audioEffects.gLimiter?.enabled || false}
+        onToggle={(enabled) => onTogglePremiumEffect('gLimiter', enabled)}
+      />
 
       {/* G-Multi-Band */}
       <StudioRack title="G-Multi-Band">
