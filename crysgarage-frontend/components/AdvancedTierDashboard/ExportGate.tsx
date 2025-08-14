@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Download, ArrowLeft, Play, Pause, Volume2, Settings, DollarSign } from 'lucide-react';
 
 interface ExportGateProps {
@@ -20,6 +20,26 @@ const ExportGate: React.FC<ExportGateProps> = ({
   const [gTunerEnabled, setGTunerEnabled] = useState(false);
   const [isPlayingOriginal, setIsPlayingOriginal] = useState(false);
   const [isPlayingProcessed, setIsPlayingProcessed] = useState(false);
+  const [originalCurrentTime, setOriginalCurrentTime] = useState(0);
+  const [processedCurrentTime, setProcessedCurrentTime] = useState(0);
+  const [originalDuration, setOriginalDuration] = useState(0);
+  const [processedDuration, setProcessedDuration] = useState(0);
+
+  // Audio refs
+  const originalAudioRef = useRef<HTMLAudioElement>(null);
+  const processedAudioRef = useRef<HTMLAudioElement>(null);
+
+  // Create URLs for audio playback
+  const originalAudioUrl = originalFile ? URL.createObjectURL(originalFile) : null;
+
+  // Cleanup object URLs on unmount
+  useEffect(() => {
+    return () => {
+      if (originalAudioUrl) {
+        URL.revokeObjectURL(originalAudioUrl);
+      }
+    };
+  }, [originalAudioUrl]);
 
   // Calculate total cost
   const calculateTotalCost = () => {
@@ -42,6 +62,64 @@ const ExportGate: React.FC<ExportGateProps> = ({
 
   const totalCost = calculateTotalCost();
 
+  // Audio playback handlers
+  const handleOriginalPlayPause = () => {
+    if (originalAudioRef.current) {
+      if (isPlayingOriginal) {
+        originalAudioRef.current.pause();
+      } else {
+        originalAudioRef.current.play();
+      }
+      setIsPlayingOriginal(!isPlayingOriginal);
+    }
+  };
+
+  const handleProcessedPlayPause = () => {
+    if (processedAudioRef.current) {
+      if (isPlayingProcessed) {
+        processedAudioRef.current.pause();
+      } else {
+        processedAudioRef.current.play();
+      }
+      setIsPlayingProcessed(!isPlayingProcessed);
+    }
+  };
+
+  // Audio event handlers
+  const handleOriginalTimeUpdate = () => {
+    if (originalAudioRef.current) {
+      setOriginalCurrentTime(originalAudioRef.current.currentTime);
+    }
+  };
+
+  const handleProcessedTimeUpdate = () => {
+    if (processedAudioRef.current) {
+      setProcessedCurrentTime(processedAudioRef.current.currentTime);
+    }
+  };
+
+  const handleOriginalLoadedMetadata = () => {
+    if (originalAudioRef.current) {
+      setOriginalDuration(originalAudioRef.current.duration);
+    }
+  };
+
+  const handleProcessedLoadedMetadata = () => {
+    if (processedAudioRef.current) {
+      setProcessedDuration(processedAudioRef.current.duration);
+    }
+  };
+
+  const handleOriginalEnded = () => {
+    setIsPlayingOriginal(false);
+    setOriginalCurrentTime(0);
+  };
+
+  const handleProcessedEnded = () => {
+    setIsPlayingProcessed(false);
+    setProcessedCurrentTime(0);
+  };
+
   const handleDownload = () => {
     // Implementation for actual download
     console.log('Downloading with settings:', {
@@ -51,10 +129,54 @@ const ExportGate: React.FC<ExportGateProps> = ({
       gTuner: gTunerEnabled,
       totalCost
     });
+
+    // Create a download link for the processed audio
+    if (processedAudioUrl) {
+      const link = document.createElement('a');
+      link.href = processedAudioUrl;
+      link.download = `mastered_audio.${downloadFormat === 'mp3' ? 'mp3' : 'wav'}`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  };
+
+  // Format time helper
+  const formatTime = (time: number) => {
+    const minutes = Math.floor(time / 60);
+    const seconds = Math.floor(time % 60);
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  };
+
+  // Calculate progress percentage
+  const getProgressPercentage = (current: number, duration: number) => {
+    return duration > 0 ? (current / duration) * 100 : 0;
   };
 
   return (
     <div className="space-y-6">
+      {/* Hidden audio elements */}
+      {originalAudioUrl && (
+        <audio
+          ref={originalAudioRef}
+          src={originalAudioUrl}
+          onTimeUpdate={handleOriginalTimeUpdate}
+          onLoadedMetadata={handleOriginalLoadedMetadata}
+          onEnded={handleOriginalEnded}
+          preload="metadata"
+        />
+      )}
+      {processedAudioUrl && (
+        <audio
+          ref={processedAudioRef}
+          src={processedAudioUrl}
+          onTimeUpdate={handleProcessedTimeUpdate}
+          onLoadedMetadata={handleProcessedLoadedMetadata}
+          onEnded={handleProcessedEnded}
+          preload="metadata"
+        />
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-3">
@@ -107,7 +229,7 @@ const ExportGate: React.FC<ExportGateProps> = ({
               <div className="flex items-center justify-between mb-3">
                 <span className="text-sm text-gray-400">Audio Preview</span>
                 <button
-                  onClick={() => setIsPlayingOriginal(!isPlayingOriginal)}
+                  onClick={handleOriginalPlayPause}
                   className="p-2 bg-crys-gold rounded-lg hover:bg-yellow-400 transition-colors"
                 >
                   {isPlayingOriginal ? (
@@ -118,11 +240,11 @@ const ExportGate: React.FC<ExportGateProps> = ({
                 </button>
               </div>
               <div className="w-full bg-gray-800 rounded-lg h-2">
-                <div className="bg-crys-gold h-2 rounded-lg" style={{ width: '45%' }}></div>
+                <div className="bg-crys-gold h-2 rounded-lg" style={{ width: `${getProgressPercentage(originalCurrentTime, originalDuration)}%` }}></div>
               </div>
               <div className="flex justify-between text-xs text-gray-400 mt-1">
-                <span>0:00</span>
-                <span>3:45</span>
+                <span>{formatTime(originalCurrentTime)}</span>
+                <span>{formatTime(originalDuration)}</span>
               </div>
             </div>
           </div>
@@ -151,7 +273,7 @@ const ExportGate: React.FC<ExportGateProps> = ({
               <div className="flex items-center justify-between mb-3">
                 <span className="text-sm text-gray-400">Audio Preview</span>
                 <button
-                  onClick={() => setIsPlayingProcessed(!isPlayingProcessed)}
+                  onClick={handleProcessedPlayPause}
                   className="p-2 bg-crys-gold rounded-lg hover:bg-yellow-400 transition-colors"
                 >
                   {isPlayingProcessed ? (
@@ -162,11 +284,11 @@ const ExportGate: React.FC<ExportGateProps> = ({
                 </button>
               </div>
               <div className="w-full bg-gray-800 rounded-lg h-2">
-                <div className="bg-crys-gold h-2 rounded-lg" style={{ width: '45%' }}></div>
+                <div className="bg-crys-gold h-2 rounded-lg" style={{ width: `${getProgressPercentage(processedCurrentTime, processedDuration)}%` }}></div>
               </div>
               <div className="flex justify-between text-xs text-gray-400 mt-1">
-                <span>0:00</span>
-                <span>3:45</span>
+                <span>{formatTime(processedCurrentTime)}</span>
+                <span>{formatTime(processedDuration)}</span>
               </div>
             </div>
           </div>

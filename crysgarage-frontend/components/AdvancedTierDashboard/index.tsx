@@ -109,6 +109,15 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
   // Refs for real-time analysis
   const realTimeMasteringPlayerRef = useRef<RealTimeMasteringPlayerRef>(null);
 
+  // Cleanup object URLs on unmount
+  useEffect(() => {
+    return () => {
+      if (processedAudioUrl) {
+        URL.revokeObjectURL(processedAudioUrl);
+      }
+    };
+  }, [processedAudioUrl]);
+
   const manualInit = useCallback(() => {
     try {
       realTimeMasteringPlayerRef.current?.manualInitializeAudioContext();
@@ -138,7 +147,14 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
 
   // Continue to export
   const handleContinueToExport = () => {
-    setCurrentStep(3);
+    // Generate a processed audio URL (simulate mastered audio)
+    if (selectedFile) {
+      // For now, we'll use the original file as the "processed" audio
+      // In a real implementation, this would be the actual processed audio
+      const processedUrl = URL.createObjectURL(selectedFile);
+      setProcessedAudioUrl(processedUrl);
+      setCurrentStep(3);
+    }
   };
 
   // Effect update handlers
