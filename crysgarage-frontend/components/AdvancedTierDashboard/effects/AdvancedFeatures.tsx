@@ -26,7 +26,9 @@ const AdvancedFeatures: React.FC<AdvancedFeaturesProps> = ({
         <p className="text-sm text-gray-400">Premium mastering capabilities</p>
       </div>
 
-      {/* G-Surround - Compact Card */}
+      {/* Effects Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        {/* G-Surround - Compact Card */}
       <div className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 rounded-lg border border-gray-700 shadow-lg overflow-hidden w-full max-w-sm mx-auto">
         {/* Header */}
         <div className="bg-gradient-to-r from-gray-800 to-gray-700 p-2 border-b border-gray-600">
@@ -242,6 +244,7 @@ const AdvancedFeatures: React.FC<AdvancedFeaturesProps> = ({
             </div>
           </div>
         </div>
+      </div>
       </div>
 
       {/* Feature Info */}
