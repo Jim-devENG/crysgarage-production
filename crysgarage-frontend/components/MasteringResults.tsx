@@ -907,7 +907,7 @@ export function MasteringResults({
                     variant="outline"
                     size="sm"
                     className="border-crys-gold/30 text-crys-gold hover:bg-crys-gold/10"
-                    onClick={() => window.location.href = '/pricing'}
+                    onClick={() => window.location.href = '/studio'}
                   >
                     Upgrade to Professional
                   </Button>

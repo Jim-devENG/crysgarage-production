@@ -88,7 +88,7 @@ export function Header({
     { id: 'home', label: 'Home', icon: <Home className="w-4 h-4" />, show: true },
     { id: 'dashboard', label: getDashboardLabel(), icon: <Zap className="w-4 h-4" />, show: !!user },
     { id: 'upload', label: 'Upload Audio', icon: <Music className="w-4 h-4" />, show: !!user },
-    { id: 'pricing', label: 'Pricing', icon: <CreditCard className="w-4 h-4" />, show: true },
+    { id: 'studio', label: 'Studio', icon: <CreditCard className="w-4 h-4" />, show: true },
     { id: 'courses', label: 'Courses', icon: <BookOpen className="w-4 h-4" />, show: true },
     { id: 'help', label: 'Help', icon: <LifeBuoy className="w-4 h-4" />, show: true },
   ];

@@ -161,7 +161,7 @@ export function UserProfile({
   };
 
   const handleUpgradePlan = () => {
-    onNavigate?.('pricing');
+    onNavigate?.('studio');
     onClose();
   };
 

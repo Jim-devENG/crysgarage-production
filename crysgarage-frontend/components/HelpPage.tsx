@@ -51,8 +51,8 @@ export function HelpPage({ onGetStarted }: HelpPageProps) {
       category: 'technical'
     },
     {
-      id: 'pricing-tiers',
-      question: 'What are the differences between pricing tiers?',
+      id: 'studio-tiers',
+question: 'What are the differences between studio tiers?',
       answer: 'Free tier offers 5 credits with preview-only results. Professional tier ($9) includes 100 credits with full downloads. Advanced tier ($20/month) provides unlimited mastering with manual controls.',
       category: 'billing'
     },

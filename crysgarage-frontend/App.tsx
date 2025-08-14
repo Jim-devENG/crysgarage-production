@@ -36,7 +36,7 @@ function AppContent() {
 
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
-  const [currentPage, setCurrentPage] = useState<'landing' | 'home' | 'dashboard' | 'professional' | 'advanced' | 'processing' | 'results' | 'pricing' | 'help' | 'courses' | 'marketplace' | 'profile' | 'admin'>('landing');
+  const [currentPage, setCurrentPage] = useState<'landing' | 'home' | 'dashboard' | 'professional' | 'advanced' | 'processing' | 'results' | 'studio' | 'help' | 'courses' | 'marketplace' | 'profile' | 'admin'>('landing');
   const [showBillingModal, setShowBillingModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showProfileEditModal, setShowProfileEditModal] = useState(false);
@@ -77,8 +77,8 @@ function AppContent() {
         setCurrentPage('professional');
       } else if (path === '/advanced') {
         setCurrentPage('advanced');
-      } else if (path === '/pricing') {
-        setCurrentPage('pricing');
+      } else if (path === '/studio') {
+        setCurrentPage('studio');
       } else if (path === '/help') {
         setCurrentPage('help');
       } else if (path === '/courses') {
@@ -153,10 +153,10 @@ function AppContent() {
       console.log('Setting current page to: results');
       setCurrentPage('results');
       window.history.pushState({}, '', '/results');
-    } else if (section === 'pricing') {
-      console.log('Setting current page to: pricing');
-      setCurrentPage('pricing');
-      window.history.pushState({}, '', '/pricing');
+    } else if (section === 'studio') {
+      console.log('Setting current page to: studio');
+      setCurrentPage('studio');
+      window.history.pushState({}, '', '/studio');
     } else if (section === 'help') {
       console.log('Setting current page to: help');
       setCurrentPage('help');
@@ -337,7 +337,7 @@ function AppContent() {
             />
           )}
           
-          {currentPage === 'pricing' && (
+          {currentPage === 'studio' && (
             <PricingPage 
               currentTier={user.tier}
               onSelectTier={handleTierSelection}
@@ -469,15 +469,15 @@ function AppContent() {
         />
       )}
       
-      {currentPage === 'pricing' && (
-        <PricingPage 
-          currentTier="free"
-          onSelectTier={handleTierSelection}
-          onGoToDashboard={() => {
-            setCurrentPage('dashboard');
-          }}
-        />
-      )}
+             {currentPage === 'studio' && (
+         <PricingPage 
+           currentTier="free"
+           onSelectTier={handleTierSelection}
+           onGoToDashboard={() => {
+             setCurrentPage('dashboard');
+           }}
+         />
+       )}
       
       {currentPage === 'help' && (
         <HelpPage 

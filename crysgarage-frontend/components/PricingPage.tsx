@@ -138,7 +138,7 @@ export function PricingPage({ onSelectTier, onGoToDashboard }: PricingPageProps)
         {/* Header */}
         <div className="text-center mb-16 max-w-4xl mx-auto">
           <Badge variant="secondary" className="bg-crys-gold/20 text-crys-gold mb-4">
-            Transparent Pricing
+            Studio Access
           </Badge>
           <h1 className="text-4xl md:text-6xl font-bold text-crys-white mb-6">
             Choose Your

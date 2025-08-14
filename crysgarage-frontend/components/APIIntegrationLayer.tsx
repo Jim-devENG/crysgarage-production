@@ -96,12 +96,12 @@ export function APIIntegrationLayer({ isVisible, onClose }: APIIntegrationLayerP
     },
     {
       id: 'plans',
-      name: 'Pricing Plans',
-      endpoint: '/plans',
-      method: 'GET',
-      status: 'mock-data',
-      description: 'Retrieve available subscription tiers and pricing',
-      mappedComponent: 'PricingPage, PricingTiers',
+      name: 'Studio Plans',
+endpoint: '/plans',
+method: 'GET',
+status: 'mock-data',
+description: 'Retrieve available subscription tiers and studio access',
+mappedComponent: 'PricingPage, PricingTiers',
       implementationStatus: 'Static pricing data, can be connected easily',
       currentState: 'Hardcoded tier data in components'
     },
