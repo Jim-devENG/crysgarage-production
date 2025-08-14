@@ -185,25 +185,25 @@ const AdvancedFeatures: React.FC<AdvancedFeaturesProps> = ({
                 <div className="text-gray-400 text-[8px]">REFERENCE FREQUENCY</div>
               </div>
 
-              {/* Depth Control */}
+              {/* Frequency Control */}
               <div className="relative w-12 h-12 mx-auto mb-1">
                 <div className="w-full h-full rounded-full bg-gradient-to-br from-gray-700 to-gray-800 border border-gray-600 shadow-inner flex items-center justify-center">
                   <div className="w-9 h-9 rounded-full bg-gradient-to-br from-gray-600 to-gray-700 border border-gray-500 flex items-center justify-center">
                     <div className="w-0.5 h-4 bg-crys-gold rounded-full transform origin-bottom" 
-                         style={{ transform: `rotate(${(audioEffects.gTuner.depth || 0) * 3.6}deg)` }}></div>
+                         style={{ transform: `rotate(${(audioEffects.gTuner.frequency / 1000) * 36}deg)` }}></div>
                   </div>
                 </div>
                 <div className="absolute -bottom-0.5 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-crys-gold rounded-full"></div>
               </div>
-              <div className="text-crys-gold font-mono text-xs mb-0.5">{(audioEffects.gTuner.depth || 0).toFixed(0)}%</div>
-              <div className="text-gray-400 text-[8px]">DEPTH</div>
+              <div className="text-crys-gold font-mono text-xs mb-0.5">{audioEffects.gTuner.frequency}Hz</div>
+              <div className="text-gray-400 text-[8px]">FREQUENCY</div>
               <input
                 type="range"
-                min="0"
-                max="100"
+                min="440"
+                max="448"
                 step="1"
-                value={audioEffects.gTuner.depth || 0}
-                onChange={(e) => onUpdateEffectSettings('gTuner', { ...audioEffects.gTuner, depth: parseFloat(e.target.value) })}
+                value={audioEffects.gTuner.frequency}
+                onChange={(e) => onUpdateEffectSettings('gTuner', { ...audioEffects.gTuner, frequency: parseFloat(e.target.value) })}
                 className="w-full mt-1"
               />
 

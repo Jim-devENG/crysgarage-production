@@ -147,6 +147,10 @@ const RealTimeMasteringPlayer = forwardRef<RealTimeMasteringPlayerRef, RealTimeM
   const gLimiterRef = useRef<DynamicsCompressorNode | null>(null);
   const gMultiBandRefs = useRef<DynamicsCompressorNode[]>([]);
   
+  // Advanced feature nodes
+  const gTunerOscillatorRef = useRef<OscillatorNode | null>(null);
+  const gTunerGainRef = useRef<GainNode | null>(null);
+  
   // State
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -279,6 +283,15 @@ const RealTimeMasteringPlayer = forwardRef<RealTimeMasteringPlayerRef, RealTimeM
     // Create G-Multi-Band (3 bands)
     gMultiBandRefs.current = Array.from({ length: 3 }, () => ctx.createDynamicsCompressor());
     
+    // Create G-Tuner oscillator and gain
+    gTunerOscillatorRef.current = ctx.createOscillator();
+    gTunerGainRef.current = ctx.createGain();
+    gTunerOscillatorRef.current.type = 'sine';
+    gTunerOscillatorRef.current.frequency.value = 444; // Default 444Hz
+    gTunerGainRef.current.gain.value = 0; // Start muted
+    gTunerOscillatorRef.current.connect(gTunerGainRef.current);
+    gTunerOscillatorRef.current.start();
+    
   }, []);
 
   // Connect the processing chain
@@ -302,6 +315,7 @@ const RealTimeMasteringPlayer = forwardRef<RealTimeMasteringPlayerRef, RealTimeM
       if (gDigitalTapeRef.current) gDigitalTapeRef.current.disconnect();
       if (gLimiterRef.current) gLimiterRef.current.disconnect();
       gMultiBandRefs.current.forEach(node => node.disconnect());
+      if (gTunerGainRef.current) gTunerGainRef.current.disconnect();
     } catch (error) {
       console.log('Error disconnecting nodes:', error);
     }
@@ -361,6 +375,11 @@ const RealTimeMasteringPlayer = forwardRef<RealTimeMasteringPlayerRef, RealTimeM
     if (gMultiBandRefs.current.length >= 3 && audioEffects.gMultiBand?.enabled) {
       currentNode.connect(gMultiBandRefs.current[0]);
       currentNode = gMultiBandRefs.current[0];
+    }
+
+    // Connect G-Tuner if enabled (adds reference tone)
+    if (gTunerGainRef.current && audioEffects.gTuner?.enabled) {
+      gTunerGainRef.current.connect(gainNodeRef.current);
     }
 
     // Connect to analyser and output
@@ -460,6 +479,12 @@ const RealTimeMasteringPlayer = forwardRef<RealTimeMasteringPlayerRef, RealTimeM
         gMultiBandRefs.current[2].threshold.value = audioEffects.gMultiBand.high.threshold;
         gMultiBandRefs.current[2].ratio.value = audioEffects.gMultiBand.high.ratio;
       }
+    }
+
+    // Update G-Tuner
+    if (gTunerOscillatorRef.current && gTunerGainRef.current && audioEffects.gTuner) {
+      gTunerOscillatorRef.current.frequency.value = audioEffects.gTuner.frequency;
+      gTunerGainRef.current.gain.value = audioEffects.gTuner.enabled ? 0.1 : 0; // Low volume reference tone
     }
   }, [audioEffects, volume, isMuted]);
 
