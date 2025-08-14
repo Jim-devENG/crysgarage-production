@@ -97,32 +97,38 @@ const StudioDashboard: React.FC<StudioDashboardProps> = ({
       </div>
 
       {/* Content */}
-      <div className="space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {activeTab === 'basic' && (
-          <BasicEffects
-            audioEffects={audioEffects}
-            onUpdateEffectSettings={onUpdateEffectSettings}
-            onToggleEffect={onToggleEffect}
-            onManualInit={onManualInit}
-          />
+          <div className="md:col-span-2 lg:col-span-3">
+            <BasicEffects
+              audioEffects={audioEffects}
+              onUpdateEffectSettings={onUpdateEffectSettings}
+              onToggleEffect={onToggleEffect}
+              onManualInit={onManualInit}
+            />
+          </div>
         )}
 
         {activeTab === 'premium' && (
-          <PremiumEffects
-            audioEffects={audioEffects}
-            onUpdateEffectSettings={onUpdateEffectSettings}
-            onTogglePremiumEffect={onTogglePremiumEffect}
-            onManualInit={onManualInit}
-          />
+          <div className="md:col-span-2 lg:col-span-3">
+            <PremiumEffects
+              audioEffects={audioEffects}
+              onUpdateEffectSettings={onUpdateEffectSettings}
+              onTogglePremiumEffect={onTogglePremiumEffect}
+              onManualInit={onManualInit}
+            />
+          </div>
         )}
 
         {activeTab === 'advanced' && (
-                      <AdvancedFeatures
+          <div className="md:col-span-2 lg:col-span-3">
+            <AdvancedFeatures
               audioEffects={audioEffects}
               onUpdateEffectSettings={onUpdateEffectSettings}
               onTogglePremiumEffect={onToggleEffect}
               onManualInit={onManualInit}
             />
+          </div>
         )}
       </div>
     </div>

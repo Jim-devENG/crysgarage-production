@@ -259,38 +259,49 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
       
       case 2:
         return (
-          <div className="space-y-4">
-            {/* Real-time Mastering Player */}
-            <RealTimeMasteringPlayer
-              ref={realTimeMasteringPlayerRef}
-              audioFile={selectedFile}
-              audioEffects={audioEffects}
-              meterData={meterData}
-              onMeterUpdate={setMeterData}
-              onEffectChange={(effects) => setAudioEffects(effects as any)}
-              isProcessing={isProcessing}
-            />
+          <div className="space-y-6">
+            {/* Top Row - Player and Meters */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+              {/* Real-time Mastering Player - Takes 2 columns */}
+              <div className="lg:col-span-2">
+                <RealTimeMasteringPlayer
+                  ref={realTimeMasteringPlayerRef}
+                  audioFile={selectedFile}
+                  audioEffects={audioEffects}
+                  meterData={meterData}
+                  onMeterUpdate={setMeterData}
+                  onEffectChange={(effects) => setAudioEffects(effects as any)}
+                  isProcessing={isProcessing}
+                />
+              </div>
 
-            {/* Real-time Meters */}
-            <RealTimeMeters meterData={meterData} />
+              {/* Real-time Meters - Takes 1 column */}
+              <div className="lg:col-span-1">
+                <RealTimeMeters meterData={meterData} />
+              </div>
+            </div>
 
-            {/* Genre Presets */}
-            <GenrePresets
-              selectedGenre={selectedGenre}
-              onGenreSelect={handleGenreSelect}
-            />
+            {/* Middle Row - Genre Presets */}
+            <div className="grid grid-cols-1 gap-4">
+              <GenrePresets
+                selectedGenre={selectedGenre}
+                onGenreSelect={handleGenreSelect}
+              />
+            </div>
 
-            {/* Studio Dashboard */}
-            <StudioDashboard
-              audioEffects={audioEffects}
-              onUpdateEffectSettings={handleUpdateEffectSettings}
-              onTogglePremiumEffect={handleTogglePremiumEffect}
-              onToggleEffect={handleToggleEffect}
-              selectedGenre={selectedGenre}
-              onGenreSelect={handleGenreSelect}
-              meterData={meterData}
-              onManualInit={manualInit}
-            />
+            {/* Bottom Row - Studio Dashboard */}
+            <div className="grid grid-cols-1 gap-4">
+              <StudioDashboard
+                audioEffects={audioEffects}
+                onUpdateEffectSettings={handleUpdateEffectSettings}
+                onTogglePremiumEffect={handleTogglePremiumEffect}
+                onToggleEffect={handleToggleEffect}
+                selectedGenre={selectedGenre}
+                onGenreSelect={handleGenreSelect}
+                meterData={meterData}
+                onManualInit={manualInit}
+              />
+            </div>
 
             {/* Continue to Export Button */}
             <div className="text-center">
