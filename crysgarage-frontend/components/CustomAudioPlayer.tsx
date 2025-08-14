@@ -69,10 +69,31 @@ const CustomAudioPlayer = forwardRef<HTMLDivElement, CustomAudioPlayerProps>(({
 
   const togglePlay = () => {
     if (audioRef.current) {
+      // Check if audio has a valid source
+      if (!audioRef.current.src || audioRef.current.src === '') {
+        console.error('Audio element has no source');
+        return;
+      }
+
+      // Ensure audio is loaded before playing
+      if (audioRef.current.readyState < 2) { // HAVE_CURRENT_DATA
+        console.log('Audio not ready, loading...');
+        audioRef.current.load();
+      }
+
       if (isPlaying) {
         audioRef.current.pause();
       } else {
-        audioRef.current.play();
+        const playPromise = audioRef.current.play();
+        if (playPromise !== undefined) {
+          playPromise
+            .then(() => {
+              console.log('Audio play started successfully');
+            })
+            .catch((error) => {
+              console.error('Error playing audio:', error);
+            });
+        }
       }
     }
   };

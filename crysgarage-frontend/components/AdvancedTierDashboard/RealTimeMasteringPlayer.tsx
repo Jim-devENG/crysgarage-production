@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState, useCallback } from 'react';
+import React, { useRef, useEffect, useState, useCallback, useImperativeHandle, forwardRef } from 'react';
 import { Play, Pause, Volume2, VolumeX, SkipBack, SkipForward, RotateCcw, Settings } from 'lucide-react';
 
 interface AudioEffects {
@@ -6,22 +6,27 @@ interface AudioEffects {
     low: number;
     mid: number;
     high: number;
+    enabled: boolean;
   };
   compressor: {
     threshold: number;
     ratio: number;
     attack: number;
     release: number;
+    enabled: boolean;
   };
   stereoWidener: {
     width: number;
+    enabled: boolean;
   };
   loudness: {
     volume: number;
+    enabled: boolean;
   };
   limiter: {
     threshold: number;
     ceiling: number;
+    enabled: boolean;
   };
   // Premium effects
   gMasteringCompressor?: {
@@ -30,6 +35,7 @@ interface AudioEffects {
     attack: number;
     release: number;
     makeup: number;
+    enabled: boolean;
   };
   gPrecisionEQ?: {
     bands: Array<{
@@ -38,24 +44,32 @@ interface AudioEffects {
       q: number;
       type: 'peaking' | 'lowshelf' | 'highshelf';
     }>;
+    enabled: boolean;
   };
   gDigitalTape?: {
     saturation: number;
     warmth: number;
     compression: number;
+    enabled: boolean;
   };
   gLimiter?: {
     threshold: number;
     ceiling: number;
     release: number;
+    enabled: boolean;
   };
   gMultiBand?: {
     low: { threshold: number; ratio: number };
     mid: { threshold: number; ratio: number };
     high: { threshold: number; ratio: number };
+    enabled: boolean;
   };
   // Advanced features
-  gSurround?: boolean;
+  gSurround?: {
+    width: number;
+    depth: number;
+    enabled: boolean;
+  };
   gTuner?: {
     enabled: boolean;
     frequency: number;
@@ -84,16 +98,32 @@ interface RealTimeMasteringPlayerProps {
   onMeterUpdate: (data: MeterData) => void;
   onEffectChange: (effects: AudioEffects) => void;
   isProcessing: boolean;
+  onManualInit?: () => void;
 }
 
-const RealTimeMasteringPlayer: React.FC<RealTimeMasteringPlayerProps> = ({
+export interface RealTimeMasteringPlayerRef {
+  manualInitializeAudioContext: () => void;
+  audioElement: HTMLAudioElement | null;
+  isPlaying: boolean;
+  currentTime: number;
+  duration: number;
+  volume: number;
+  play: () => void;
+  pause: () => void;
+  setVolume: (volume: number) => void;
+  seek: (time: number) => void;
+  debugAudioState: () => void;
+}
+
+const RealTimeMasteringPlayer = forwardRef<RealTimeMasteringPlayerRef, RealTimeMasteringPlayerProps>(({
   audioFile,
   audioEffects,
   meterData,
   onMeterUpdate,
   onEffectChange,
-  isProcessing
-}) => {
+  isProcessing,
+  onManualInit
+}, ref) => {
   const audioRef = useRef<HTMLAudioElement>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
@@ -121,25 +151,45 @@ const RealTimeMasteringPlayer: React.FC<RealTimeMasteringPlayerProps> = ({
   const [isMuted, setIsMuted] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [audioUrl, setAudioUrl] = useState<string>('');
+  const [isInitialized, setIsInitialized] = useState(false);
+  const [audioContextState, setAudioContextState] = useState<string>('suspended');
 
-  // Initialize audio context and processing chain
-  const initializeAudioContext = useCallback(() => {
-    if (!audioRef.current) return;
-
+  // Simplified audio context initialization
+  const initializeAudioContext = useCallback(async () => {
+    console.log('=== INITIALIZING AUDIO CONTEXT ===');
+    
     try {
-      // Create audio context
-      audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+      // Create audio context if it doesn't exist
+      if (!audioContextRef.current) {
+        console.log('Creating new audio context...');
+        audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+        setAudioContextState(audioContextRef.current.state);
+      }
+      
+      // Resume audio context if suspended
+      if (audioContextRef.current.state === 'suspended') {
+        console.log('Resuming suspended audio context...');
+        await audioContextRef.current.resume();
+        setAudioContextState(audioContextRef.current.state);
+      }
       
       // Create analyser for real-time analysis
-      analyserRef.current = audioContextRef.current.createAnalyser();
-      analyserRef.current.fftSize = 2048;
-      analyserRef.current.smoothingTimeConstant = 0.8;
+      if (!analyserRef.current) {
+        analyserRef.current = audioContextRef.current.createAnalyser();
+        analyserRef.current.fftSize = 2048;
+        analyserRef.current.smoothingTimeConstant = 0.8;
+      }
       
-      // Create source from audio element
-      sourceRef.current = audioContextRef.current.createMediaElementSource(audioRef.current);
+      // Create source from the main audio element
+      if (!sourceRef.current && audioRef.current) {
+        console.log('Creating MediaElementAudioSourceNode...');
+        sourceRef.current = audioContextRef.current.createMediaElementSource(audioRef.current);
+      }
       
       // Create gain node for volume control
-      gainNodeRef.current = audioContextRef.current.createGain();
+      if (!gainNodeRef.current) {
+        gainNodeRef.current = audioContextRef.current.createGain();
+      }
       
       // Create effect nodes
       createEffectNodes();
@@ -147,12 +197,20 @@ const RealTimeMasteringPlayer: React.FC<RealTimeMasteringPlayerProps> = ({
       // Connect the processing chain
       connectProcessingChain();
       
+      setIsInitialized(true);
+      console.log('✅ Audio context initialized successfully');
+      
     } catch (error) {
-      console.error('Error initializing audio context:', error);
-      // Reset state on error
-      setIsPlaying(false);
+      console.error('❌ Error initializing audio context:', error);
+      setIsInitialized(false);
     }
   }, []);
+
+  // Manual initialization function exposed through ref
+  const manualInitializeAudioContext = useCallback(async () => {
+    console.log('=== MANUAL AUDIO CONTEXT INITIALIZATION ===');
+    await initializeAudioContext();
+  }, [initializeAudioContext]);
 
   // Create all effect nodes
   const createEffectNodes = useCallback(() => {
@@ -181,7 +239,7 @@ const RealTimeMasteringPlayer: React.FC<RealTimeMasteringPlayerProps> = ({
     // Create compressor
     compressorRef.current = ctx.createDynamicsCompressor();
     
-    // Create stereo widener (using gain nodes for mid-side processing)
+    // Create stereo widener
     stereoWidenerRef.current = ctx.createGain();
     
     // Create limiter
@@ -219,60 +277,66 @@ const RealTimeMasteringPlayer: React.FC<RealTimeMasteringPlayerProps> = ({
     
   }, []);
 
-  // Connect the processing chain - only connect active effects
+  // Connect the processing chain
   const connectProcessingChain = useCallback(() => {
-    if (!sourceRef.current || !analyserRef.current || !gainNodeRef.current) return;
+    if (!sourceRef.current || !analyserRef.current || !gainNodeRef.current) {
+      console.log('Audio nodes not available for connection');
+      return;
+    }
+    
+    console.log('Connecting processing chain...');
 
     // Disconnect all existing connections
-    sourceRef.current.disconnect();
-    eqNodesRef.current.forEach(node => node.disconnect());
-    if (compressorRef.current) compressorRef.current.disconnect();
-    if (stereoWidenerRef.current) stereoWidenerRef.current.disconnect();
-    if (limiterRef.current) limiterRef.current.disconnect();
-    if (gMasteringCompRef.current) gMasteringCompRef.current.disconnect();
-    gPrecisionEQRefs.current.forEach(node => node.disconnect());
-    if (gDigitalTapeRef.current) gDigitalTapeRef.current.disconnect();
-    if (gLimiterRef.current) gLimiterRef.current.disconnect();
-    gMultiBandRefs.current.forEach(node => node.disconnect());
+    try {
+      sourceRef.current.disconnect();
+      eqNodesRef.current.forEach(node => node.disconnect());
+      if (compressorRef.current) compressorRef.current.disconnect();
+      if (stereoWidenerRef.current) stereoWidenerRef.current.disconnect();
+      if (limiterRef.current) limiterRef.current.disconnect();
+      if (gMasteringCompRef.current) gMasteringCompRef.current.disconnect();
+      gPrecisionEQRefs.current.forEach(node => node.disconnect());
+      if (gDigitalTapeRef.current) gDigitalTapeRef.current.disconnect();
+      if (gLimiterRef.current) gLimiterRef.current.disconnect();
+      gMultiBandRefs.current.forEach(node => node.disconnect());
+    } catch (error) {
+      console.log('Error disconnecting nodes:', error);
+    }
 
     let currentNode: AudioNode = sourceRef.current;
 
-    // Connect EQ if any band is active
-    const eqActive = audioEffects.eq.low !== 0 || audioEffects.eq.mid !== 0 || audioEffects.eq.high !== 0;
-    if (eqActive && eqNodesRef.current.length >= 3) {
-      // Connect EQ nodes in series
+    // Connect EQ if enabled
+    if (audioEffects.eq?.enabled && eqNodesRef.current.length >= 3) {
       eqNodesRef.current[0].connect(eqNodesRef.current[1]);
       eqNodesRef.current[1].connect(eqNodesRef.current[2]);
       currentNode.connect(eqNodesRef.current[0]);
       currentNode = eqNodesRef.current[2];
     }
 
-    // Connect compressor if active (threshold < 0 means compression is active)
-    if (compressorRef.current && audioEffects.compressor.threshold < 0) {
+    // Connect compressor if enabled
+    if (compressorRef.current && audioEffects.compressor?.enabled) {
       currentNode.connect(compressorRef.current);
       currentNode = compressorRef.current;
     }
 
-    // Connect stereo widener if active
-    if (stereoWidenerRef.current && audioEffects.stereoWidener.width !== 0) {
+    // Connect stereo widener if enabled
+    if (stereoWidenerRef.current && audioEffects.stereoWidener?.enabled) {
       currentNode.connect(stereoWidenerRef.current);
       currentNode = stereoWidenerRef.current;
     }
 
-    // Connect limiter if active (threshold < 0 means limiting is active)
-    if (limiterRef.current && audioEffects.limiter.threshold < 0) {
+    // Connect limiter if enabled
+    if (limiterRef.current && audioEffects.limiter?.enabled) {
       currentNode.connect(limiterRef.current);
       currentNode = limiterRef.current;
     }
 
-    // Premium effects - only connect if they exist and are enabled
-    if (gMasteringCompRef.current && audioEffects.gMasteringCompressor) {
+    // Premium effects
+    if (gMasteringCompRef.current && audioEffects.gMasteringCompressor?.enabled) {
       currentNode.connect(gMasteringCompRef.current);
       currentNode = gMasteringCompRef.current;
     }
 
-    if (gPrecisionEQRefs.current.length > 0 && audioEffects.gPrecisionEQ) {
-      // Connect G-Precision EQ bands in series
+    if (gPrecisionEQRefs.current.length > 0 && audioEffects.gPrecisionEQ?.enabled) {
       for (let i = 0; i < gPrecisionEQRefs.current.length - 1; i++) {
         gPrecisionEQRefs.current[i].connect(gPrecisionEQRefs.current[i + 1]);
       }
@@ -280,18 +344,17 @@ const RealTimeMasteringPlayer: React.FC<RealTimeMasteringPlayerProps> = ({
       currentNode = gPrecisionEQRefs.current[gPrecisionEQRefs.current.length - 1];
     }
 
-    if (gDigitalTapeRef.current && audioEffects.gDigitalTape) {
+    if (gDigitalTapeRef.current && audioEffects.gDigitalTape?.enabled) {
       currentNode.connect(gDigitalTapeRef.current);
       currentNode = gDigitalTapeRef.current;
     }
 
-    if (gLimiterRef.current && audioEffects.gLimiter) {
+    if (gLimiterRef.current && audioEffects.gLimiter?.enabled) {
       currentNode.connect(gLimiterRef.current);
       currentNode = gLimiterRef.current;
     }
 
-    if (gMultiBandRefs.current.length >= 3 && audioEffects.gMultiBand) {
-      // Connect multi-band compressors in parallel (simplified)
+    if (gMultiBandRefs.current.length >= 3 && audioEffects.gMultiBand?.enabled) {
       currentNode.connect(gMultiBandRefs.current[0]);
       currentNode = gMultiBandRefs.current[0];
     }
@@ -301,45 +364,49 @@ const RealTimeMasteringPlayer: React.FC<RealTimeMasteringPlayerProps> = ({
     analyserRef.current.connect(gainNodeRef.current);
     gainNodeRef.current.connect(audioContextRef.current!.destination);
 
+    console.log('✅ Processing chain connected successfully');
   }, [audioEffects]);
 
   // Update effect parameters in real-time
   const updateEffectParameters = useCallback(() => {
+    if (!audioContextRef.current || !eqNodesRef.current) {
+      return;
+    }
+    
     // Update EQ
-    if (eqNodesRef.current.length >= 3) {
+    if (eqNodesRef.current.length >= 3 && audioEffects.eq?.enabled) {
       eqNodesRef.current[0].gain.value = audioEffects.eq.low;
       eqNodesRef.current[1].gain.value = audioEffects.eq.mid;
       eqNodesRef.current[2].gain.value = audioEffects.eq.high;
     }
 
     // Update compressor
-    if (compressorRef.current) {
+    if (compressorRef.current && audioEffects.compressor?.enabled) {
       compressorRef.current.threshold.value = audioEffects.compressor.threshold;
       compressorRef.current.ratio.value = audioEffects.compressor.ratio;
       compressorRef.current.attack.value = audioEffects.compressor.attack / 1000;
       compressorRef.current.release.value = audioEffects.compressor.release / 1000;
     }
 
-    // Update stereo widener (simplified mid-side processing)
-    if (stereoWidenerRef.current) {
+    // Update stereo widener
+    if (stereoWidenerRef.current && audioEffects.stereoWidener?.enabled) {
       const width = audioEffects.stereoWidener.width;
-      // Apply subtle stereo enhancement
       stereoWidenerRef.current.gain.value = 1 + (width / 100) * 0.3;
     }
 
     // Update limiter
-    if (limiterRef.current) {
+    if (limiterRef.current && audioEffects.limiter?.enabled) {
       limiterRef.current.threshold.value = audioEffects.limiter.threshold;
-      limiterRef.current.ratio.value = 20; // Hard limiting
+      limiterRef.current.ratio.value = 20;
     }
 
     // Update volume
-    if (gainNodeRef.current) {
+    if (gainNodeRef.current && audioEffects.loudness?.enabled) {
       gainNodeRef.current.gain.value = audioEffects.loudness.volume * (isMuted ? 0 : volume);
     }
 
     // Update premium effects
-    if (gMasteringCompRef.current && audioEffects.gMasteringCompressor) {
+    if (gMasteringCompRef.current && audioEffects.gMasteringCompressor?.enabled) {
       const comp = audioEffects.gMasteringCompressor;
       gMasteringCompRef.current.threshold.value = comp.threshold;
       gMasteringCompRef.current.ratio.value = comp.ratio;
@@ -347,7 +414,7 @@ const RealTimeMasteringPlayer: React.FC<RealTimeMasteringPlayerProps> = ({
       gMasteringCompRef.current.release.value = comp.release / 1000;
     }
 
-    if (gPrecisionEQRefs.current.length > 0 && audioEffects.gPrecisionEQ) {
+    if (gPrecisionEQRefs.current.length > 0 && audioEffects.gPrecisionEQ?.enabled) {
       audioEffects.gPrecisionEQ.bands.forEach((band, index) => {
         if (gPrecisionEQRefs.current[index]) {
           const node = gPrecisionEQRefs.current[index];
@@ -359,8 +426,7 @@ const RealTimeMasteringPlayer: React.FC<RealTimeMasteringPlayerProps> = ({
       });
     }
 
-    if (gDigitalTapeRef.current && audioEffects.gDigitalTape) {
-      // Update tape saturation curve
+    if (gDigitalTapeRef.current && audioEffects.gDigitalTape?.enabled) {
       const saturation = audioEffects.gDigitalTape.saturation;
       const curve = new Float32Array(44100);
       for (let i = 0; i < 44100; i++) {
@@ -370,23 +436,27 @@ const RealTimeMasteringPlayer: React.FC<RealTimeMasteringPlayerProps> = ({
       gDigitalTapeRef.current.curve = curve;
     }
 
-    if (gLimiterRef.current && audioEffects.gLimiter) {
+    if (gLimiterRef.current && audioEffects.gLimiter?.enabled) {
       const limiter = audioEffects.gLimiter;
       gLimiterRef.current.threshold.value = limiter.threshold;
       gLimiterRef.current.ratio.value = 20;
       gLimiterRef.current.release.value = limiter.release / 1000;
     }
 
-    if (gMultiBandRefs.current.length >= 3 && audioEffects.gMultiBand) {
-      const bands = audioEffects.gMultiBand;
-      gMultiBandRefs.current[0].threshold.value = bands.low.threshold;
-      gMultiBandRefs.current[0].ratio.value = bands.low.ratio;
-      gMultiBandRefs.current[1].threshold.value = bands.mid.threshold;
-      gMultiBandRefs.current[1].ratio.value = bands.mid.ratio;
-      gMultiBandRefs.current[2].threshold.value = bands.high.threshold;
-      gMultiBandRefs.current[2].ratio.value = bands.high.ratio;
+    if (gMultiBandRefs.current.length >= 3 && audioEffects.gMultiBand?.enabled) {
+      if (audioEffects.gMultiBand.low) {
+        gMultiBandRefs.current[0].threshold.value = audioEffects.gMultiBand.low.threshold;
+        gMultiBandRefs.current[0].ratio.value = audioEffects.gMultiBand.low.ratio;
+      }
+      if (audioEffects.gMultiBand.mid) {
+        gMultiBandRefs.current[1].threshold.value = audioEffects.gMultiBand.mid.threshold;
+        gMultiBandRefs.current[1].ratio.value = audioEffects.gMultiBand.mid.ratio;
+      }
+      if (audioEffects.gMultiBand.high) {
+        gMultiBandRefs.current[2].threshold.value = audioEffects.gMultiBand.high.threshold;
+        gMultiBandRefs.current[2].ratio.value = audioEffects.gMultiBand.high.ratio;
+      }
     }
-
   }, [audioEffects, volume, isMuted]);
 
   // Real-time analysis
@@ -421,7 +491,6 @@ const RealTimeMasteringPlayer: React.FC<RealTimeMasteringPlayerProps> = ({
       const left = timeData.slice(0, timeData.length / 2);
       const right = timeData.slice(timeData.length / 2);
       
-      // Calculate RMS levels for left and right channels
       let sumL = 0, sumR = 0, sumLR = 0;
       for (let i = 0; i < left.length; i++) {
         const leftSample = (left[i] - 128) / 128;
@@ -437,18 +506,15 @@ const RealTimeMasteringPlayer: React.FC<RealTimeMasteringPlayerProps> = ({
       correlation = sumLR / Math.sqrt(sumL * sumR);
     }
 
-    // Create enhanced goniometer data for better visualization
+    // Create goniometer data
     const goniometerData = [];
     if (timeData.length >= 2) {
       const left = timeData.slice(0, timeData.length / 2);
       const right = timeData.slice(timeData.length / 2);
       
-      // Sample every 4th point to reduce data density
       for (let i = 0; i < Math.min(left.length, 256); i += 4) {
         const leftSample = (left[i] - 128) / 128;
         const rightSample = (right[i] - 128) / 128;
-        
-        // Add left and right samples to the array
         goniometerData.push(leftSample, rightSample);
       }
     }
@@ -467,86 +533,137 @@ const RealTimeMasteringPlayer: React.FC<RealTimeMasteringPlayerProps> = ({
 
   }, [onMeterUpdate]);
 
-  // Effect update loop
+  // Update effect parameters when audio effects change
   useEffect(() => {
-    updateEffectParameters();
-  }, [updateEffectParameters]);
-
-  // Reconnect processing chain when effects change
-  useEffect(() => {
-    if (audioContextRef.current) {
+    if (audioContextRef.current && eqNodesRef.current) {
+      updateEffectParameters();
       connectProcessingChain();
     }
-  }, [connectProcessingChain]);
+  }, [audioEffects, updateEffectParameters, connectProcessingChain]);
 
   // Analysis loop
   useEffect(() => {
     if (!isPlaying) return;
 
-    const analysisInterval = setInterval(updateAnalysis, 50); // 20fps
+    const analysisInterval = setInterval(updateAnalysis, 50);
     return () => clearInterval(analysisInterval);
   }, [isPlaying, updateAnalysis]);
 
   // Initialize when audio file changes
   useEffect(() => {
     if (audioFile) {
+      console.log('Audio file changed:', audioFile.name);
+      
       const url = URL.createObjectURL(audioFile);
       setAudioUrl(url);
       
-      // Initialize audio context when user interacts
-      const handleUserInteraction = () => {
-        if (audioContextRef.current?.state === 'suspended') {
-          audioContextRef.current.resume();
-        }
-        if (!audioContextRef.current) {
-          initializeAudioContext();
-        }
-        document.removeEventListener('click', handleUserInteraction);
-        document.removeEventListener('keydown', handleUserInteraction);
-      };
-      
-      document.addEventListener('click', handleUserInteraction);
-      document.addEventListener('keydown', handleUserInteraction);
-      
       return () => {
         URL.revokeObjectURL(url);
-        document.removeEventListener('click', handleUserInteraction);
-        document.removeEventListener('keydown', handleUserInteraction);
       };
+    } else {
+      setAudioUrl('');
     }
-  }, [audioFile, initializeAudioContext]);
+  }, [audioFile]);
+
+  // Expose functions through ref
+  useImperativeHandle(ref, () => ({
+    manualInitializeAudioContext,
+    audioElement: audioRef.current,
+    isPlaying,
+    currentTime,
+    duration,
+    volume,
+    play: handlePlay,
+    pause: handlePause,
+    setVolume: (vol: number) => {
+      if (audioRef.current) {
+        audioRef.current.volume = vol;
+        setVolume(vol);
+      }
+    },
+    seek: (time: number) => {
+      if (audioRef.current) {
+        audioRef.current.currentTime = time;
+        setCurrentTime(time);
+      }
+    },
+    debugAudioState: () => {
+      console.log('=== RealTimeMasteringPlayer Debug Info ===');
+      console.log('Audio file:', audioFile?.name);
+      console.log('Audio URL:', audioUrl);
+      console.log('Audio ref:', audioRef.current);
+      console.log('Audio context:', audioContextRef.current);
+      console.log('Audio context state:', audioContextState);
+      console.log('Is initialized:', isInitialized);
+      console.log('Is playing:', isPlaying);
+      console.log('Current time:', currentTime);
+      console.log('Duration:', duration);
+      
+      if (audioRef.current) {
+        console.log('Audio element src:', audioRef.current.src);
+        console.log('Audio element readyState:', audioRef.current.readyState);
+        console.log('Audio element paused:', audioRef.current.paused);
+        console.log('Audio element currentTime:', audioRef.current.currentTime);
+        console.log('Audio element duration:', audioRef.current.duration);
+      }
+    }
+  }), [manualInitializeAudioContext, isPlaying, currentTime, duration, volume, audioFile, audioUrl, audioContextState, isInitialized]);
 
   // Audio event handlers
-  const handlePlay = () => {
+  const handlePlay = async () => {
     try {
-      if (audioRef.current) {
-        // Ensure audio context is resumed
-        if (audioContextRef.current && audioContextRef.current.state === 'suspended') {
-          audioContextRef.current.resume();
-        }
-        
-        const playPromise = audioRef.current.play();
-        if (playPromise !== undefined) {
-          playPromise
-            .then(() => {
-              setIsPlaying(true);
-            })
-            .catch((error) => {
-              console.error('Error playing audio:', error);
-              setIsPlaying(false);
-            });
-        }
+      console.log('=== HANDLE PLAY CALLED ===');
+      
+      if (!audioRef.current) {
+        console.error('Audio ref is null');
+        return;
       }
+
+      if (!audioRef.current.src || audioRef.current.src === '') {
+        console.error('Audio element has no source');
+        return;
+      }
+
+      // Try to initialize audio context for effects
+      try {
+        if (!audioContextRef.current) {
+          console.log('Initializing audio context for playback...');
+          await initializeAudioContext();
+        }
+
+        // Resume audio context if suspended
+        if (audioContextRef.current && audioContextRef.current.state === 'suspended') {
+          console.log('Resuming suspended audio context...');
+          await audioContextRef.current.resume();
+          setAudioContextState(audioContextRef.current.state);
+        }
+
+        // Ensure the processing chain is connected
+        if (audioContextRef.current && sourceRef.current) {
+          connectProcessingChain();
+        }
+      } catch (audioContextError) {
+        console.warn('Web Audio API failed, falling back to basic playback:', audioContextError);
+        // Continue with basic playback even if Web Audio API fails
+      }
+
+      console.log('Attempting to play audio...');
+      await audioRef.current.play();
+      console.log('✅ Audio play started successfully');
+      setIsPlaying(true);
+      
     } catch (error) {
-      console.error('Error in handlePlay:', error);
+      console.error('❌ Error playing audio:', error);
       setIsPlaying(false);
     }
   };
 
   const handlePause = () => {
+    console.log('=== HANDLE PAUSE CALLED ===');
     if (audioRef.current) {
       audioRef.current.pause();
       setIsPlaying(false);
+      console.log('✅ Audio paused successfully');
     }
   };
 
@@ -597,6 +714,47 @@ const RealTimeMasteringPlayer: React.FC<RealTimeMasteringPlayerProps> = ({
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   };
 
+  // Test audio function
+  const testAudioPlayback = () => {
+    console.log('=== Testing Audio Playback ===');
+    
+    try {
+      const testAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      
+      if (testAudioContext.state === 'suspended') {
+        testAudioContext.resume();
+      }
+      
+      const oscillator = testAudioContext.createOscillator();
+      const gainNode = testAudioContext.createGain();
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(testAudioContext.destination);
+      
+      oscillator.frequency.setValueAtTime(440, testAudioContext.currentTime);
+      oscillator.type = 'sine';
+      
+      gainNode.gain.setValueAtTime(0.1, testAudioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, testAudioContext.currentTime + 0.5);
+      
+      oscillator.start(testAudioContext.currentTime);
+      oscillator.stop(testAudioContext.currentTime + 0.5);
+      
+      setTimeout(() => {
+        try {
+          testAudioContext.close();
+        } catch (error) {
+          console.log('Error closing test audio context:', error);
+        }
+      }, 1000);
+      
+      console.log('✅ Test audio played successfully!');
+      
+    } catch (error) {
+      console.error('❌ Test audio failed:', error);
+    }
+  };
+
   if (!audioFile) {
     return (
       <div className="bg-gray-900 rounded-lg p-6 text-center">
@@ -613,6 +771,12 @@ const RealTimeMasteringPlayer: React.FC<RealTimeMasteringPlayerProps> = ({
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-semibold text-white">Real-Time Mastering Player</h3>
         <div className="flex items-center space-x-2">
+          <button
+            onClick={testAudioPlayback}
+            className="p-2 rounded bg-green-600 hover:bg-green-500 transition-colors text-xs text-white"
+          >
+            Test Audio
+          </button>
           <button
             onClick={() => setShowSettings(!showSettings)}
             className="p-2 rounded bg-gray-700 hover:bg-gray-600 transition-colors"
@@ -631,6 +795,10 @@ const RealTimeMasteringPlayer: React.FC<RealTimeMasteringPlayerProps> = ({
         onLoadedMetadata={handleLoadedMetadata}
         onPlay={() => setIsPlaying(true)}
         onPause={() => setIsPlaying(false)}
+        onError={(e) => console.error('Audio error:', e)}
+        onLoadStart={() => console.log('Audio load started')}
+        onCanPlay={() => console.log('Audio can play')}
+        onCanPlayThrough={() => console.log('Audio can play through')}
       />
 
       {/* File Info */}
@@ -640,6 +808,18 @@ const RealTimeMasteringPlayer: React.FC<RealTimeMasteringPlayerProps> = ({
         </p>
         <p className="text-sm text-gray-400">
           <span className="font-medium">Size:</span> {(audioFile.size / 1024 / 1024).toFixed(2)} MB
+        </p>
+        <p className="text-sm text-gray-400">
+          <span className="font-medium">Audio Context:</span> 
+          <span className={`ml-1 ${audioContextState === 'running' ? 'text-green-400' : audioContextState === 'suspended' ? 'text-yellow-400' : 'text-red-400'}`}>
+            {audioContextState}
+          </span>
+        </p>
+        <p className="text-sm text-gray-400">
+          <span className="font-medium">Effects:</span> 
+          <span className={`ml-1 ${isInitialized ? 'text-green-400' : 'text-red-400'}`}>
+            {isInitialized ? 'Active' : 'Inactive'}
+          </span>
         </p>
       </div>
 
@@ -675,7 +855,18 @@ const RealTimeMasteringPlayer: React.FC<RealTimeMasteringPlayerProps> = ({
           </button>
 
           <button
-            onClick={isPlaying ? handlePause : handlePlay}
+            onClick={async () => {
+              // Ensure audio context is initialized on user interaction
+              if (!audioContextRef.current) {
+                console.log('Initializing audio context on play button click...');
+                await initializeAudioContext();
+              }
+              if (isPlaying) {
+                handlePause();
+              } else {
+                handlePlay();
+              }
+            }}
             className="p-3 rounded-full bg-crys-gold hover:bg-yellow-400 transition-colors shadow-lg"
             disabled={isProcessing}
           >
@@ -816,6 +1007,6 @@ const RealTimeMasteringPlayer: React.FC<RealTimeMasteringPlayerProps> = ({
       `}</style>
     </div>
   );
-};
+});
 
 export default RealTimeMasteringPlayer;

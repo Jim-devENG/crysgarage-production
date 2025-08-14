@@ -43,7 +43,14 @@ const HardwareSlider: React.FC<HardwareSliderProps> = ({
   return (
     <div className={`flex ${isVertical ? 'flex-col' : 'flex-row'} items-center space-y-2 ${isVertical ? '' : 'space-y-0 space-x-2'}`}>
       {/* Slider Container */}
-      <div className={`relative ${isVertical ? 'h-full' : 'w-full'} flex items-center justify-center`}>
+      <div 
+        className={`relative ${isVertical ? 'h-full' : 'w-full'} flex items-center justify-center`}
+        onClick={() => {
+          console.log('=== SLIDER CLICKED ===');
+          console.log('Slider label:', label);
+          // This will help ensure audio context is resumed
+        }}
+      >
         {/* Slider Track */}
         <div className={`${sliderWidth[size]} ${sizeClasses[size]} bg-gradient-to-b from-gray-800 to-gray-700 rounded-full border border-gray-600 shadow-inner relative`}>
           {/* Slider Fill */}
@@ -62,7 +69,13 @@ const HardwareSlider: React.FC<HardwareSliderProps> = ({
             max={max}
             step={step}
             value={value}
-            onChange={(e) => onChange(parseFloat(e.target.value))}
+            onChange={(e) => {
+              console.log('=== SLIDER CHANGE EVENT ===');
+              console.log('Slider label:', label);
+              console.log('Old value:', value);
+              console.log('New value:', parseFloat(e.target.value));
+              onChange(parseFloat(e.target.value));
+            }}
             className={`hardware-slider ${isVertical ? 'slider-vertical' : 'slider-horizontal'}`}
             style={{
               background: `linear-gradient(${isVertical ? 'to top' : 'to right'}, 

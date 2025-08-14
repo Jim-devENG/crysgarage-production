@@ -177,23 +177,63 @@ export function LiveAudioControls({
     console.log('Audio element readyState:', audioRef.current.readyState);
 
     try {
+      // Check if audio has a valid source
+      if (!audioRef.current.src || audioRef.current.src === '') {
+        console.error('Audio element has no source');
+        setAudioError('No audio source available');
+        return;
+      }
+
       // Initialize audio context on first play
       if (!isAudioContextInitialized) {
         console.log('Initializing audio context on first play...');
         await initializeAudioContext();
       }
 
+      // Ensure audio context is resumed
+      if (audioContextRef.current && audioContextRef.current.state === 'suspended') {
+        console.log('Resuming suspended audio context...');
+        await audioContextRef.current.resume();
+      }
+
       if (isPlaying) {
         console.log('Pausing audio...');
         audioRef.current.pause();
+        setIsPlaying(false);
       } else {
         console.log('Playing audio...');
-        await audioRef.current.play();
-        console.log('Audio play started successfully');
+        
+        // Ensure audio is loaded
+        if (audioRef.current.readyState < 2) { // HAVE_CURRENT_DATA
+          console.log('Audio not ready, waiting for load...');
+          await new Promise((resolve, reject) => {
+            const handleCanPlay = () => {
+              audioRef.current?.removeEventListener('canplay', handleCanPlay);
+              audioRef.current?.removeEventListener('error', handleError);
+              resolve(true);
+            };
+            const handleError = (e: any) => {
+              audioRef.current?.removeEventListener('canplay', handleCanPlay);
+              audioRef.current?.removeEventListener('error', handleError);
+              reject(new Error('Audio failed to load'));
+            };
+            audioRef.current?.addEventListener('canplay', handleCanPlay);
+            audioRef.current?.addEventListener('error', handleError);
+            audioRef.current?.load();
+          });
+        }
+        
+        const playPromise = audioRef.current.play();
+        if (playPromise !== undefined) {
+          await playPromise;
+          console.log('Audio play started successfully');
+          setIsPlaying(true);
+        }
       }
     } catch (error) {
       console.error('Playback error:', error);
       setAudioError(`Failed to play audio: ${error.message}`);
+      setIsPlaying(false);
     }
   };
 
