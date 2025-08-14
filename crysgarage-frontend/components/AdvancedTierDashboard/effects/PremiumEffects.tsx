@@ -20,23 +20,46 @@ const PremiumEffects: React.FC<PremiumEffectsProps> = ({
 }) => {
   return (
     <div className="space-y-3">
-      {/* G-Mastering Compressor */}
-      <GMasteringCompressor
-        threshold={audioEffects.gMasteringCompressor?.threshold || -20}
-        ratio={audioEffects.gMasteringCompressor?.ratio || 4}
-        attack={audioEffects.gMasteringCompressor?.attack || 10}
-        release={audioEffects.gMasteringCompressor?.release || 100}
-        makeup={audioEffects.gMasteringCompressor?.makeup || 0}
-        reduction={audioEffects.gMasteringCompressor?.reduction || 0}
-        outputLevel={audioEffects.gMasteringCompressor?.outputLevel || -20}
-        onThresholdChange={(value) => onUpdateEffectSettings('gMasteringCompressor', { ...audioEffects.gMasteringCompressor, threshold: value })}
-        onRatioChange={(value) => onUpdateEffectSettings('gMasteringCompressor', { ...audioEffects.gMasteringCompressor, ratio: value })}
-        onAttackChange={(value) => onUpdateEffectSettings('gMasteringCompressor', { ...audioEffects.gMasteringCompressor, attack: value })}
-        onReleaseChange={(value) => onUpdateEffectSettings('gMasteringCompressor', { ...audioEffects.gMasteringCompressor, release: value })}
-        onMakeupChange={(value) => onUpdateEffectSettings('gMasteringCompressor', { ...audioEffects.gMasteringCompressor, makeup: value })}
-        enabled={audioEffects.gMasteringCompressor?.enabled || false}
-        onToggle={(enabled) => onTogglePremiumEffect('gMasteringCompressor', enabled)}
-      />
+      {/* Premium Effects Header */}
+      <div className="text-center mb-4">
+        <h3 className="text-lg font-bold text-white mb-2">Premium G-Series Effects</h3>
+        <p className="text-sm text-gray-400">Professional-grade mastering tools</p>
+      </div>
+
+      {/* Compact Effects Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        {/* G-Mastering Compressor */}
+        <GMasteringCompressor
+          threshold={audioEffects.gMasteringCompressor?.threshold || -20}
+          ratio={audioEffects.gMasteringCompressor?.ratio || 4}
+          attack={audioEffects.gMasteringCompressor?.attack || 10}
+          release={audioEffects.gMasteringCompressor?.release || 100}
+          makeup={audioEffects.gMasteringCompressor?.makeup || 0}
+          reduction={audioEffects.gMasteringCompressor?.reduction || 0}
+          outputLevel={audioEffects.gMasteringCompressor?.outputLevel || -20}
+          onThresholdChange={(value) => onUpdateEffectSettings('gMasteringCompressor', { ...audioEffects.gMasteringCompressor, threshold: value })}
+          onRatioChange={(value) => onUpdateEffectSettings('gMasteringCompressor', { ...audioEffects.gMasteringCompressor, ratio: value })}
+          onAttackChange={(value) => onUpdateEffectSettings('gMasteringCompressor', { ...audioEffects.gMasteringCompressor, attack: value })}
+          onReleaseChange={(value) => onUpdateEffectSettings('gMasteringCompressor', { ...audioEffects.gMasteringCompressor, release: value })}
+          onMakeupChange={(value) => onUpdateEffectSettings('gMasteringCompressor', { ...audioEffects.gMasteringCompressor, makeup: value })}
+          enabled={audioEffects.gMasteringCompressor?.enabled || false}
+          onToggle={(enabled) => onTogglePremiumEffect('gMasteringCompressor', enabled)}
+        />
+
+        {/* Advanced Limiter */}
+        <AdvancedLimiter
+          limitLevel={audioEffects.gLimiter?.threshold || -1}
+          inputGain={audioEffects.gLimiter?.inputGain || 0}
+          outputGain={audioEffects.gLimiter?.outputGain || 0}
+          reduction={audioEffects.gLimiter?.reduction || 0}
+          outputPeak={audioEffects.gLimiter?.outputPeak || -20}
+          onLimitLevelChange={(value) => onUpdateEffectSettings('gLimiter', { ...audioEffects.gLimiter, threshold: value })}
+          onInputGainChange={(value) => onUpdateEffectSettings('gLimiter', { ...audioEffects.gLimiter, inputGain: value })}
+          onOutputGainChange={(value) => onUpdateEffectSettings('gLimiter', { ...audioEffects.gLimiter, outputGain: value })}
+          enabled={audioEffects.gLimiter?.enabled || false}
+          onToggle={(enabled) => onTogglePremiumEffect('gLimiter', enabled)}
+        />
+      </div>
 
       {/* G-Precision EQ */}
       <StudioRack title="G-Precision EQ">
@@ -145,20 +168,6 @@ const PremiumEffects: React.FC<PremiumEffectsProps> = ({
           )}
         </div>
       </StudioRack>
-
-      {/* Advanced Limiter */}
-      <AdvancedLimiter
-        limitLevel={audioEffects.gLimiter?.threshold || -1}
-        inputGain={audioEffects.gLimiter?.inputGain || 0}
-        outputGain={audioEffects.gLimiter?.outputGain || 0}
-        reduction={audioEffects.gLimiter?.reduction || 0}
-        outputPeak={audioEffects.gLimiter?.outputPeak || -20}
-        onLimitLevelChange={(value) => onUpdateEffectSettings('gLimiter', { ...audioEffects.gLimiter, threshold: value })}
-        onInputGainChange={(value) => onUpdateEffectSettings('gLimiter', { ...audioEffects.gLimiter, inputGain: value })}
-        onOutputGainChange={(value) => onUpdateEffectSettings('gLimiter', { ...audioEffects.gLimiter, outputGain: value })}
-        enabled={audioEffects.gLimiter?.enabled || false}
-        onToggle={(enabled) => onTogglePremiumEffect('gLimiter', enabled)}
-      />
 
       {/* G-Multi-Band */}
       <StudioRack title="G-Multi-Band">
