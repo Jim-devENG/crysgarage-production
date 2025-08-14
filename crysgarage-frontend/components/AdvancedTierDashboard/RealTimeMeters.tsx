@@ -40,7 +40,7 @@ const RealTimeMeters: React.FC<RealTimeMetersProps> = ({ meterData }) => {
   };
 
   return (
-    <div className="bg-gradient-to-br from-gray-800 to-gray-700 rounded-xl p-6 border border-gray-600">
+    <div className="backdrop-blur-md bg-black bg-opacity-30 rounded-xl p-6 border border-gray-500 border-opacity-50 shadow-2xl">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center space-x-3">
@@ -51,7 +51,7 @@ const RealTimeMeters: React.FC<RealTimeMetersProps> = ({ meterData }) => {
         </div>
         
         {/* Tab Navigation */}
-        <div className="flex space-x-1 bg-gray-900 rounded-lg p-1">
+        <div className="flex space-x-1 bg-black bg-opacity-50 backdrop-blur-sm rounded-lg p-1 border border-gray-600 border-opacity-50">
           <button
             onClick={() => setActiveTab('overview')}
             className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
@@ -90,7 +90,7 @@ const RealTimeMeters: React.FC<RealTimeMetersProps> = ({ meterData }) => {
         {activeTab === 'overview' && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* LUFS Meter */}
-            <div className="bg-gray-900 rounded-lg p-4">
+            <div className="backdrop-blur-sm bg-black bg-opacity-20 rounded-lg p-4 border border-gray-600 border-opacity-30">
               <LUFSMeter 
                 value={meterData.lufs} 
                 target={meterSettings.lufsTarget}
@@ -99,7 +99,7 @@ const RealTimeMeters: React.FC<RealTimeMetersProps> = ({ meterData }) => {
             </div>
 
             {/* Stereo Meter */}
-            <div className="bg-gray-900 rounded-lg p-4">
+            <div className="backdrop-blur-sm bg-black bg-opacity-20 rounded-lg p-4 border border-gray-600 border-opacity-30">
               <StereoMeter 
                 leftLevel={meterData.leftLevel}
                 rightLevel={meterData.rightLevel}
@@ -109,7 +109,7 @@ const RealTimeMeters: React.FC<RealTimeMetersProps> = ({ meterData }) => {
             </div>
 
             {/* Correlation Meter */}
-            <div className="bg-gray-900 rounded-lg p-4">
+            <div className="backdrop-blur-sm bg-black bg-opacity-20 rounded-lg p-4 border border-gray-600 border-opacity-30">
               <CorrelationMeter 
                 value={meterData.correlation}
                 target={meterSettings.correlationTarget}
@@ -117,7 +117,7 @@ const RealTimeMeters: React.FC<RealTimeMetersProps> = ({ meterData }) => {
             </div>
 
             {/* Frequency Meter */}
-            <div className="bg-gray-900 rounded-lg p-4">
+            <div className="backdrop-blur-sm bg-black bg-opacity-20 rounded-lg p-4 border border-gray-600 border-opacity-30">
               <FrequencyMeter 
                 frequencyData={meterData.frequencyData}
                 title="Frequency Spectrum"
@@ -129,7 +129,7 @@ const RealTimeMeters: React.FC<RealTimeMetersProps> = ({ meterData }) => {
         {activeTab === 'detailed' && (
           <div className="space-y-6">
             {/* Detailed LUFS Analysis */}
-            <div className="bg-gray-900 rounded-lg p-4">
+            <div className="backdrop-blur-sm bg-black bg-opacity-20 rounded-lg p-4 border border-gray-600 border-opacity-30">
               <h4 className="text-lg font-semibold text-white mb-4">LUFS Analysis</h4>
               <LUFSMeter 
                 value={meterData.lufs} 
@@ -140,7 +140,7 @@ const RealTimeMeters: React.FC<RealTimeMetersProps> = ({ meterData }) => {
             </div>
 
             {/* Detailed Stereo Analysis */}
-            <div className="bg-gray-900 rounded-lg p-4">
+            <div className="backdrop-blur-sm bg-black bg-opacity-20 rounded-lg p-4 border border-gray-600 border-opacity-30">
               <h4 className="text-lg font-semibold text-white mb-4">Stereo Analysis</h4>
               <StereoMeter 
                 leftLevel={meterData.leftLevel}
@@ -152,7 +152,7 @@ const RealTimeMeters: React.FC<RealTimeMetersProps> = ({ meterData }) => {
             </div>
 
             {/* Detailed Frequency Analysis */}
-            <div className="bg-gray-900 rounded-lg p-4">
+            <div className="backdrop-blur-sm bg-black bg-opacity-20 rounded-lg p-4 border border-gray-600 border-opacity-30">
               <h4 className="text-lg font-semibold text-white mb-4">Frequency Analysis</h4>
               <FrequencyMeter 
                 frequencyData={meterData.frequencyData}
@@ -166,7 +166,7 @@ const RealTimeMeters: React.FC<RealTimeMetersProps> = ({ meterData }) => {
         {activeTab === 'stereo' && (
           <div className="space-y-6">
             {/* Goniometer */}
-            <div className="bg-gray-900 rounded-lg p-4">
+            <div className="backdrop-blur-sm bg-black bg-opacity-20 rounded-lg p-4 border border-gray-600 border-opacity-30">
               <h4 className="text-lg font-semibold text-white mb-4">Stereo Field (Goniometer)</h4>
               <Goniometer 
                 goniometerData={meterData.goniometerData}
@@ -174,7 +174,7 @@ const RealTimeMeters: React.FC<RealTimeMetersProps> = ({ meterData }) => {
             </div>
 
             {/* Correlation Meter */}
-            <div className="bg-gray-900 rounded-lg p-4">
+            <div className="backdrop-blur-sm bg-black bg-opacity-20 rounded-lg p-4 border border-gray-600 border-opacity-30">
               <h4 className="text-lg font-semibold text-white mb-4">Stereo Correlation</h4>
               <CorrelationMeter 
                 value={meterData.correlation}
@@ -184,7 +184,7 @@ const RealTimeMeters: React.FC<RealTimeMetersProps> = ({ meterData }) => {
             </div>
 
             {/* Stereo Balance */}
-            <div className="bg-gray-900 rounded-lg p-4">
+            <div className="backdrop-blur-sm bg-black bg-opacity-20 rounded-lg p-4 border border-gray-600 border-opacity-30">
               <h4 className="text-lg font-semibold text-white mb-4">Stereo Balance</h4>
               <StereoMeter 
                 leftLevel={meterData.leftLevel}
@@ -199,7 +199,7 @@ const RealTimeMeters: React.FC<RealTimeMetersProps> = ({ meterData }) => {
       </div>
 
       {/* Settings Panel */}
-      <div className="mt-6 bg-gray-900 rounded-lg p-4">
+      <div className="mt-6 backdrop-blur-sm bg-black bg-opacity-20 rounded-lg p-4 border border-gray-600 border-opacity-30">
         <h4 className="text-lg font-semibold text-white mb-4 flex items-center">
           <Settings className="w-5 h-5 mr-2" />
           Meter Settings

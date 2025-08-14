@@ -32,7 +32,7 @@ const StudioDashboard: React.FC<StudioDashboardProps> = ({
   const [activeTab, setActiveTab] = useState<'basic' | 'premium' | 'advanced'>('basic');
 
   return (
-    <div className="bg-gradient-to-br from-gray-800 to-gray-700 rounded-lg p-4 border border-gray-600">
+    <div className="backdrop-blur-md bg-black bg-opacity-30 rounded-lg p-4 border border-gray-500 border-opacity-50 shadow-2xl">
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center space-x-2">
@@ -63,7 +63,7 @@ const StudioDashboard: React.FC<StudioDashboardProps> = ({
       </div>
 
       {/* Tab Navigation */}
-      <div className="flex space-x-1 bg-gray-900 rounded-md p-1 mb-4">
+      <div className="flex space-x-1 bg-black bg-opacity-50 backdrop-blur-sm rounded-md p-1 mb-4 border border-gray-600 border-opacity-50">
         <button
           onClick={() => setActiveTab('basic')}
           className={`flex-1 py-1.5 px-3 rounded text-xs font-medium transition-colors ${

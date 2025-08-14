@@ -12,7 +12,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
   selectedFile, 
   fileInfo, 
   onFileUpload, 
-  onContinue 
+  onContinue
 }) => {
   return (
     <div className="max-w-2xl mx-auto">

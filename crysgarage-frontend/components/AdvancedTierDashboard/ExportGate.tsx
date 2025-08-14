@@ -31,6 +31,12 @@ const ExportGate: React.FC<ExportGateProps> = ({
 
   // Create URLs for audio playback
   const originalAudioUrl = originalFile ? URL.createObjectURL(originalFile) : null;
+  console.log('ExportGate - Original file:', originalFile);
+  console.log('ExportGate - Original audio URL:', originalAudioUrl);
+  console.log('ExportGate - Processed audio URL:', processedAudioUrl);
+  console.log('ExportGate - Original file:', originalFile);
+  console.log('ExportGate - Original audio URL:', originalAudioUrl);
+  console.log('ExportGate - Processed audio URL:', processedAudioUrl);
 
   // Cleanup object URLs on unmount
   useEffect(() => {
@@ -64,24 +70,44 @@ const ExportGate: React.FC<ExportGateProps> = ({
 
   // Audio playback handlers
   const handleOriginalPlayPause = () => {
+    console.log('Original play/pause clicked');
+    console.log('Original audio ref:', originalAudioRef.current);
+    console.log('Original audio URL:', originalAudioUrl);
+    
     if (originalAudioRef.current) {
       if (isPlayingOriginal) {
+        console.log('Pausing original audio');
         originalAudioRef.current.pause();
       } else {
-        originalAudioRef.current.play();
+        console.log('Playing original audio');
+        originalAudioRef.current.play().catch(error => {
+          console.error('Error playing original audio:', error);
+        });
       }
       setIsPlayingOriginal(!isPlayingOriginal);
+    } else {
+      console.error('Original audio ref is null');
     }
   };
 
   const handleProcessedPlayPause = () => {
+    console.log('Processed play/pause clicked');
+    console.log('Processed audio ref:', processedAudioRef.current);
+    console.log('Processed audio URL:', processedAudioUrl);
+    
     if (processedAudioRef.current) {
       if (isPlayingProcessed) {
+        console.log('Pausing processed audio');
         processedAudioRef.current.pause();
       } else {
-        processedAudioRef.current.play();
+        console.log('Playing processed audio');
+        processedAudioRef.current.play().catch(error => {
+          console.error('Error playing processed audio:', error);
+        });
       }
       setIsPlayingProcessed(!isPlayingProcessed);
+    } else {
+      console.error('Processed audio ref is null');
     }
   };
 
@@ -163,6 +189,10 @@ const ExportGate: React.FC<ExportGateProps> = ({
           onTimeUpdate={handleOriginalTimeUpdate}
           onLoadedMetadata={handleOriginalLoadedMetadata}
           onEnded={handleOriginalEnded}
+          onError={(e) => console.error('Original audio error:', e)}
+          onLoadStart={() => console.log('Original audio load started')}
+          onCanPlay={() => console.log('Original audio can play')}
+          onCanPlayThrough={() => console.log('Original audio can play through')}
           preload="metadata"
         />
       )}
@@ -173,6 +203,10 @@ const ExportGate: React.FC<ExportGateProps> = ({
           onTimeUpdate={handleProcessedTimeUpdate}
           onLoadedMetadata={handleProcessedLoadedMetadata}
           onEnded={handleProcessedEnded}
+          onError={(e) => console.error('Processed audio error:', e)}
+          onLoadStart={() => console.log('Processed audio load started')}
+          onCanPlay={() => console.log('Processed audio can play')}
+          onCanPlayThrough={() => console.log('Processed audio can play through')}
           preload="metadata"
         />
       )}

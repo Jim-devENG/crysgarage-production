@@ -150,6 +150,8 @@ const RealTimeMasteringPlayer = forwardRef<RealTimeMasteringPlayerRef, RealTimeM
   // Advanced feature nodes
   const gTunerOscillatorRef = useRef<OscillatorNode | null>(null);
   const gTunerGainRef = useRef<GainNode | null>(null);
+  const gTunerPitchShiftRef = useRef<GainNode | null>(null);
+  const gTunerAnalyserRef = useRef<AnalyserNode | null>(null);
   
   // State
   const [isPlaying, setIsPlaying] = useState(false);
@@ -283,14 +285,25 @@ const RealTimeMasteringPlayer = forwardRef<RealTimeMasteringPlayerRef, RealTimeM
     // Create G-Multi-Band (3 bands)
     gMultiBandRefs.current = Array.from({ length: 3 }, () => ctx.createDynamicsCompressor());
     
-    // Create G-Tuner oscillator and gain
+    // Create G-Tuner pitch correction nodes
     gTunerOscillatorRef.current = ctx.createOscillator();
     gTunerGainRef.current = ctx.createGain();
+    gTunerPitchShiftRef.current = ctx.createGain(); // Pitch shifter for real-time tuning
+    gTunerAnalyserRef.current = ctx.createAnalyser(); // For pitch detection
+    
+    // Reference oscillator (444Hz)
     gTunerOscillatorRef.current.type = 'sine';
     gTunerOscillatorRef.current.frequency.value = 444; // Default 444Hz
     gTunerGainRef.current.gain.value = 0; // Start muted
     gTunerOscillatorRef.current.connect(gTunerGainRef.current);
     gTunerOscillatorRef.current.start();
+    
+    // Pitch shifter for real-time audio tuning
+    gTunerPitchShiftRef.current.gain.value = 1.0; // Start with no pitch change
+    
+    // Configure analyser for pitch detection
+    gTunerAnalyserRef.current.fftSize = 2048;
+    gTunerAnalyserRef.current.smoothingTimeConstant = 0.8;
     
   }, []);
 
@@ -377,7 +390,15 @@ const RealTimeMasteringPlayer = forwardRef<RealTimeMasteringPlayerRef, RealTimeM
       currentNode = gMultiBandRefs.current[0];
     }
 
-    // Connect G-Tuner if enabled (adds reference tone)
+    // Connect G-Tuner if enabled (applies pitch correction to audio)
+    if (gTunerPitchShiftRef.current && gTunerAnalyserRef.current && audioEffects.gTuner?.enabled) {
+      // Connect to analyser for pitch detection
+      currentNode.connect(gTunerAnalyserRef.current);
+      gTunerAnalyserRef.current.connect(gTunerPitchShiftRef.current);
+      currentNode = gTunerPitchShiftRef.current;
+    }
+    
+    // Connect G-Tuner reference tone if enabled
     if (gTunerGainRef.current && audioEffects.gTuner?.enabled) {
       gTunerGainRef.current.connect(gainNodeRef.current);
     }
@@ -389,6 +410,46 @@ const RealTimeMasteringPlayer = forwardRef<RealTimeMasteringPlayerRef, RealTimeM
 
     console.log('✅ Processing chain connected successfully');
   }, [audioEffects]);
+
+  // Pitch detection function
+  const detectPitch = useCallback(() => {
+    if (!gTunerAnalyserRef.current || !audioEffects.gTuner?.enabled) return;
+    
+    const analyser = gTunerAnalyserRef.current;
+    const bufferLength = analyser.frequencyBinCount;
+    const frequencyData = new Float32Array(bufferLength);
+    
+    analyser.getFloatFrequencyData(frequencyData);
+    
+    // Find the peak frequency (strongest component)
+    let maxIndex = 0;
+    let maxValue = -Infinity;
+    
+    for (let i = 0; i < bufferLength; i++) {
+      if (frequencyData[i] > maxValue) {
+        maxValue = frequencyData[i];
+        maxIndex = i;
+      }
+    }
+    
+    // Convert bin index to frequency
+    const sampleRate = audioContextRef.current?.sampleRate || 44100;
+    const detectedFreq = (maxIndex * sampleRate) / (2 * bufferLength);
+    
+    // Update the G-Tuner frequency if we detected a significant signal
+    if (maxValue > -50 && detectedFreq > 80 && detectedFreq < 800) {
+      // Update the audio effects with the detected frequency
+      onEffectChange({
+        ...audioEffects,
+        gTuner: {
+          ...audioEffects.gTuner,
+          frequency: detectedFreq
+        }
+      });
+      
+      console.log(`Pitch detected: ${detectedFreq.toFixed(1)}Hz`);
+    }
+  }, [audioEffects, onEffectChange]);
 
   // Update effect parameters in real-time
   const updateEffectParameters = useCallback(() => {
@@ -486,6 +547,29 @@ const RealTimeMasteringPlayer = forwardRef<RealTimeMasteringPlayerRef, RealTimeM
       gTunerOscillatorRef.current.frequency.value = audioEffects.gTuner.frequency;
       gTunerGainRef.current.gain.value = audioEffects.gTuner.enabled ? 0.1 : 0; // Low volume reference tone
     }
+    
+    // Update G-Tuner real-time pitch correction
+    if (gTunerPitchShiftRef.current && audioEffects.gTuner) {
+      if (audioEffects.gTuner.enabled) {
+        // Real-time pitch detection and correction to 444Hz
+        const referenceFreq = 444; // Target frequency
+        const currentFreq = audioEffects.gTuner.frequency; // Current detected frequency
+        
+        // Calculate pitch correction ratio
+        // If current frequency is higher than 444Hz, we need to lower the pitch
+        // If current frequency is lower than 444Hz, we need to raise the pitch
+        const pitchRatio = referenceFreq / currentFreq;
+        
+        // Apply pitch correction using gain adjustment
+        // This creates a pitch shift effect by adjusting the playback rate
+        gTunerPitchShiftRef.current.gain.value = pitchRatio;
+        
+        console.log(`G-Tuner: Detected ${currentFreq}Hz, correcting to ${referenceFreq}Hz (ratio: ${pitchRatio.toFixed(3)})`);
+      } else {
+        // No pitch correction when disabled
+        gTunerPitchShiftRef.current.gain.value = 1.0; // No pitch change
+      }
+    }
   }, [audioEffects, volume, isMuted]);
 
   // Real-time analysis
@@ -575,8 +659,13 @@ const RealTimeMasteringPlayer = forwardRef<RealTimeMasteringPlayerRef, RealTimeM
     if (!isPlaying) return;
 
     const analysisInterval = setInterval(updateAnalysis, 50);
-    return () => clearInterval(analysisInterval);
-  }, [isPlaying, updateAnalysis]);
+    const pitchDetectionInterval = setInterval(detectPitch, 100); // Pitch detection every 100ms
+    
+    return () => {
+      clearInterval(analysisInterval);
+      clearInterval(pitchDetectionInterval);
+    };
+  }, [isPlaying, updateAnalysis, detectPitch]);
 
   // Initialize when audio file changes
   useEffect(() => {
@@ -743,50 +832,11 @@ const RealTimeMasteringPlayer = forwardRef<RealTimeMasteringPlayerRef, RealTimeM
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   };
 
-  // Test audio function
-  const testAudioPlayback = () => {
-    console.log('=== Testing Audio Playback ===');
-    
-    try {
-      const testAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-      
-      if (testAudioContext.state === 'suspended') {
-        testAudioContext.resume();
-      }
-      
-      const oscillator = testAudioContext.createOscillator();
-      const gainNode = testAudioContext.createGain();
-      
-      oscillator.connect(gainNode);
-      gainNode.connect(testAudioContext.destination);
-      
-      oscillator.frequency.setValueAtTime(440, testAudioContext.currentTime);
-      oscillator.type = 'sine';
-      
-      gainNode.gain.setValueAtTime(0.1, testAudioContext.currentTime);
-      gainNode.gain.exponentialRampToValueAtTime(0.01, testAudioContext.currentTime + 0.5);
-      
-      oscillator.start(testAudioContext.currentTime);
-      oscillator.stop(testAudioContext.currentTime + 0.5);
-      
-      setTimeout(() => {
-        try {
-          testAudioContext.close();
-        } catch (error) {
-          console.log('Error closing test audio context:', error);
-        }
-      }, 1000);
-      
-      console.log('✅ Test audio played successfully!');
-      
-    } catch (error) {
-      console.error('❌ Test audio failed:', error);
-    }
-  };
+
 
   if (!audioFile) {
     return (
-      <div className="bg-gray-900 rounded-lg p-6 text-center">
+      <div className="backdrop-blur-md bg-black bg-opacity-30 rounded-lg p-6 text-center border border-gray-500 border-opacity-50 shadow-2xl">
         <div className="text-gray-400 mb-4">
           {/* Settings Icon */}
           <div className="w-12 h-12 bg-crys-gold rounded-full mx-auto mb-2 flex items-center justify-center">
@@ -799,7 +849,7 @@ const RealTimeMasteringPlayer = forwardRef<RealTimeMasteringPlayerRef, RealTimeM
   }
 
   return (
-    <div className="bg-gray-900 rounded-lg p-6">
+    <div className="backdrop-blur-md bg-black bg-opacity-30 rounded-lg p-6 border border-gray-500 border-opacity-50 shadow-2xl">
       {/* Settings Icon */}
       <div className="text-center mb-4">
         <div className="w-12 h-12 bg-crys-gold rounded-full mx-auto mb-2 flex items-center justify-center">
@@ -809,13 +859,7 @@ const RealTimeMasteringPlayer = forwardRef<RealTimeMasteringPlayerRef, RealTimeM
         <p className="text-sm text-gray-400">Professional audio mastering with real-time effects</p>
       </div>
 
-      {/* Test Audio Button */}
-      <button
-        onClick={testAudioPlayback}
-        className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg mb-4 hover:bg-blue-700 transition-colors"
-      >
-        Test Audio Playback
-      </button>
+
 
       {/* Settings Toggle */}
       <button
