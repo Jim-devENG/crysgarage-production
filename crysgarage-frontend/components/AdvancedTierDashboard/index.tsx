@@ -97,7 +97,7 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
     
     // Advanced features
     gSurround: { width: 0, depth: 0, enabled: false },
-    gTuner: { enabled: false, frequency: 444 }
+    gTuner: { enabled: false, frequency: 450 }
   });
 
   const [surroundEnabled, setSurroundEnabled] = useState(false);
@@ -256,7 +256,7 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
         enabled: false 
       },
       gSurround: { width: 0, depth: 0, enabled: false },
-      gTuner: { enabled: false, frequency: 444 }
+      gTuner: { enabled: false, frequency: 450 }
     });
   };
 

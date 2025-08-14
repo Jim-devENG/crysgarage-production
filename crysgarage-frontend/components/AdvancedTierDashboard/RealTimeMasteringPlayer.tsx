@@ -148,10 +148,8 @@ const RealTimeMasteringPlayer = forwardRef<RealTimeMasteringPlayerRef, RealTimeM
   const gMultiBandRefs = useRef<DynamicsCompressorNode[]>([]);
   
   // Advanced feature nodes
-  const gTunerOscillatorRef = useRef<OscillatorNode | null>(null);
-  const gTunerGainRef = useRef<GainNode | null>(null);
   const gTunerPitchShiftRef = useRef<GainNode | null>(null);
-  const gTunerAnalyserRef = useRef<AnalyserNode | null>(null);
+  const gTunerPlaybackRateRef = useRef<number>(1.0);
   
   // State
   const [isPlaying, setIsPlaying] = useState(false);
@@ -285,25 +283,11 @@ const RealTimeMasteringPlayer = forwardRef<RealTimeMasteringPlayerRef, RealTimeM
     // Create G-Multi-Band (3 bands)
     gMultiBandRefs.current = Array.from({ length: 3 }, () => ctx.createDynamicsCompressor());
     
-    // Create G-Tuner pitch correction nodes
-    gTunerOscillatorRef.current = ctx.createOscillator();
-    gTunerGainRef.current = ctx.createGain();
-    gTunerPitchShiftRef.current = ctx.createGain(); // Pitch shifter for real-time tuning
-    gTunerAnalyserRef.current = ctx.createAnalyser(); // For pitch detection
-    
-    // Reference oscillator (444Hz)
-    gTunerOscillatorRef.current.type = 'sine';
-    gTunerOscillatorRef.current.frequency.value = 444; // Default 444Hz
-    gTunerGainRef.current.gain.value = 0; // Start muted
-    gTunerOscillatorRef.current.connect(gTunerGainRef.current);
-    gTunerOscillatorRef.current.start();
+    // Create G-Tuner fine-tune pitch shifter
+    gTunerPitchShiftRef.current = ctx.createGain(); // Pitch shifter for fine-tuning
     
     // Pitch shifter for real-time audio tuning
     gTunerPitchShiftRef.current.gain.value = 1.0; // Start with no pitch change
-    
-    // Configure analyser for pitch detection
-    gTunerAnalyserRef.current.fftSize = 2048;
-    gTunerAnalyserRef.current.smoothingTimeConstant = 0.8;
     
   }, []);
 
@@ -328,7 +312,7 @@ const RealTimeMasteringPlayer = forwardRef<RealTimeMasteringPlayerRef, RealTimeM
       if (gDigitalTapeRef.current) gDigitalTapeRef.current.disconnect();
       if (gLimiterRef.current) gLimiterRef.current.disconnect();
       gMultiBandRefs.current.forEach(node => node.disconnect());
-      if (gTunerGainRef.current) gTunerGainRef.current.disconnect();
+
     } catch (error) {
       console.log('Error disconnecting nodes:', error);
     }
@@ -390,17 +374,10 @@ const RealTimeMasteringPlayer = forwardRef<RealTimeMasteringPlayerRef, RealTimeM
       currentNode = gMultiBandRefs.current[0];
     }
 
-    // Connect G-Tuner if enabled (applies pitch correction to audio)
-    if (gTunerPitchShiftRef.current && gTunerAnalyserRef.current && audioEffects.gTuner?.enabled) {
-      // Connect to analyser for pitch detection
-      currentNode.connect(gTunerAnalyserRef.current);
-      gTunerAnalyserRef.current.connect(gTunerPitchShiftRef.current);
+    // Connect G-Tuner if enabled (applies fine-tune pitch shift to audio)
+    if (gTunerPitchShiftRef.current && audioEffects.gTuner?.enabled) {
+      currentNode.connect(gTunerPitchShiftRef.current);
       currentNode = gTunerPitchShiftRef.current;
-    }
-    
-    // Connect G-Tuner reference tone if enabled
-    if (gTunerGainRef.current && audioEffects.gTuner?.enabled) {
-      gTunerGainRef.current.connect(gainNodeRef.current);
     }
 
     // Connect to analyser and output
@@ -411,45 +388,7 @@ const RealTimeMasteringPlayer = forwardRef<RealTimeMasteringPlayerRef, RealTimeM
     console.log('✅ Processing chain connected successfully');
   }, [audioEffects]);
 
-  // Pitch detection function
-  const detectPitch = useCallback(() => {
-    if (!gTunerAnalyserRef.current || !audioEffects.gTuner?.enabled) return;
-    
-    const analyser = gTunerAnalyserRef.current;
-    const bufferLength = analyser.frequencyBinCount;
-    const frequencyData = new Float32Array(bufferLength);
-    
-    analyser.getFloatFrequencyData(frequencyData);
-    
-    // Find the peak frequency (strongest component)
-    let maxIndex = 0;
-    let maxValue = -Infinity;
-    
-    for (let i = 0; i < bufferLength; i++) {
-      if (frequencyData[i] > maxValue) {
-        maxValue = frequencyData[i];
-        maxIndex = i;
-      }
-    }
-    
-    // Convert bin index to frequency
-    const sampleRate = audioContextRef.current?.sampleRate || 44100;
-    const detectedFreq = (maxIndex * sampleRate) / (2 * bufferLength);
-    
-    // Update the G-Tuner frequency if we detected a significant signal
-    if (maxValue > -50 && detectedFreq > 80 && detectedFreq < 800) {
-      // Update the audio effects with the detected frequency
-      onEffectChange({
-        ...audioEffects,
-        gTuner: {
-          ...audioEffects.gTuner,
-          frequency: detectedFreq
-        }
-      });
-      
-      console.log(`Pitch detected: ${detectedFreq.toFixed(1)}Hz`);
-    }
-  }, [audioEffects, onEffectChange]);
+
 
   // Update effect parameters in real-time
   const updateEffectParameters = useCallback(() => {
@@ -542,32 +481,38 @@ const RealTimeMasteringPlayer = forwardRef<RealTimeMasteringPlayerRef, RealTimeM
       }
     }
 
-    // Update G-Tuner
-    if (gTunerOscillatorRef.current && gTunerGainRef.current && audioEffects.gTuner) {
-      gTunerOscillatorRef.current.frequency.value = audioEffects.gTuner.frequency;
-      gTunerGainRef.current.gain.value = audioEffects.gTuner.enabled ? 0.1 : 0; // Low volume reference tone
-    }
-    
-    // Update G-Tuner real-time pitch correction
+    // Update G-Tuner fine-tune pitch shifter
     if (gTunerPitchShiftRef.current && audioEffects.gTuner) {
       if (audioEffects.gTuner.enabled) {
-        // Real-time pitch detection and correction to 444Hz
-        const referenceFreq = 444; // Target frequency
-        const currentFreq = audioEffects.gTuner.frequency; // Current detected frequency
+        // Fine-tune pitch shifting based on frequency knob (400Hz-500Hz range)
+        const targetFreq = audioEffects.gTuner.frequency; // User-selected frequency
+        const referenceFreq = 450; // Base reference frequency
         
-        // Calculate pitch correction ratio
-        // If current frequency is higher than 444Hz, we need to lower the pitch
-        // If current frequency is lower than 444Hz, we need to raise the pitch
-        const pitchRatio = referenceFreq / currentFreq;
+        // Calculate fine-tune pitch shift ratio
+        // This creates a subtle pitch adjustment around the 444Hz reference
+        const pitchRatio = targetFreq / referenceFreq;
         
-        // Apply pitch correction using gain adjustment
-        // This creates a pitch shift effect by adjusting the playback rate
+        // Store the playback rate for the audio element
+        gTunerPlaybackRateRef.current = pitchRatio;
+        
+        // Apply fine-tune pitch shift to the audio element directly
+        if (audioRef.current) {
+          audioRef.current.playbackRate = pitchRatio;
+        }
+        
+        // Also apply to the gain node for additional effect
         gTunerPitchShiftRef.current.gain.value = pitchRatio;
         
-        console.log(`G-Tuner: Detected ${currentFreq}Hz, correcting to ${referenceFreq}Hz (ratio: ${pitchRatio.toFixed(3)})`);
+        console.log(`G-Tuner: Fine-tuning audio to ${targetFreq}Hz (ratio: ${pitchRatio.toFixed(3)}, playbackRate: ${pitchRatio.toFixed(3)})`);
       } else {
-        // No pitch correction when disabled
+        // No pitch shift when disabled
         gTunerPitchShiftRef.current.gain.value = 1.0; // No pitch change
+        gTunerPlaybackRateRef.current = 1.0;
+        
+        // Reset audio element playback rate
+        if (audioRef.current) {
+          audioRef.current.playbackRate = 1.0;
+        }
       }
     }
   }, [audioEffects, volume, isMuted]);
@@ -659,13 +604,11 @@ const RealTimeMasteringPlayer = forwardRef<RealTimeMasteringPlayerRef, RealTimeM
     if (!isPlaying) return;
 
     const analysisInterval = setInterval(updateAnalysis, 50);
-    const pitchDetectionInterval = setInterval(detectPitch, 100); // Pitch detection every 100ms
     
     return () => {
       clearInterval(analysisInterval);
-      clearInterval(pitchDetectionInterval);
     };
-  }, [isPlaying, updateAnalysis, detectPitch]);
+  }, [isPlaying, updateAnalysis]);
 
   // Initialize when audio file changes
   useEffect(() => {

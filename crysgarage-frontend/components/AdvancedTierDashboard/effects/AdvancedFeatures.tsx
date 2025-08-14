@@ -199,8 +199,8 @@ const AdvancedFeatures: React.FC<AdvancedFeaturesProps> = ({
               <div className="text-gray-400 text-[8px]">FREQUENCY</div>
               <input
                 type="range"
-                min="440"
-                max="448"
+                min="400"
+                max="500"
                 step="1"
                 value={audioEffects.gTuner.frequency}
                 onChange={(e) => onUpdateEffectSettings('gTuner', { ...audioEffects.gTuner, frequency: parseFloat(e.target.value) })}
