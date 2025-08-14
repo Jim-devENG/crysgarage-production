@@ -1,15 +1,4 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { 
-  FileAudio, 
-  Upload, 
-  Music,
-  Zap,
-  Download,
-  Settings,
-  Play,
-  Pause,
-  Volume2
-} from 'lucide-react';
 import StudioHeader from './StudioHeader';
 import FileUpload from './FileUpload';
 import RealTimeMeters from './RealTimeMeters';
@@ -260,10 +249,11 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
       case 2:
         return (
           <div className="space-y-6">
-            {/* Top Row - Player and Meters */}
+            {/* Main Layout - Player/Meters on top, Genre under player */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-              {/* Real-time Mastering Player - Takes 2 columns */}
-              <div className="lg:col-span-2">
+              {/* Left Column - Player and Genre */}
+              <div className="lg:col-span-2 space-y-4">
+                {/* Real-time Mastering Player */}
                 <RealTimeMasteringPlayer
                   ref={realTimeMasteringPlayerRef}
                   audioFile={selectedFile}
@@ -273,23 +263,21 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
                   onEffectChange={(effects) => setAudioEffects(effects as any)}
                   isProcessing={isProcessing}
                 />
+                
+                {/* Genre Presets - Directly under player */}
+                <GenrePresets
+                  selectedGenre={selectedGenre}
+                  onGenreSelect={handleGenreSelect}
+                />
               </div>
 
-              {/* Real-time Meters - Takes 1 column */}
+              {/* Right Column - Real-time Meters */}
               <div className="lg:col-span-1">
                 <RealTimeMeters meterData={meterData} />
               </div>
             </div>
 
-            {/* Middle Row - Genre Presets */}
-            <div className="grid grid-cols-1 gap-4">
-              <GenrePresets
-                selectedGenre={selectedGenre}
-                onGenreSelect={handleGenreSelect}
-              />
-            </div>
-
-            {/* Bottom Row - Studio Dashboard */}
+            {/* Studio Dashboard - Full width below */}
             <div className="grid grid-cols-1 gap-4">
               <StudioDashboard
                 audioEffects={audioEffects}

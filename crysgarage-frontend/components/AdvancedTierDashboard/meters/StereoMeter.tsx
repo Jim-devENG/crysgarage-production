@@ -1,5 +1,4 @@
 import React from 'react';
-import { Volume2 } from 'lucide-react';
 
 interface StereoMeterProps {
   leftLevel: number;
@@ -77,7 +76,7 @@ const StereoMeter: React.FC<StereoMeterProps> = ({
     <div className="space-y-3">
       <div className="text-center">
         <span className="text-sm font-medium text-gray-300 flex items-center justify-center">
-          <Volume2 className="w-4 h-4 mr-2" />
+          <div className="w-4 h-4 bg-crys-gold rounded-full mr-2"></div>
           Stereo Levels
         </span>
         <div className="text-xs text-gray-500">Peak: {peak.toFixed(1)}dB | RMS: {rms.toFixed(1)}dB</div>

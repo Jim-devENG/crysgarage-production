@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { Download, ArrowLeft, Play, Pause, Volume2, Settings, DollarSign } from 'lucide-react';
 
 interface ExportGateProps {
   originalFile: File | null;
@@ -62,11 +61,11 @@ const ExportGate: React.FC<ExportGateProps> = ({
             onClick={onBack}
             className="p-2 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors"
           >
-            <ArrowLeft className="w-5 h-5 text-white" />
+            <div className="w-5 h-5 bg-white rounded-full"></div>
           </button>
           <div className="flex items-center space-x-3">
             <div className="bg-gradient-to-r from-crys-gold to-yellow-500 p-2 rounded-lg">
-              <Download className="w-5 h-5 text-gray-900" />
+              <div className="w-5 h-5 bg-gray-900 rounded-full"></div>
             </div>
             <h2 className="text-2xl font-bold text-white">Export Gate</h2>
           </div>
@@ -85,7 +84,7 @@ const ExportGate: React.FC<ExportGateProps> = ({
         {/* Original Audio */}
         <div className="bg-gradient-to-br from-gray-800 to-gray-700 rounded-xl p-6 border border-gray-600">
           <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
-            <Volume2 className="w-5 h-5 mr-2" />
+            <div className="w-5 h-5 bg-crys-gold rounded-full mr-2"></div>
             Original Audio
           </h3>
           
@@ -111,9 +110,9 @@ const ExportGate: React.FC<ExportGateProps> = ({
                   className="p-2 bg-crys-gold rounded-lg hover:bg-yellow-400 transition-colors"
                 >
                   {isPlayingOriginal ? (
-                    <Pause className="w-4 h-4 text-gray-900" />
+                    <div className="w-4 h-4 bg-gray-900 rounded-full"></div>
                   ) : (
-                    <Play className="w-4 h-4 text-gray-900" />
+                    <div className="w-4 h-4 bg-gray-900 rounded-full"></div>
                   )}
                 </button>
               </div>
@@ -131,7 +130,7 @@ const ExportGate: React.FC<ExportGateProps> = ({
         {/* Processed Audio */}
         <div className="bg-gradient-to-br from-gray-800 to-gray-700 rounded-xl p-6 border border-gray-600">
           <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
-            <Settings className="w-5 h-5 mr-2" />
+            <div className="w-5 h-5 bg-gray-900 rounded-full mr-2"></div>
             Processed Audio
           </h3>
           
@@ -155,9 +154,9 @@ const ExportGate: React.FC<ExportGateProps> = ({
                   className="p-2 bg-crys-gold rounded-lg hover:bg-yellow-400 transition-colors"
                 >
                   {isPlayingProcessed ? (
-                    <Pause className="w-4 h-4 text-gray-900" />
+                    <div className="w-4 h-4 bg-gray-900 rounded-full"></div>
                   ) : (
-                    <Play className="w-4 h-4 text-gray-900" />
+                    <div className="w-4 h-4 bg-gray-900 rounded-full"></div>
                   )}
                 </button>
               </div>
@@ -176,7 +175,7 @@ const ExportGate: React.FC<ExportGateProps> = ({
       {/* Export Settings */}
       <div className="bg-gradient-to-br from-gray-800 to-gray-700 rounded-xl p-6 border border-gray-600">
         <h3 className="text-lg font-semibold text-white mb-6 flex items-center">
-          <Settings className="w-5 h-5 mr-2" />
+          <div className="w-5 h-5 bg-gray-900 rounded-full mr-2"></div>
           Export Settings
         </h3>
 
@@ -374,7 +373,7 @@ const ExportGate: React.FC<ExportGateProps> = ({
           onClick={handleDownload}
           className="bg-crys-gold text-black px-8 py-4 rounded-lg font-semibold hover:bg-yellow-400 transition-colors flex items-center space-x-2 mx-auto"
         >
-          <Download className="w-5 h-5" />
+          <div className="w-5 h-5"></div>
           <span>Download Mastered Audio</span>
           {totalCost > 0 && (
             <span className="bg-gray-900 text-crys-gold px-3 py-1 rounded-full text-sm">

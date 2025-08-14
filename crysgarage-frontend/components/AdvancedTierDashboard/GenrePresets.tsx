@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { Music, Music2, Music3, Music4, Palette } from 'lucide-react';
 import { availableGenres, Genre as GenreType } from '../GenreDropdown';
 import { GENRE_PRESETS, getGenreGradient } from './sharedGenrePresets';
 
@@ -21,7 +20,7 @@ const GenrePresets: React.FC<GenrePresetsProps> = ({ selectedGenre, onGenreSelec
       <div className="text-center mb-4">
         <div className="flex items-center justify-center space-x-2 mb-1.5">
           <div className="bg-gradient-to-r from-crys-gold to-yellow-500 p-1 rounded-md">
-            <Palette className="w-3 h-3 text-gray-900" />
+            <div className="w-3 h-3 bg-gray-900 rounded-full"></div>
           </div>
           <h3 className="text-lg font-bold text-white">Select Genre & Process</h3>
         </div>
@@ -103,7 +102,7 @@ const GenrePresets: React.FC<GenrePresetsProps> = ({ selectedGenre, onGenreSelec
                 return (
                   <>
                     <div className={`p-1.5 rounded-md bg-gradient-to-br ${getGenreGradient(genre.id)}`}>
-                      <Music className="w-4 h-4 text-white" />
+                      <div className="w-4 h-4 bg-white rounded-full"></div>
                     </div>
                     <div>
                       <h4 className="text-white font-semibold text-xs">{genre.name} Preset</h4>

@@ -1,5 +1,4 @@
 import React from 'react';
-import { Music } from 'lucide-react';
 
 interface StudioHeaderProps {
   credits: number;
@@ -18,7 +17,7 @@ const StudioHeader: React.FC<StudioHeaderProps> = ({
         <div className="flex justify-between items-center">
           <div className="flex items-center space-x-4">
             <div className="w-12 h-12 bg-gradient-to-br from-crys-gold to-yellow-500 rounded-lg flex items-center justify-center">
-              <Music className="w-6 h-6 text-black" />
+              <div className="w-6 h-6 bg-black rounded-full"></div>
             </div>
             <div>
               <h1 className="text-2xl font-bold text-crys-gold">Advanced Studio</h1>

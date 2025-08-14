@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { Globe, Music, Settings } from 'lucide-react';
 import StudioRack from '../StudioRack';
 import HardwareKnob from '../HardwareKnob';
 
@@ -37,7 +36,7 @@ const AdvancedFeatures: React.FC<AdvancedFeaturesProps> = ({
               <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse shadow-sm"></div>
               <div className="flex items-center space-x-1">
                 <div className="bg-gradient-to-r from-crys-gold to-yellow-500 p-0.5 rounded">
-                  <Globe className="w-2.5 h-2.5 text-gray-900" />
+                  <div className="w-2.5 h-2.5 bg-gray-900 rounded-full"></div>
                 </div>
                 <div>
                   <h3 className="text-xs font-bold text-white">CRYS GARAGE STUDIO</h3>
@@ -146,7 +145,7 @@ const AdvancedFeatures: React.FC<AdvancedFeaturesProps> = ({
               <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse shadow-sm"></div>
               <div className="flex items-center space-x-1">
                 <div className="bg-gradient-to-r from-crys-gold to-yellow-500 p-0.5 rounded">
-                  <Music className="w-2.5 h-2.5 text-gray-900" />
+                  <div className="w-2.5 h-2.5 bg-gray-900 rounded-full"></div>
                 </div>
                 <div>
                   <h3 className="text-xs font-bold text-white">CRYS GARAGE STUDIO</h3>
@@ -250,7 +249,7 @@ const AdvancedFeatures: React.FC<AdvancedFeaturesProps> = ({
       {/* Feature Info */}
       <div className="bg-gray-900 rounded-md p-3 border border-gray-700">
         <h5 className="text-white font-medium text-xs mb-2 flex items-center">
-          <Settings className="w-3 h-3 mr-1 text-crys-gold" />
+          <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
           Advanced Features Info
         </h5>
         <div className="space-y-1 text-[10px] text-gray-300">

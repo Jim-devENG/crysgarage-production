@@ -1,5 +1,4 @@
 import React from 'react';
-import { Zap, Settings, Target, Gauge, Activity } from 'lucide-react';
 import StudioRack from '../StudioRack';
 import HardwareKnob from '../HardwareKnob';
 import AdvancedLimiter from './AdvancedLimiter';
@@ -37,7 +36,7 @@ const PremiumEffects: React.FC<PremiumEffectsProps> = ({
               <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse shadow-sm"></div>
               <div className="flex items-center space-x-1">
                 <div className="bg-gradient-to-r from-crys-gold to-yellow-500 p-0.5 rounded">
-                  <Settings className="w-2.5 h-2.5 text-gray-900" />
+                  <div className="w-2.5 h-2.5 bg-gray-900 rounded-full"></div>
                 </div>
                 <div>
                   <h3 className="text-xs font-bold text-white">CRYS GARAGE STUDIO</h3>
@@ -165,7 +164,7 @@ const PremiumEffects: React.FC<PremiumEffectsProps> = ({
               <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse shadow-sm"></div>
               <div className="flex items-center space-x-1">
                 <div className="bg-gradient-to-r from-crys-gold to-yellow-500 p-0.5 rounded">
-                  <Zap className="w-2.5 h-2.5 text-gray-900" />
+                  <div className="w-2.5 h-2.5 bg-gray-900 rounded-full"></div>
                 </div>
                 <div>
                   <h3 className="text-xs font-bold text-white">CRYS GARAGE STUDIO</h3>
@@ -274,7 +273,7 @@ const PremiumEffects: React.FC<PremiumEffectsProps> = ({
               <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse shadow-sm"></div>
               <div className="flex items-center space-x-1">
                 <div className="bg-gradient-to-r from-crys-gold to-yellow-500 p-0.5 rounded">
-                  <Target className="w-2.5 h-2.5 text-gray-900" />
+                  <div className="w-2.5 h-2.5 bg-gray-900 rounded-full"></div>
                 </div>
                 <div>
                   <h3 className="text-xs font-bold text-white">CRYS GARAGE STUDIO</h3>

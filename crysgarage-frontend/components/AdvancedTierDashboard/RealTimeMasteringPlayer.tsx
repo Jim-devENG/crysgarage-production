@@ -1,5 +1,4 @@
 import React, { useRef, useEffect, useState, useCallback, useImperativeHandle, forwardRef } from 'react';
-import { Play, Pause, Volume2, VolumeX, SkipBack, SkipForward, RotateCcw, Settings } from 'lucide-react';
 
 interface AudioEffects {
   eq: {
@@ -763,7 +762,10 @@ const RealTimeMasteringPlayer = forwardRef<RealTimeMasteringPlayerRef, RealTimeM
     return (
       <div className="bg-gray-900 rounded-lg p-6 text-center">
         <div className="text-gray-400 mb-4">
-          <Settings className="w-12 h-12 mx-auto mb-2" />
+          {/* Settings Icon */}
+          <div className="w-12 h-12 bg-crys-gold rounded-full mx-auto mb-2 flex items-center justify-center">
+            <div className="w-6 h-6 bg-black rounded-full"></div>
+          </div>
           <p>Upload an audio file to start real-time mastering</p>
         </div>
       </div>
@@ -772,23 +774,31 @@ const RealTimeMasteringPlayer = forwardRef<RealTimeMasteringPlayerRef, RealTimeM
 
   return (
     <div className="bg-gray-900 rounded-lg p-6">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-white">Real-Time Mastering Player</h3>
-        <div className="flex items-center space-x-2">
-          <button
-            onClick={testAudioPlayback}
-            className="p-2 rounded bg-green-600 hover:bg-green-500 transition-colors text-xs text-white"
-          >
-            Test Audio
-          </button>
-          <button
-            onClick={() => setShowSettings(!showSettings)}
-            className="p-2 rounded bg-gray-700 hover:bg-gray-600 transition-colors"
-          >
-            <Settings className="w-4 h-4 text-gray-300" />
-          </button>
+      {/* Settings Icon */}
+      <div className="text-center mb-4">
+        <div className="w-12 h-12 bg-crys-gold rounded-full mx-auto mb-2 flex items-center justify-center">
+          <div className="w-6 h-6 bg-black rounded-full"></div>
         </div>
+        <h3 className="text-lg font-semibold text-white">Real-Time Mastering Player</h3>
+        <p className="text-sm text-gray-400">Professional audio mastering with real-time effects</p>
       </div>
+
+      {/* Test Audio Button */}
+      <button
+        onClick={testAudioPlayback}
+        className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg mb-4 hover:bg-blue-700 transition-colors"
+      >
+        Test Audio Playback
+      </button>
+
+      {/* Settings Toggle */}
+      <button
+        onClick={() => setShowSettings(!showSettings)}
+        className="w-full bg-gray-700 text-white py-2 px-4 rounded-lg mb-4 hover:bg-gray-600 transition-colors flex items-center justify-center space-x-2"
+      >
+        <span>Settings</span>
+        <div className="w-4 h-4 bg-gray-300 rounded-full"></div>
+      </button>
 
       {/* Audio Element */}
       <audio
@@ -848,73 +858,71 @@ const RealTimeMasteringPlayer = forwardRef<RealTimeMasteringPlayerRef, RealTimeM
         </div>
       </div>
 
-      {/* Controls */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center space-x-3">
-          <button
-            onClick={skipBackward}
-            className="p-2 rounded-full bg-gray-700 hover:bg-gray-600 transition-colors"
-          >
-            <SkipBack className="w-4 h-4 text-gray-300" />
-          </button>
+      {/* Transport Controls */}
+      <div className="flex items-center justify-center space-x-4 mb-4">
+        {/* Skip Backward */}
+        <button
+          onClick={skipBackward}
+          className="p-2 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors"
+        >
+          <div className="w-4 h-4 bg-gray-300 rounded-full"></div>
+        </button>
 
-          <button
-            onClick={async () => {
-              // Ensure audio context is initialized on user interaction
-              if (!audioContextRef.current) {
-                console.log('Initializing audio context on play button click...');
-                await initializeAudioContext();
-              }
-              if (isPlaying) {
-                handlePause();
-              } else {
-                handlePlay();
-              }
+        {/* Play/Pause Button */}
+        <button
+          onClick={() => {
+            console.log('Initializing audio context on play button click...');
+            manualInitializeAudioContext();
+            
+            if (isPlaying) {
+              handlePause();
+            } else {
+              handlePlay();
+            }
+          }}
+          className="p-4 bg-crys-gold rounded-full hover:bg-yellow-400 transition-colors flex items-center justify-center"
+        >
+          {isPlaying ? (
+            <div className="w-5 h-5 bg-black rounded-full"></div>
+          ) : (
+            <div className="w-5 h-5 bg-black rounded-full ml-0.5"></div>
+          )}
+        </button>
+
+        {/* Skip Forward */}
+        <button
+          onClick={skipForward}
+          className="p-2 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors"
+        >
+          <div className="w-4 h-4 bg-gray-300 rounded-full"></div>
+        </button>
+      </div>
+
+      {/* Volume Control */}
+      <div className="flex items-center justify-center space-x-2 mb-4">
+        <button
+          onClick={() => setVolume(volume === 0 ? 1 : 0)}
+          className="p-2 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors"
+        >
+          {volume === 0 ? (
+            <div className="w-4 h-4 bg-gray-300 rounded-full"></div>
+          ) : (
+            <div className="w-4 h-4 bg-gray-300 rounded-full"></div>
+          )}
+        </button>
+        <div className="w-20">
+          <input
+            type="range"
+            min="0"
+            max="1"
+            step="0.01"
+            value={isMuted ? 0 : volume}
+            onChange={handleVolumeChange}
+            className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer slider"
+            style={{
+              background: `linear-gradient(to right, #fbbf24 0%, #fbbf24 ${(isMuted ? 0 : volume) * 100}%, #4b5563 ${(isMuted ? 0 : volume) * 100}%, #4b5563 100%)`
             }}
-            className="p-3 rounded-full bg-crys-gold hover:bg-yellow-400 transition-colors shadow-lg"
-            disabled={isProcessing}
-          >
-            {isPlaying ? (
-              <Pause className="w-5 h-5 text-black" />
-            ) : (
-              <Play className="w-5 h-5 text-black ml-0.5" />
-            )}
-          </button>
-
-          <button
-            onClick={skipForward}
-            className="p-2 rounded-full bg-gray-700 hover:bg-gray-600 transition-colors"
-          >
-            <SkipForward className="w-4 h-4 text-gray-300" />
-          </button>
-        </div>
-
-        {/* Volume Control */}
-        <div className="flex items-center space-x-2">
-          <button
-            onClick={toggleMute}
-            className="p-2 rounded-full bg-gray-700 hover:bg-gray-600 transition-colors"
-          >
-            {isMuted ? (
-              <VolumeX className="w-4 h-4 text-gray-300" />
-            ) : (
-              <Volume2 className="w-4 h-4 text-gray-300" />
-            )}
-          </button>
-          <div className="w-20">
-            <input
-              type="range"
-              min="0"
-              max="1"
-              step="0.01"
-              value={isMuted ? 0 : volume}
-              onChange={handleVolumeChange}
-              className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer slider"
-              style={{
-                background: `linear-gradient(to right, #fbbf24 0%, #fbbf24 ${(isMuted ? 0 : volume) * 100}%, #4b5563 ${(isMuted ? 0 : volume) * 100}%, #4b5563 100%)`
-              }}
-            />
-          </div>
+          />
         </div>
       </div>
 

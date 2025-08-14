@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { Gauge, Volume2, Settings, Zap } from 'lucide-react';
 
 interface AdvancedLimiterProps {
   limitLevel: number;
@@ -43,7 +42,7 @@ const AdvancedLimiter: React.FC<AdvancedLimiterProps> = ({
             <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse shadow-sm"></div>
             <div className="flex items-center space-x-1">
               <div className="bg-gradient-to-r from-crys-gold to-yellow-500 p-0.5 rounded">
-                <Gauge className="w-2.5 h-2.5 text-gray-900" />
+                <div className="w-2.5 h-2.5 bg-gray-900 rounded-full"></div>
               </div>
               <div>
                 <h3 className="text-xs font-bold text-white">A.O.M. MUSICIANS' ALLY</h3>

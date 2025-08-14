@@ -1,5 +1,4 @@
 import React from 'react';
-import { FileAudio, Upload, Zap } from 'lucide-react';
 
 interface FileUploadProps {
   selectedFile: File | null;
@@ -38,7 +37,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
             {selectedFile ? (
               <>
                 <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <FileAudio className="w-8 h-8 text-white" />
+                  <div className="w-8 h-8 bg-white rounded-full"></div>
                 </div>
                 <h3 className="text-xl font-semibold mb-2 text-green-400">File Uploaded Successfully!</h3>
                 <p className="text-gray-400 mb-4">Click "Enter Studio" to start mastering</p>
@@ -48,7 +47,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
               </>
             ) : (
               <>
-                <Upload className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                <div className="w-16 h-16 bg-gray-400 rounded-full mx-auto mb-4"></div>
                 <h3 className="text-xl font-semibold mb-2">Choose Audio File</h3>
                 <p className="text-gray-400 mb-4">WAV, MP3, FLAC, or other audio formats</p>
                 <div className="bg-crys-gold text-black px-6 py-2 rounded-lg font-semibold hover:bg-yellow-400 transition-colors inline-block">
@@ -69,7 +68,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
           
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center space-x-3">
-              <FileAudio className="w-6 h-6 text-crys-gold" />
+              <div className="w-6 h-6 bg-crys-gold rounded-full"></div>
               <div>
                 <h4 className="font-semibold text-white">{selectedFile?.name || fileInfo?.name}</h4>
                 <p className="text-sm text-gray-400">
@@ -99,17 +98,14 @@ const FileUpload: React.FC<FileUploadProps> = ({
                 onContinue();
               }}
               disabled={!selectedFile}
-              className={`px-8 py-4 rounded-xl font-bold text-lg transition-all transform hover:scale-105 flex items-center space-x-3 mx-auto ${
+              className={`w-full py-4 px-6 rounded-xl font-bold text-lg transition-all transform ${
                 selectedFile 
-                  ? 'bg-gradient-to-r from-crys-gold to-yellow-400 text-black shadow-lg hover:shadow-xl border-2 border-yellow-300 animate-pulse' 
+                  ? 'bg-gradient-to-r from-crys-gold to-yellow-500 text-black hover:from-yellow-400 hover:to-crys-gold hover:scale-105 shadow-lg' 
                   : 'bg-gray-600 text-gray-400 cursor-not-allowed'
-              }`}
-              style={{
-                boxShadow: selectedFile ? '0 0 20px rgba(251, 191, 36, 0.5)' : 'none'
-              }}
+              } flex items-center justify-center space-x-2`}
             >
               <span className="text-xl">Enter Studio</span>
-              <Zap className="w-6 h-6" />
+              <div className="w-6 h-6 bg-black rounded-full"></div>
             </button>
             {selectedFile && (
               <p className="text-sm text-gray-400 mt-3">
