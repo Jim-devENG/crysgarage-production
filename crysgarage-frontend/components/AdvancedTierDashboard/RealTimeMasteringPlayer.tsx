@@ -35,6 +35,8 @@ interface AudioEffects {
     attack: number;
     release: number;
     makeup: number;
+    reduction: number;
+    outputLevel: number;
     enabled: boolean;
   };
   gPrecisionEQ?: {

@@ -72,7 +72,7 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
     limiter: { threshold: -1, ceiling: -0.1, enabled: true },
     
     // Premium effects (optional)
-    gMasteringCompressor: { threshold: -20, ratio: 4, attack: 10, release: 100, makeup: 0, enabled: false },
+    gMasteringCompressor: { threshold: -20, ratio: 4, attack: 10, release: 100, makeup: 0, reduction: 0, outputLevel: -20, enabled: false },
     gPrecisionEQ: { 
       bands: [
         { frequency: 60, gain: 0, q: 1, type: 'lowshelf' as const },
@@ -217,7 +217,7 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
       stereoWidener: { width: 0, enabled: true },
       loudness: { volume: 1, enabled: true },
       limiter: { threshold: -1, ceiling: -0.1, enabled: true },
-      gMasteringCompressor: { threshold: -20, ratio: 4, attack: 10, release: 100, makeup: 0, enabled: false },
+      gMasteringCompressor: { threshold: -20, ratio: 4, attack: 10, release: 100, makeup: 0, reduction: 0, outputLevel: -20, enabled: false },
       gPrecisionEQ: { 
         bands: [
           { frequency: 60, gain: 0, q: 1, type: 'lowshelf' as const },

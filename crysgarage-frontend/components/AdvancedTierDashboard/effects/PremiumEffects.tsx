@@ -3,6 +3,7 @@ import { Zap, Settings, Target, Gauge, Activity } from 'lucide-react';
 import StudioRack from '../StudioRack';
 import HardwareKnob from '../HardwareKnob';
 import AdvancedLimiter from './AdvancedLimiter';
+import GMasteringCompressor from './GMasteringCompressor';
 
 interface PremiumEffectsProps {
   audioEffects: any;
@@ -20,93 +21,22 @@ const PremiumEffects: React.FC<PremiumEffectsProps> = ({
   return (
     <div className="space-y-3">
       {/* G-Mastering Compressor */}
-      <StudioRack title="G-Mastering Compressor">
-        <div className="p-2 border-b border-gray-700">
-          <div className="flex items-center justify-between mb-2">
-            <h5 className="text-white font-medium text-sm flex items-center">
-              <Zap className="w-3 h-3 mr-1 text-crys-gold" />
-              G-Mastering Compressor
-            </h5>
-            <label className="flex items-center">
-              <input
-                type="checkbox"
-                checked={audioEffects.gMasteringCompressor?.enabled || false}
-                onChange={(e) => onTogglePremiumEffect('gMasteringCompressor', e.target.checked)}
-                className="mr-1"
-              />
-              <span className="text-gray-300 text-xs">Enable</span>
-            </label>
-          </div>
-          {audioEffects.gMasteringCompressor?.enabled && (
-            <div className="grid grid-cols-2 gap-2">
-              <div className="text-center">
-                <HardwareKnob
-                  value={audioEffects.gMasteringCompressor?.threshold || -20}
-                  onChange={(value) => onUpdateEffectSettings('gMasteringCompressor', { ...audioEffects.gMasteringCompressor, threshold: value })}
-                  min={-60}
-                  max={0}
-                  step={1}
-                  label="Threshold"
-                  unit="dB"
-                  size="small"
-                  onKnobClick={onManualInit}
-                />
-              </div>
-              <div className="text-center">
-                <HardwareKnob
-                  value={audioEffects.gMasteringCompressor?.ratio || 4}
-                  onChange={(value) => onUpdateEffectSettings('gMasteringCompressor', { ...audioEffects.gMasteringCompressor, ratio: value })}
-                  min={1}
-                  max={20}
-                  step={0.1}
-                  label="Ratio"
-                  size="small"
-                  onKnobClick={onManualInit}
-                />
-              </div>
-              <div className="text-center">
-                <HardwareKnob
-                  value={audioEffects.gMasteringCompressor?.attack || 10}
-                  onChange={(value) => onUpdateEffectSettings('gMasteringCompressor', { ...audioEffects.gMasteringCompressor, attack: value })}
-                  min={0.1}
-                  max={100}
-                  step={0.1}
-                  label="Attack"
-                  unit="ms"
-                  size="small"
-                  onKnobClick={onManualInit}
-                />
-              </div>
-              <div className="text-center">
-                <HardwareKnob
-                  value={audioEffects.gMasteringCompressor?.release || 100}
-                  onChange={(value) => onUpdateEffectSettings('gMasteringCompressor', { ...audioEffects.gMasteringCompressor, release: value })}
-                  min={10}
-                  max={1000}
-                  step={1}
-                  label="Release"
-                  unit="ms"
-                  size="small"
-                  onKnobClick={onManualInit}
-                />
-              </div>
-              <div className="text-center col-span-2">
-                <HardwareKnob
-                  value={audioEffects.gMasteringCompressor?.makeup || 0}
-                  onChange={(value) => onUpdateEffectSettings('gMasteringCompressor', { ...audioEffects.gMasteringCompressor, makeup: value })}
-                  min={0}
-                  max={20}
-                  step={0.1}
-                  label="Makeup Gain"
-                  unit="dB"
-                  size="small"
-                  onKnobClick={onManualInit}
-                />
-              </div>
-            </div>
-          )}
-        </div>
-      </StudioRack>
+      <GMasteringCompressor
+        threshold={audioEffects.gMasteringCompressor?.threshold || -20}
+        ratio={audioEffects.gMasteringCompressor?.ratio || 4}
+        attack={audioEffects.gMasteringCompressor?.attack || 10}
+        release={audioEffects.gMasteringCompressor?.release || 100}
+        makeup={audioEffects.gMasteringCompressor?.makeup || 0}
+        reduction={audioEffects.gMasteringCompressor?.reduction || 0}
+        outputLevel={audioEffects.gMasteringCompressor?.outputLevel || -20}
+        onThresholdChange={(value) => onUpdateEffectSettings('gMasteringCompressor', { ...audioEffects.gMasteringCompressor, threshold: value })}
+        onRatioChange={(value) => onUpdateEffectSettings('gMasteringCompressor', { ...audioEffects.gMasteringCompressor, ratio: value })}
+        onAttackChange={(value) => onUpdateEffectSettings('gMasteringCompressor', { ...audioEffects.gMasteringCompressor, attack: value })}
+        onReleaseChange={(value) => onUpdateEffectSettings('gMasteringCompressor', { ...audioEffects.gMasteringCompressor, release: value })}
+        onMakeupChange={(value) => onUpdateEffectSettings('gMasteringCompressor', { ...audioEffects.gMasteringCompressor, makeup: value })}
+        enabled={audioEffects.gMasteringCompressor?.enabled || false}
+        onToggle={(enabled) => onTogglePremiumEffect('gMasteringCompressor', enabled)}
+      />
 
       {/* G-Precision EQ */}
       <StudioRack title="G-Precision EQ">
