@@ -1,4 +1,15 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { 
+  FileAudio, 
+  Upload, 
+  Music,
+  Zap,
+  Download,
+  Settings,
+  Play,
+  Pause,
+  Volume2
+} from 'lucide-react';
 import StudioHeader from './StudioHeader';
 import FileUpload from './FileUpload';
 import RealTimeMeters from './RealTimeMeters';

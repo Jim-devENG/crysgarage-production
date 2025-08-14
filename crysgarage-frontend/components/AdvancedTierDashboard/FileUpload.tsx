@@ -1,4 +1,5 @@
 import React from 'react';
+import { FileAudio, Upload, Zap } from 'lucide-react';
 
 interface FileUploadProps {
   selectedFile: File | null;
@@ -37,7 +38,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
             {selectedFile ? (
               <>
                 <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <div className="w-8 h-8 bg-white rounded-full"></div>
+                  <FileAudio className="w-8 h-8 text-white" />
                 </div>
                 <h3 className="text-xl font-semibold mb-2 text-green-400">File Uploaded Successfully!</h3>
                 <p className="text-gray-400 mb-4">Click "Enter Studio" to start mastering</p>
@@ -47,7 +48,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
               </>
             ) : (
               <>
-                <div className="w-16 h-16 bg-gray-400 rounded-full mx-auto mb-4"></div>
+                <Upload className="w-16 h-16 text-gray-400 mx-auto mb-4" />
                 <h3 className="text-xl font-semibold mb-2">Choose Audio File</h3>
                 <p className="text-gray-400 mb-4">WAV, MP3, FLAC, or other audio formats</p>
                 <div className="bg-crys-gold text-black px-6 py-2 rounded-lg font-semibold hover:bg-yellow-400 transition-colors inline-block">
@@ -68,7 +69,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
           
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center space-x-3">
-              <div className="w-6 h-6 bg-crys-gold rounded-full"></div>
+              <FileAudio className="w-6 h-6 text-crys-gold" />
               <div>
                 <h4 className="font-semibold text-white">{selectedFile?.name || fileInfo?.name}</h4>
                 <p className="text-sm text-gray-400">
@@ -105,7 +106,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
               } flex items-center justify-center space-x-2`}
             >
               <span className="text-xl">Enter Studio</span>
-              <div className="w-6 h-6 bg-black rounded-full"></div>
+              <Zap className="w-6 h-6" />
             </button>
             {selectedFile && (
               <p className="text-sm text-gray-400 mt-3">

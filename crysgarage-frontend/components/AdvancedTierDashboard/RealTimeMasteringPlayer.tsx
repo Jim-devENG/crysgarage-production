@@ -1,4 +1,5 @@
 import React, { useRef, useEffect, useState, useCallback, useImperativeHandle, forwardRef } from 'react';
+import { Play, Pause, Volume2, VolumeX, SkipBack, SkipForward, RotateCcw, Settings } from 'lucide-react';
 
 interface AudioEffects {
   eq: {
@@ -764,7 +765,7 @@ const RealTimeMasteringPlayer = forwardRef<RealTimeMasteringPlayerRef, RealTimeM
         <div className="text-gray-400 mb-4">
           {/* Settings Icon */}
           <div className="w-12 h-12 bg-crys-gold rounded-full mx-auto mb-2 flex items-center justify-center">
-            <div className="w-6 h-6 bg-black rounded-full"></div>
+            <RotateCcw className="w-6 h-6 text-black" />
           </div>
           <p>Upload an audio file to start real-time mastering</p>
         </div>
@@ -777,7 +778,7 @@ const RealTimeMasteringPlayer = forwardRef<RealTimeMasteringPlayerRef, RealTimeM
       {/* Settings Icon */}
       <div className="text-center mb-4">
         <div className="w-12 h-12 bg-crys-gold rounded-full mx-auto mb-2 flex items-center justify-center">
-          <div className="w-6 h-6 bg-black rounded-full"></div>
+          <Settings className="w-6 h-6 text-black" />
         </div>
         <h3 className="text-lg font-semibold text-white">Real-Time Mastering Player</h3>
         <p className="text-sm text-gray-400">Professional audio mastering with real-time effects</p>
@@ -797,7 +798,7 @@ const RealTimeMasteringPlayer = forwardRef<RealTimeMasteringPlayerRef, RealTimeM
         className="w-full bg-gray-700 text-white py-2 px-4 rounded-lg mb-4 hover:bg-gray-600 transition-colors flex items-center justify-center space-x-2"
       >
         <span>Settings</span>
-        <div className="w-4 h-4 bg-gray-300 rounded-full"></div>
+        <Settings className="w-4 h-4 text-gray-300" />
       </button>
 
       {/* Audio Element */}
@@ -865,7 +866,7 @@ const RealTimeMasteringPlayer = forwardRef<RealTimeMasteringPlayerRef, RealTimeM
           onClick={skipBackward}
           className="p-2 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors"
         >
-          <div className="w-4 h-4 bg-gray-300 rounded-full"></div>
+          <SkipBack className="w-4 h-4 text-gray-300" />
         </button>
 
         {/* Play/Pause Button */}
@@ -883,9 +884,9 @@ const RealTimeMasteringPlayer = forwardRef<RealTimeMasteringPlayerRef, RealTimeM
           className="p-4 bg-crys-gold rounded-full hover:bg-yellow-400 transition-colors flex items-center justify-center"
         >
           {isPlaying ? (
-            <div className="w-5 h-5 bg-black rounded-full"></div>
+            <Pause className="w-5 h-5 text-black" />
           ) : (
-            <div className="w-5 h-5 bg-black rounded-full ml-0.5"></div>
+            <Play className="w-5 h-5 text-black ml-0.5" />
           )}
         </button>
 
@@ -894,7 +895,7 @@ const RealTimeMasteringPlayer = forwardRef<RealTimeMasteringPlayerRef, RealTimeM
           onClick={skipForward}
           className="p-2 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors"
         >
-          <div className="w-4 h-4 bg-gray-300 rounded-full"></div>
+          <SkipForward className="w-4 h-4 text-gray-300" />
         </button>
       </div>
 
@@ -905,9 +906,9 @@ const RealTimeMasteringPlayer = forwardRef<RealTimeMasteringPlayerRef, RealTimeM
           className="p-2 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors"
         >
           {volume === 0 ? (
-            <div className="w-4 h-4 bg-gray-300 rounded-full"></div>
+            <VolumeX className="w-4 h-4 text-gray-300" />
           ) : (
-            <div className="w-4 h-4 bg-gray-300 rounded-full"></div>
+            <Volume2 className="w-4 h-4 text-gray-300" />
           )}
         </button>
         <div className="w-20">

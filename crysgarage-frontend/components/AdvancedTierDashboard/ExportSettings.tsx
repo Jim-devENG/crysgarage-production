@@ -1,4 +1,5 @@
 import React from 'react';
+import { Download, Settings, DollarSign } from 'lucide-react';
 
 interface ExportSettingsProps {
   downloadFormat: 'mp3' | 'wav16' | 'wav24' | 'wav32';
@@ -32,7 +33,7 @@ const ExportSettings: React.FC<ExportSettingsProps> = ({
               <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse shadow-sm"></div>
               <div className="flex items-center space-x-1">
                 <div className="bg-gradient-to-r from-crys-gold to-yellow-500 p-0.5 rounded">
-                  <div className="w-2.5 h-2.5 bg-gray-900 rounded-full"></div>
+                  <Download className="w-2.5 h-2.5 text-gray-900" />
                 </div>
                 <div>
                   <h3 className="text-xs font-bold text-white">CRYS GARAGE STUDIO</h3>
@@ -129,7 +130,7 @@ const ExportSettings: React.FC<ExportSettingsProps> = ({
               <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse shadow-sm"></div>
               <div className="flex items-center space-x-1">
                 <div className="bg-gradient-to-r from-crys-gold to-yellow-500 p-0.5 rounded">
-                  <div className="w-2.5 h-2.5 bg-gray-900 rounded-full"></div>
+                  <Settings className="w-2.5 h-2.5 text-gray-900" />
                 </div>
                 <div>
                   <h3 className="text-xs font-bold text-white">CRYS GARAGE STUDIO</h3>
@@ -238,7 +239,7 @@ const ExportSettings: React.FC<ExportSettingsProps> = ({
               <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse shadow-sm"></div>
               <div className="flex items-center space-x-1">
                 <div className="bg-gradient-to-r from-crys-gold to-yellow-500 p-0.5 rounded">
-                  <div className="w-2.5 h-2.5 bg-gray-900 rounded-full"></div>
+                  <DollarSign className="w-2.5 h-2.5 text-gray-900" />
                 </div>
                 <div>
                   <h3 className="text-xs font-bold text-white">CRYS GARAGE STUDIO</h3>
