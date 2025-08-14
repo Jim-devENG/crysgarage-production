@@ -5,12 +5,7 @@ services:
     build: ./crysgarage-frontend
     container_name: crysgarage-frontend
     ports:
-      - "5173:5173"
-    volumes:
-      - ./crysgarage-frontend:/app
-      - /app/node_modules
-    environment:
-      - NODE_ENV=development
+      - "3000:80"
     networks:
       - crysgarage-network
     restart: unless-stopped
