@@ -1,10 +1,11 @@
 export const loadStateFromStorage = () => {
   try {
-    const savedState = sessionStorage.getItem('professionalTierState');
+    const savedState = sessionStorage.getItem('professionalDashboardState');
     if (savedState) {
       const parsed = JSON.parse(savedState);
       return {
         currentStep: parsed.currentStep || 1,
+        selectedFile: parsed.selectedFile || null,
         selectedGenre: parsed.selectedGenre || null,
         processedAudioUrl: parsed.processedAudioUrl || null,
         isProcessing: false, // Always reset processing state
@@ -17,6 +18,7 @@ export const loadStateFromStorage = () => {
   }
   return {
     currentStep: 1,
+    selectedFile: null,
     selectedGenre: null,
     processedAudioUrl: null,
     isProcessing: false,
@@ -27,7 +29,7 @@ export const loadStateFromStorage = () => {
 
 export const saveStateToStorage = (state: any) => {
   try {
-    sessionStorage.setItem('professionalTierState', JSON.stringify(state));
+    sessionStorage.setItem('professionalDashboardState', JSON.stringify(state));
   } catch (error) {
     console.error('Error saving state to storage:', error);
   }
