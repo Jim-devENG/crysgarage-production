@@ -29,16 +29,26 @@ const AudioPlayers: React.FC<AudioPlayersProps> = ({
   const [compressorNode, setCompressorNode] = useState<DynamicsCompressorNode | null>(null);
   const [originalAudioElement, setOriginalAudioElement] = useState<HTMLAudioElement | null>(null);
   const [isProcessingReady, setIsProcessingReady] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Initialize audio processing when component mounts
   useEffect(() => {
-    initializeAudioProcessing();
+    try {
+      initializeAudioProcessing();
+    } catch (err) {
+      console.error('Error initializing audio processing:', err);
+      setError('Failed to initialize audio processing');
+    }
   }, []);
 
   // Apply genre preset when genre changes
   useEffect(() => {
     if (selectedGenre && isProcessingReady) {
-      applyGenrePreset(selectedGenre);
+      try {
+        applyGenrePreset(selectedGenre);
+      } catch (err) {
+        console.error('Error applying genre preset:', err);
+      }
     }
   }, [selectedGenre, isProcessingReady]);
 
@@ -92,6 +102,7 @@ const AudioPlayers: React.FC<AudioPlayersProps> = ({
       
     } catch (error) {
       console.error('Error initializing audio processing:', error);
+      setError('Failed to initialize audio processing');
     }
   };
 
@@ -118,19 +129,30 @@ const AudioPlayers: React.FC<AudioPlayersProps> = ({
   };
 
   const handleMasteredPlay = async () => {
-    if (!isProcessingReady) {
-      console.log('Cannot play mastered audio - not ready');
+    if (!isProcessingReady || !selectedFile) {
+      console.log('Cannot play mastered audio - not ready or no file');
       return;
     }
 
     try {
-      // Create a hidden audio element for the mastered playback
-      const audio = new Audio(selectedFile ? URL.createObjectURL(selectedFile) : '');
+      // Create a new audio element
+      const audio = new Audio();
+      audio.src = URL.createObjectURL(selectedFile);
       
-      // Create audio source
-      const source = audioContext!.createMediaElementSource(audio);
-      source.connect(compressorNode!);
-      setAudioSource(source);
+      // Wait for audio to be loaded
+      await new Promise((resolve, reject) => {
+        audio.addEventListener('canplaythrough', resolve);
+        audio.addEventListener('error', reject);
+        audio.load();
+      });
+
+      // Create audio source only once
+      if (!audioSource) {
+        const source = audioContext!.createMediaElementSource(audio);
+        source.connect(compressorNode!);
+        setAudioSource(source);
+      }
+
       setOriginalAudioElement(audio);
 
       // Apply current genre preset
@@ -147,15 +169,43 @@ const AudioPlayers: React.FC<AudioPlayersProps> = ({
     } catch (error) {
       console.error('Error playing mastered audio:', error);
       setIsPlayingMastered(false);
+      setError('Failed to play mastered audio');
     }
   };
 
   const handleMasteredPause = () => {
-    if (originalAudioElement) {
-      originalAudioElement.pause();
+    try {
+      if (originalAudioElement) {
+        originalAudioElement.pause();
+      }
+      setIsPlayingMastered(false);
+    } catch (error) {
+      console.error('Error pausing mastered audio:', error);
     }
-    setIsPlayingMastered(false);
   };
+
+  if (error) {
+    return (
+      <div className="bg-gray-700 rounded-xl p-6">
+        <div className="text-center">
+          <div className="w-12 h-12 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-3">
+            <span className="text-xl">⚠️</span>
+          </div>
+          <p className="text-sm text-red-400 mb-2">Audio Error</p>
+          <p className="text-xs text-gray-400">{error}</p>
+          <button
+            onClick={() => {
+              setError(null);
+              initializeAudioProcessing();
+            }}
+            className="mt-3 px-4 py-2 bg-crys-gold text-black rounded-lg text-sm hover:bg-yellow-400 transition-colors"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-gray-700 rounded-xl p-6">
