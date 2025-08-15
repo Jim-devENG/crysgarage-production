@@ -8,8 +8,8 @@ ENV NODE_OPTIONS="--max-old-space-size=2048"
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies with better caching
-RUN npm ci --only=production && npm cache clean --force
+# Install ALL dependencies (including dev dependencies needed for build)
+RUN npm ci && npm cache clean --force
 
 # Copy source code
 COPY . .
