@@ -173,6 +173,38 @@ const PremiumEffects: React.FC<PremiumEffectsProps> = ({
             enabled={audioEffects.gMasteringCompressor?.enabled || false}
             onToggle={(enabled) => onTogglePremiumEffect('gMasteringCompressor', enabled)}
             onManualInit={onManualInit}
+            // Control button handlers
+            onKneeChange={(knee) => {
+              onUpdateEffectSettings('gMasteringCompressor', { ...audioEffects.gMasteringCompressor, knee: knee });
+              onManualInit?.();
+            }}
+            onLookaheadChange={(lookahead) => {
+              onUpdateEffectSettings('gMasteringCompressor', { ...audioEffects.gMasteringCompressor, lookahead: lookahead });
+              onManualInit?.();
+            }}
+            onStereoLinkChange={(stereoLink) => {
+              onUpdateEffectSettings('gMasteringCompressor', { ...audioEffects.gMasteringCompressor, stereoLink: stereoLink });
+              onManualInit?.();
+            }}
+            onSidechainChange={(sidechain) => {
+              onUpdateEffectSettings('gMasteringCompressor', { ...audioEffects.gMasteringCompressor, sidechain: sidechain });
+              onManualInit?.();
+            }}
+            onAutoReleaseChange={(autoRelease) => {
+              onUpdateEffectSettings('gMasteringCompressor', { ...audioEffects.gMasteringCompressor, autoRelease: autoRelease });
+              onManualInit?.();
+            }}
+            onRMSDetectionChange={(rmsDetection) => {
+              onUpdateEffectSettings('gMasteringCompressor', { ...audioEffects.gMasteringCompressor, rmsDetection: rmsDetection });
+              onManualInit?.();
+            }}
+            // Current settings
+            knee={audioEffects.gMasteringCompressor?.knee || 'Soft'}
+            lookahead={audioEffects.gMasteringCompressor?.lookahead || 'Off'}
+            stereoLink={audioEffects.gMasteringCompressor?.stereoLink || 'Low'}
+            sidechain={audioEffects.gMasteringCompressor?.sidechain || 'Off'}
+            autoRelease={audioEffects.gMasteringCompressor?.autoRelease || false}
+            rmsDetection={audioEffects.gMasteringCompressor?.rmsDetection || false}
           />
         </div>
 
