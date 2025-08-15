@@ -90,12 +90,7 @@ export function LandingPage({ onGetStarted, onTryMastering }: LandingPageProps) 
     }
   ];
 
-  const stats = [
-    { number: "10,000+", label: "Tracks Mastered" },
-    { number: "2,500+", label: "Happy Artists" },
-    { number: "< 2min", label: "Average Processing" },
-    { number: "99.9%", label: "Satisfaction Rate" }
-  ];
+
 
   const testimonials = [
     {
@@ -317,31 +312,7 @@ export function LandingPage({ onGetStarted, onTryMastering }: LandingPageProps) 
               </motion.p>
               
               {/* Problem Statement */}
-              <motion.div 
-                className="bg-crys-graphite/30 rounded-2xl p-6 mb-12 max-w-xl backdrop-blur-sm border border-crys-gold/10"
-                variants={itemVariants}
-              >
-                <div className="grid md:grid-cols-2 gap-6 text-sm">
-                  <div>
-                    <h4 className="text-red-400 font-medium mb-2">Traditional Mastering</h4>
-                    <ul className="space-y-1 text-crys-light-grey">
-                      <li>• $50-200+ per track</li>
-                      <li>• Days to weeks turnaround</li>
-                      <li>• Studio booking required</li>
-                      <li>• Limited accessibility</li>
-                    </ul>
-                  </div>
-                  <div>
-                    <h4 className="text-crys-gold font-medium mb-2">Crysgarage Studio</h4>
-                    <ul className="space-y-1 text-crys-light-grey">
-                      <li>• $5-20 per session</li>
-                      <li>• Under 2 minutes</li>
-                      <li>• 24/7 availability</li>
-                      <li>• Accessible to everyone</li>
-                    </ul>
-                  </div>
-                </div>
-              </motion.div>
+
               
               {/* CTA Buttons */}
               <motion.div 
@@ -379,23 +350,7 @@ export function LandingPage({ onGetStarted, onTryMastering }: LandingPageProps) 
                 </motion.div>
               </motion.div>
               
-              {/* Quick Stats */}
-              <motion.div 
-                className="grid grid-cols-2 md:grid-cols-4 gap-6"
-                variants={containerVariants}
-              >
-                {stats.map((stat, index) => (
-                  <motion.div 
-                    key={index} 
-                    className="text-center bg-crys-graphite/20 rounded-lg p-4 backdrop-blur-sm border border-crys-gold/10"
-                    variants={itemVariants}
-                    whileHover={{ scale: 1.1 }}
-                  >
-                    <div className="text-2xl md:text-3xl font-bold text-crys-gold mb-1">{stat.number}</div>
-                    <div className="text-crys-light-grey text-sm">{stat.label}</div>
-                  </motion.div>
-                ))}
-              </motion.div>
+
             </motion.div>
 
             {/* Right Visual Content - Audio Visualization */}
