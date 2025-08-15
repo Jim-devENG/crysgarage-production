@@ -27,6 +27,7 @@ const AudioPlayers: React.FC<AudioPlayersProps> = ({
   const [audioSource, setAudioSource] = useState<MediaElementAudioSourceNode | null>(null);
   const [gainNode, setGainNode] = useState<GainNode | null>(null);
   const [compressorNode, setCompressorNode] = useState<DynamicsCompressorNode | null>(null);
+  const [analyserNode, setAnalyserNode] = useState<AnalyserNode | null>(null);
   const [originalAudioElement, setOriginalAudioElement] = useState<HTMLAudioElement | null>(null);
   const [isProcessingReady, setIsProcessingReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -41,16 +42,13 @@ const AudioPlayers: React.FC<AudioPlayersProps> = ({
     }
   }, []);
 
-  // Apply genre preset when genre changes
+  // Apply genre preset when genre changes - this is the key for real-time changes
   useEffect(() => {
-    if (selectedGenre && isProcessingReady) {
-      try {
-        applyGenrePreset(selectedGenre);
-      } catch (err) {
-        console.error('Error applying genre preset:', err);
-      }
+    if (selectedGenre && isProcessingReady && gainNode && compressorNode) {
+      console.log('Applying genre preset in real-time:', selectedGenre.name);
+      applyGenrePreset(selectedGenre);
     }
-  }, [selectedGenre, isProcessingReady]);
+  }, [selectedGenre, isProcessingReady, gainNode, compressorNode]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -80,9 +78,14 @@ const AudioPlayers: React.FC<AudioPlayersProps> = ({
       // Create processing nodes
       const gain = ctx.createGain();
       const compressor = ctx.createDynamicsCompressor();
+      const analyser = ctx.createAnalyser();
       
-      // Connect processing chain
-      compressor.connect(gain).connect(ctx.destination);
+      // Configure analyzer
+      analyser.fftSize = 256;
+      analyser.smoothingTimeConstant = 0.8;
+      
+      // Connect processing chain: source -> compressor -> gain -> analyser -> destination
+      compressor.connect(gain).connect(analyser).connect(ctx.destination);
       
       // Set initial values
       gain.gain.value = 1.0;
@@ -95,6 +98,7 @@ const AudioPlayers: React.FC<AudioPlayersProps> = ({
       setAudioContext(ctx);
       setGainNode(gain);
       setCompressorNode(compressor);
+      setAnalyserNode(analyser);
       setIsProcessingReady(true);
       
       console.log('Audio processing initialized successfully');
@@ -107,19 +111,32 @@ const AudioPlayers: React.FC<AudioPlayersProps> = ({
   };
 
   const applyGenrePreset = (genre: any) => {
-    if (!gainNode || !compressorNode || !genre) return;
+    if (!gainNode || !compressorNode || !genre) {
+      console.log('Cannot apply genre preset - missing nodes or genre');
+      return;
+    }
     
     try {
       const preset = genrePresets[genre.id] || genrePresets.afrobeats;
+      console.log('Applying preset:', preset);
       
-      // Apply gain
-      gainNode.gain.setValueAtTime(preset.gain, gainNode.context.currentTime);
+      // Apply gain with smooth transition
+      gainNode.gain.setValueAtTime(gainNode.gain.value, gainNode.context.currentTime);
+      gainNode.gain.linearRampToValueAtTime(preset.gain, gainNode.context.currentTime + 0.1);
       
-      // Apply compression
-      compressorNode.threshold.setValueAtTime(preset.compression.threshold, compressorNode.context.currentTime);
-      compressorNode.ratio.setValueAtTime(preset.compression.ratio, compressorNode.context.currentTime);
-      compressorNode.attack.setValueAtTime(preset.compression.attack, compressorNode.context.currentTime);
-      compressorNode.release.setValueAtTime(preset.compression.release, compressorNode.context.currentTime);
+      // Apply compression with smooth transitions
+      compressorNode.threshold.setValueAtTime(compressorNode.threshold.value, compressorNode.context.currentTime);
+      compressorNode.threshold.linearRampToValueAtTime(preset.compression.threshold, compressorNode.context.currentTime + 0.1);
+      
+      compressorNode.ratio.setValueAtTime(compressorNode.ratio.value, compressorNode.context.currentTime);
+      compressorNode.ratio.linearRampToValueAtTime(preset.compression.ratio, compressorNode.context.currentTime + 0.1);
+      
+      compressorNode.attack.setValueAtTime(compressorNode.attack.value, compressorNode.context.currentTime);
+      compressorNode.attack.linearRampToValueAtTime(preset.compression.attack, compressorNode.context.currentTime + 0.1);
+      
+      compressorNode.release.setValueAtTime(compressorNode.release.value, compressorNode.context.currentTime);
+      compressorNode.release.linearRampToValueAtTime(preset.compression.release, compressorNode.context.currentTime + 0.1);
+      
       compressorNode.knee.setValueAtTime(10, compressorNode.context.currentTime);
       
       console.log(`Applied ${genre.name} preset in real-time`);
@@ -155,7 +172,7 @@ const AudioPlayers: React.FC<AudioPlayersProps> = ({
 
       setOriginalAudioElement(audio);
 
-      // Apply current genre preset
+      // Apply current genre preset immediately
       if (selectedGenre) {
         applyGenrePreset(selectedGenre);
       }
@@ -256,6 +273,7 @@ const AudioPlayers: React.FC<AudioPlayersProps> = ({
               targetLufs={selectedGenre ? genrePresets[selectedGenre.id]?.targetLufs : undefined}
               targetTruePeak={selectedGenre ? genrePresets[selectedGenre.id]?.truePeak : undefined}
               isAudioConnected={true}
+              analyserNode={analyserNode}
             />
           </>
         ) : (

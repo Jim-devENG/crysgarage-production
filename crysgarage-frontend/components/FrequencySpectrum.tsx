@@ -7,6 +7,7 @@ interface FrequencySpectrumProps {
   targetLufs?: number;
   targetTruePeak?: number;
   isAudioConnected?: boolean; // New prop to indicate if audio is already connected to Web Audio API
+  analyserNode?: AnalyserNode | null; // Shared analyzer node from parent
 }
 
 const FrequencySpectrum: React.FC<FrequencySpectrumProps> = ({
@@ -15,7 +16,8 @@ const FrequencySpectrum: React.FC<FrequencySpectrumProps> = ({
   title,
   targetLufs,
   targetTruePeak,
-  isAudioConnected = false
+  isAudioConnected = false,
+  analyserNode = null
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -27,8 +29,13 @@ const FrequencySpectrum: React.FC<FrequencySpectrumProps> = ({
   const [peakValue, setPeakValue] = useState<number>(0);
 
   useEffect(() => {
-    if (!audioElement || isAudioConnected) {
-      // If audio is already connected to Web Audio API, don't create another connection
+    if (!audioElement) {
+      return;
+    }
+
+    if (analyserNode) {
+      // Use the shared analyzer node from parent
+      analyserRef.current = analyserNode;
       return;
     }
 
@@ -40,15 +47,20 @@ const FrequencySpectrum: React.FC<FrequencySpectrumProps> = ({
     analyser.fftSize = 256;
     analyser.smoothingTimeConstant = 0.8;
     
-    // Create source from audio element
-    const source = audioContext.createMediaElementSource(audioElement);
-    source.connect(analyser);
-    analyser.connect(audioContext.destination);
+    if (!isAudioConnected) {
+      // Create source from audio element only if not already connected
+      const source = audioContext.createMediaElementSource(audioElement);
+      source.connect(analyser);
+      analyser.connect(audioContext.destination);
+      sourceRef.current = source;
+    } else {
+      // If already connected, just connect analyzer to destination for visualization
+      analyser.connect(audioContext.destination);
+    }
 
     // Store references
     audioContextRef.current = audioContext;
     analyserRef.current = analyser;
-    sourceRef.current = source;
 
     return () => {
       if (animationRef.current) {
@@ -58,7 +70,7 @@ const FrequencySpectrum: React.FC<FrequencySpectrumProps> = ({
         audioContextRef.current.close();
       }
     };
-  }, [audioElement, isAudioConnected]);
+  }, [audioElement, isAudioConnected, analyserNode]);
 
   useEffect(() => {
     if (!isPlaying || !analyserRef.current || !canvasRef.current) {
