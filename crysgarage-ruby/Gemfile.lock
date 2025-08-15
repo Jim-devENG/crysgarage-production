@@ -2,11 +2,7 @@ GEM
   remote: https://rubygems.org/
   specs:
     base64 (0.3.0)
-    ffi (1.17.2-x64-mingw-ucrt)
-<<<<<<< HEAD
     ffi (1.17.2-x86_64-linux-gnu)
-=======
->>>>>>> a737561bdc9ab295a029fca984b2847febdeeaec
     fileutils (1.7.3)
     json (2.13.0)
     mustermann (3.0.3)
@@ -31,11 +27,7 @@ GEM
     wavefile (1.1.2)
 
 PLATFORMS
-  x64-mingw-ucrt
-<<<<<<< HEAD
   x86_64-linux-gnu
-=======
->>>>>>> a737561bdc9ab295a029fca984b2847febdeeaec
 
 DEPENDENCIES
   ffi (~> 1.16)
