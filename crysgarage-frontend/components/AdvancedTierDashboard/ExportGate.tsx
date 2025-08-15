@@ -24,6 +24,8 @@ const ExportGate: React.FC<ExportGateProps> = ({
   const [processedCurrentTime, setProcessedCurrentTime] = useState(0);
   const [originalDuration, setOriginalDuration] = useState(0);
   const [processedDuration, setProcessedDuration] = useState(0);
+  const [originalAudioReady, setOriginalAudioReady] = useState(false);
+  const [processedAudioReady, setProcessedAudioReady] = useState(false);
 
   // Audio refs
   const originalAudioRef = useRef<HTMLAudioElement>(null);
@@ -31,9 +33,7 @@ const ExportGate: React.FC<ExportGateProps> = ({
 
   // Create URLs for audio playback
   const originalAudioUrl = originalFile ? URL.createObjectURL(originalFile) : null;
-  console.log('ExportGate - Original file:', originalFile);
-  console.log('ExportGate - Original audio URL:', originalAudioUrl);
-  console.log('ExportGate - Processed audio URL:', processedAudioUrl);
+  
   console.log('ExportGate - Original file:', originalFile);
   console.log('ExportGate - Original audio URL:', originalAudioUrl);
   console.log('ExportGate - Processed audio URL:', processedAudioUrl);
@@ -46,6 +46,21 @@ const ExportGate: React.FC<ExportGateProps> = ({
       }
     };
   }, [originalAudioUrl]);
+
+  // Stop other audio when one starts playing
+  const stopOtherAudio = (isOriginal: boolean) => {
+    if (isOriginal) {
+      if (processedAudioRef.current && !processedAudioRef.current.paused) {
+        processedAudioRef.current.pause();
+        setIsPlayingProcessed(false);
+      }
+    } else {
+      if (originalAudioRef.current && !originalAudioRef.current.paused) {
+        originalAudioRef.current.pause();
+        setIsPlayingOriginal(false);
+      }
+    }
+  };
 
   // Calculate total cost
   const calculateTotalCost = () => {
@@ -69,45 +84,57 @@ const ExportGate: React.FC<ExportGateProps> = ({
   const totalCost = calculateTotalCost();
 
   // Audio playback handlers
-  const handleOriginalPlayPause = () => {
+  const handleOriginalPlayPause = async () => {
     console.log('Original play/pause clicked');
     console.log('Original audio ref:', originalAudioRef.current);
     console.log('Original audio URL:', originalAudioUrl);
+    console.log('Original audio ready:', originalAudioReady);
     
-    if (originalAudioRef.current) {
+    if (!originalAudioRef.current || !originalAudioUrl) {
+      console.error('Original audio not available');
+      return;
+    }
+
+    try {
       if (isPlayingOriginal) {
         console.log('Pausing original audio');
         originalAudioRef.current.pause();
+        setIsPlayingOriginal(false);
       } else {
         console.log('Playing original audio');
-        originalAudioRef.current.play().catch(error => {
-          console.error('Error playing original audio:', error);
-        });
+        stopOtherAudio(true);
+        await originalAudioRef.current.play();
+        setIsPlayingOriginal(true);
       }
-      setIsPlayingOriginal(!isPlayingOriginal);
-    } else {
-      console.error('Original audio ref is null');
+    } catch (error) {
+      console.error('Error playing original audio:', error);
     }
   };
 
-  const handleProcessedPlayPause = () => {
+  const handleProcessedPlayPause = async () => {
     console.log('Processed play/pause clicked');
     console.log('Processed audio ref:', processedAudioRef.current);
     console.log('Processed audio URL:', processedAudioUrl);
+    console.log('Processed audio ready:', processedAudioReady);
     
-    if (processedAudioRef.current) {
+    if (!processedAudioRef.current || !processedAudioUrl) {
+      console.error('Processed audio not available');
+      return;
+    }
+
+    try {
       if (isPlayingProcessed) {
         console.log('Pausing processed audio');
         processedAudioRef.current.pause();
+        setIsPlayingProcessed(false);
       } else {
         console.log('Playing processed audio');
-        processedAudioRef.current.play().catch(error => {
-          console.error('Error playing processed audio:', error);
-        });
+        stopOtherAudio(false);
+        await processedAudioRef.current.play();
+        setIsPlayingProcessed(true);
       }
-      setIsPlayingProcessed(!isPlayingProcessed);
-    } else {
-      console.error('Processed audio ref is null');
+    } catch (error) {
+      console.error('Error playing processed audio:', error);
     }
   };
 
@@ -125,25 +152,41 @@ const ExportGate: React.FC<ExportGateProps> = ({
   };
 
   const handleOriginalLoadedMetadata = () => {
+    console.log('Original audio metadata loaded');
     if (originalAudioRef.current) {
       setOriginalDuration(originalAudioRef.current.duration);
+      setOriginalAudioReady(true);
     }
   };
 
   const handleProcessedLoadedMetadata = () => {
+    console.log('Processed audio metadata loaded');
     if (processedAudioRef.current) {
       setProcessedDuration(processedAudioRef.current.duration);
+      setProcessedAudioReady(true);
     }
   };
 
   const handleOriginalEnded = () => {
+    console.log('Original audio ended');
     setIsPlayingOriginal(false);
     setOriginalCurrentTime(0);
   };
 
   const handleProcessedEnded = () => {
+    console.log('Processed audio ended');
     setIsPlayingProcessed(false);
     setProcessedCurrentTime(0);
+  };
+
+  const handleOriginalError = (e: any) => {
+    console.error('Original audio error:', e);
+    setOriginalAudioReady(false);
+  };
+
+  const handleProcessedError = (e: any) => {
+    console.error('Processed audio error:', e);
+    setProcessedAudioReady(false);
   };
 
   const handleDownload = () => {
@@ -189,11 +232,12 @@ const ExportGate: React.FC<ExportGateProps> = ({
           onTimeUpdate={handleOriginalTimeUpdate}
           onLoadedMetadata={handleOriginalLoadedMetadata}
           onEnded={handleOriginalEnded}
-          onError={(e) => console.error('Original audio error:', e)}
+          onError={handleOriginalError}
           onLoadStart={() => console.log('Original audio load started')}
           onCanPlay={() => console.log('Original audio can play')}
           onCanPlayThrough={() => console.log('Original audio can play through')}
           preload="metadata"
+          crossOrigin="anonymous"
         />
       )}
       {processedAudioUrl && (
@@ -203,11 +247,12 @@ const ExportGate: React.FC<ExportGateProps> = ({
           onTimeUpdate={handleProcessedTimeUpdate}
           onLoadedMetadata={handleProcessedLoadedMetadata}
           onEnded={handleProcessedEnded}
-          onError={(e) => console.error('Processed audio error:', e)}
+          onError={handleProcessedError}
           onLoadStart={() => console.log('Processed audio load started')}
           onCanPlay={() => console.log('Processed audio can play')}
           onCanPlayThrough={() => console.log('Processed audio can play through')}
           preload="metadata"
+          crossOrigin="anonymous"
         />
       )}
 
@@ -243,6 +288,9 @@ const ExportGate: React.FC<ExportGateProps> = ({
           <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
             <Volume2 className="w-5 h-5 mr-2" />
             Original Audio
+            {!originalAudioReady && originalAudioUrl && (
+              <span className="ml-2 text-xs text-yellow-400">Loading...</span>
+            )}
           </h3>
           
           <div className="space-y-4">
@@ -257,6 +305,12 @@ const ExportGate: React.FC<ExportGateProps> = ({
                   {originalFile ? (originalFile.size / 1024 / 1024).toFixed(2) : '0'} MB
                 </span>
               </div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm text-gray-400">Status</span>
+                <span className={`text-sm ${originalAudioReady ? 'text-green-400' : 'text-yellow-400'}`}>
+                  {originalAudioReady ? 'Ready' : 'Loading...'}
+                </span>
+              </div>
             </div>
             
             <div className="bg-gray-900 rounded-lg p-4">
@@ -264,7 +318,12 @@ const ExportGate: React.FC<ExportGateProps> = ({
                 <span className="text-sm text-gray-400">Audio Preview</span>
                 <button
                   onClick={handleOriginalPlayPause}
-                  className="p-2 bg-crys-gold rounded-lg hover:bg-yellow-400 transition-colors"
+                  disabled={!originalAudioReady}
+                  className={`p-2 rounded-lg transition-colors ${
+                    originalAudioReady 
+                      ? 'bg-crys-gold hover:bg-yellow-400' 
+                      : 'bg-gray-600 cursor-not-allowed'
+                  }`}
                 >
                   {isPlayingOriginal ? (
                     <Pause className="w-4 h-4 text-gray-900" />
@@ -289,6 +348,9 @@ const ExportGate: React.FC<ExportGateProps> = ({
           <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
             <Settings className="w-5 h-5 mr-2" />
             Processed Audio
+            {!processedAudioReady && processedAudioUrl && (
+              <span className="ml-2 text-xs text-yellow-400">Loading...</span>
+            )}
           </h3>
           
           <div className="space-y-4">
@@ -301,6 +363,12 @@ const ExportGate: React.FC<ExportGateProps> = ({
                 <span className="text-sm text-gray-400">Processing</span>
                 <span className="text-sm text-green-400">Complete</span>
               </div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm text-gray-400">Status</span>
+                <span className={`text-sm ${processedAudioReady ? 'text-green-400' : 'text-yellow-400'}`}>
+                  {processedAudioReady ? 'Ready' : 'Loading...'}
+                </span>
+              </div>
             </div>
             
             <div className="bg-gray-900 rounded-lg p-4">
@@ -308,7 +376,12 @@ const ExportGate: React.FC<ExportGateProps> = ({
                 <span className="text-sm text-gray-400">Audio Preview</span>
                 <button
                   onClick={handleProcessedPlayPause}
-                  className="p-2 bg-crys-gold rounded-lg hover:bg-yellow-400 transition-colors"
+                  disabled={!processedAudioReady}
+                  className={`p-2 rounded-lg transition-colors ${
+                    processedAudioReady 
+                      ? 'bg-crys-gold hover:bg-yellow-400' 
+                      : 'bg-gray-600 cursor-not-allowed'
+                  }`}
                 >
                   {isPlayingProcessed ? (
                     <Pause className="w-4 h-4 text-gray-900" />
@@ -351,11 +424,16 @@ const ExportGate: React.FC<ExportGateProps> = ({
                     onChange={(e) => setDownloadFormat(e.target.value as any)}
                     className="text-crys-gold"
                   />
-                  <span className="text-white">MP3 (320kbps)</span>
+                  <div>
+                    <div className="text-white font-medium">MP3</div>
+                    <div className="text-sm text-gray-400">Compressed, smaller file</div>
+                  </div>
                 </div>
-                <span className="text-green-400 text-sm">Free</span>
+                <div className="text-right">
+                  <div className="text-white font-medium">$0.00</div>
+                </div>
               </label>
-              
+
               <label className="flex items-center justify-between p-3 bg-gray-900 rounded-lg border border-gray-600 cursor-pointer hover:bg-gray-800 transition-colors">
                 <div className="flex items-center space-x-3">
                   <input
@@ -366,11 +444,16 @@ const ExportGate: React.FC<ExportGateProps> = ({
                     onChange={(e) => setDownloadFormat(e.target.value as any)}
                     className="text-crys-gold"
                   />
-                  <span className="text-white">WAV (16bit)</span>
+                  <div>
+                    <div className="text-white font-medium">WAV 16-bit</div>
+                    <div className="text-sm text-gray-400">CD quality, uncompressed</div>
+                  </div>
                 </div>
-                <span className="text-green-400 text-sm">Free</span>
+                <div className="text-right">
+                  <div className="text-white font-medium">$0.00</div>
+                </div>
               </label>
-              
+
               <label className="flex items-center justify-between p-3 bg-gray-900 rounded-lg border border-gray-600 cursor-pointer hover:bg-gray-800 transition-colors">
                 <div className="flex items-center space-x-3">
                   <input
@@ -381,11 +464,16 @@ const ExportGate: React.FC<ExportGateProps> = ({
                     onChange={(e) => setDownloadFormat(e.target.value as any)}
                     className="text-crys-gold"
                   />
-                  <span className="text-white">WAV (24bit)</span>
+                  <div>
+                    <div className="text-white font-medium">WAV 24-bit</div>
+                    <div className="text-sm text-gray-400">Studio quality, high dynamic range</div>
+                  </div>
                 </div>
-                <span className="text-green-400 text-sm">Free</span>
+                <div className="text-right">
+                  <div className="text-white font-medium">$0.00</div>
+                </div>
               </label>
-              
+
               <label className="flex items-center justify-between p-3 bg-gray-900 rounded-lg border border-gray-600 cursor-pointer hover:bg-gray-800 transition-colors">
                 <div className="flex items-center space-x-3">
                   <input
@@ -396,9 +484,14 @@ const ExportGate: React.FC<ExportGateProps> = ({
                     onChange={(e) => setDownloadFormat(e.target.value as any)}
                     className="text-crys-gold"
                   />
-                  <span className="text-white">WAV (32bit)</span>
+                  <div>
+                    <div className="text-white font-medium">WAV 32-bit</div>
+                    <div className="text-sm text-gray-400">Maximum quality, floating point</div>
+                  </div>
                 </div>
-                <span className="text-crys-gold text-sm">$2</span>
+                <div className="text-right">
+                  <div className="text-white font-medium">$2.00</div>
+                </div>
               </label>
             </div>
           </div>
@@ -417,11 +510,16 @@ const ExportGate: React.FC<ExportGateProps> = ({
                     onChange={(e) => setSampleRate(e.target.value as any)}
                     className="text-crys-gold"
                   />
-                  <span className="text-white">44.1kHz</span>
+                  <div>
+                    <div className="text-white font-medium">44.1 kHz</div>
+                    <div className="text-sm text-gray-400">CD standard</div>
+                  </div>
                 </div>
-                <span className="text-green-400 text-sm">Free</span>
+                <div className="text-right">
+                  <div className="text-white font-medium">$0.00</div>
+                </div>
               </label>
-              
+
               <label className="flex items-center justify-between p-3 bg-gray-900 rounded-lg border border-gray-600 cursor-pointer hover:bg-gray-800 transition-colors">
                 <div className="flex items-center space-x-3">
                   <input
@@ -432,11 +530,16 @@ const ExportGate: React.FC<ExportGateProps> = ({
                     onChange={(e) => setSampleRate(e.target.value as any)}
                     className="text-crys-gold"
                   />
-                  <span className="text-white">48kHz</span>
+                  <div>
+                    <div className="text-white font-medium">48 kHz</div>
+                    <div className="text-sm text-gray-400">Professional standard</div>
+                  </div>
                 </div>
-                <span className="text-green-400 text-sm">Free</span>
+                <div className="text-right">
+                  <div className="text-white font-medium">$0.00</div>
+                </div>
               </label>
-              
+
               <label className="flex items-center justify-between p-3 bg-gray-900 rounded-lg border border-gray-600 cursor-pointer hover:bg-gray-800 transition-colors">
                 <div className="flex items-center space-x-3">
                   <input
@@ -447,11 +550,16 @@ const ExportGate: React.FC<ExportGateProps> = ({
                     onChange={(e) => setSampleRate(e.target.value as any)}
                     className="text-crys-gold"
                   />
-                  <span className="text-white">88.2kHz</span>
+                  <div>
+                    <div className="text-white font-medium">88.2 kHz</div>
+                    <div className="text-sm text-gray-400">High resolution</div>
+                  </div>
                 </div>
-                <span className="text-crys-gold text-sm">$3</span>
+                <div className="text-right">
+                  <div className="text-white font-medium">$3.00</div>
+                </div>
               </label>
-              
+
               <label className="flex items-center justify-between p-3 bg-gray-900 rounded-lg border border-gray-600 cursor-pointer hover:bg-gray-800 transition-colors">
                 <div className="flex items-center space-x-3">
                   <input
@@ -462,11 +570,16 @@ const ExportGate: React.FC<ExportGateProps> = ({
                     onChange={(e) => setSampleRate(e.target.value as any)}
                     className="text-crys-gold"
                   />
-                  <span className="text-white">96kHz</span>
+                  <div>
+                    <div className="text-white font-medium">96 kHz</div>
+                    <div className="text-sm text-gray-400">Ultra high resolution</div>
+                  </div>
                 </div>
-                <span className="text-crys-gold text-sm">$5</span>
+                <div className="text-right">
+                  <div className="text-white font-medium">$5.00</div>
+                </div>
               </label>
-              
+
               <label className="flex items-center justify-between p-3 bg-gray-900 rounded-lg border border-gray-600 cursor-pointer hover:bg-gray-800 transition-colors">
                 <div className="flex items-center space-x-3">
                   <input
@@ -477,17 +590,22 @@ const ExportGate: React.FC<ExportGateProps> = ({
                     onChange={(e) => setSampleRate(e.target.value as any)}
                     className="text-crys-gold"
                   />
-                  <span className="text-white">192kHz</span>
+                  <div>
+                    <div className="text-white font-medium">192 kHz</div>
+                    <div className="text-sm text-gray-400">Maximum resolution</div>
+                  </div>
                 </div>
-                <span className="text-crys-gold text-sm">$10</span>
+                <div className="text-right">
+                  <div className="text-white font-medium">$10.00</div>
+                </div>
               </label>
             </div>
           </div>
         </div>
 
-        {/* Premium Features */}
+        {/* Additional Features */}
         <div className="mt-8">
-          <h4 className="text-md font-semibold text-white mb-4">Premium Features</h4>
+          <h4 className="text-md font-semibold text-white mb-4">Additional Features</h4>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <label className="flex items-center justify-between p-4 bg-gray-900 rounded-lg border border-gray-600 cursor-pointer hover:bg-gray-800 transition-colors">
               <div className="flex items-center space-x-3">
@@ -498,13 +616,15 @@ const ExportGate: React.FC<ExportGateProps> = ({
                   className="text-crys-gold"
                 />
                 <div>
-                  <span className="text-white font-medium">G-Surround</span>
-                  <div className="text-sm text-gray-400">Create surround sound</div>
+                  <div className="text-white font-medium">G-Surround</div>
+                  <div className="text-sm text-gray-400">5.1 surround sound encoding</div>
                 </div>
               </div>
-              <span className="text-crys-gold text-sm">$5</span>
+              <div className="text-right">
+                <div className="text-white font-medium">$5.00</div>
+              </div>
             </label>
-            
+
             <label className="flex items-center justify-between p-4 bg-gray-900 rounded-lg border border-gray-600 cursor-pointer hover:bg-gray-800 transition-colors">
               <div className="flex items-center space-x-3">
                 <input
@@ -514,11 +634,13 @@ const ExportGate: React.FC<ExportGateProps> = ({
                   className="text-crys-gold"
                 />
                 <div>
-                  <span className="text-white font-medium">G-Tuner</span>
-                  <div className="text-sm text-gray-400">444Hz tuning (per use)</div>
+                  <div className="text-white font-medium">G-Tuner</div>
+                  <div className="text-sm text-gray-400">Automatic pitch correction</div>
                 </div>
               </div>
-              <span className="text-crys-gold text-sm">$3</span>
+              <div className="text-right">
+                <div className="text-white font-medium">$3.00</div>
+              </div>
             </label>
           </div>
         </div>
@@ -528,19 +650,14 @@ const ExportGate: React.FC<ExportGateProps> = ({
       <div className="text-center">
         <button
           onClick={handleDownload}
-          className="bg-crys-gold text-black px-8 py-4 rounded-lg font-semibold hover:bg-yellow-400 transition-colors flex items-center space-x-2 mx-auto"
+          className="bg-crys-gold text-black px-8 py-3 rounded-lg font-semibold hover:bg-yellow-400 transition-colors flex items-center justify-center space-x-2 mx-auto"
         >
           <Download className="w-5 h-5" />
           <span>Download Mastered Audio</span>
-          {totalCost > 0 && (
-            <span className="bg-gray-900 text-crys-gold px-3 py-1 rounded-full text-sm">
-              ${totalCost.toFixed(2)}
-            </span>
-          )}
         </button>
       </div>
     </div>
   );
-};
-
+  };
+ 
 export default ExportGate;
