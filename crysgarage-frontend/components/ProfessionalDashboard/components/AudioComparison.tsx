@@ -37,6 +37,12 @@ const AudioComparison: React.FC<AudioComparisonProps> = ({
       return;
     }
     
+    // Prevent multiple initializations
+    if (audioContext) {
+      console.log('Real-time processing already initialized');
+      return;
+    }
+    
     try {
       console.log('Initializing real-time processing...');
       
@@ -70,6 +76,8 @@ const AudioComparison: React.FC<AudioComparisonProps> = ({
       
     } catch (error) {
       console.error('Error initializing real-time processing:', error);
+      // Don't let errors crash the component
+      alert('Audio processing initialization failed. Please try refreshing the page.');
     }
   };
 
@@ -100,22 +108,29 @@ const AudioComparison: React.FC<AudioComparisonProps> = ({
     }
     
     try {
-      // Create audio source from the original audio element (only when needed)
-      const source = audioContext.createMediaElementSource(originalAudioElement);
-      setAudioSource(source);
-      
-      // Connect the source to the processing chain
-      source.connect(compressorNode);
+      // Only create audio source if it doesn't exist
+      if (!audioSource) {
+        console.log('Creating audio source for real-time processing...');
+        const source = audioContext.createMediaElementSource(originalAudioElement);
+        setAudioSource(source);
+        
+        // Connect the source to the processing chain
+        source.connect(compressorNode);
+      }
       
       setIsPlayingMastered(true);
       setIsPlayingOriginal(false);
       
       // Play the original audio with real-time processing applied
-      originalAudioElement.play().catch(console.error);
+      originalAudioElement.play().catch((error) => {
+        console.error('Error playing audio:', error);
+        setIsPlayingMastered(false);
+      });
       console.log('Playing real-time mastered audio with current genre preset');
     } catch (error) {
       console.error('Error setting up real-time mastered playback:', error);
       setIsPlayingMastered(false);
+      alert('Failed to start mastered audio playback. Please try again.');
     }
   };
 
@@ -140,6 +155,20 @@ const AudioComparison: React.FC<AudioComparisonProps> = ({
       applyGenrePresetRealTime(selectedGenre);
     }
   }, [selectedGenre, gainNode, compressorNode]);
+
+  // Cleanup function to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      // Clean up audio context when component unmounts
+      if (audioContext) {
+        try {
+          audioContext.close();
+        } catch (error) {
+          console.error('Error closing audio context:', error);
+        }
+      }
+    };
+  }, [audioContext]);
 
   return (
     <div>
@@ -168,21 +197,39 @@ const AudioComparison: React.FC<AudioComparisonProps> = ({
               src={selectedFile ? URL.createObjectURL(selectedFile) : ''}
               title="Original Audio"
               onPlay={() => {
-                setIsPlayingOriginal(true);
-                setIsPlayingMastered(false);
-                // Initialize real-time processing when audio starts playing
-                if (!isRealTimeProcessing) {
-                  console.log('Audio started playing, initializing real-time processing...');
-                  setTimeout(() => {
-                    setIsRealTimeProcessing(true);
-                  }, 100);
+                try {
+                  setIsPlayingOriginal(true);
+                  setIsPlayingMastered(false);
+                  // Initialize real-time processing when audio starts playing
+                  if (!isRealTimeProcessing) {
+                    console.log('Audio started playing, initializing real-time processing...');
+                    setTimeout(() => {
+                      try {
+                        setIsRealTimeProcessing(true);
+                      } catch (error) {
+                        console.error('Error setting real-time processing:', error);
+                      }
+                    }, 100);
+                  }
+                } catch (error) {
+                  console.error('Error in original audio play handler:', error);
                 }
               }}
-              onPause={() => setIsPlayingOriginal(false)}
+              onPause={() => {
+                try {
+                  setIsPlayingOriginal(false);
+                } catch (error) {
+                  console.error('Error in original audio pause handler:', error);
+                }
+              }}
               className="w-full"
               onAudioElementReady={(audioElement) => {
-                console.log('Original audio element ready:', audioElement);
-                setOriginalAudioElement(audioElement);
+                try {
+                  console.log('Original audio element ready:', audioElement);
+                  setOriginalAudioElement(audioElement);
+                } catch (error) {
+                  console.error('Error setting audio element:', error);
+                }
               }}
             />
             
