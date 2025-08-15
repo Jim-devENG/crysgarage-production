@@ -21,39 +21,22 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT }}
           script: |
-            echo "🚀 Starting deployment..."
-
+            echo "🚀 Starting deployment via GitHub Actions..."
+            
             # Navigate to deployment directory
             cd /var/www/crysgarage-deploy
-
-            # Pull latest changes
-            echo "📥 Pulling latest changes..."
-            git pull origin master
-
-            # Stop existing containers
-            echo "🛑 Stopping containers..."
-            docker-compose down
-
-            # Build and start containers
-            echo "🔨 Building and starting containers..."
-            docker-compose build --no-cache
-            docker-compose up -d
-
-            # Wait for services to start
-            echo "⏳ Waiting for services to start..."
-            sleep 15
-
-            # Check container status
-            echo "📊 Container status:"
-            docker-compose ps
-
-            # Test the application
-            echo "🧪 Testing application..."
-            if curl -s -f https://crysgarage.studio/health > /dev/null; then
-              echo "✅ Deployment successful! Application is running."
+            
+            # Make sure the deployment script is executable
+            chmod +x deploy_vps_simple.sh
+            
+            # Run the enhanced deployment script
+            ./deploy_vps_simple.sh
+            
+            # Additional verification
+            echo "🔍 Verifying deployment..."
+            if curl -s -f https://crysgarage.studio > /dev/null; then
+              echo "✅ GitHub Actions deployment successful!"
             else
-              echo "❌ Deployment failed! Application is not responding."
+              echo "❌ GitHub Actions deployment failed!"
               exit 1
             fi
-
-            echo "🌐 Application URL: https://crysgarage.studio"
