@@ -318,11 +318,11 @@ export function LandingPage({ onGetStarted, onTryMastering }: LandingPageProps) 
               </motion.div>
               {/* Main Headline */}
               <motion.h1 
-                className="text-5xl md:text-6xl lg:text-7xl font-bold text-crys-white mb-6 leading-tight"
+                className="text-4xl md:text-5xl lg:text-6xl font-bold text-crys-white mb-6 leading-tight"
                 variants={itemVariants}
               >
                 <motion.span 
-                  className="block font-musical musical-glow"
+                  className="block font-musical musical-glow text-3xl md:text-4xl lg:text-5xl"
                   initial={{ opacity: 0, y: 30 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 1, delay: 0.2 }}
@@ -330,7 +330,7 @@ export function LandingPage({ onGetStarted, onTryMastering }: LandingPageProps) 
                   Craft the Sound,
                 </motion.span>
                 <motion.span 
-                  className="block font-audiowide text-transparent bg-gradient-to-r from-crys-gold via-yellow-400 to-crys-gold-muted bg-clip-text text-[64px] musical-pulse"
+                  className="block font-audiowide text-transparent bg-gradient-to-r from-crys-gold via-yellow-400 to-crys-gold-muted bg-clip-text text-4xl md:text-5xl lg:text-6xl musical-pulse"
                   initial={{ opacity: 0, y: 30 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 1, delay: 0.4 }}
@@ -338,7 +338,7 @@ export function LandingPage({ onGetStarted, onTryMastering }: LandingPageProps) 
                   Unleash the Realm
                 </motion.span>
                 <motion.span 
-                  className="block font-chakra text-crys-gold text-2xl md:text-3xl mt-4 musical-wave"
+                  className="block font-chakra text-crys-gold text-xl md:text-2xl mt-4 musical-wave"
                   initial={{ opacity: 0, y: 30 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 1, delay: 0.6 }}
