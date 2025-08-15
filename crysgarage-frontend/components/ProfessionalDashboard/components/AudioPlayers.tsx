@@ -255,6 +255,7 @@ const AudioPlayers: React.FC<AudioPlayersProps> = ({
               title={`${selectedGenre?.name || 'Mastered'} Frequency Spectrum`}
               targetLufs={selectedGenre ? genrePresets[selectedGenre.id]?.targetLufs : undefined}
               targetTruePeak={selectedGenre ? genrePresets[selectedGenre.id]?.truePeak : undefined}
+              isAudioConnected={true}
             />
           </>
         ) : (

@@ -4,38 +4,33 @@ interface FrequencySpectrumProps {
   audioElement: HTMLAudioElement | null;
   isPlaying: boolean;
   title: string;
-  className?: string;
   targetLufs?: number;
   targetTruePeak?: number;
+  isAudioConnected?: boolean; // New prop to indicate if audio is already connected to Web Audio API
 }
 
-const FrequencySpectrum: React.FC<FrequencySpectrumProps> = ({ 
-  audioElement, 
-  isPlaying, 
+const FrequencySpectrum: React.FC<FrequencySpectrumProps> = ({
+  audioElement,
+  isPlaying,
   title,
-  className = "",
   targetLufs,
-  targetTruePeak
+  targetTruePeak,
+  isAudioConnected = false
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const animationRef = useRef<number>();
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const sourceRef = useRef<MediaElementAudioSourceNode | null>(null);
+  const animationRef = useRef<number | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [lufsValue, setLufsValue] = useState<number | null>(null);
-  const [peakValue, setPeakValue] = useState<number | null>(null);
+  const [lufsValue, setLufsValue] = useState<number>(0);
+  const [peakValue, setPeakValue] = useState<number>(0);
 
   useEffect(() => {
-    if (!audioElement || !canvasRef.current) return;
-
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    // Set canvas size
-    canvas.width = canvas.offsetWidth;
-    canvas.height = 120;
+    if (!audioElement || isAudioConnected) {
+      // If audio is already connected to Web Audio API, don't create another connection
+      return;
+    }
 
     // Create audio context and analyzer
     const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -63,7 +58,7 @@ const FrequencySpectrum: React.FC<FrequencySpectrumProps> = ({
         audioContextRef.current.close();
       }
     };
-  }, [audioElement]);
+  }, [audioElement, isAudioConnected]);
 
   useEffect(() => {
     if (!isPlaying || !analyserRef.current || !canvasRef.current) {
@@ -83,28 +78,28 @@ const FrequencySpectrum: React.FC<FrequencySpectrumProps> = ({
     const bufferLength = analyser.frequencyBinCount;
     const dataArray = new Uint8Array(bufferLength);
 
-         const draw = () => {
-       if (!isPlaying) return;
+    const draw = () => {
+      if (!isPlaying) return;
 
-       animationRef.current = requestAnimationFrame(draw);
-       
-       analyser.getByteFrequencyData(dataArray);
+      animationRef.current = requestAnimationFrame(draw);
+      
+      analyser.getByteFrequencyData(dataArray);
 
-       // Calculate LUFS and Peak values
-       let sum = 0;
-       let peak = 0;
-       for (let i = 0; i < bufferLength; i++) {
-         const value = dataArray[i] / 255;
-         sum += value * value;
-         if (value > peak) peak = value;
-       }
-       
-       // Calculate RMS (Root Mean Square) for LUFS approximation
-       const rms = Math.sqrt(sum / bufferLength);
-       const lufs = 20 * Math.log10(rms) - 70; // Approximate LUFS calculation
-       
-       setLufsValue(lufs);
-       setPeakValue(20 * Math.log10(peak) - 70);
+      // Calculate LUFS and Peak values
+      let sum = 0;
+      let peak = 0;
+      for (let i = 0; i < bufferLength; i++) {
+        const value = dataArray[i] / 255;
+        sum += value * value;
+        if (value > peak) peak = value;
+      }
+      
+      // Calculate RMS (Root Mean Square) for LUFS approximation
+      const rms = Math.sqrt(sum / bufferLength);
+      const lufs = 20 * Math.log10(rms) - 70; // Approximate LUFS calculation
+      
+      setLufsValue(lufs);
+      setPeakValue(20 * Math.log10(peak) - 70);
 
       // Clear canvas
       ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -145,12 +140,12 @@ const FrequencySpectrum: React.FC<FrequencySpectrumProps> = ({
           gradient.addColorStop(1, '#f59e0b');
         } else if (frequency < 8000) {
           // Presence - orange
-          gradient.addColorStop(0, '#ea580c');
-          gradient.addColorStop(1, '#f97316');
-        } else {
-          // Brilliance - red
           gradient.addColorStop(0, '#dc2626');
           gradient.addColorStop(1, '#ef4444');
+        } else {
+          // Air - red
+          gradient.addColorStop(0, '#991b1b');
+          gradient.addColorStop(1, '#dc2626');
         }
 
         ctx.fillStyle = gradient;
@@ -159,80 +154,95 @@ const FrequencySpectrum: React.FC<FrequencySpectrumProps> = ({
         x += barWidth + 1;
       }
 
-      // Draw frequency labels
-      ctx.fillStyle = '#ffffff';
-      ctx.font = '10px Arial';
-      ctx.textAlign = 'center';
-      
-      const frequencies = [60, 250, 1000, 4000, 8000, 16000];
-      frequencies.forEach(freq => {
-        const binIndex = Math.floor(freq * analyser.fftSize / (audioContextRef.current?.sampleRate || 44100));
-        const xPos = (binIndex / bufferLength) * canvas.width;
-        if (xPos < canvas.width) {
-          ctx.fillText(freq < 1000 ? `${freq}Hz` : `${freq/1000}k`, xPos, canvas.height - 5);
-        }
-      });
+      // Draw target lines if provided
+      if (targetLufs !== undefined) {
+        const targetY = canvas.height - ((targetLufs + 70) / 70) * canvas.height;
+        ctx.strokeStyle = '#fbbf24';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([5, 5]);
+        ctx.beginPath();
+        ctx.moveTo(0, targetY);
+        ctx.lineTo(canvas.width, targetY);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+
+      if (targetTruePeak !== undefined) {
+        const targetY = canvas.height - ((targetTruePeak + 70) / 70) * canvas.height;
+        ctx.strokeStyle = '#ef4444';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([5, 5]);
+        ctx.beginPath();
+        ctx.moveTo(0, targetY);
+        ctx.lineTo(canvas.width, targetY);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
     };
 
     draw();
-  }, [isPlaying]);
+
+    return () => {
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+      }
+    };
+  }, [isPlaying, targetLufs, targetTruePeak]);
+
+  // Handle canvas resize
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const resizeCanvas = () => {
+      const rect = canvas.getBoundingClientRect();
+      canvas.width = rect.width;
+      canvas.height = rect.height;
+    };
+
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+
+    return () => {
+      window.removeEventListener('resize', resizeCanvas);
+    };
+  }, []);
 
   return (
-    <div className={`bg-gray-700 rounded-lg p-3 ${className}`}>
-             <div className="flex items-center justify-between mb-2">
-         <h4 className="text-sm font-medium text-white">{title}</h4>
-         <div className="flex items-center space-x-4">
-           {isAnalyzing && lufsValue !== null && (
-             <div className="flex items-center space-x-2">
-               <span className="text-xs text-gray-300">LUFS:</span>
-               <span className="text-xs font-medium text-crys-gold">
-                 {lufsValue.toFixed(1)} dB
-               </span>
-               {targetLufs && (
-                 <span className="text-xs text-gray-400">
-                   (Target: {targetLufs} dB)
-                 </span>
-               )}
-             </div>
-           )}
-           {isAnalyzing && peakValue !== null && (
-             <div className="flex items-center space-x-2">
-               <span className="text-xs text-gray-300">Peak:</span>
-               <span className="text-xs font-medium text-red-400">
-                 {peakValue.toFixed(1)} dB
-               </span>
-               {targetTruePeak && (
-                 <span className="text-xs text-gray-400">
-                   (Target: {targetTruePeak} dB)
-                 </span>
-               )}
-             </div>
-           )}
-           <div className="flex items-center space-x-2">
-             <div className={`w-2 h-2 rounded-full ${isAnalyzing ? 'bg-green-400 animate-pulse' : 'bg-gray-400'}`}></div>
-             <span className="text-xs text-gray-300">
-               {isAnalyzing ? 'Live' : 'Ready'}
-             </span>
-           </div>
-         </div>
-       </div>
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <h4 className="text-sm font-medium text-gray-300">{title}</h4>
+        <div className="flex items-center space-x-4 text-xs">
+          <div className="flex items-center space-x-1">
+            <span className="text-gray-400">LUFS:</span>
+            <span className={`font-mono ${lufsValue > -14 ? 'text-red-400' : 'text-green-400'}`}>
+              {lufsValue.toFixed(1)}
+            </span>
+          </div>
+          <div className="flex items-center space-x-1">
+            <span className="text-gray-400">Peak:</span>
+            <span className={`font-mono ${peakValue > -1 ? 'text-red-400' : 'text-green-400'}`}>
+              {peakValue.toFixed(1)}
+            </span>
+          </div>
+        </div>
+      </div>
       
-      <div className="relative">
+      <div className="relative bg-gray-800 rounded-lg overflow-hidden">
         <canvas
           ref={canvasRef}
-          className="w-full h-[120px] bg-gray-800 rounded border border-gray-600"
-          style={{ imageRendering: 'pixelated' }}
+          className="w-full h-24"
+          style={{ background: 'linear-gradient(to bottom, #1f2937, #111827)' }}
         />
         
-        {/* Frequency range indicators */}
-        <div className="flex justify-between text-xs text-gray-400 mt-1">
-          <span>Sub</span>
-          <span>Bass</span>
-          <span>Low</span>
-          <span>High</span>
-          <span>Pres</span>
-          <span>Brill</span>
-        </div>
+        {!isAnalyzing && isPlaying && (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="text-center">
+              <div className="w-6 h-6 border-2 border-crys-gold border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+              <p className="text-xs text-gray-400">Analyzing...</p>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
