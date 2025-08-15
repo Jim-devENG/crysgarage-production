@@ -533,6 +533,10 @@ function AppContent() {
         {currentPage === 'admin' && (
           <AdminDashboard onBack={() => setCurrentPage('landing')} />
         )}
+        
+        {currentPage === 'community' && (
+          <CommunityPage currentUser={null} />
+        )}
       </main>
       
       {showAuthModal && (
