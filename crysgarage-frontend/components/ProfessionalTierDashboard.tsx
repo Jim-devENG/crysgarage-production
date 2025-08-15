@@ -90,11 +90,15 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
     });
   }, [currentStep, selectedGenre, processedAudioUrl, isProcessing, downloadFormat, fileInfo]);
 
-  // Debug audio elements
+  // Debug audio elements and real-time processing
   useEffect(() => {
     console.log('Original audio element:', originalAudioElement);
     console.log('Mastered audio element:', masteredAudioElement);
-  }, [originalAudioElement, masteredAudioElement]);
+    console.log('Real-time processing state:', isRealTimeProcessing);
+    console.log('Audio context:', audioContext);
+    console.log('Gain node:', gainNode);
+    console.log('Compressor node:', compressorNode);
+  }, [originalAudioElement, masteredAudioElement, isRealTimeProcessing, audioContext, gainNode, compressorNode]);
 
   // Genre presets with processing details - 7 Color System
   const GENRE_PRESETS: Record<string, any> = {
@@ -324,6 +328,8 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
     if (!selectedFile || !originalAudioElement) return;
     
     try {
+      console.log('Initializing real-time processing...');
+      
       // Create audio context
       const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
       setAudioContext(ctx);
@@ -344,10 +350,16 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
       source.connect(compressor).connect(gain).connect(ctx.destination);
       
       setIsRealTimeProcessing(true);
-      console.log('Real-time audio processing initialized');
+      console.log('Real-time audio processing initialized successfully');
+      
+      // Apply current genre preset if one is selected
+      if (selectedGenre) {
+        applyGenrePresetRealTime(selectedGenre);
+      }
       
     } catch (error) {
       console.error('Error initializing real-time processing:', error);
+      setIsRealTimeProcessing(false);
     }
   };
 
@@ -375,13 +387,33 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
     
     setSelectedGenre(genre);
     
-    // If real-time processing is available, use it
+    // If real-time processing is available and audio is playing, use real-time
     if (isRealTimeProcessing && originalAudioElement && !originalAudioElement.paused) {
+      console.log('Using real-time processing for genre change');
       applyGenrePresetRealTime(genre);
       return;
     }
     
+    // If real-time processing is available but audio is not playing, initialize it
+    if (isRealTimeProcessing && originalAudioElement && originalAudioElement.paused) {
+      console.log('Real-time processing available but audio paused, applying preset');
+      applyGenrePresetRealTime(genre);
+      return;
+    }
+    
+    // If no real-time processing yet, try to initialize it first
+    if (!isRealTimeProcessing && originalAudioElement) {
+      console.log('Attempting to initialize real-time processing...');
+      await initializeRealTimeProcessing();
+      if (isRealTimeProcessing) {
+        console.log('Real-time processing initialized, applying preset');
+        applyGenrePresetRealTime(genre);
+        return;
+      }
+    }
+    
     // Fallback to offline processing for initial load or when audio is not playing
+    console.log('Using offline processing for genre change');
     setIsProcessing(true);
     
     try {
@@ -755,6 +787,7 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
                            
                            // Initialize real-time processing when audio starts playing
                            if (!isRealTimeProcessing) {
+                             console.log('Audio started playing, initializing real-time processing...');
                              setTimeout(() => {
                                initializeRealTimeProcessing();
                              }, 100);
@@ -765,6 +798,14 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
                          onAudioElementReady={(audioElement) => {
                            console.log('Original audio element ready:', audioElement);
                            setOriginalAudioElement(audioElement);
+                           
+                           // Initialize real-time processing immediately when element is ready
+                           if (!isRealTimeProcessing) {
+                             console.log('Audio element ready, initializing real-time processing...');
+                             setTimeout(() => {
+                               initializeRealTimeProcessing();
+                             }, 100);
+                           }
                          }}
                        />
                      
