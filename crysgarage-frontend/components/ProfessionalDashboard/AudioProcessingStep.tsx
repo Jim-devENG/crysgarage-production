@@ -76,7 +76,28 @@ const AudioProcessingStep: React.FC<AudioProcessingStepProps> = ({
         </div>
       )}
 
-      {/* Original Audio Player and Genre Selection - Side by Side */}
+      {/* Genre Selection */}
+      <div className="bg-gray-800 rounded-xl p-6">
+        <h3 className="text-lg font-semibold mb-4 text-center">Choose Your Genre</h3>
+        <GenreGrid
+          genres={availableGenres}
+          selectedGenre={selectedGenre}
+          onGenreSelect={handleGenreSelect}
+        />
+        
+        {!selectedGenre && (
+          <div className="mt-6 text-center">
+            <div className="w-12 h-12 bg-crys-gold/20 rounded-full flex items-center justify-center mx-auto mb-3">
+              <span className="text-xl">🎵</span>
+            </div>
+            <p className="text-sm text-gray-400">
+              Select a genre to start real-time mastering
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Audio Players - Side by Side */}
       <div className="grid md:grid-cols-2 gap-6">
         {/* Original Audio Player */}
         <div className="bg-gray-800 rounded-xl p-6">
@@ -107,45 +128,39 @@ const AudioProcessingStep: React.FC<AudioProcessingStepProps> = ({
           </div>
         </div>
 
-        {/* Genre Selection */}
+        {/* Mastered Audio Player */}
         <div className="bg-gray-800 rounded-xl p-6">
-          <h3 className="text-lg font-semibold mb-4 text-center">Choose Your Genre</h3>
-          <GenreGrid
-            genres={availableGenres}
-            selectedGenre={selectedGenre}
-            onGenreSelect={handleGenreSelect}
-          />
-          
-          {!selectedGenre && (
-            <div className="mt-6 text-center">
-              <div className="w-12 h-12 bg-crys-gold/20 rounded-full flex items-center justify-center mx-auto mb-3">
-                <span className="text-xl">🎵</span>
+          <h3 className="text-lg font-semibold mb-4 text-center text-crys-gold">
+            {selectedGenre ? `${selectedGenre.name} Mastered` : 'Mastered Audio'}
+          </h3>
+          {selectedGenre ? (
+            <AudioPlayers
+              selectedFile={selectedFile}
+              selectedGenre={selectedGenre}
+              genrePresets={GENRE_PRESETS}
+              onAudioReady={() => setIsAudioReady(true)}
+              onProcessingComplete={onProcessingComplete}
+              isProcessing={isProcessing}
+              setIsProcessing={setIsProcessing}
+            />
+          ) : (
+            <div className="space-y-4">
+              <div className="bg-gray-700 rounded-lg p-6 text-center">
+                <div className="w-12 h-12 bg-crys-gold/20 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <span className="text-xl">🎚️</span>
+                </div>
+                <p className="text-sm text-gray-400">
+                  Select a genre above to enable mastered audio
+                </p>
               </div>
-              <p className="text-sm text-gray-400">
-                Select a genre to start real-time mastering
-              </p>
+              
+              <div className="text-center">
+                <p className="text-xs text-crys-gold">Real-time audio processing</p>
+              </div>
             </div>
           )}
         </div>
       </div>
-
-      {/* Mastered Audio Player - Only show when genre is selected */}
-      {selectedGenre && (
-        <div className="bg-gray-800 rounded-xl p-6">
-          <h3 className="text-xl font-semibold mb-4 text-center text-crys-gold">
-            {selectedGenre.name} Mastered Audio
-          </h3>
-          <AudioPlayers
-            selectedFile={selectedFile}
-            selectedGenre={selectedGenre}
-            genrePresets={GENRE_PRESETS}
-            onAudioReady={() => setIsAudioReady(true)}
-            onProcessingComplete={onProcessingComplete}
-            isProcessing={isProcessing}
-            setIsProcessing={setIsProcessing}
-          />
-        </div>
-      )}
     </div>
   );
 };
