@@ -555,8 +555,8 @@ export function LandingPage({ onGetStarted, onTryMastering }: LandingPageProps) 
         {/* Background */}
         <div className="absolute inset-0 z-0">
           <ImageWithFallback
-            src="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=1920&h=1080&fit=crop"
-            alt="Audio waveform"
+            src="/studio.jpg"
+            alt="Studio background"
             className="w-full h-full object-cover opacity-15"
           />
           <div className="absolute inset-0 bg-gradient-to-br from-crys-gold/20 via-crys-gold/10 to-crys-gold/20"></div>
