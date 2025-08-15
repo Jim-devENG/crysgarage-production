@@ -313,7 +313,12 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
 
               {/* Right Column - Real-time Meters */}
               <div className="lg:col-span-1">
-                <RealTimeMeters meterData={meterData} />
+                <RealTimeMeters 
+                  meterData={meterData} 
+                  audioEffects={audioEffects}
+                  onUpdateEffectSettings={handleUpdateEffectSettings}
+                  onManualInit={manualInit}
+                />
               </div>
             </div>
 
