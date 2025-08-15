@@ -75,6 +75,9 @@ export interface User {
   join_date: string;
   total_tracks: number;
   total_spent: number;
+  avatar?: string;
+  username?: string;
+  role?: string;
 }
 
 export interface AudioStatus {

@@ -7,7 +7,8 @@ export interface Genre {
   id: string;
   name: string;
   description: string;
-  color: string;
+  price: number;
+  characteristics: string[];
 }
 
 export interface FileInfo {

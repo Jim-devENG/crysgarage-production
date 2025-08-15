@@ -84,7 +84,9 @@ const ProfessionalDashboard: React.FC<ProfessionalTierDashboardProps> = ({ onFil
         return (
           <FileUploadStep
             onFileUpload={handleFileUpload}
-            credits={credits}
+            selectedFile={selectedFile}
+            fileInfo={null}
+            onNext={nextStep}
           />
         );
       case 2:
