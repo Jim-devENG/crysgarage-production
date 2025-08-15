@@ -150,7 +150,8 @@ question: 'What are the differences between studio tiers?',
   };
 
   return (
-            <div className="max-w-6xl mx-auto">
+    <div className="min-h-screen">
+      <div className="max-w-6xl mx-auto px-6 py-8">
       {/* Header */}
       <div className="text-center mb-12">
         <Badge variant="secondary" className="bg-crys-gold/20 text-crys-gold mb-4">
@@ -468,6 +469,7 @@ question: 'What are the differences between studio tiers?',
           </Card>
         </TabsContent>
       </Tabs>
+      </div>
     </div>
   );
 }
