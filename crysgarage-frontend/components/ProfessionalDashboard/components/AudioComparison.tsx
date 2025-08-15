@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Play, Pause } from 'lucide-react';
 import StyledAudioPlayer from '../../StyledAudioPlayer';
 import FrequencySpectrum from '../../FrequencySpectrum';
 import { GenrePreset } from '../types';
@@ -22,6 +23,124 @@ const AudioComparison: React.FC<AudioComparisonProps> = ({
   setIsPlayingOriginal,
   genrePresets
 }) => {
+  const [isPlayingMastered, setIsPlayingMastered] = useState(false);
+  const [audioContext, setAudioContext] = useState<AudioContext | null>(null);
+  const [audioSource, setAudioSource] = useState<MediaElementAudioSourceNode | null>(null);
+  const [gainNode, setGainNode] = useState<GainNode | null>(null);
+  const [compressorNode, setCompressorNode] = useState<DynamicsCompressorNode | null>(null);
+  const [originalAudioElement, setOriginalAudioElement] = useState<HTMLAudioElement | null>(null);
+
+  // Initialize real-time audio processing
+  const initializeRealTimeProcessing = async () => {
+    if (!selectedFile || !originalAudioElement) {
+      console.log('Cannot initialize real-time processing - missing file or audio element');
+      return;
+    }
+    
+    try {
+      console.log('Initializing real-time processing...');
+      
+      // Create audio context
+      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      
+      // Resume audio context if suspended
+      if (ctx.state === 'suspended') {
+        await ctx.resume();
+      }
+      
+      setAudioContext(ctx);
+      
+      // Create gain node
+      const gain = ctx.createGain();
+      setGainNode(gain);
+      
+      // Create compressor node
+      const compressor = ctx.createDynamicsCompressor();
+      setCompressorNode(compressor);
+      
+      // Connect the processing chain (we'll connect the source when needed)
+      compressor.connect(gain).connect(ctx.destination);
+      
+      console.log('Real-time audio processing initialized successfully');
+      
+      // Apply current genre preset if one is selected
+      if (selectedGenre) {
+        applyGenrePresetRealTime(selectedGenre);
+      }
+      
+    } catch (error) {
+      console.error('Error initializing real-time processing:', error);
+    }
+  };
+
+  // Apply genre preset in real-time
+  const applyGenrePresetRealTime = (genre: any) => {
+    if (!gainNode || !compressorNode) return;
+    
+    const preset = genrePresets[genre.id] || genrePresets.afrobeats;
+    
+    // Apply gain changes
+    gainNode.gain.setValueAtTime(preset.gain, gainNode.context.currentTime);
+    
+    // Apply compression changes
+    compressorNode.threshold.setValueAtTime(preset.compression.threshold, compressorNode.context.currentTime);
+    compressorNode.ratio.setValueAtTime(preset.compression.ratio, compressorNode.context.currentTime);
+    compressorNode.attack.setValueAtTime(preset.compression.attack, compressorNode.context.currentTime);
+    compressorNode.release.setValueAtTime(preset.compression.release, compressorNode.context.currentTime);
+    compressorNode.knee.setValueAtTime(10, compressorNode.context.currentTime);
+    
+    console.log(`Applied ${genre.name} preset in real-time`);
+  };
+
+  // Handle real-time mastered audio playback
+  const handleRealTimeMasteredPlay = () => {
+    if (!originalAudioElement || !audioContext || !compressorNode) {
+      console.log('Cannot play real-time mastered audio - missing audio element or processing not initialized');
+      return;
+    }
+    
+    try {
+      // Create audio source from the original audio element (only when needed)
+      const source = audioContext.createMediaElementSource(originalAudioElement);
+      setAudioSource(source);
+      
+      // Connect the source to the processing chain
+      source.connect(compressorNode);
+      
+      setIsPlayingMastered(true);
+      setIsPlayingOriginal(false);
+      
+      // Play the original audio with real-time processing applied
+      originalAudioElement.play().catch(console.error);
+      console.log('Playing real-time mastered audio with current genre preset');
+    } catch (error) {
+      console.error('Error setting up real-time mastered playback:', error);
+      setIsPlayingMastered(false);
+    }
+  };
+
+  const handleRealTimeMasteredPause = () => {
+    if (originalAudioElement) {
+      originalAudioElement.pause();
+    }
+    setIsPlayingMastered(false);
+    console.log('Paused real-time mastered audio');
+  };
+
+  // Initialize real-time processing when audio element is ready
+  useEffect(() => {
+    if (originalAudioElement && !audioContext) {
+      initializeRealTimeProcessing();
+    }
+  }, [originalAudioElement]);
+
+  // Apply genre preset when genre changes
+  useEffect(() => {
+    if (selectedGenre && gainNode && compressorNode) {
+      applyGenrePresetRealTime(selectedGenre);
+    }
+  }, [selectedGenre, gainNode, compressorNode]);
+
   return (
     <div>
       <div className="text-center mb-6">
@@ -50,6 +169,7 @@ const AudioComparison: React.FC<AudioComparisonProps> = ({
               title="Original Audio"
               onPlay={() => {
                 setIsPlayingOriginal(true);
+                setIsPlayingMastered(false);
                 // Initialize real-time processing when audio starts playing
                 if (!isRealTimeProcessing) {
                   console.log('Audio started playing, initializing real-time processing...');
@@ -60,11 +180,15 @@ const AudioComparison: React.FC<AudioComparisonProps> = ({
               }}
               onPause={() => setIsPlayingOriginal(false)}
               className="w-full"
+              onAudioElementReady={(audioElement) => {
+                console.log('Original audio element ready:', audioElement);
+                setOriginalAudioElement(audioElement);
+              }}
             />
             
             {/* Frequency Spectrum Analysis for Original */}
             <FrequencySpectrum
-              audioElement={null} // Will be connected later
+              audioElement={originalAudioElement}
               isPlaying={isPlayingOriginal}
               title="Original Frequency Spectrum"
               targetLufs={selectedGenre ? genrePresets[selectedGenre.id]?.targetLufs : undefined}
@@ -97,10 +221,28 @@ const AudioComparison: React.FC<AudioComparisonProps> = ({
                 {/* Real-time mastered audio controls */}
                 <div className="bg-gray-700 rounded-lg p-4">
                   <div className="flex items-center justify-center space-x-4">
-                    <div className="flex items-center space-x-2">
-                      <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                      <span className="text-sm text-green-400 font-medium">Live Processing Ready</span>
-                    </div>
+                    <button
+                      onClick={isPlayingMastered ? handleRealTimeMasteredPause : handleRealTimeMasteredPlay}
+                      disabled={!selectedGenre || !audioContext}
+                      className={`p-3 rounded-full transition-all duration-300 ${
+                        isPlayingMastered
+                          ? 'bg-red-500 hover:bg-red-600 text-white'
+                          : 'bg-crys-gold hover:bg-yellow-400 text-black'
+                      } disabled:bg-gray-600 disabled:cursor-not-allowed`}
+                    >
+                      {isPlayingMastered ? (
+                        <Pause className="w-6 h-6" />
+                      ) : (
+                        <Play className="w-6 h-6" />
+                      )}
+                    </button>
+                    
+                    {isPlayingMastered && (
+                      <div className="flex items-center space-x-2">
+                        <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                        <span className="text-sm text-green-400 font-medium">Live Processing</span>
+                      </div>
+                    )}
                   </div>
                   
                   <div className="mt-3 text-center">
@@ -115,8 +257,8 @@ const AudioComparison: React.FC<AudioComparisonProps> = ({
                 
                 {/* Frequency Spectrum Analysis for Real-time Mastered */}
                 <FrequencySpectrum
-                  audioElement={null} // Will be connected later
-                  isPlaying={false}
+                  audioElement={originalAudioElement}
+                  isPlaying={isPlayingMastered}
                   title={`${selectedGenre?.name || 'Real-time'} Frequency Spectrum`}
                   targetLufs={selectedGenre ? genrePresets[selectedGenre.id]?.targetLufs : undefined}
                   targetTruePeak={selectedGenre ? genrePresets[selectedGenre.id]?.truePeak : undefined}
