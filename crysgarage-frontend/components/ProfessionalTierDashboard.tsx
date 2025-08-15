@@ -61,6 +61,13 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
   const [originalAudioElement, setOriginalAudioElement] = useState<HTMLAudioElement | null>(null);
   const [masteredAudioElement, setMasteredAudioElement] = useState<HTMLAudioElement | null>(null);
   const [downloadFormat, setDownloadFormat] = useState<'wav' | 'mp3'>(loadStateFromStorage().downloadFormat);
+  
+  // Real-time audio processing
+  const [audioContext, setAudioContext] = useState<AudioContext | null>(null);
+  const [audioSource, setAudioSource] = useState<MediaElementAudioSourceNode | null>(null);
+  const [gainNode, setGainNode] = useState<GainNode | null>(null);
+  const [compressorNode, setCompressorNode] = useState<DynamicsCompressorNode | null>(null);
+  const [isRealTimeProcessing, setIsRealTimeProcessing] = useState(false);
 
   // Save state to sessionStorage whenever it changes
   const saveStateToStorage = (state: any) => {
@@ -312,28 +319,70 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
     }
   };
 
+  // Initialize real-time audio processing
+  const initializeRealTimeProcessing = async () => {
+    if (!selectedFile || !originalAudioElement) return;
+    
+    try {
+      // Create audio context
+      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      setAudioContext(ctx);
+      
+      // Create audio source from the original audio element
+      const source = ctx.createMediaElementSource(originalAudioElement);
+      setAudioSource(source);
+      
+      // Create gain node
+      const gain = ctx.createGain();
+      setGainNode(gain);
+      
+      // Create compressor node
+      const compressor = ctx.createDynamicsCompressor();
+      setCompressorNode(compressor);
+      
+      // Connect the processing chain
+      source.connect(compressor).connect(gain).connect(ctx.destination);
+      
+      setIsRealTimeProcessing(true);
+      console.log('Real-time audio processing initialized');
+      
+    } catch (error) {
+      console.error('Error initializing real-time processing:', error);
+    }
+  };
+
+  // Apply genre preset in real-time
+  const applyGenrePresetRealTime = (genre: GenreType) => {
+    if (!gainNode || !compressorNode) return;
+    
+    const preset = GENRE_PRESETS[genre.id] || GENRE_PRESETS.afrobeats;
+    
+    // Apply gain changes
+    gainNode.gain.setValueAtTime(preset.gain, gainNode.context.currentTime);
+    
+    // Apply compression changes
+    compressorNode.threshold.setValueAtTime(preset.compression.threshold, compressorNode.context.currentTime);
+    compressorNode.ratio.setValueAtTime(preset.compression.ratio, compressorNode.context.currentTime);
+    compressorNode.attack.setValueAtTime(preset.compression.attack, compressorNode.context.currentTime);
+    compressorNode.release.setValueAtTime(preset.compression.release, compressorNode.context.currentTime);
+    compressorNode.knee.setValueAtTime(10, compressorNode.context.currentTime);
+    
+    console.log(`Applied ${genre.name} preset in real-time`);
+  };
+
   const processAudioWithGenre = async (genre: GenreType) => {
     if (!selectedFile) return;
     
-    // Store current playing state
-    const wasPlayingMastered = isPlayingMastered;
-    const wasPlayingOriginal = isPlayingOriginal;
-    
-    // Pause any currently playing audio
-    if (isPlayingMastered && masteredAudioElement) {
-      masteredAudioElement.pause();
-      setIsPlayingMastered(false);
-    }
-    if (isPlayingOriginal && originalAudioElement) {
-      originalAudioElement.pause();
-      setIsPlayingOriginal(false);
-    }
-    
-    setIsProcessing(true);
     setSelectedGenre(genre);
     
-    // Don't clear the mastered audio element immediately - keep it until new one is ready
-    // setMasteredAudioElement(null); // Removed this line to prevent blank state
+    // If real-time processing is available, use it
+    if (isRealTimeProcessing && originalAudioElement && !originalAudioElement.paused) {
+      applyGenrePresetRealTime(genre);
+      return;
+    }
+    
+    // Fallback to offline processing for initial load or when audio is not playing
+    setIsProcessing(true);
     
     try {
       console.log(`Starting ${genre.name} audio processing...`);
@@ -393,19 +442,6 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
       
       console.log(`${genre.name} preset mastered audio created successfully:`, masteredUrl);
       audioContext.close();
-      
-      // Resume playing if it was playing before
-      if (wasPlayingMastered) {
-        // Small delay to ensure the new audio element is ready
-        setTimeout(() => {
-          if (masteredAudioElement) {
-            masteredAudioElement.play().catch(error => {
-              console.error('Error resuming mastered audio after genre change:', error);
-            });
-            setIsPlayingMastered(true);
-          }
-        }, 100);
-      }
       
     } catch (error) {
       console.error(`Error processing audio with ${genre.name} preset:`, error);
@@ -592,11 +628,17 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
         {currentStep === 2 && (
           <div className="space-y-8">
             {/* Genre Selection */}
-            <div>
-              <div className="text-center mb-6">
-                <h2 className="text-2xl font-bold text-crys-gold mb-2">Select Genre & Process</h2>
-                <p className="text-gray-400">Click a genre to apply its preset and process your audio</p>
-              </div>
+                         <div>
+               <div className="text-center mb-6">
+                 <h2 className="text-2xl font-bold text-crys-gold mb-2">Select Genre & Process</h2>
+                 <p className="text-gray-400">Click a genre to apply its preset and process your audio</p>
+                 {isRealTimeProcessing && isPlayingOriginal && (
+                   <div className="mt-2 flex items-center justify-center space-x-2">
+                     <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                     <span className="text-sm text-green-400 font-medium">Real-time processing active</span>
+                   </div>
+                 )}
+               </div>
               
                              <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 mb-8">
                  {availableGenres.map((genre) => {
@@ -648,26 +690,34 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
                       return colorMap[genreId] || 'from-gray-500 to-gray-600';
                     };
                    
-                   return (
-                     <button
-                       key={genre.id}
-                       onClick={() => processAudioWithGenre(genre)}
-                       disabled={isProcessing}
-                       className={`px-4 py-3 rounded-lg border-2 transition-all duration-300 text-center hover:scale-105 bg-gradient-to-br ${getGenreGradient(genre.id)} ${
-                         isSelected
-                           ? 'border-crys-gold shadow-lg shadow-crys-gold/30 scale-105'
-                           : 'border-white/20 hover:border-white/40 hover:scale-110'
-                       } disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 relative`}
-                     >
-                       {isProcessing && isSelected && (
-                         <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center">
-                           <div className="w-4 h-4 border-2 border-crys-gold border-t-transparent rounded-full animate-spin"></div>
-                         </div>
-                       )}
-                       <h3 className="font-semibold text-sm mb-1 text-white drop-shadow-sm">{genre.name}</h3>
-                       <p className="text-xs text-white/80 leading-tight drop-shadow-sm">{genre.description}</p>
-                     </button>
-                   );
+                                       return (
+                      <button
+                        key={genre.id}
+                        onClick={() => processAudioWithGenre(genre)}
+                        disabled={isProcessing}
+                        className={`px-4 py-3 rounded-lg border-2 transition-all duration-300 text-center hover:scale-105 bg-gradient-to-br ${getGenreGradient(genre.id)} ${
+                          isSelected
+                            ? 'border-crys-gold shadow-lg shadow-crys-gold/30 scale-105'
+                            : 'border-white/20 hover:border-white/40 hover:scale-110'
+                        } disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 relative`}
+                      >
+                        {isProcessing && isSelected && (
+                          <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center">
+                            <div className="w-4 h-4 border-2 border-crys-gold border-t-transparent rounded-full animate-spin"></div>
+                          </div>
+                        )}
+                        {isRealTimeProcessing && isSelected && isPlayingOriginal && (
+                          <div className="absolute inset-0 bg-green-500/20 rounded-lg flex items-center justify-center">
+                            <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                          </div>
+                        )}
+                        <h3 className="font-semibold text-sm mb-1 text-white drop-shadow-sm">{genre.name}</h3>
+                        <p className="text-xs text-white/80 leading-tight drop-shadow-sm">{genre.description}</p>
+                        {isRealTimeProcessing && isSelected && isPlayingOriginal && (
+                          <p className="text-xs text-green-400 mt-1">Live</p>
+                        )}
+                      </button>
+                    );
                  })}
                </div>
             </div>
@@ -695,21 +745,28 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
                       </div>
                     </div>
                     
-                                                               <StyledAudioPlayer
-                        src={selectedFile ? URL.createObjectURL(selectedFile) : ''}
-                        title="Original Audio"
-                        onPlay={() => {
-                          setIsPlayingOriginal(true);
-                          if (masteredAudioElement) masteredAudioElement.pause();
-                          setIsPlayingMastered(false);
-                        }}
-                        onPause={() => setIsPlayingOriginal(false)}
-                        className="w-full"
-                        onAudioElementReady={(audioElement) => {
-                          console.log('Original audio element ready:', audioElement);
-                          setOriginalAudioElement(audioElement);
-                        }}
-                      />
+                                                                                                                               <StyledAudioPlayer
+                         src={selectedFile ? URL.createObjectURL(selectedFile) : ''}
+                         title="Original Audio"
+                         onPlay={() => {
+                           setIsPlayingOriginal(true);
+                           if (masteredAudioElement) masteredAudioElement.pause();
+                           setIsPlayingMastered(false);
+                           
+                           // Initialize real-time processing when audio starts playing
+                           if (!isRealTimeProcessing) {
+                             setTimeout(() => {
+                               initializeRealTimeProcessing();
+                             }, 100);
+                           }
+                         }}
+                         onPause={() => setIsPlayingOriginal(false)}
+                         className="w-full"
+                         onAudioElementReady={(audioElement) => {
+                           console.log('Original audio element ready:', audioElement);
+                           setOriginalAudioElement(audioElement);
+                         }}
+                       />
                      
                      {/* Frequency Spectrum Analysis for Original */}
                      <FrequencySpectrum
