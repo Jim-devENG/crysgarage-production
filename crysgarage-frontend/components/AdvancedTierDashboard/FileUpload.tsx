@@ -19,29 +19,24 @@ const FileUpload: React.FC<FileUploadProps> = ({
   // Professional studio images for the slider
   const studioImages = [
     {
-      url: '/image1.jpg',
+      url: '/image5.jpg',
+      title: "Mastering Studio Suite",
+      description: "Complete mastering suite with industry-standard equipment and acoustics"
+    },
+    {
+      url: '/Image7.png',
       title: "Professional Studio Equipment",
       description: "High-end audio processing gear with premium preamps, compressors, and VU meters"
     },
     {
-      url: '/image2.jpg',
+      url: '/Image8.png',
       title: "Professional Mixing Console",
       description: "Multi-channel audio mixing console with premium faders and master controls"
     },
     {
-      url: '/image3.jpg',
+      url: '/Image9.png',
       title: "Advanced Audio Processing",
       description: "State-of-the-art digital audio workstations and processing units"
-    },
-    {
-      url: '/image4.jpg',
-      title: "Premium Studio Setup",
-      description: "Professional-grade studio environment with cutting-edge technology"
-    },
-    {
-      url: '/image5.jpg',
-      title: "Mastering Studio Suite",
-      description: "Complete mastering suite with industry-standard equipment and acoustics"
     }
   ];
 
