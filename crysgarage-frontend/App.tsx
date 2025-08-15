@@ -20,6 +20,7 @@ import { ProfileEditModal } from './components/ProfileEditModal';
 import { AutoAuthFix } from './components/AutoAuthFix';
 import { AdminDashboard } from './components/AdminDashboard';
 import { CommunityPage } from './components/CommunityPage';
+import AboutUs from './components/AboutUs';
 
 // Main App Component
 function AppContent() {
@@ -37,7 +38,7 @@ function AppContent() {
 
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
-  const [currentPage, setCurrentPage] = useState<'landing' | 'home' | 'dashboard' | 'professional' | 'advanced' | 'processing' | 'results' | 'studio' | 'help' | 'courses' | 'marketplace' | 'profile' | 'admin' | 'community'>('landing');
+  const [currentPage, setCurrentPage] = useState<'landing' | 'home' | 'dashboard' | 'professional' | 'advanced' | 'processing' | 'results' | 'studio' | 'help' | 'courses' | 'marketplace' | 'profile' | 'admin' | 'community' | 'about'>('landing');
   const [showBillingModal, setShowBillingModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showProfileEditModal, setShowProfileEditModal] = useState(false);
@@ -88,6 +89,8 @@ function AppContent() {
         setCurrentPage('profile');
       } else if (path === '/community') {
         setCurrentPage('community');
+      } else if (path === '/about') {
+        setCurrentPage('about');
       } else if (path === '/') {
         setCurrentPage('landing');
       } else {
@@ -536,6 +539,10 @@ function AppContent() {
         
         {currentPage === 'community' && (
           <CommunityPage currentUser={null} />
+        )}
+        
+        {currentPage === 'about' && (
+          <AboutUs />
         )}
       </main>
       
