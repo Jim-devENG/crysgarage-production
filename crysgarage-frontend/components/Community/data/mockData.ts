@@ -2,7 +2,7 @@ import { User, Post } from '../types';
 
 export const mockUsers: User[] = [
   {
-    id: '1',
+    id: 1,
     name: 'Alex Producer',
     avatar: '/avatars/alex.jpg',
     username: 'alexproducer',
@@ -14,7 +14,7 @@ export const mockUsers: User[] = [
     badges: ['verified', 'producer', 'top-contributor']
   },
   {
-    id: '2',
+    id: 2,
     name: 'Sarah Mixer',
     avatar: '/avatars/sarah.jpg',
     username: 'sarahmixer',
@@ -26,7 +26,7 @@ export const mockUsers: User[] = [
     badges: ['moderator', 'mix-engineer', 'helpful']
   },
   {
-    id: '3',
+    id: 3,
     name: 'Mike Beatmaker',
     avatar: '/avatars/mike.jpg',
     username: 'mikebeatmaker',
