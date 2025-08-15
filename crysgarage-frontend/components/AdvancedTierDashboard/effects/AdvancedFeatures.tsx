@@ -17,234 +17,351 @@ const AdvancedFeatures: React.FC<AdvancedFeaturesProps> = ({
   onManualInit
 }) => {
   const [showCost, setShowCost] = useState(false);
+  const [editingKnob, setEditingKnob] = useState<string | null>(null);
+
+  const handleKnobChange = (effectType: string, setting: string, value: number) => {
+    console.log(`Advanced knob changed: ${effectType}.${setting} = ${value}`);
+    onUpdateEffectSettings(effectType, { ...audioEffects[effectType], [setting]: value });
+    // Ensure audio context is resumed for real-time control
+    onManualInit?.();
+  };
+
+  const handleKnobClick = () => {
+    // Resume audio context when knob is clicked
+    onManualInit?.();
+  };
 
   return (
     <div className="space-y-3">
       {/* Advanced Features Header */}
       <div className="text-center mb-4">
         <h3 className="text-lg font-bold text-white mb-2">Advanced Features</h3>
-        <p className="text-sm text-gray-400">Premium mastering capabilities</p>
+        <p className="text-sm text-gray-400">Premium mastering capabilities with real-time control</p>
       </div>
 
       {/* Effects Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        {/* G-Surround - Compact Card */}
-      <div className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 rounded-lg border border-gray-700 shadow-lg overflow-hidden w-full max-w-sm mx-auto">
-        {/* Header */}
-        <div className="bg-gradient-to-r from-gray-800 to-gray-700 p-2 border-b border-gray-600">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-1.5">
-              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse shadow-sm"></div>
-              <div className="flex items-center space-x-1">
-                <div className="bg-gradient-to-r from-crys-gold to-yellow-500 p-0.5 rounded">
-                  <Globe className="w-2.5 h-2.5 text-gray-900" />
+        {/* G-Surround - Enhanced with HardwareKnob */}
+        <StudioRack title="G-SURROUND" subtitle="CRYS GARAGE STUDIO">
+          <div className="p-3">
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="text-white font-semibold text-xs">G-Surround</h4>
+              <label className="flex items-center">
+                <input
+                  type="checkbox"
+                  checked={audioEffects.gSurround?.enabled || false}
+                  onChange={(e) => onTogglePremiumEffect('gSurround', e.target.checked)}
+                  className="mr-1"
+                />
+                <span className="text-gray-300 text-[10px]">Enable</span>
+              </label>
+            </div>
+
+            {audioEffects.gSurround?.enabled && (
+              <div className="grid grid-cols-2 gap-3">
+                <div className="text-center">
+                  <HardwareKnob
+                    value={audioEffects.gSurround.width || 0}
+                    min={0}
+                    max={100}
+                    step={1}
+                    label="WIDTH"
+                    unit="%"
+                    size="small"
+                    onChange={(value) => handleKnobChange('gSurround', 'width', value)}
+                    onKnobClick={handleKnobClick}
+                    isEditing={editingKnob === 'gSurround-width'}
+                    onEditingChange={(editing) => setEditingKnob(editing ? 'gSurround-width' : null)}
+                  />
                 </div>
-                <div>
-                  <h3 className="text-xs font-bold text-white">CRYS GARAGE STUDIO</h3>
-                  <p className="text-[8px] text-gray-400">G-SURROUND</p>
+
+                <div className="text-center">
+                  <HardwareKnob
+                    value={audioEffects.gSurround.depth || 0}
+                    min={0}
+                    max={100}
+                    step={1}
+                    label="DEPTH"
+                    unit="%"
+                    size="small"
+                    onChange={(value) => handleKnobChange('gSurround', 'depth', value)}
+                    onKnobClick={handleKnobClick}
+                    isEditing={editingKnob === 'gSurround-depth'}
+                    onEditingChange={(editing) => setEditingKnob(editing ? 'gSurround-depth' : null)}
+                  />
                 </div>
               </div>
-            </div>
-            <div className="flex space-x-0.5">
-              <div className="w-1 h-1 bg-gray-600 rounded-full border border-gray-500"></div>
-              <div className="w-1 h-1 bg-gray-600 rounded-full border border-gray-500"></div>
-              <div className="w-1 h-1 bg-gray-600 rounded-full border border-gray-500"></div>
-            </div>
+            )}
           </div>
-        </div>
+        </StudioRack>
 
-        {/* Content */}
-        <div className="p-3">
-          <div className="flex items-center justify-between mb-3">
-            <h4 className="text-white font-semibold text-xs">G-Surround</h4>
-            <label className="flex items-center">
-              <input
-                type="checkbox"
-                checked={audioEffects.gSurround?.enabled || false}
-                onChange={(e) => onTogglePremiumEffect('gSurround', e.target.checked)}
-                className="mr-1"
-              />
-              <span className="text-gray-300 text-[10px]">Enable</span>
-            </label>
-          </div>
-
-          {audioEffects.gSurround?.enabled && (
-            <div className="grid grid-cols-2 gap-3">
-              <div className="text-center">
-                <div className="relative w-12 h-12 mx-auto mb-1">
-                  <div className="w-full h-full rounded-full bg-gradient-to-br from-gray-700 to-gray-800 border border-gray-600 shadow-inner flex items-center justify-center">
-                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-gray-600 to-gray-700 border border-gray-500 flex items-center justify-center">
-                      <div className="w-0.5 h-4 bg-crys-gold rounded-full transform origin-bottom" 
-                           style={{ transform: `rotate(${(audioEffects.gSurround.width + 100) * 1.8}deg)` }}></div>
-                    </div>
-                  </div>
-                  <div className="absolute -bottom-0.5 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-crys-gold rounded-full"></div>
-                </div>
-                <div className="text-crys-gold font-mono text-xs mb-0.5">{audioEffects.gSurround.width.toFixed(1)}%</div>
-                <div className="text-gray-400 text-[8px]">WIDTH</div>
+        {/* G-Tuner - Enhanced with HardwareKnob */}
+        <StudioRack title="G-TUNER" subtitle="CRYS GARAGE STUDIO">
+          <div className="p-3">
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="text-white font-semibold text-xs">G-Tuner</h4>
+              <label className="flex items-center">
                 <input
-                  type="range"
-                  min="-100"
-                  max="100"
-                  step="1"
-                  value={audioEffects.gSurround.width}
-                  onChange={(e) => onUpdateEffectSettings('gSurround', { ...audioEffects.gSurround, width: parseFloat(e.target.value) })}
-                  className="w-full mt-1"
+                  type="checkbox"
+                  checked={audioEffects.gTuner?.enabled || false}
+                  onChange={(e) => onTogglePremiumEffect('gTuner', e.target.checked)}
+                  className="mr-1"
+                />
+                <span className="text-gray-300 text-[10px]">Enable</span>
+              </label>
+            </div>
+
+            {audioEffects.gTuner?.enabled && (
+              <div className="text-center">
+                <HardwareKnob
+                  value={audioEffects.gTuner.frequency || 440}
+                  min={20}
+                  max={20000}
+                  step={1}
+                  label="FREQ"
+                  unit="Hz"
+                  size="medium"
+                  onChange={(value) => handleKnobChange('gTuner', 'frequency', value)}
+                  onKnobClick={handleKnobClick}
+                  isEditing={editingKnob === 'gTuner-frequency'}
+                  onEditingChange={(editing) => setEditingKnob(editing ? 'gTuner-frequency' : null)}
                 />
               </div>
+            )}
+          </div>
+        </StudioRack>
 
-              <div className="text-center">
-                <div className="relative w-12 h-12 mx-auto mb-1">
-                  <div className="w-full h-full rounded-full bg-gradient-to-br from-gray-700 to-gray-800 border border-gray-600 shadow-inner flex items-center justify-center">
-                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-gray-600 to-gray-700 border border-gray-500 flex items-center justify-center">
-                      <div className="w-0.5 h-4 bg-crys-gold rounded-full transform origin-bottom" 
-                           style={{ transform: `rotate(${(audioEffects.gSurround.depth + 100) * 1.8}deg)` }}></div>
-                    </div>
-                  </div>
-                  <div className="absolute -bottom-0.5 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-crys-gold rounded-full"></div>
-                </div>
-                <div className="text-crys-gold font-mono text-xs mb-0.5">{audioEffects.gSurround.depth.toFixed(1)}%</div>
-                <div className="text-gray-400 text-[8px]">DEPTH</div>
+        {/* G-Spectral Analyzer - Enhanced with HardwareKnob */}
+        <StudioRack title="G-SPECTRAL ANALYZER" subtitle="CRYS GARAGE STUDIO">
+          <div className="p-3">
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="text-white font-semibold text-xs">G-Spectral</h4>
+              <label className="flex items-center">
                 <input
-                  type="range"
-                  min="-100"
-                  max="100"
-                  step="1"
-                  value={audioEffects.gSurround.depth}
-                  onChange={(e) => onUpdateEffectSettings('gSurround', { ...audioEffects.gSurround, depth: parseFloat(e.target.value) })}
-                  className="w-full mt-1"
+                  type="checkbox"
+                  checked={audioEffects.gSpectral?.enabled || false}
+                  onChange={(e) => onTogglePremiumEffect('gSpectral', e.target.checked)}
+                  className="mr-1"
                 />
-              </div>
+                <span className="text-gray-300 text-[10px]">Enable</span>
+              </label>
             </div>
-          )}
-        </div>
 
-        {/* Footer */}
-        <div className="bg-gradient-to-r from-gray-700 to-gray-800 p-1.5 border-t border-gray-600">
-          <div className="flex justify-between items-center">
-            <div className="flex space-x-0.5">
-              <div className="w-0.5 h-0.5 bg-gray-500 rounded-full"></div>
-              <div className="w-0.5 h-0.5 bg-gray-500 rounded-full"></div>
-              <div className="w-0.5 h-0.5 bg-gray-500 rounded-full"></div>
-            </div>
-            <div className="text-[6px] text-gray-500">CRYS GARAGE G-SURROUND v1.0.0</div>
-            <div className="flex space-x-0.5">
-              <div className="w-0.5 h-0.5 bg-gray-500 rounded-full"></div>
-              <div className="w-0.5 h-0.5 bg-gray-500 rounded-full"></div>
-              <div className="w-0.5 h-0.5 bg-gray-500 rounded-full"></div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* G-Tuner - Compact Card */}
-      <div className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 rounded-lg border border-gray-700 shadow-lg overflow-hidden w-full max-w-sm mx-auto">
-        {/* Header */}
-        <div className="bg-gradient-to-r from-gray-800 to-gray-700 p-2 border-b border-gray-600">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-1.5">
-              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse shadow-sm"></div>
-              <div className="flex items-center space-x-1">
-                <div className="bg-gradient-to-r from-crys-gold to-yellow-500 p-0.5 rounded">
-                  <Music className="w-2.5 h-2.5 text-gray-900" />
+            {audioEffects.gSpectral?.enabled && (
+              <div className="grid grid-cols-2 gap-3">
+                <div className="text-center">
+                  <HardwareKnob
+                    value={audioEffects.gSpectral.resolution || 1024}
+                    min={256}
+                    max={4096}
+                    step={256}
+                    label="RES"
+                    unit=""
+                    size="small"
+                    onChange={(value) => handleKnobChange('gSpectral', 'resolution', value)}
+                    onKnobClick={handleKnobClick}
+                    isEditing={editingKnob === 'gSpectral-resolution'}
+                    onEditingChange={(editing) => setEditingKnob(editing ? 'gSpectral-resolution' : null)}
+                  />
                 </div>
-                <div>
-                  <h3 className="text-xs font-bold text-white">CRYS GARAGE STUDIO</h3>
-                  <p className="text-[8px] text-gray-400">G-TUNER</p>
+
+                <div className="text-center">
+                  <HardwareKnob
+                    value={audioEffects.gSpectral.smoothing || 0}
+                    min={0}
+                    max={100}
+                    step={1}
+                    label="SMOOTH"
+                    unit="%"
+                    size="small"
+                    onChange={(value) => handleKnobChange('gSpectral', 'smoothing', value)}
+                    onKnobClick={handleKnobClick}
+                    isEditing={editingKnob === 'gSpectral-smoothing'}
+                    onEditingChange={(editing) => setEditingKnob(editing ? 'gSpectral-smoothing' : null)}
+                  />
                 </div>
               </div>
-            </div>
-            <div className="flex space-x-0.5">
-              <div className="w-1 h-1 bg-gray-600 rounded-full border border-gray-500"></div>
-              <div className="w-1 h-1 bg-gray-600 rounded-full border border-gray-500"></div>
-              <div className="w-1 h-1 bg-gray-600 rounded-full border border-gray-500"></div>
-            </div>
+            )}
           </div>
-        </div>
+        </StudioRack>
 
-        {/* Content */}
-        <div className="p-3">
-          <div className="flex items-center justify-between mb-3">
-            <h4 className="text-white font-semibold text-xs">G-Tuner</h4>
-            <label className="flex items-center">
-              <input
-                type="checkbox"
-                checked={audioEffects.gTuner?.enabled || false}
-                onChange={(e) => onTogglePremiumEffect('gTuner', e.target.checked)}
-                className="mr-1"
-              />
-              <span className="text-gray-300 text-[10px]">Enable</span>
-            </label>
-          </div>
+        {/* G-Harmonic Exciter - Enhanced with HardwareKnob */}
+        <StudioRack title="G-HARMONIC EXCITER" subtitle="CRYS GARAGE STUDIO">
+          <div className="p-3">
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="text-white font-semibold text-xs">G-Harmonic</h4>
+              <label className="flex items-center">
+                <input
+                  type="checkbox"
+                  checked={audioEffects.gHarmonic?.enabled || false}
+                  onChange={(e) => onTogglePremiumEffect('gHarmonic', e.target.checked)}
+                  className="mr-1"
+                />
+                <span className="text-gray-300 text-[10px]">Enable</span>
+              </label>
+            </div>
 
-          {audioEffects.gTuner?.enabled && (
-            <div className="text-center">
-              {/* Frequency Display */}
-              <div className="bg-gray-900 rounded-md p-3 mb-3">
-                <div className="text-crys-gold font-mono text-xl mb-1">{audioEffects.gTuner.frequency}Hz</div>
-                <div className="text-gray-400 text-[8px]">REFERENCE FREQUENCY</div>
-              </div>
-
-              {/* Frequency Control */}
-              <div className="relative w-12 h-12 mx-auto mb-1">
-                <div className="w-full h-full rounded-full bg-gradient-to-br from-gray-700 to-gray-800 border border-gray-600 shadow-inner flex items-center justify-center">
-                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-gray-600 to-gray-700 border border-gray-500 flex items-center justify-center">
-                    <div className="w-0.5 h-4 bg-crys-gold rounded-full transform origin-bottom" 
-                         style={{ transform: `rotate(${(audioEffects.gTuner.frequency / 1000) * 36}deg)` }}></div>
-                  </div>
+            {audioEffects.gHarmonic?.enabled && (
+              <div className="grid grid-cols-3 gap-2">
+                <div className="text-center">
+                  <HardwareKnob
+                    value={audioEffects.gHarmonic.amount || 0}
+                    min={0}
+                    max={100}
+                    step={1}
+                    label="AMT"
+                    unit="%"
+                    size="small"
+                    onChange={(value) => handleKnobChange('gHarmonic', 'amount', value)}
+                    onKnobClick={handleKnobClick}
+                    isEditing={editingKnob === 'gHarmonic-amount'}
+                    onEditingChange={(editing) => setEditingKnob(editing ? 'gHarmonic-amount' : null)}
+                  />
                 </div>
-                <div className="absolute -bottom-0.5 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-crys-gold rounded-full"></div>
-              </div>
-              <div className="text-crys-gold font-mono text-xs mb-0.5">{audioEffects.gTuner.frequency}Hz</div>
-              <div className="text-gray-400 text-[8px]">FREQUENCY</div>
-              <input
-                type="range"
-                min="400"
-                max="500"
-                step="1"
-                value={audioEffects.gTuner.frequency}
-                onChange={(e) => onUpdateEffectSettings('gTuner', { ...audioEffects.gTuner, frequency: parseFloat(e.target.value) })}
-                className="w-full mt-1"
-              />
 
-              {/* Cost Info */}
-              <div className="mt-3 text-center">
-                <div className="text-[8px] text-gray-400">Cost per use: $3</div>
-                <button
-                  onClick={() => setShowCost(!showCost)}
-                  className="text-[8px] text-crys-gold hover:text-yellow-400 mt-1"
-                >
-                  {showCost ? 'Hide Details' : 'Show Details'}
-                </button>
-                {showCost && (
-                  <div className="mt-2 p-2 bg-gray-800 rounded text-[8px] text-gray-300">
-                    <div>• 444Hz reference tone</div>
-                    <div>• Professional tuning</div>
-                    <div>• Real-time frequency analysis</div>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
+                <div className="text-center">
+                  <HardwareKnob
+                    value={audioEffects.gHarmonic.frequency || 8000}
+                    min={1000}
+                    max={20000}
+                    step={100}
+                    label="FREQ"
+                    unit="Hz"
+                    size="small"
+                    onChange={(value) => handleKnobChange('gHarmonic', 'frequency', value)}
+                    onKnobClick={handleKnobClick}
+                    isEditing={editingKnob === 'gHarmonic-frequency'}
+                    onEditingChange={(editing) => setEditingKnob(editing ? 'gHarmonic-frequency' : null)}
+                  />
+                </div>
 
-        {/* Footer */}
-        <div className="bg-gradient-to-r from-gray-700 to-gray-800 p-1.5 border-t border-gray-600">
-          <div className="flex justify-between items-center">
-            <div className="flex space-x-0.5">
-              <div className="w-0.5 h-0.5 bg-gray-500 rounded-full"></div>
-              <div className="w-0.5 h-0.5 bg-gray-500 rounded-full"></div>
-              <div className="w-0.5 h-0.5 bg-gray-500 rounded-full"></div>
-            </div>
-            <div className="text-[6px] text-gray-500">CRYS GARAGE G-TUNER v1.0.0</div>
-            <div className="flex space-x-0.5">
-              <div className="w-0.5 h-0.5 bg-gray-500 rounded-full"></div>
-              <div className="w-0.5 h-0.5 bg-gray-500 rounded-full"></div>
-              <div className="w-0.5 h-0.5 bg-gray-500 rounded-full"></div>
-            </div>
+                <div className="text-center">
+                  <HardwareKnob
+                    value={audioEffects.gHarmonic.mix || 50}
+                    min={0}
+                    max={100}
+                    step={1}
+                    label="MIX"
+                    unit="%"
+                    size="small"
+                    onChange={(value) => handleKnobChange('gHarmonic', 'mix', value)}
+                    onKnobClick={handleKnobClick}
+                    isEditing={editingKnob === 'gHarmonic-mix'}
+                    onEditingChange={(editing) => setEditingKnob(editing ? 'gHarmonic-mix' : null)}
+                  />
+                </div>
+              </div>
+            )}
           </div>
-        </div>
-      </div>
+        </StudioRack>
+
+        {/* G-Stereo Imager - Enhanced with HardwareKnob */}
+        <StudioRack title="G-STEREO IMAGER" subtitle="CRYS GARAGE STUDIO">
+          <div className="p-3">
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="text-white font-semibold text-xs">G-Stereo</h4>
+              <label className="flex items-center">
+                <input
+                  type="checkbox"
+                  checked={audioEffects.gStereo?.enabled || false}
+                  onChange={(e) => onTogglePremiumEffect('gStereo', e.target.checked)}
+                  className="mr-1"
+                />
+                <span className="text-gray-300 text-[10px]">Enable</span>
+              </label>
+            </div>
+
+            {audioEffects.gStereo?.enabled && (
+              <div className="grid grid-cols-2 gap-3">
+                <div className="text-center">
+                  <HardwareKnob
+                    value={audioEffects.gStereo.width || 0}
+                    min={0}
+                    max={200}
+                    step={1}
+                    label="WIDTH"
+                    unit="%"
+                    size="small"
+                    onChange={(value) => handleKnobChange('gStereo', 'width', value)}
+                    onKnobClick={handleKnobClick}
+                    isEditing={editingKnob === 'gStereo-width'}
+                    onEditingChange={(editing) => setEditingKnob(editing ? 'gStereo-width' : null)}
+                  />
+                </div>
+
+                <div className="text-center">
+                  <HardwareKnob
+                    value={audioEffects.gStereo.midSide || 0}
+                    min={0}
+                    max={100}
+                    step={1}
+                    label="M/S"
+                    unit="%"
+                    size="small"
+                    onChange={(value) => handleKnobChange('gStereo', 'midSide', value)}
+                    onKnobClick={handleKnobClick}
+                    isEditing={editingKnob === 'gStereo-midSide'}
+                    onEditingChange={(editing) => setEditingKnob(editing ? 'gStereo-midSide' : null)}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        </StudioRack>
+
+        {/* G-Dynamic EQ - Enhanced with HardwareKnob */}
+        <StudioRack title="G-DYNAMIC EQ" subtitle="CRYS GARAGE STUDIO">
+          <div className="p-3">
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="text-white font-semibold text-xs">G-Dynamic EQ</h4>
+              <label className="flex items-center">
+                <input
+                  type="checkbox"
+                  checked={audioEffects.gDynamicEQ?.enabled || false}
+                  onChange={(e) => onTogglePremiumEffect('gDynamicEQ', e.target.checked)}
+                  className="mr-1"
+                />
+                <span className="text-gray-300 text-[10px]">Enable</span>
+              </label>
+            </div>
+
+            {audioEffects.gDynamicEQ?.enabled && (
+              <div className="grid grid-cols-2 gap-3">
+                <div className="text-center">
+                  <HardwareKnob
+                    value={audioEffects.gDynamicEQ.threshold || -20}
+                    min={-60}
+                    max={0}
+                    step={1}
+                    label="THRESH"
+                    unit="dB"
+                    size="small"
+                    onChange={(value) => handleKnobChange('gDynamicEQ', 'threshold', value)}
+                    onKnobClick={handleKnobClick}
+                    isEditing={editingKnob === 'gDynamicEQ-threshold'}
+                    onEditingChange={(editing) => setEditingKnob(editing ? 'gDynamicEQ-threshold' : null)}
+                  />
+                </div>
+
+                <div className="text-center">
+                  <HardwareKnob
+                    value={audioEffects.gDynamicEQ.ratio || 2}
+                    min={1}
+                    max={10}
+                    step={0.1}
+                    label="RATIO"
+                    unit=":1"
+                    size="small"
+                    onChange={(value) => handleKnobChange('gDynamicEQ', 'ratio', value)}
+                    onKnobClick={handleKnobClick}
+                    isEditing={editingKnob === 'gDynamicEQ-ratio'}
+                    onEditingChange={(editing) => setEditingKnob(editing ? 'gDynamicEQ-ratio' : null)}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        </StudioRack>
       </div>
 
       {/* Feature Info */}
