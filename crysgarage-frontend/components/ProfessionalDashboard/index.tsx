@@ -1,127 +1,161 @@
 import React, { useState, useEffect } from 'react';
 import { ProfessionalTierDashboardProps } from './types';
 import FileUploadStep from './FileUploadStep';
-import GenreSelectionStep from './GenreSelectionStep';
+import AudioProcessingStep from './AudioProcessingStep';
 import ExportStep from './ExportStep';
 import { loadStateFromStorage, saveStateToStorage } from './utils/storageUtils';
 
 const ProfessionalDashboard: React.FC<ProfessionalTierDashboardProps> = ({ onFileUpload, credits = 0 }) => {
-  // Load state from sessionStorage on component mount
-  const [currentStep, setCurrentStep] = useState(loadStateFromStorage().currentStep);
+  const [currentStep, setCurrentStep] = useState(1);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [fileInfo, setFileInfo] = useState<{name: string, size: number, type: string} | null>(loadStateFromStorage().fileInfo);
-  const [selectedGenre, setSelectedGenre] = useState<any>(loadStateFromStorage().selectedGenre);
-  const [processedAudioUrl, setProcessedAudioUrl] = useState<string | null>(loadStateFromStorage().processedAudioUrl);
-  const [isProcessing, setIsProcessing] = useState(loadStateFromStorage().isProcessing);
-  const [downloadFormat, setDownloadFormat] = useState<'wav' | 'mp3'>(loadStateFromStorage().downloadFormat);
+  const [selectedGenre, setSelectedGenre] = useState<any>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [processedAudioUrl, setProcessedAudioUrl] = useState<string | null>(null);
 
-  // Save state whenever relevant state changes
+  // Load state from session storage on mount
+  useEffect(() => {
+    const savedState = loadStateFromStorage();
+    if (savedState) {
+      setCurrentStep(savedState.currentStep || 1);
+      setSelectedFile(savedState.selectedFile || null);
+      setSelectedGenre(savedState.selectedGenre || null);
+      setIsProcessing(savedState.isProcessing || false);
+      setProcessedAudioUrl(savedState.processedAudioUrl || null);
+    }
+  }, []);
+
+  // Save state to session storage whenever it changes
   useEffect(() => {
     saveStateToStorage({
       currentStep,
+      selectedFile,
       selectedGenre,
-      processedAudioUrl,
       isProcessing,
-      downloadFormat,
-      fileInfo
+      processedAudioUrl
     });
-  }, [currentStep, selectedGenre, processedAudioUrl, isProcessing, downloadFormat, fileInfo]);
+  }, [currentStep, selectedFile, selectedGenre, isProcessing, processedAudioUrl]);
 
   const clearState = () => {
-    sessionStorage.removeItem('professionalTierState');
     setCurrentStep(1);
     setSelectedFile(null);
-    setFileInfo(null);
     setSelectedGenre(null);
-    setProcessedAudioUrl(null);
     setIsProcessing(false);
-    setDownloadFormat('wav');
+    setProcessedAudioUrl(null);
+    sessionStorage.removeItem('professionalDashboardState');
   };
 
   const nextStep = () => {
-    if (currentStep < 3) {
-      setCurrentStep(currentStep + 1);
-    }
+    setCurrentStep(prev => Math.min(prev + 1, 3));
   };
 
   const prevStep = () => {
-    if (currentStep > 1) {
-      setCurrentStep(currentStep - 1);
-    }
+    setCurrentStep(prev => Math.max(prev - 1, 1));
   };
 
-  const handleFileUpload = async (file: File) => {
-    // Clear previous state when starting a new session
-    clearState();
+  const handleFileUpload = (file: File) => {
     setSelectedFile(file);
-    setFileInfo({
-      name: file.name,
-      size: file.size,
-      type: file.type
-    });
-    setCurrentStep(2);
     if (onFileUpload) {
       onFileUpload(file);
     }
+    nextStep();
   };
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black text-white">
-      <div className="max-w-7xl mx-auto px-4 py-6">
-        <div className="flex justify-between items-center mb-6">
-          <div>
-            <h1 className="text-3xl font-bold text-crys-gold">Professional Tier Dashboard</h1>
-            <p className="text-gray-400">Step {currentStep} of 3</p>
-          </div>
-          {currentStep > 1 && (
-            <button
-              onClick={clearState}
-              className="bg-gray-700 text-white px-4 py-2 rounded-lg font-semibold hover:bg-gray-600 transition-colors"
-            >
-              Start New Session
-            </button>
-          )}
-        </div>
+  const handleGenreSelect = (genre: any) => {
+    setSelectedGenre(genre);
+  };
 
-        {/* Step 1: File Upload */}
-        {currentStep === 1 && (
-          <FileUploadStep 
+  const handleProcessingComplete = (audioUrl: string) => {
+    setProcessedAudioUrl(audioUrl);
+    setIsProcessing(false);
+    nextStep();
+  };
+
+  const renderCurrentStep = () => {
+    switch (currentStep) {
+      case 1:
+        return (
+          <FileUploadStep
             onFileUpload={handleFileUpload}
-            selectedFile={selectedFile}
-            fileInfo={fileInfo}
-            onNext={nextStep}
+            credits={credits}
           />
-        )}
-
-        {/* Step 2: Genre Selection + Audio Comparison */}
-        {currentStep === 2 && (
-          <GenreSelectionStep
+        );
+      case 2:
+        return (
+          <AudioProcessingStep
             selectedFile={selectedFile}
             selectedGenre={selectedGenre}
-            setSelectedGenre={setSelectedGenre}
-            processedAudioUrl={processedAudioUrl}
-            setProcessedAudioUrl={setProcessedAudioUrl}
+            onGenreSelect={handleGenreSelect}
+            onProcessingComplete={handleProcessingComplete}
             isProcessing={isProcessing}
             setIsProcessing={setIsProcessing}
-            onNext={nextStep}
-            onPrev={prevStep}
+            onBack={prevStep}
           />
-        )}
-
-        {/* Step 3: Export Gate */}
-        {currentStep === 3 && (
+        );
+      case 3:
+        return (
           <ExportStep
             selectedFile={selectedFile}
             selectedGenre={selectedGenre}
             processedAudioUrl={processedAudioUrl}
-            isProcessing={isProcessing}
-            setIsProcessing={setIsProcessing}
-            downloadFormat={downloadFormat}
-            setDownloadFormat={setDownloadFormat}
-            onPrev={prevStep}
-            onNewSession={() => setCurrentStep(1)}
+            onBack={prevStep}
+            onRestart={clearState}
           />
-        )}
+        );
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-900 text-white">
+      <div className="container mx-auto px-4 py-8">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold text-crys-gold mb-2">Professional Tier</h1>
+          <p className="text-gray-400">Advanced audio mastering with real-time processing</p>
+        </div>
+
+        {/* Progress Steps */}
+        <div className="flex justify-center mb-8">
+          <div className="flex items-center space-x-4">
+            {[1, 2, 3].map((step) => (
+              <div key={step} className="flex items-center">
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold ${
+                  currentStep >= step 
+                    ? 'bg-crys-gold text-black' 
+                    : 'bg-gray-700 text-gray-400'
+                }`}>
+                  {step}
+                </div>
+                {step < 3 && (
+                  <div className={`w-16 h-1 mx-2 ${
+                    currentStep > step ? 'bg-crys-gold' : 'bg-gray-700'
+                  }`} />
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Step Labels */}
+        <div className="flex justify-center mb-8">
+          <div className="flex space-x-16">
+            <span className={`text-sm ${currentStep >= 1 ? 'text-crys-gold' : 'text-gray-500'}`}>
+              Upload Audio
+            </span>
+            <span className={`text-sm ${currentStep >= 2 ? 'text-crys-gold' : 'text-gray-500'}`}>
+              Process & Master
+            </span>
+            <span className={`text-sm ${currentStep >= 3 ? 'text-crys-gold' : 'text-gray-500'}`}>
+              Export
+            </span>
+          </div>
+        </div>
+
+        {/* Current Step Content */}
+        <div className="max-w-6xl mx-auto">
+          {renderCurrentStep()}
+        </div>
       </div>
     </div>
   );
