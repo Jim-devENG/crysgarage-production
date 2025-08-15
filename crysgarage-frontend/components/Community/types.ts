@@ -1,14 +1,14 @@
 export interface User {
   id: number;
   name: string;
-  avatar: string;
-  username: string;
-  role: 'member' | 'moderator' | 'admin' | 'premium';
-  joinDate: string;
-  posts: number;
-  followers: number;
-  following: number;
-  badges: string[];
+  avatar?: string;
+  username?: string;
+  role?: 'member' | 'moderator' | 'admin' | 'premium';
+  joinDate?: string;
+  posts?: number;
+  followers?: number;
+  following?: number;
+  badges?: string[];
 }
 
 export interface Comment {
