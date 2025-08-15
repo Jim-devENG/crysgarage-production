@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Gauge, Volume2, Settings, Zap } from 'lucide-react';
+import HardwareKnob from '../HardwareKnob';
 
 interface AdvancedLimiterProps {
   limitLevel: number;
@@ -12,6 +13,7 @@ interface AdvancedLimiterProps {
   onOutputGainChange: (value: number) => void;
   enabled: boolean;
   onToggle: (enabled: boolean) => void;
+  onManualInit?: () => void;
 }
 
 const AdvancedLimiter: React.FC<AdvancedLimiterProps> = ({
@@ -24,7 +26,8 @@ const AdvancedLimiter: React.FC<AdvancedLimiterProps> = ({
   onInputGainChange,
   onOutputGainChange,
   enabled,
-  onToggle
+  onToggle,
+  onManualInit
 }) => {
   const [unityGainMonitoring, setUnityGainMonitoring] = useState(false);
   const [bypass, setBypass] = useState(false);
@@ -33,6 +36,27 @@ const AdvancedLimiter: React.FC<AdvancedLimiterProps> = ({
   const [oversampling, setOversampling] = useState<'x1' | 'x2' | 'x4'>('x1');
   const [latency, setLatency] = useState<'Normal' | 'Low'>('Normal');
   const [overshoot, setOvershoot] = useState<'Clip' | 'Soft'>('Clip');
+  const [editingKnob, setEditingKnob] = useState<string | null>(null);
+
+  const handleKnobChange = (setting: string, value: number) => {
+    console.log(`A.O.M. Limiter knob changed: ${setting} = ${value}`);
+    switch (setting) {
+      case 'limitLevel':
+        onLimitLevelChange(value);
+        break;
+      case 'inputGain':
+        onInputGainChange(value);
+        break;
+      case 'outputGain':
+        onOutputGainChange(value);
+        break;
+    }
+    onManualInit?.();
+  };
+
+  const handleKnobClick = () => {
+    onManualInit?.();
+  };
 
   return (
     <div className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 rounded-lg border border-gray-700 shadow-lg overflow-hidden w-full max-w-sm">
@@ -79,77 +103,56 @@ const AdvancedLimiter: React.FC<AdvancedLimiterProps> = ({
 
         {enabled && (
           <>
-            {/* Main Control Knobs - Compact Layout */}
+            {/* Main Control Knobs - Enhanced with HardwareKnob */}
             <div className="grid grid-cols-3 gap-3 mb-4">
               {/* Limit Level Knob */}
               <div className="text-center">
-                <div className="relative w-12 h-12 mx-auto mb-1">
-                  <div className="w-full h-full rounded-full bg-gradient-to-br from-gray-700 to-gray-800 border border-gray-600 shadow-inner flex items-center justify-center">
-                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-gray-600 to-gray-700 border border-gray-500 flex items-center justify-center">
-                      <div className="w-0.5 h-4 bg-crys-gold rounded-full transform origin-bottom" 
-                           style={{ transform: `rotate(${(limitLevel + 20) * 3}deg)` }}></div>
-                    </div>
-                  </div>
-                  <div className="absolute -bottom-0.5 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-crys-gold rounded-full"></div>
-                </div>
-                <div className="text-crys-gold font-mono text-xs mb-0.5">{limitLevel.toFixed(2)}dB</div>
-                <div className="text-gray-400 text-[8px]">LIMIT</div>
-                <input
-                  type="range"
-                  min="-20"
-                  max="0"
-                  step="0.01"
+                <HardwareKnob
                   value={limitLevel}
-                  onChange={(e) => onLimitLevelChange(parseFloat(e.target.value))}
-                  className="w-full mt-1"
+                  min={-20}
+                  max={0}
+                  step={0.01}
+                  label="LIMIT"
+                  unit="dB"
+                  size="small"
+                  onChange={(value) => handleKnobChange('limitLevel', value)}
+                  onKnobClick={handleKnobClick}
+                  isEditing={editingKnob === 'limitLevel'}
+                  onEditingChange={(editing) => setEditingKnob(editing ? 'limitLevel' : null)}
                 />
               </div>
 
               {/* Input Gain Knob */}
               <div className="text-center">
-                <div className="relative w-12 h-12 mx-auto mb-1">
-                  <div className="w-full h-full rounded-full bg-gradient-to-br from-gray-700 to-gray-800 border border-gray-600 shadow-inner flex items-center justify-center">
-                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-gray-600 to-gray-700 border border-gray-500 flex items-center justify-center">
-                      <div className="w-0.5 h-4 bg-crys-gold rounded-full transform origin-bottom" 
-                           style={{ transform: `rotate(${(inputGain + 20) * 2}deg)` }}></div>
-                    </div>
-                  </div>
-                  <div className="absolute -bottom-0.5 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-crys-gold rounded-full"></div>
-                </div>
-                <div className="text-crys-gold font-mono text-xs mb-0.5">{inputGain.toFixed(2)}dB</div>
-                <div className="text-gray-400 text-[8px]">INPUT</div>
-                <input
-                  type="range"
-                  min="-20"
-                  max="20"
-                  step="0.01"
+                <HardwareKnob
                   value={inputGain}
-                  onChange={(e) => onInputGainChange(parseFloat(e.target.value))}
-                  className="w-full mt-1"
+                  min={-20}
+                  max={20}
+                  step={0.01}
+                  label="INPUT"
+                  unit="dB"
+                  size="small"
+                  onChange={(value) => handleKnobChange('inputGain', value)}
+                  onKnobClick={handleKnobClick}
+                  isEditing={editingKnob === 'inputGain'}
+                  onEditingChange={(editing) => setEditingKnob(editing ? 'inputGain' : null)}
                 />
               </div>
 
               {/* Output Gain Knob */}
               <div className="text-center">
-                <div className="relative w-12 h-12 mx-auto mb-1">
-                  <div className="w-full h-full rounded-full bg-gradient-to-br from-gray-700 to-gray-800 border border-gray-600 shadow-inner flex items-center justify-center">
-                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-gray-600 to-gray-700 border border-gray-500 flex items-center justify-center">
-                      <div className="w-0.5 h-4 bg-crys-gold rounded-full transform origin-bottom" 
-                           style={{ transform: `rotate(${(outputGain + 20) * 2}deg)` }}></div>
-                    </div>
-                  </div>
-                  <div className="absolute -bottom-0.5 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-crys-gold rounded-full"></div>
-                </div>
-                <div className="text-crys-gold font-mono text-xs mb-0.5">{outputGain.toFixed(2)}dB</div>
-                <div className="text-gray-400 text-[8px]">OUTPUT</div>
-                <input
-                  type="range"
-                  min="-20"
-                  max="20"
-                  step="0.01"
+                <HardwareKnob
                   value={outputGain}
-                  onChange={(e) => onOutputGainChange(parseFloat(e.target.value))}
-                  className="w-full mt-1"
+                  min={-20}
+                  max={20}
+                  step={0.01}
+                  label="OUTPUT"
+                  unit="dB"
+                  size="small"
+                  onChange={(value) => handleKnobChange('outputGain', value)}
+                  onKnobClick={handleKnobClick}
+                  isEditing={editingKnob === 'outputGain'}
+                  onEditingChange={(editing) => setEditingKnob(editing ? 'outputGain' : null)}
                 />
               </div>
             </div>

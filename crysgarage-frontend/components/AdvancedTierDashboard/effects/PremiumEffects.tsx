@@ -109,6 +109,7 @@ const PremiumEffects: React.FC<PremiumEffectsProps> = ({
             }}
             enabled={audioEffects.gLimiter?.enabled || false}
             onToggle={(enabled) => onTogglePremiumEffect('gLimiter', enabled)}
+            onManualInit={onManualInit}
           />
         </div>
 
