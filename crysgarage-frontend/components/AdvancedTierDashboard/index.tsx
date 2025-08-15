@@ -340,7 +340,7 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
             <div className="text-center">
               <button
                 onClick={handleContinueToExport}
-                className="bg-crys-gold text-black px-6 py-2 rounded-lg font-semibold hover:bg-yellow-400 transition-colors"
+                className="bg-amber-500 text-black px-6 py-2 rounded-lg font-semibold hover:bg-amber-600 transition-colors"
               >
                 Continue to Export Gate
               </button>
@@ -365,100 +365,10 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
 
   return (
     <div 
-      className="min-h-screen relative"
-      style={{
-        backgroundImage: `url('data:image/svg+xml;base64,${btoa(`
-          <svg width="1920" height="1080" viewBox="0 0 1920 1080" xmlns="http://www.w3.org/2000/svg">
-            <defs>
-              <linearGradient id="studioGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" style="stop-color:#2d1b0e;stop-opacity:0.9" />
-                <stop offset="50%" style="stop-color:#1a0f0a;stop-opacity:0.85" />
-                <stop offset="100%" style="stop-color:#0d0805;stop-opacity:0.9" />
-              </linearGradient>
-              <filter id="noise">
-                <feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="4" stitchTiles="stitch"/>
-                <feColorMatrix type="matrix" values="1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 0.1 0"/>
-              </filter>
-            </defs>
-            
-            <!-- Studio Background -->
-            <rect width="100%" height="100%" fill="url(#studioGradient)"/>
-            <rect width="100%" height="100%" filter="url(#noise)" opacity="0.1"/>
-            
-            <!-- Stone Wall Texture -->
-            <defs>
-              <pattern id="stonePattern" x="0" y="0" width="100" height="60" patternUnits="userSpaceOnUse">
-                <rect width="100" height="60" fill="#3a2a1a" opacity="0.3"/>
-                <rect x="0" y="0" width="100" height="2" fill="#5a4a3a" opacity="0.4"/>
-                <rect x="0" y="58" width="100" height="2" fill="#2a1a0a" opacity="0.4"/>
-                <rect x="0" y="0" width="2" height="60" fill="#5a4a3a" opacity="0.4"/>
-                <rect x="98" y="0" width="2" height="60" fill="#2a1a0a" opacity="0.4"/>
-              </pattern>
-            </defs>
-            <rect width="100%" height="100%" fill="url(#stonePattern)"/>
-            
-            <!-- Acoustic Panels -->
-            <defs>
-              <pattern id="acousticPattern" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse">
-                <rect width="40" height="40" fill="#1a1a1a" opacity="0.6"/>
-                <polygon points="0,0 20,20 40,0 20,20 0,40 20,20 40,40 20,20" fill="#2a2a2a" opacity="0.4"/>
-              </pattern>
-            </defs>
-            <rect x="0" y="0" width="300" height="100%" fill="url(#acousticPattern)"/>
-            <rect x="1620" y="0" width="300" height="100%" fill="url(#acousticPattern)"/>
-            
-            <!-- Equipment Glow -->
-            <defs>
-              <radialGradient id="equipmentGlow" cx="50%" cy="50%" r="50%">
-                <stop offset="0%" style="stop-color:#ff6b35;stop-opacity:0.1" />
-                <stop offset="100%" style="stop-color:#ff6b35;stop-opacity:0" />
-              </radialGradient>
-            </defs>
-            <circle cx="960" cy="300" r="400" fill="url(#equipmentGlow)"/>
-            <circle cx="960" cy="800" r="300" fill="url(#equipmentGlow)"/>
-            
-            <!-- Subtle Equipment Lines -->
-            <line x1="200" y1="200" x2="1720" y2="200" stroke="#ff6b35" stroke-width="1" opacity="0.1"/>
-            <line x1="200" y1="400" x2="1720" y2="400" stroke="#ff6b35" stroke-width="1" opacity="0.1"/>
-            <line x1="200" y1="600" x2="1720" y2="600" stroke="#ff6b35" stroke-width="1" opacity="0.1"/>
-            <line x1="200" y1="800" x2="1720" y2="800" stroke="#ff6b35" stroke-width="1" opacity="0.1"/>
-            
-            <!-- Console Glow -->
-            <defs>
-              <linearGradient id="consoleGlow" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" style="stop-color:#ffd700;stop-opacity:0.05" />
-                <stop offset="50%" style="stop-color:#ffd700;stop-opacity:0.02" />
-                <stop offset="100%" style="stop-color:#ffd700;stop-opacity:0.05" />
-              </linearGradient>
-            </defs>
-            <rect x="400" y="500" width="1120" height="200" fill="url(#consoleGlow)"/>
-            
-            <!-- Vintage Equipment Silhouettes -->
-            <rect x="100" y="300" width="150" height="400" fill="#2a1a0a" opacity="0.3"/>
-            <rect x="1670" y="300" width="150" height="400" fill="#2a1a0a" opacity="0.3"/>
-            
-            <!-- Guitar Stands -->
-            <rect x="1670" y="750" width="150" height="200" fill="#1a0f0a" opacity="0.4"/>
-            
-            <!-- Monitor Glow -->
-            <defs>
-              <radialGradient id="monitorGlow" cx="50%" cy="50%" r="50%">
-                <stop offset="0%" style="stop-color:#00ff88;stop-opacity:0.1" />
-                <stop offset="100%" style="stop-color:#00ff88;stop-opacity:0" />
-              </radialGradient>
-            </defs>
-            <circle cx="600" cy="300" r="100" fill="url(#monitorGlow)"/>
-            <circle cx="1320" cy="300" r="100" fill="url(#monitorGlow)"/>
-          </svg>
-        `)}')`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundAttachment: 'fixed',
-        backgroundRepeat: 'no-repeat'
-      }}
+      className="min-h-screen relative bg-gradient-to-br from-black via-gray-900 to-black"
     >
       {/* Overlay for better readability */}
-      <div className="absolute inset-0 bg-black bg-opacity-40"></div>
+      <div className="absolute inset-0 bg-black bg-opacity-20"></div>
       
       {/* Studio Header */}
       <div className="relative z-10">

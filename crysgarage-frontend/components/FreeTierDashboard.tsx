@@ -306,9 +306,9 @@ export function FreeTierDashboard({ onFileUpload, onUpgrade, credits, isAuthenti
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-crys-black via-crys-graphite to-crys-black text-crys-white" style={{ marginTop: '-80px', paddingTop: '80px' }}>
+    <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black text-white" style={{ marginTop: '-80px', paddingTop: '80px' }}>
       {/* Navigation Tabs */}
-      <div className="border-b border-audio-panel-border/30 -mt-16">
+      <div className="border-b border-gray-700/50 -mt-16">
         <div className="max-w-7xl mx-auto px-6 py-0">
           <div className="flex justify-center space-x-1">
             {[
@@ -325,8 +325,8 @@ export function FreeTierDashboard({ onFileUpload, onUpgrade, credits, isAuthenti
                   onClick={() => setActiveTab(tab.id as any)}
                   className={`flex items-center gap-2 px-4 py-2 rounded-t-lg font-medium transition-all ${
                     isActive 
-                      ? 'border border-audio-panel-border border-b-0 text-crys-gold' 
-                      : 'text-crys-light-grey hover:text-crys-white hover:bg-audio-panel-bg/50'
+                      ? 'border border-amber-500 border-b-0 text-amber-400 bg-black/50' 
+                      : 'text-gray-400 hover:text-amber-400 hover:bg-black/30'
                   }`}
                 >
                   <Icon className="w-4 h-4" />
@@ -345,13 +345,13 @@ export function FreeTierDashboard({ onFileUpload, onUpgrade, credits, isAuthenti
           <div className="space-y-2">
             {/* Welcome Section */}
             <div className="text-center pt-8">
-              <div className="w-16 h-16 bg-gradient-to-r from-crys-gold/20 to-yellow-400/20 rounded-2xl flex items-center justify-center mx-auto mb-3">
-                <Sparkles className="w-8 h-8 text-crys-gold" />
+              <div className="w-16 h-16 bg-gradient-to-r from-amber-500/20 to-yellow-400/20 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                <Sparkles className="w-8 h-8 text-amber-400" />
               </div>
-              <h2 className="text-xl font-bold text-crys-white mb-2">
+              <h2 className="text-xl font-bold text-white mb-2">
                 Transform Your Audio
               </h2>
-              <p className="text-crys-light-grey text-sm max-w-2xl mx-auto">
+              <p className="text-gray-400 text-sm max-w-2xl mx-auto">
                 Upload your tracks and experience professional-grade mastering with our advanced audio processing technology.
               </p>
             </div>
@@ -377,13 +377,13 @@ export function FreeTierDashboard({ onFileUpload, onUpgrade, credits, isAuthenti
               ].map((feature, index) => {
                 const Icon = feature.icon;
                 return (
-                  <Card key={index} className="bg-audio-panel-bg border-audio-panel-border hover:border-crys-gold/30 transition-colors">
+                  <Card key={index} className="bg-gray-800 border-gray-700 hover:border-amber-500/50 transition-colors">
                     <CardContent className="p-4 text-center">
-                      <div className="w-10 h-10 bg-gradient-to-r from-crys-gold/20 to-yellow-400/20 rounded-xl flex items-center justify-center mx-auto mb-3">
-                        <Icon className="w-5 h-5 text-crys-gold" />
+                      <div className="w-10 h-10 bg-gradient-to-r from-amber-500/20 to-yellow-400/20 rounded-xl flex items-center justify-center mx-auto mb-3">
+                        <Icon className="w-5 h-5 text-amber-400" />
                       </div>
-                      <h3 className="text-crys-white font-semibold mb-2">{feature.title}</h3>
-                      <p className="text-crys-light-grey text-sm">{feature.description}</p>
+                      <h3 className="text-white font-semibold mb-2">{feature.title}</h3>
+                      <p className="text-gray-400 text-sm">{feature.description}</p>
                     </CardContent>
                   </Card>
                 );
@@ -391,40 +391,40 @@ export function FreeTierDashboard({ onFileUpload, onUpgrade, credits, isAuthenti
             </div>
 
             {/* Upload Section */}
-            <Card className="bg-audio-panel-bg border-audio-panel-border">
+            <Card className="bg-gray-800 border-gray-700">
               <CardHeader className="pt-2">
                 <div className="flex items-center gap-3">
-                  <Upload className="w-5 h-5 text-crys-gold" />
-                  <h3 className="text-crys-white font-semibold">Upload Your Track</h3>
+                  <Upload className="w-5 h-5 text-amber-400" />
+                  <h3 className="text-white font-semibold">Upload Your Track</h3>
                 </div>
               </CardHeader>
               <CardContent>
                 <UploadInterface onFileUpload={handleFileUpload} />
                 
-                <div className="mt-6 grid md:grid-cols-2 gap-6 text-sm text-crys-light-grey">
+                <div className="mt-6 grid md:grid-cols-2 gap-6 text-sm text-gray-400">
                   <div>
-                    <h4 className="text-crys-white font-medium mb-2">Supported Formats</h4>
+                    <h4 className="text-white font-medium mb-2">Supported Formats</h4>
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
-                        <FileAudio className="w-4 h-4 text-crys-gold" />
+                        <FileAudio className="w-4 h-4 text-amber-400" />
                         <span>WAV (up to 60MB)</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <FileAudio className="w-4 h-4 text-crys-gold" />
+                        <FileAudio className="w-4 h-4 text-amber-400" />
                         <span>MP3 (up to 60MB)</span>
                       </div>
                     </div>
                   </div>
                   
                   <div>
-                    <h4 className="text-crys-white font-medium mb-2">Free Tier Limits</h4>
+                    <h4 className="text-white font-medium mb-2">Free Tier Limits</h4>
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
-                        <Gift className="w-4 h-4 text-crys-gold" />
+                        <Gift className="w-4 h-4 text-amber-400" />
                         <span>3 tracks per month</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Timer className="w-4 h-4 text-crys-gold" />
+                        <Timer className="w-4 h-4 text-amber-400" />
                         <span>Standard processing</span>
                       </div>
                     </div>
@@ -439,74 +439,74 @@ export function FreeTierDashboard({ onFileUpload, onUpgrade, credits, isAuthenti
         {activeTab === 'processing' && currentFile && (
           <div className="space-y-8">
             <div className="text-center">
-              <h2 className="text-2xl font-bold text-crys-white mb-4">Processing Your Track</h2>
-              <p className="text-crys-light-grey">Applying professional mastering techniques...</p>
+              <h2 className="text-2xl font-bold text-white mb-4">Processing Your Track</h2>
+              <p className="text-gray-400">Applying professional mastering techniques...</p>
             </div>
 
-            <Card className="bg-audio-panel-bg border-audio-panel-border">
+            <Card className="bg-gray-800 border-gray-700">
               <CardContent className="p-8">
                 <div className="flex items-center gap-4 mb-6">
-                  <div className="w-12 h-12 bg-gradient-to-r from-crys-gold/20 to-yellow-400/20 rounded-xl flex items-center justify-center">
-                    <FileAudio className="w-6 h-6 text-crys-gold" />
+                  <div className="w-12 h-12 bg-gradient-to-r from-amber-500/20 to-yellow-400/20 rounded-xl flex items-center justify-center">
+                    <FileAudio className="w-6 h-6 text-amber-400" />
                   </div>
                   <div>
-                    <h3 className="text-crys-white font-semibold">{currentFile.name}</h3>
-                    <p className="text-crys-light-grey text-sm">{formatFileSize(currentFile.size)}</p>
+                    <h3 className="text-white font-semibold">{currentFile.name}</h3>
+                    <p className="text-gray-400 text-sm">{formatFileSize(currentFile.size)}</p>
                   </div>
                 </div>
 
                 <Progress value={processingProgress} className="h-3 mb-4" />
-                <p className="text-crys-gold font-medium text-center">{processingProgress}% Complete</p>
+                <p className="text-amber-400 font-medium text-center">{processingProgress}% Complete</p>
 
-                <div className="mt-8 grid md:grid-cols-2 gap-6">
-                  <div className="space-y-4">
-                    <h4 className="text-crys-white font-medium">Processing Steps</h4>
-                    {[
-                      { step: "Audio Analysis", completed: processingProgress >= 10 },
-                      { step: "Frequency Balancing", completed: processingProgress >= 30 },
-                      { step: "Dynamic Processing", completed: processingProgress >= 50 },
-                      { step: "Stereo Enhancement", completed: processingProgress >= 70 },
-                      { step: "Final Mastering", completed: processingProgress >= 90 }
-                    ].map((item, index) => (
-                      <div key={index} className="flex items-center gap-3">
-                        <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
-                          item.completed ? 'bg-green-500' : 'bg-crys-graphite'
-                        }`}>
-                          {item.completed ? (
-                            <CheckCircle className="w-4 h-4 text-white" />
-                          ) : (
-                            <span className="text-xs text-crys-light-grey">{index + 1}</span>
-                          )}
+                                  <div className="mt-8 grid md:grid-cols-2 gap-6">
+                    <div className="space-y-4">
+                      <h4 className="text-white font-medium">Processing Steps</h4>
+                      {[
+                        { step: "Audio Analysis", completed: processingProgress >= 10 },
+                        { step: "Frequency Balancing", completed: processingProgress >= 30 },
+                        { step: "Dynamic Processing", completed: processingProgress >= 50 },
+                        { step: "Stereo Enhancement", completed: processingProgress >= 70 },
+                        { step: "Final Mastering", completed: processingProgress >= 90 }
+                      ].map((item, index) => (
+                        <div key={index} className="flex items-center gap-3">
+                          <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
+                            item.completed ? 'bg-green-500' : 'bg-gray-700'
+                          }`}>
+                            {item.completed ? (
+                              <CheckCircle className="w-4 h-4 text-white" />
+                            ) : (
+                              <span className="text-xs text-gray-400">{index + 1}</span>
+                            )}
+                          </div>
+                          <span className={`text-sm ${item.completed ? 'text-white' : 'text-gray-400'}`}>
+                            {item.step}
+                          </span>
                         </div>
-                        <span className={`text-sm ${item.completed ? 'text-crys-white' : 'text-crys-light-grey'}`}>
-                          {item.step}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
 
-                  <div className="space-y-4">
-                    <h4 className="text-crys-white font-medium">Processing Details</h4>
-                    <div className="space-y-3 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-crys-light-grey">Target Loudness:</span>
-                        <span className="text-crys-gold">-9.0 LUFS</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-crys-light-grey">Peak Limit:</span>
-                        <span className="text-crys-gold">-0.2 dBTP</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-crys-light-grey">Processing Quality:</span>
-                        <span className="text-crys-gold">Professional</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-crys-light-grey">Output Format:</span>
-                        <span className="text-crys-gold">WAV</span>
+                    <div className="space-y-4">
+                      <h4 className="text-white font-medium">Processing Details</h4>
+                      <div className="space-y-3 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-gray-400">Target Loudness:</span>
+                          <span className="text-amber-400">-9.0 LUFS</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-400">Peak Limit:</span>
+                          <span className="text-amber-400">-0.2 dBTP</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-400">Processing Quality:</span>
+                          <span className="text-amber-400">Professional</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-400">Output Format:</span>
+                          <span className="text-amber-400">WAV</span>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
               </CardContent>
             </Card>
           </div>
@@ -516,32 +516,32 @@ export function FreeTierDashboard({ onFileUpload, onUpgrade, credits, isAuthenti
         {activeTab === 'results' && currentFile && originalStats && masteredStats && (
           <div className="space-y-8">
             <div className="text-center">
-              <h2 className="text-2xl font-bold text-crys-white mb-4">Mastering Complete!</h2>
-              <p className="text-crys-light-grey">Your track has been professionally mastered</p>
+              <h2 className="text-2xl font-bold text-white mb-4">Mastering Complete!</h2>
+              <p className="text-gray-400">Your track has been professionally mastered</p>
             </div>
 
             {/* Audio Comparison Players */}
             <div className="grid md:grid-cols-2 gap-6">
               {/* Original Audio Player */}
-              <Card className="bg-audio-panel-bg border-audio-panel-border">
+              <Card className="bg-gray-800 border-gray-700">
                 <CardHeader>
                   <div className="flex items-center gap-2">
-                    <VolumeX className="w-4 h-4 text-crys-gold" />
-                    <h3 className="text-crys-white font-semibold">Original Audio</h3>
+                    <VolumeX className="w-4 h-4 text-amber-400" />
+                    <h3 className="text-white font-semibold">Original Audio</h3>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 bg-gradient-to-r from-crys-gold/20 to-yellow-400/20 rounded-lg flex items-center justify-center">
-                      <FileAudio className="w-6 h-6 text-crys-gold" />
+                    <div className="w-12 h-12 bg-gradient-to-r from-amber-500/20 to-yellow-400/20 rounded-lg flex items-center justify-center">
+                      <FileAudio className="w-6 h-6 text-amber-400" />
                     </div>
                     <div className="flex-1">
-                      <h4 className="text-crys-white font-medium">{currentFile.name}</h4>
-                      <p className="text-crys-light-grey text-sm">Before mastering</p>
+                      <h4 className="text-white font-medium">{currentFile.name}</h4>
+                      <p className="text-gray-400 text-sm">Before mastering</p>
                     </div>
                     <Button 
                       onClick={toggleOriginalPlayback}
-                      className="bg-crys-gold hover:bg-crys-gold/90 text-crys-black"
+                      className="bg-amber-500 hover:bg-amber-600 text-black"
                     >
                       {isPlayingOriginal ? (
                         <>
@@ -557,44 +557,44 @@ export function FreeTierDashboard({ onFileUpload, onUpgrade, credits, isAuthenti
                     </Button>
                   </div>
 
-                  {originalAudioElement && (
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-sm text-crys-light-grey">
-                        <span>{formatTime(currentTimeOriginal)}</span>
-                        <span>{formatTime(originalAudioElement.duration || 0)}</span>
-                      </div>
-                      <div className="w-full bg-crys-graphite rounded-full h-2">
-                        <div 
-                          className="bg-crys-gold h-2 rounded-full transition-all"
-                          style={{ width: `${(currentTimeOriginal / (originalAudioElement.duration || 1)) * 100}%` }}
-                        ></div>
-                      </div>
-                    </div>
-                  )}
+                                        {originalAudioElement && (
+                        <div className="space-y-2">
+                          <div className="flex justify-between text-sm text-gray-400">
+                            <span>{formatTime(currentTimeOriginal)}</span>
+                            <span>{formatTime(originalAudioElement.duration || 0)}</span>
+                          </div>
+                          <div className="w-full bg-gray-700 rounded-full h-2">
+                            <div 
+                              className="bg-amber-500 h-2 rounded-full transition-all"
+                              style={{ width: `${(currentTimeOriginal / (originalAudioElement.duration || 1)) * 100}%` }}
+                            ></div>
+                          </div>
+                        </div>
+                      )}
                 </CardContent>
               </Card>
 
               {/* Mastered Audio Player */}
-              <Card className="bg-audio-panel-bg border-audio-panel-border">
+              <Card className="bg-gray-800 border-gray-700">
                 <CardHeader>
                   <div className="flex items-center gap-2">
-                    <Volume2Icon className="w-4 h-4 text-crys-gold" />
-                    <h3 className="text-crys-white font-semibold">Mastered Audio</h3>
+                    <Volume2Icon className="w-4 h-4 text-amber-400" />
+                    <h3 className="text-white font-semibold">Mastered Audio</h3>
                     <Badge className="bg-green-500/20 text-green-400 text-xs">Professional</Badge>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 bg-gradient-to-r from-crys-gold/20 to-yellow-400/20 rounded-lg flex items-center justify-center">
-                      <Zap className="w-6 h-6 text-crys-gold" />
+                    <div className="w-12 h-12 bg-gradient-to-r from-amber-500/20 to-yellow-400/20 rounded-lg flex items-center justify-center">
+                      <Zap className="w-6 h-6 text-amber-400" />
                     </div>
                     <div className="flex-1">
-                      <h4 className="text-crys-white font-medium">{currentFile.name.replace(/\.[^/.]+$/, '')}_mastered.wav</h4>
-                      <p className="text-crys-light-grey text-sm">After professional mastering</p>
+                      <h4 className="text-white font-medium">{currentFile.name.replace(/\.[^/.]+$/, '')}_mastered.wav</h4>
+                      <p className="text-gray-400 text-sm">After professional mastering</p>
                     </div>
                     <Button 
                       onClick={toggleMasteredPlayback}
-                      className="bg-crys-gold hover:bg-crys-gold/90 text-crys-black"
+                      className="bg-amber-500 hover:bg-amber-600 text-black"
                     >
                       {isPlayingMastered ? (
                         <>
@@ -612,13 +612,13 @@ export function FreeTierDashboard({ onFileUpload, onUpgrade, credits, isAuthenti
 
                   {masteredAudioElement && (
                     <div className="space-y-2">
-                      <div className="flex justify-between text-sm text-crys-light-grey">
+                      <div className="flex justify-between text-sm text-gray-400">
                         <span>{formatTime(currentTimeMastered)}</span>
                         <span>{formatTime(masteredAudioElement.duration || 0)}</span>
                       </div>
-                      <div className="w-full bg-crys-graphite rounded-full h-2">
+                      <div className="w-full bg-gray-700 rounded-full h-2">
                         <div 
-                          className="bg-crys-gold h-2 rounded-full transition-all"
+                          className="bg-amber-500 h-2 rounded-full transition-all"
                           style={{ width: `${(currentTimeMastered / (masteredAudioElement.duration || 1)) * 100}%` }}
                         ></div>
                       </div>
@@ -631,11 +631,11 @@ export function FreeTierDashboard({ onFileUpload, onUpgrade, credits, isAuthenti
             {/* Comparison Stats */}
             <div className="grid md:grid-cols-2 gap-6">
               {/* Original Stats */}
-              <Card className="bg-audio-panel-bg border-audio-panel-border">
+              <Card className="bg-gray-800 border-gray-700">
                 <CardHeader>
                   <div className="flex items-center gap-2">
-                    <VolumeX className="w-4 h-4 text-crys-gold" />
-                    <h3 className="text-crys-white font-semibold">Original</h3>
+                    <VolumeX className="w-4 h-4 text-amber-400" />
+                    <h3 className="text-white font-semibold">Original</h3>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -650,10 +650,10 @@ export function FreeTierDashboard({ onFileUpload, onUpgrade, credits, isAuthenti
                     return (
                       <div key={index} className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <Icon className="w-4 h-4 text-crys-light-grey" />
-                          <span className="text-crys-light-grey text-sm">{stat.label}</span>
+                          <Icon className="w-4 h-4 text-gray-400" />
+                          <span className="text-gray-400 text-sm">{stat.label}</span>
                         </div>
-                        <span className="text-crys-white font-medium">{stat.value} {stat.unit}</span>
+                        <span className="text-white font-medium">{stat.value} {stat.unit}</span>
                       </div>
                     );
                   })}
@@ -661,11 +661,11 @@ export function FreeTierDashboard({ onFileUpload, onUpgrade, credits, isAuthenti
               </Card>
 
               {/* Mastered Stats */}
-              <Card className="bg-audio-panel-bg border-audio-panel-border">
+              <Card className="bg-gray-800 border-gray-700">
                 <CardHeader>
                   <div className="flex items-center gap-2">
-                    <Volume2Icon className="w-4 h-4 text-crys-gold" />
-                    <h3 className="text-crys-white font-semibold">Mastered</h3>
+                    <Volume2Icon className="w-4 h-4 text-amber-400" />
+                    <h3 className="text-white font-semibold">Mastered</h3>
                     <Badge className="bg-green-500/20 text-green-400 text-xs">Professional</Badge>
                   </div>
                 </CardHeader>
@@ -682,11 +682,11 @@ export function FreeTierDashboard({ onFileUpload, onUpgrade, credits, isAuthenti
                     return (
                       <div key={index} className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <Icon className="w-4 h-4 text-crys-light-grey" />
-                          <span className="text-crys-light-grey text-sm">{stat.label}</span>
+                          <Icon className="w-4 h-4 text-gray-400" />
+                          <span className="text-gray-400 text-sm">{stat.label}</span>
                         </div>
                         <div className="flex items-center gap-2">
-                          <span className="text-crys-white font-medium">{stat.value} {stat.unit}</span>
+                          <span className="text-white font-medium">{stat.value} {stat.unit}</span>
                           <span className={`text-xs ${isPositive ? 'text-green-400' : 'text-blue-400'}`}>
                             {isPositive ? '+' : ''}{stat.improvement.toFixed(1)}
                           </span>
@@ -699,21 +699,21 @@ export function FreeTierDashboard({ onFileUpload, onUpgrade, credits, isAuthenti
             </div>
 
             {/* Download Section */}
-            <Card className="bg-audio-panel-bg border-audio-panel-border">
+            <Card className="bg-gray-800 border-gray-700">
               <CardContent className="p-6">
                 <div className="text-center">
-                  <div className="w-16 h-16 bg-gradient-to-r from-crys-gold/20 to-yellow-400/20 rounded-xl flex items-center justify-center mx-auto mb-4">
-                    <Download className="w-8 h-8 text-crys-gold" />
+                  <div className="w-16 h-16 bg-gradient-to-r from-amber-500/20 to-yellow-400/20 rounded-xl flex items-center justify-center mx-auto mb-4">
+                    <Download className="w-8 h-8 text-amber-400" />
                   </div>
-                  <h3 className="text-crys-white font-semibold mb-2">Download Your Mastered Track</h3>
-                  <p className="text-crys-light-grey mb-6">Get your professionally mastered audio file</p>
+                  <h3 className="text-white font-semibold mb-2">Download Your Mastered Track</h3>
+                  <p className="text-gray-400 mb-6">Get your professionally mastered audio file</p>
                   
                   <div className="flex items-center justify-center gap-4">
-                    <Button className="bg-crys-gold hover:bg-crys-gold/90 text-crys-black">
+                    <Button className="bg-amber-500 hover:bg-amber-600 text-black">
                       <Download className="w-4 h-4 mr-2" />
                       Download WAV ($2.99)
                     </Button>
-                    <Button variant="outline" className="border-crys-gold/30 text-crys-gold hover:bg-crys-gold/10">
+                    <Button variant="outline" className="border-amber-500/30 text-amber-400 hover:bg-amber-500/10">
                       <Upload className="w-4 h-4 mr-2" />
                       Master Another Track
                     </Button>
@@ -728,21 +728,21 @@ export function FreeTierDashboard({ onFileUpload, onUpgrade, credits, isAuthenti
         {activeTab === 'library' && (
           <div className="space-y-8">
             <div className="text-center">
-              <h2 className="text-2xl font-bold text-crys-white mb-4">Your Audio Library</h2>
-              <p className="text-crys-light-grey">Manage your uploaded and mastered tracks</p>
+              <h2 className="text-2xl font-bold text-white mb-4">Your Audio Library</h2>
+              <p className="text-gray-400">Manage your uploaded and mastered tracks</p>
             </div>
 
             {uploadedFiles.length === 0 ? (
-              <Card className="bg-audio-panel-bg border-audio-panel-border">
+              <Card className="bg-gray-800 border-gray-700">
                 <CardContent className="p-12 text-center">
-                  <div className="w-16 h-16 bg-gradient-to-r from-crys-gold/20 to-yellow-400/20 rounded-xl flex items-center justify-center mx-auto mb-4">
-                    <FileText className="w-8 h-8 text-crys-gold" />
+                  <div className="w-16 h-16 bg-gradient-to-r from-amber-500/20 to-yellow-400/20 rounded-xl flex items-center justify-center mx-auto mb-4">
+                    <FileText className="w-8 h-8 text-amber-400" />
                   </div>
-                  <h3 className="text-crys-white font-semibold mb-2">No Tracks Yet</h3>
-                  <p className="text-crys-light-grey mb-6">Upload your first track to get started with professional mastering</p>
+                  <h3 className="text-white font-semibold mb-2">No Tracks Yet</h3>
+                  <p className="text-gray-400 mb-6">Upload your first track to get started with professional mastering</p>
                   <Button 
                     onClick={() => setActiveTab('upload')}
-                    className="bg-crys-gold hover:bg-crys-gold/90 text-crys-black"
+                    className="bg-amber-500 hover:bg-amber-600 text-black"
                   >
                     <Upload className="w-4 h-4 mr-2" />
                     Upload Track
@@ -752,16 +752,16 @@ export function FreeTierDashboard({ onFileUpload, onUpgrade, credits, isAuthenti
             ) : (
               <div className="grid gap-4">
                 {uploadedFiles.map((file) => (
-                  <Card key={file.id} className="bg-audio-panel-bg border-audio-panel-border">
+                  <Card key={file.id} className="bg-gray-800 border-gray-700">
                     <CardContent className="p-4">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-4">
-                          <div className="w-12 h-12 bg-gradient-to-r from-crys-gold/20 to-yellow-400/20 rounded-xl flex items-center justify-center">
-                            <FileAudio className="w-6 h-6 text-crys-gold" />
+                          <div className="w-12 h-12 bg-gradient-to-r from-amber-500/20 to-yellow-400/20 rounded-xl flex items-center justify-center">
+                            <FileAudio className="w-6 h-6 text-amber-400" />
                           </div>
                           <div>
-                            <h3 className="text-crys-white font-medium">{file.name}</h3>
-                            <p className="text-crys-light-grey text-sm">{formatFileSize(file.size)}</p>
+                            <h3 className="text-white font-medium">{file.name}</h3>
+                            <p className="text-gray-400 text-sm">{formatFileSize(file.size)}</p>
                           </div>
                         </div>
                         
@@ -770,13 +770,13 @@ export function FreeTierDashboard({ onFileUpload, onUpgrade, credits, isAuthenti
                             file.status === 'completed' ? 'bg-green-500/20 text-green-400' :
                             file.status === 'processing' ? 'bg-yellow-500/20 text-yellow-400' :
                             file.status === 'error' ? 'bg-red-500/20 text-red-400' :
-                            'bg-crys-gold/20 text-crys-gold'
+                            'bg-amber-500/20 text-amber-400'
                           }>
                             {file.status.charAt(0).toUpperCase() + file.status.slice(1)}
                           </Badge>
                           
                           {file.status === 'completed' && (
-                            <Button size="sm" className="bg-crys-gold hover:bg-crys-gold/90 text-crys-black">
+                            <Button size="sm" className="bg-amber-500 hover:bg-amber-600 text-black">
                               <Download className="w-4 h-4" />
                             </Button>
                           )}
