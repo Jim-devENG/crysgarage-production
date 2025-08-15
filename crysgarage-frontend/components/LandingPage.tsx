@@ -94,8 +94,7 @@ export function LandingPage({ onGetStarted, onTryMastering }: LandingPageProps) 
     { number: "10,000+", label: "Tracks Mastered" },
     { number: "2,500+", label: "Happy Artists" },
     { number: "< 2min", label: "Average Processing" },
-    { number: "99.9%", label: "Satisfaction Rate" },
-    { number: "ENHANCED", label: "Deployment Test" }
+    { number: "99.9%", label: "Satisfaction Rate" }
   ];
 
   const testimonials = [
