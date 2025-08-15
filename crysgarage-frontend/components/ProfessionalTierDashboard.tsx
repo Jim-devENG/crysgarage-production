@@ -394,19 +394,27 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
     const wasPlayingMastered = isPlayingMastered && masteredAudioElement && !masteredAudioElement.paused;
     const wasPlayingOriginal = isPlayingOriginal && originalAudioElement && !originalAudioElement.paused;
     
+    console.log('Genre change requested:', genre.name);
+    console.log('Current playback state - Mastered:', wasPlayingMastered, 'Original:', wasPlayingOriginal);
+    
     setSelectedGenre(genre);
     
-    // If real-time processing is available and audio is playing, use real-time
+    // If real-time processing is available and original audio is playing, use real-time
     if (isRealTimeProcessing && originalAudioElement && !originalAudioElement.paused) {
-      console.log('Using real-time processing for genre change while audio is playing');
+      console.log('Using real-time processing for genre change while original audio is playing');
+      applyGenrePresetRealTime(genre);
+      return;
+    }
+    
+    // If mastered audio is playing, just apply real-time processing without interrupting
+    if (isRealTimeProcessing && wasPlayingMastered) {
+      console.log('Mastered audio is playing, applying real-time processing without interruption');
       applyGenrePresetRealTime(genre);
       
-      // Restore mastered audio playback if it was playing
-      if (wasPlayingMastered && masteredAudioElement && processedAudioUrl) {
-        console.log('Restoring mastered audio playback after genre change');
-        setTimeout(() => {
-          masteredAudioElement.play().catch(console.error);
-        }, 100);
+      // Ensure mastered audio continues playing
+      if (masteredAudioElement && masteredAudioElement.paused) {
+        console.log('Resuming mastered audio playback after genre change');
+        masteredAudioElement.play().catch(console.error);
       }
       return;
     }
@@ -873,7 +881,7 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
                               console.log('Mastered audio element ready:', audioElement);
                               setMasteredAudioElement(audioElement);
                             }}
-                            key={`${processedAudioUrl}-${selectedGenre?.id}`} // Force re-render when URL or genre changes
+                            key={processedAudioUrl} // Force re-render when URL changes only
                           />
                          
                          {/* Frequency Spectrum Analysis for Mastered */}
