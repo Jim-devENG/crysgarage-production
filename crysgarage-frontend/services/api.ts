@@ -75,14 +75,14 @@ export interface User {
   join_date: string;
   total_tracks: number;
   total_spent: number;
-  avatar: string;
-  username: string;
-  role: 'member' | 'moderator' | 'admin' | 'premium';
-  joinDate: string;
-  posts: number;
-  followers: number;
-  following: number;
-  badges: string[];
+  avatar?: string;
+  username?: string;
+  role?: 'member' | 'moderator' | 'admin' | 'premium';
+  joinDate?: string;
+  posts?: number;
+  followers?: number;
+  following?: number;
+  badges?: string[];
 }
 
 export interface AudioStatus {
