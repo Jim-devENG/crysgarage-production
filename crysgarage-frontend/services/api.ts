@@ -78,6 +78,11 @@ export interface User {
   avatar?: string;
   username?: string;
   role?: string;
+  joinDate?: string;
+  posts?: any[];
+  followers?: any[];
+  following?: any[];
+  badges?: any[];
 }
 
 export interface AudioStatus {

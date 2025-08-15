@@ -85,6 +85,9 @@ const AudioProcessingStep: React.FC<AudioProcessingStepProps> = ({
           genres={availableGenres}
           selectedGenre={selectedGenre}
           onGenreSelect={handleGenreSelect}
+          isProcessing={isProcessing}
+          isRealTimeProcessing={false}
+          isPlayingOriginal={isPlayingOriginal}
         />
         
         {!selectedGenre && (
