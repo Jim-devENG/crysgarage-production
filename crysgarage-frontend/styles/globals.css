@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Audiowide&family=Chakra+Petch:wght@300;400;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -256,6 +258,106 @@
 
 html {
   font-size: var(--font-size);
+}
+
+/* Musical fancy fonts */
+.font-musical {
+  font-family: 'Orbitron', monospace;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.font-audiowide {
+  font-family: 'Audiowide', cursive;
+  letter-spacing: 0.05em;
+}
+
+.font-chakra {
+  font-family: 'Chakra Petch', sans-serif;
+  font-weight: 600;
+}
+
+/* Musical animations */
+@keyframes musical-glow {
+  0%, 100% {
+    text-shadow: 
+      0 0 5px #d4af37,
+      0 0 10px #d4af37,
+      0 0 15px #d4af37,
+      0 0 20px #d4af37;
+  }
+  50% {
+    text-shadow: 
+      0 0 10px #d4af37,
+      0 0 20px #d4af37,
+      0 0 30px #d4af37,
+      0 0 40px #d4af37;
+  }
+}
+
+@keyframes musical-pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+@keyframes musical-wave {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  25% {
+    transform: translateY(-5px);
+  }
+  75% {
+    transform: translateY(5px);
+  }
+}
+
+@keyframes musical-float {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  33% {
+    transform: translateY(-10px) rotate(1deg);
+  }
+  66% {
+    transform: translateY(5px) rotate(-1deg);
+  }
+}
+
+@keyframes musical-sparkle {
+  0%, 100% {
+    opacity: 0;
+    transform: scale(0) rotate(0deg);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1) rotate(180deg);
+  }
+}
+
+.musical-glow {
+  animation: musical-glow 3s ease-in-out infinite;
+}
+
+.musical-pulse {
+  animation: musical-pulse 2s ease-in-out infinite;
+}
+
+.musical-wave {
+  animation: musical-wave 4s ease-in-out infinite;
+}
+
+.musical-float {
+  animation: musical-float 6s ease-in-out infinite;
+}
+
+.musical-sparkle {
+  animation: musical-sparkle 2s ease-in-out infinite;
 }
 
 /* Custom animations for audio interface */

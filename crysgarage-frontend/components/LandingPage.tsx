@@ -286,20 +286,65 @@ export function LandingPage({ onGetStarted, onTryMastering }: LandingPageProps) 
           <div className="grid lg:grid-cols-2 gap-12 items-center max-w-7xl mx-auto">
             {/* Left Content */}
             <motion.div 
-              className="max-w-2xl"
+              className="max-w-2xl relative"
               variants={containerVariants}
               initial="hidden"
               animate="visible"
             >
+              {/* Musical Sparkle Effects */}
+              <motion.div
+                className="absolute -top-4 -right-4 text-2xl text-crys-gold musical-sparkle"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 2, delay: 1 }}
+              >
+                🎵
+              </motion.div>
+              <motion.div
+                className="absolute -bottom-4 -left-4 text-xl text-crys-gold musical-sparkle"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 2, delay: 1.5 }}
+              >
+                🎚️
+              </motion.div>
+              <motion.div
+                className="absolute top-1/2 -right-8 text-lg text-crys-gold musical-sparkle"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 2, delay: 2 }}
+              >
+                🎧
+              </motion.div>
               {/* Main Headline */}
               <motion.h1 
                 className="text-5xl md:text-6xl lg:text-7xl font-bold text-crys-white mb-6 leading-tight"
                 variants={itemVariants}
               >
-                Craft the Sound,
-                <span className="block text-transparent bg-gradient-to-r from-crys-gold to-crys-gold-muted bg-clip-text text-[64px]">
-                  Unleash the Future
-                </span>
+                <motion.span 
+                  className="block font-musical musical-glow"
+                  initial={{ opacity: 0, y: 30 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 1, delay: 0.2 }}
+                >
+                  Craft the Sound,
+                </motion.span>
+                <motion.span 
+                  className="block font-audiowide text-transparent bg-gradient-to-r from-crys-gold via-yellow-400 to-crys-gold-muted bg-clip-text text-[64px] musical-pulse"
+                  initial={{ opacity: 0, y: 30 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 1, delay: 0.4 }}
+                >
+                  Unleash the Realm
+                </motion.span>
+                <motion.span 
+                  className="block font-chakra text-crys-gold text-2xl md:text-3xl mt-4 musical-wave"
+                  initial={{ opacity: 0, y: 30 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 1, delay: 0.6 }}
+                >
+                  Can You Make It?
+                </motion.span>
               </motion.h1>
               
               {/* Subheadline */}
@@ -571,22 +616,31 @@ export function LandingPage({ onGetStarted, onTryMastering }: LandingPageProps) 
             viewport={{ once: true }}
           >
             <motion.h2 
-              className="text-4xl md:text-5xl font-bold text-crys-white mb-6"
+              className="text-4xl md:text-6xl font-bold text-crys-white mb-6 leading-tight"
               initial={{ scale: 0.9 }}
               whileInView={{ scale: 1 }}
               transition={{ duration: 0.8, delay: 0.2 }}
               viewport={{ once: true }}
             >
-              Ready to Transform Your Sound?
+              <span className="bg-gradient-to-r from-crys-gold via-yellow-400 to-crys-gold bg-clip-text text-transparent animate-pulse">
+                Craft the Sound,
+              </span>
+              <br />
+              <span className="bg-gradient-to-r from-purple-400 via-pink-500 to-crys-gold bg-clip-text text-transparent">
+                Unleash the Future
+              </span>
             </motion.h2>
             <motion.p 
-              className="text-xl text-crys-light-grey mb-8"
+              className="text-xl md:text-2xl text-crys-light-grey mb-8 font-medium italic"
               initial={{ opacity: 0 }}
               whileInView={{ opacity: 1 }}
               transition={{ duration: 0.8, delay: 0.4 }}
               viewport={{ once: true }}
             >
-              Join thousands of artists who've revolutionized their workflow with professional Crysgarage mastering.
+              <span className="text-crys-gold">♪</span> Can you make it? 
+              <span className="text-crys-gold">♫</span> Craft the sound, 
+              <span className="text-crys-gold">♪</span> Unleash the realm 
+              <span className="text-crys-gold">♫</span>
             </motion.p>
             
             <motion.div 
