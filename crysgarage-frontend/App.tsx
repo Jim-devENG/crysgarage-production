@@ -19,6 +19,7 @@ import { PaymentModal } from './components/PaymentModal';
 import { ProfileEditModal } from './components/ProfileEditModal';
 import { AutoAuthFix } from './components/AutoAuthFix';
 import { AdminDashboard } from './components/AdminDashboard';
+import { CommunityPage } from './components/CommunityPage';
 
 // Main App Component
 function AppContent() {
@@ -36,7 +37,7 @@ function AppContent() {
 
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
-  const [currentPage, setCurrentPage] = useState<'landing' | 'home' | 'dashboard' | 'professional' | 'advanced' | 'processing' | 'results' | 'studio' | 'help' | 'courses' | 'marketplace' | 'profile' | 'admin'>('landing');
+  const [currentPage, setCurrentPage] = useState<'landing' | 'home' | 'dashboard' | 'professional' | 'advanced' | 'processing' | 'results' | 'studio' | 'help' | 'courses' | 'marketplace' | 'profile' | 'admin' | 'community'>('landing');
   const [showBillingModal, setShowBillingModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showProfileEditModal, setShowProfileEditModal] = useState(false);
@@ -85,6 +86,8 @@ function AppContent() {
         setCurrentPage('courses');
       } else if (path === '/profile') {
         setCurrentPage('profile');
+      } else if (path === '/community') {
+        setCurrentPage('community');
       } else if (path === '/') {
         setCurrentPage('landing');
       } else {
@@ -177,6 +180,10 @@ function AppContent() {
       console.log('Setting current page to: admin');
       setCurrentPage('admin');
       window.history.pushState({}, '', '/admin');
+    } else if (section === 'community') {
+      console.log('Setting current page to: community');
+      setCurrentPage('community');
+      window.history.pushState({}, '', '/community');
     }
     // Note: 'professional' and 'advanced' are intentionally excluded to prevent direct navigation
   };
@@ -384,6 +391,10 @@ function AppContent() {
           
           {currentPage === 'admin' && (
             <AdminDashboard onBack={() => setCurrentPage('landing')} />
+          )}
+          
+          {currentPage === 'community' && (
+            <CommunityPage currentUser={user} />
           )}
         </main>
 
