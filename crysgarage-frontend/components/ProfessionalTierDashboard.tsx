@@ -335,10 +335,6 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
       const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
       setAudioContext(ctx);
       
-      // Create audio source from the original audio element
-      const source = ctx.createMediaElementSource(originalAudioElement);
-      setAudioSource(source);
-      
       // Create gain node
       const gain = ctx.createGain();
       setGainNode(gain);
@@ -347,8 +343,8 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
       const compressor = ctx.createDynamicsCompressor();
       setCompressorNode(compressor);
       
-      // Connect the processing chain
-      source.connect(compressor).connect(gain).connect(ctx.destination);
+      // Connect the processing chain (we'll connect the source when needed)
+      compressor.connect(gain).connect(ctx.destination);
       
       setIsRealTimeProcessing(true);
       console.log('Real-time audio processing initialized successfully');
@@ -385,18 +381,29 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
 
   // Handle real-time mastered audio playback
   const handleRealTimeMasteredPlay = () => {
-    if (!originalAudioElement || !isRealTimeProcessing) {
+    if (!originalAudioElement || !isRealTimeProcessing || !audioContext) {
       console.log('Cannot play real-time mastered audio - missing audio element or processing not initialized');
       return;
     }
     
-    setIsRealTimeMasteredPlaying(true);
-    setIsPlayingOriginal(false);
-    setIsPlayingMastered(false);
-    
-    // Play the original audio with real-time processing applied
-    originalAudioElement.play().catch(console.error);
-    console.log('Playing real-time mastered audio with current genre preset');
+    try {
+      // Create audio source from the original audio element (only when needed)
+      const source = audioContext.createMediaElementSource(originalAudioElement);
+      setAudioSource(source);
+      
+      // Connect the source to the processing chain
+      source.connect(compressorNode!);
+      
+      setIsRealTimeMasteredPlaying(true);
+      setIsPlayingOriginal(false);
+      setIsPlayingMastered(false);
+      
+      // Play the original audio with real-time processing applied
+      originalAudioElement.play().catch(console.error);
+      console.log('Playing real-time mastered audio with current genre preset');
+    } catch (error) {
+      console.error('Error setting up real-time mastered playback:', error);
+    }
   };
 
   const handleRealTimeMasteredPause = () => {
@@ -790,7 +797,7 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
                            setIsPlayingOriginal(true);
                            setIsRealTimeMasteredPlaying(false);
                            
-                           // Initialize real-time processing when audio starts playing
+                           // Initialize real-time processing when audio starts playing (but don't connect source)
                            if (!isRealTimeProcessing) {
                              console.log('Audio started playing, initializing real-time processing...');
                              setTimeout(() => {
@@ -803,14 +810,6 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
                          onAudioElementReady={(audioElement) => {
                            console.log('Original audio element ready:', audioElement);
                            setOriginalAudioElement(audioElement);
-                           
-                           // Initialize real-time processing immediately when element is ready
-                           if (!isRealTimeProcessing) {
-                             console.log('Audio element ready, initializing real-time processing...');
-                             setTimeout(() => {
-                               initializeRealTimeProcessing();
-                             }, 100);
-                           }
                          }}
                        />
                      
