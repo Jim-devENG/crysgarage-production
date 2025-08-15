@@ -330,7 +330,7 @@ export function LandingPage({ onGetStarted, onTryMastering }: LandingPageProps) 
                   Craft the Sound,
                 </motion.span>
                 <motion.span 
-                  className="block font-audiowide text-transparent bg-gradient-to-r from-crys-gold via-yellow-400 to-crys-gold-muted bg-clip-text text-4xl md:text-5xl lg:text-6xl musical-pulse whitespace-nowrap"
+                  className="block font-audiowide text-transparent bg-gradient-to-r from-crys-gold via-yellow-400 to-crys-gold-muted bg-clip-text text-3xl md:text-4xl lg:text-5xl musical-pulse whitespace-nowrap"
                   initial={{ opacity: 0, y: 30 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 1, delay: 0.4 }}
