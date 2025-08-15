@@ -47,6 +47,7 @@ export function Header({
   onShowProfile
 }: HeaderProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
 
   const handleNavigation = (section: string) => {
     if (onNavigate) {
@@ -89,10 +90,18 @@ export function Header({
     { id: 'home', label: 'Home', icon: <Home className="w-4 h-4" />, show: true },
     { id: 'dashboard', label: getDashboardLabel(), icon: <Zap className="w-4 h-4" />, show: !!user },
     { id: 'upload', label: 'Upload Audio', icon: <Music className="w-4 h-4" />, show: !!user },
-    { id: 'community', label: 'Community', icon: <Users className="w-4 h-4" />, show: true },
     { id: 'studio', label: 'Studio', icon: <CreditCard className="w-4 h-4" />, show: true },
-    { id: 'courses', label: 'Courses', icon: <BookOpen className="w-4 h-4" />, show: true },
-    { id: 'help', label: 'Help', icon: <LifeBuoy className="w-4 h-4" />, show: true },
+    { 
+      id: 'help', 
+      label: 'Help', 
+      icon: <LifeBuoy className="w-4 h-4" />, 
+      show: true,
+      dropdown: [
+        { id: 'help', label: 'Help Center', icon: <LifeBuoy className="w-4 h-4" /> },
+        { id: 'courses', label: 'Courses', icon: <BookOpen className="w-4 h-4" /> },
+        { id: 'community', label: 'Community', icon: <Users className="w-4 h-4" /> }
+      ]
+    },
   ];
 
   return (
@@ -123,14 +132,50 @@ export function Header({
           <nav className="hidden lg:flex items-center gap-2">
             {navigationItems.map((item) => (
               item.show && (
-                <button
-                  key={item.id}
-                  onClick={() => handleNavigation(item.id)}
-                  className={getNavItemClasses(item.id)}
-                >
-                  {item.icon}
-                  {item.label}
-                </button>
+                <div key={item.id} className="relative">
+                  {item.dropdown ? (
+                    <div
+                      onMouseEnter={() => setActiveDropdown(item.id)}
+                      onMouseLeave={() => setActiveDropdown(null)}
+                    >
+                      <button
+                        onClick={() => handleNavigation(item.id)}
+                        className={`${getNavItemClasses(item.id)} flex items-center gap-1`}
+                      >
+                        {item.icon}
+                        {item.label}
+                        <ChevronDown className="w-3 h-3" />
+                      </button>
+                      
+                      {/* Dropdown Menu */}
+                      {activeDropdown === item.id && (
+                        <div className="absolute top-full left-0 mt-1 w-48 bg-crys-black/95 border border-crys-graphite rounded-lg shadow-lg backdrop-blur-sm z-50">
+                          {item.dropdown.map((dropdownItem) => (
+                            <button
+                              key={dropdownItem.id}
+                              onClick={() => {
+                                handleNavigation(dropdownItem.id);
+                                setActiveDropdown(null);
+                              }}
+                              className="w-full flex items-center gap-3 px-4 py-3 text-left text-crys-white hover:text-crys-gold hover:bg-crys-gold/10 transition-colors first:rounded-t-lg last:rounded-b-lg"
+                            >
+                              {dropdownItem.icon}
+                              {dropdownItem.label}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => handleNavigation(item.id)}
+                      className={getNavItemClasses(item.id)}
+                    >
+                      {item.icon}
+                      {item.label}
+                    </button>
+                  )}
+                </div>
               )
             ))}
           </nav>
@@ -245,14 +290,49 @@ export function Header({
             <nav className="p-4 space-y-2">
               {navigationItems.map((item) => (
                 item.show && (
-                  <button
-                    key={item.id}
-                    onClick={() => handleNavigation(item.id)}
-                    className="w-full flex items-center gap-3 px-4 py-3 text-crys-white hover:text-crys-gold hover:bg-crys-gold/10 rounded-lg transition-colors text-left"
-                  >
-                    {item.icon}
-                    {item.label}
-                  </button>
+                  <div key={item.id}>
+                    {item.dropdown ? (
+                      <div>
+                        <button
+                          onClick={() => setActiveDropdown(activeDropdown === item.id ? null : item.id)}
+                          className="w-full flex items-center justify-between px-4 py-3 text-crys-white hover:text-crys-gold hover:bg-crys-gold/10 rounded-lg transition-colors text-left"
+                        >
+                          <div className="flex items-center gap-3">
+                            {item.icon}
+                            {item.label}
+                          </div>
+                          <ChevronDown className={`w-4 h-4 transition-transform ${activeDropdown === item.id ? 'rotate-180' : ''}`} />
+                        </button>
+                        
+                        {activeDropdown === item.id && (
+                          <div className="ml-4 mt-2 space-y-1">
+                            {item.dropdown.map((dropdownItem) => (
+                              <button
+                                key={dropdownItem.id}
+                                onClick={() => {
+                                  handleNavigation(dropdownItem.id);
+                                  setActiveDropdown(null);
+                                  setIsMobileMenuOpen(false);
+                                }}
+                                className="w-full flex items-center gap-3 px-4 py-2 text-crys-light-grey hover:text-crys-gold hover:bg-crys-gold/10 rounded-lg transition-colors text-left text-sm"
+                              >
+                                {dropdownItem.icon}
+                                {dropdownItem.label}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => handleNavigation(item.id)}
+                        className="w-full flex items-center gap-3 px-4 py-3 text-crys-white hover:text-crys-gold hover:bg-crys-gold/10 rounded-lg transition-colors text-left"
+                      >
+                        {item.icon}
+                        {item.label}
+                      </button>
+                    )}
+                  </div>
                 )
               ))}
               
