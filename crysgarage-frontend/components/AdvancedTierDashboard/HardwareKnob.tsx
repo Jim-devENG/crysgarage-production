@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 
 interface HardwareKnobProps {
   value: number;
@@ -10,7 +10,9 @@ interface HardwareKnobProps {
   color?: string;
   size?: 'small' | 'medium' | 'large';
   onChange: (value: number) => void;
-  onKnobClick?: () => void; // Add optional click handler
+  onKnobClick?: () => void;
+  isEditing?: boolean;
+  onEditingChange?: (editing: boolean) => void;
 }
 
 const HardwareKnob: React.FC<HardwareKnobProps> = ({
@@ -23,8 +25,14 @@ const HardwareKnob: React.FC<HardwareKnobProps> = ({
   color = '#f59e0b',
   size = 'medium',
   onChange,
-  onKnobClick
+  onKnobClick,
+  isEditing = false,
+  onEditingChange
 }) => {
+  const [isDragging, setIsDragging] = useState(false);
+  const [editValue, setEditValue] = useState(value.toString());
+  const knobRef = useRef<HTMLDivElement>(null);
+
   const sizeClasses = {
     small: 'w-10 h-10',
     medium: 'w-12 h-12',
@@ -40,45 +48,96 @@ const HardwareKnob: React.FC<HardwareKnobProps> = ({
   const percentage = ((value - min) / (max - min)) * 100;
   const rotation = (percentage / 100) * 270 - 135; // -135 to 135 degrees
 
+  // Update edit value when prop value changes
+  useEffect(() => {
+    setEditValue(value.toString());
+  }, [value]);
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+    onKnobClick?.();
+  };
+
+  const handleMouseMove = (e: MouseEvent) => {
+    if (!isDragging || !knobRef.current) return;
+
+    const rect = knobRef.current.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+    
+    const deltaX = e.clientX - centerX;
+    const deltaY = e.clientY - centerY;
+    
+    let angle = Math.atan2(deltaY, deltaX) * (180 / Math.PI);
+    angle = (angle + 360) % 360;
+    
+    // Convert angle to value (135° = max, -135° = min)
+    let normalizedAngle = angle;
+    if (normalizedAngle > 180) {
+      normalizedAngle = normalizedAngle - 360;
+    }
+    
+    const normalizedValue = (normalizedAngle + 135) / 270; // 0 to 1
+    const newValue = min + (max - min) * Math.max(0, Math.min(1, normalizedValue));
+    
+    // Apply step
+    const steppedValue = Math.round(newValue / step) * step;
+    const clampedValue = Math.max(min, Math.min(max, steppedValue));
+    
+    onChange(clampedValue);
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  useEffect(() => {
+    if (isDragging) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      return () => {
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+      };
+    }
+  }, [isDragging, value, min, max, step]);
+
+  const handleEditSubmit = () => {
+    const numValue = parseFloat(editValue);
+    if (!isNaN(numValue) && numValue >= min && numValue <= max) {
+      const steppedValue = Math.round(numValue / step) * step;
+      onChange(steppedValue);
+    } else {
+      setEditValue(value.toString());
+    }
+    onEditingChange?.(false);
+  };
+
+  const handleEditKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleEditSubmit();
+    } else if (e.key === 'Escape') {
+      setEditValue(value.toString());
+      onEditingChange?.(false);
+    }
+  };
+
   return (
     <div className="flex flex-col items-center space-y-2">
       {/* Knob Container */}
       <div 
-        className={`${sizeClasses[size]} bg-gradient-to-br from-gray-700 to-gray-800 rounded-full border-2 border-gray-600 flex items-center justify-center shadow-inner relative`}
+        ref={knobRef}
+        className={`${sizeClasses[size]} bg-gradient-to-br from-gray-700 to-gray-800 rounded-full border-2 border-gray-600 flex items-center justify-center shadow-inner relative cursor-pointer transition-all ${
+          isDragging ? 'scale-105 shadow-lg' : 'hover:scale-105'
+        }`}
+        onMouseDown={handleMouseDown}
         onClick={() => {
           console.log('=== KNOB CLICKED ===');
           console.log('Knob label:', label);
-          // This will help ensure audio context is resumed
           onKnobClick?.();
         }}
       >
-        {/* Hidden Input - Positioned to cover entire knob area */}
-        <input
-          type="range"
-          min={min}
-          max={max}
-          step={step}
-          value={value}
-          onChange={(e) => {
-            console.log('=== KNOB CHANGE EVENT ===');
-            console.log('Knob label:', label);
-            console.log('Old value:', value);
-            console.log('New value:', parseFloat(e.target.value));
-            onChange(parseFloat(e.target.value));
-          }}
-          className="knob-input"
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            width: '100%',
-            height: '100%',
-            opacity: 0,
-            cursor: 'pointer',
-            zIndex: 10
-          }}
-        />
-        
         {/* Knob Inner */}
         <div className={`${innerSizeClasses[size]} bg-gradient-to-br from-gray-600 to-gray-700 rounded-full border border-gray-500 relative`}>
           {/* Knob Indicator */}
@@ -114,12 +173,27 @@ const HardwareKnob: React.FC<HardwareKnobProps> = ({
         </div>
       </div>
       
-      {/* Label */}
+      {/* Label and Value */}
       <div className="text-center">
         <div className="text-xs text-gray-400 font-medium">{label}</div>
-        <div className="text-xs font-bold text-white">
-          {value}{unit}
-        </div>
+        {isEditing ? (
+          <input
+            type="number"
+            value={editValue}
+            onChange={(e) => setEditValue(e.target.value)}
+            onKeyPress={handleEditKeyPress}
+            onBlur={handleEditSubmit}
+            className="w-16 text-xs font-bold text-white bg-gray-800 border border-crys-gold rounded px-1 text-center"
+            autoFocus
+          />
+        ) : (
+          <div 
+            className="text-xs font-bold text-white cursor-pointer hover:text-crys-gold transition-colors"
+            onDoubleClick={() => onEditingChange?.(true)}
+          >
+            {value}{unit}
+          </div>
+        )}
       </div>
     </div>
   );
