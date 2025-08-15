@@ -77,7 +77,7 @@ export interface User {
   total_spent: number;
   avatar: string;
   username: string;
-  role: string;
+  role: 'member' | 'moderator' | 'admin' | 'premium';
   joinDate: string;
   posts: number;
   followers: number;
