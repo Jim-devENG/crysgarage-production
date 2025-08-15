@@ -14,6 +14,18 @@ interface AdvancedLimiterProps {
   enabled: boolean;
   onToggle: (enabled: boolean) => void;
   onManualInit?: () => void;
+  // New props for control buttons
+  onChannelModeChange?: (mode: 'L/R' | 'M/S') => void;
+  onShapeChange?: (shape: 'Linear' | 'Soft') => void;
+  onOversamplingChange?: (oversampling: 'x1' | 'x2' | 'x4') => void;
+  onLatencyChange?: (latency: 'Normal' | 'Low') => void;
+  onOvershootChange?: (overshoot: 'Clip' | 'Soft') => void;
+  // Current settings from audio effects
+  channelMode?: 'L/R' | 'M/S';
+  shape?: 'Linear' | 'Soft';
+  oversampling?: 'x1' | 'x2' | 'x4';
+  latency?: 'Normal' | 'Low';
+  overshoot?: 'Clip' | 'Soft';
 }
 
 const AdvancedLimiter: React.FC<AdvancedLimiterProps> = ({
@@ -27,16 +39,36 @@ const AdvancedLimiter: React.FC<AdvancedLimiterProps> = ({
   onOutputGainChange,
   enabled,
   onToggle,
-  onManualInit
+  onManualInit,
+  onChannelModeChange,
+  onShapeChange,
+  onOversamplingChange,
+  onLatencyChange,
+  onOvershootChange,
+  channelMode: externalChannelMode = 'L/R',
+  shape: externalShape = 'Linear',
+  oversampling: externalOversampling = 'x1',
+  latency: externalLatency = 'Normal',
+  overshoot: externalOvershoot = 'Clip'
 }) => {
   const [unityGainMonitoring, setUnityGainMonitoring] = useState(false);
   const [bypass, setBypass] = useState(false);
-  const [channelMode, setChannelMode] = useState<'L/R' | 'M/S'>('L/R');
-  const [shape, setShape] = useState<'Linear' | 'Soft'>('Linear');
-  const [oversampling, setOversampling] = useState<'x1' | 'x2' | 'x4'>('x1');
-  const [latency, setLatency] = useState<'Normal' | 'Low'>('Normal');
-  const [overshoot, setOvershoot] = useState<'Clip' | 'Soft'>('Clip');
+  
+  // Use external state if provided, otherwise use local state
+  const [localChannelMode, setLocalChannelMode] = useState<'L/R' | 'M/S'>(externalChannelMode);
+  const [localShape, setLocalShape] = useState<'Linear' | 'Soft'>(externalShape);
+  const [localOversampling, setLocalOversampling] = useState<'x1' | 'x2' | 'x4'>(externalOversampling);
+  const [localLatency, setLocalLatency] = useState<'Normal' | 'Low'>(externalLatency);
+  const [localOvershoot, setLocalOvershoot] = useState<'Clip' | 'Soft'>(externalOvershoot);
+  
   const [editingKnob, setEditingKnob] = useState<string | null>(null);
+
+  // Use external state if available, otherwise use local state
+  const channelMode = externalChannelMode || localChannelMode;
+  const shape = externalShape || localShape;
+  const oversampling = externalOversampling || localOversampling;
+  const latency = externalLatency || localLatency;
+  const overshoot = externalOvershoot || localOvershoot;
 
   const handleKnobChange = (setting: string, value: number) => {
     console.log(`A.O.M. Limiter knob changed: ${setting} = ${value}`);
@@ -55,6 +87,56 @@ const AdvancedLimiter: React.FC<AdvancedLimiterProps> = ({
   };
 
   const handleKnobClick = () => {
+    onManualInit?.();
+  };
+
+  const handleChannelModeChange = () => {
+    const newMode = channelMode === 'L/R' ? 'M/S' : 'L/R';
+    if (onChannelModeChange) {
+      onChannelModeChange(newMode);
+    } else {
+      setLocalChannelMode(newMode);
+    }
+    onManualInit?.();
+  };
+
+  const handleShapeChange = () => {
+    const newShape = shape === 'Linear' ? 'Soft' : 'Linear';
+    if (onShapeChange) {
+      onShapeChange(newShape);
+    } else {
+      setLocalShape(newShape);
+    }
+    onManualInit?.();
+  };
+
+  const handleOversamplingChange = () => {
+    const newOversampling = oversampling === 'x1' ? 'x2' : oversampling === 'x2' ? 'x4' : 'x1';
+    if (onOversamplingChange) {
+      onOversamplingChange(newOversampling);
+    } else {
+      setLocalOversampling(newOversampling);
+    }
+    onManualInit?.();
+  };
+
+  const handleLatencyChange = () => {
+    const newLatency = latency === 'Normal' ? 'Low' : 'Normal';
+    if (onLatencyChange) {
+      onLatencyChange(newLatency);
+    } else {
+      setLocalLatency(newLatency);
+    }
+    onManualInit?.();
+  };
+
+  const handleOvershootChange = () => {
+    const newOvershoot = overshoot === 'Clip' ? 'Soft' : 'Clip';
+    if (onOvershootChange) {
+      onOvershootChange(newOvershoot);
+    } else {
+      setLocalOvershoot(newOvershoot);
+    }
     onManualInit?.();
   };
 
@@ -215,11 +297,11 @@ const AdvancedLimiter: React.FC<AdvancedLimiterProps> = ({
               </div>
             </div>
 
-            {/* Bottom Control Buttons - Compact */}
+            {/* Bottom Control Buttons - Enhanced with Audio Processing */}
             <div className="grid grid-cols-5 gap-1">
               <div className="text-center">
                 <button
-                  onClick={() => setChannelMode(channelMode === 'L/R' ? 'M/S' : 'L/R')}
+                  onClick={handleChannelModeChange}
                   className={`w-full py-1 px-1 rounded text-[8px] font-medium transition-colors ${
                     channelMode === 'L/R' ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300'
                   }`}
@@ -231,7 +313,7 @@ const AdvancedLimiter: React.FC<AdvancedLimiterProps> = ({
 
               <div className="text-center">
                 <button
-                  onClick={() => setShape(shape === 'Linear' ? 'Soft' : 'Linear')}
+                  onClick={handleShapeChange}
                   className={`w-full py-1 px-1 rounded text-[8px] font-medium transition-colors ${
                     shape === 'Linear' ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300'
                   }`}
@@ -243,7 +325,7 @@ const AdvancedLimiter: React.FC<AdvancedLimiterProps> = ({
 
               <div className="text-center">
                 <button
-                  onClick={() => setOversampling(oversampling === 'x1' ? 'x2' : oversampling === 'x2' ? 'x4' : 'x1')}
+                  onClick={handleOversamplingChange}
                   className={`w-full py-1 px-1 rounded text-[8px] font-medium transition-colors ${
                     oversampling === 'x1' ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300'
                   }`}
@@ -255,7 +337,7 @@ const AdvancedLimiter: React.FC<AdvancedLimiterProps> = ({
 
               <div className="text-center">
                 <button
-                  onClick={() => setLatency(latency === 'Normal' ? 'Low' : 'Normal')}
+                  onClick={handleLatencyChange}
                   className={`w-full py-1 px-1 rounded text-[8px] font-medium transition-colors ${
                     latency === 'Normal' ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300'
                   }`}
@@ -267,7 +349,7 @@ const AdvancedLimiter: React.FC<AdvancedLimiterProps> = ({
 
               <div className="text-center">
                 <button
-                  onClick={() => setOvershoot(overshoot === 'Clip' ? 'Soft' : 'Clip')}
+                  onClick={handleOvershootChange}
                   className={`w-full py-1 px-1 rounded text-[8px] font-medium transition-colors ${
                     overshoot === 'Clip' ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300'
                   }`}

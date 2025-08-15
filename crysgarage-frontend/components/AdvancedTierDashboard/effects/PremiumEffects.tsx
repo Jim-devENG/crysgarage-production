@@ -110,6 +110,33 @@ const PremiumEffects: React.FC<PremiumEffectsProps> = ({
             enabled={audioEffects.gLimiter?.enabled || false}
             onToggle={(enabled) => onTogglePremiumEffect('gLimiter', enabled)}
             onManualInit={onManualInit}
+            // Control button handlers
+            onChannelModeChange={(mode) => {
+              onUpdateEffectSettings('gLimiter', { ...audioEffects.gLimiter, channelMode: mode });
+              onManualInit?.();
+            }}
+            onShapeChange={(shape) => {
+              onUpdateEffectSettings('gLimiter', { ...audioEffects.gLimiter, shape: shape });
+              onManualInit?.();
+            }}
+            onOversamplingChange={(oversampling) => {
+              onUpdateEffectSettings('gLimiter', { ...audioEffects.gLimiter, oversampling: oversampling });
+              onManualInit?.();
+            }}
+            onLatencyChange={(latency) => {
+              onUpdateEffectSettings('gLimiter', { ...audioEffects.gLimiter, latency: latency });
+              onManualInit?.();
+            }}
+            onOvershootChange={(overshoot) => {
+              onUpdateEffectSettings('gLimiter', { ...audioEffects.gLimiter, overshoot: overshoot });
+              onManualInit?.();
+            }}
+            // Current settings
+            channelMode={audioEffects.gLimiter?.channelMode || 'L/R'}
+            shape={audioEffects.gLimiter?.shape || 'Linear'}
+            oversampling={audioEffects.gLimiter?.oversampling || 'x1'}
+            latency={audioEffects.gLimiter?.latency || 'Normal'}
+            overshoot={audioEffects.gLimiter?.overshoot || 'Clip'}
           />
         </div>
 
