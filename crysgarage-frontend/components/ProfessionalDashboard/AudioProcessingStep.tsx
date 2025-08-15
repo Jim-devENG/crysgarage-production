@@ -15,6 +15,7 @@ interface AudioProcessingStepProps {
   isProcessing: boolean;
   setIsProcessing: (processing: boolean) => void;
   onBack: () => void;
+  onNext: () => void;
 }
 
 const AudioProcessingStep: React.FC<AudioProcessingStepProps> = ({
@@ -24,7 +25,8 @@ const AudioProcessingStep: React.FC<AudioProcessingStepProps> = ({
   onProcessingComplete,
   isProcessing,
   setIsProcessing,
-  onBack
+  onBack,
+  onNext
 }) => {
   const [isAudioReady, setIsAudioReady] = useState(false);
   const [isPlayingOriginal, setIsPlayingOriginal] = useState(false);
@@ -161,6 +163,21 @@ const AudioProcessingStep: React.FC<AudioProcessingStepProps> = ({
           )}
         </div>
       </div>
+
+      {/* Next Button */}
+      {selectedGenre && (
+        <div className="flex justify-center">
+          <button
+            onClick={onNext}
+            className="px-8 py-4 bg-crys-gold hover:bg-yellow-400 text-black font-semibold rounded-lg transition-colors flex items-center space-x-3"
+          >
+            <span>Next: Download Your Mastered Audio</span>
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+        </div>
+      )}
     </div>
   );
 };

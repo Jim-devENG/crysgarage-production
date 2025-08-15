@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ArrowLeft, Download, RotateCcw } from 'lucide-react';
+import { GENRE_PRESETS } from './utils/genrePresets';
 
 interface ExportStepProps {
   selectedFile: File | null;
@@ -19,20 +20,151 @@ const ExportStep: React.FC<ExportStepProps> = ({
   const [downloadFormat, setDownloadFormat] = useState<'mp3' | 'wav'>('wav');
   const [isDownloading, setIsDownloading] = useState(false);
 
+  // Helper functions to get genre preset values
+  const getGenreGain = (genreId: string) => {
+    const preset = GENRE_PRESETS[genreId];
+    return preset ? Math.round((preset.gain - 1) * 20) : 0; // Convert to dB
+  };
+
+  const getGenreCompression = (genreId: string) => {
+    const preset = GENRE_PRESETS[genreId];
+    return preset ? `${preset.compression.ratio}:1` : '2:1';
+  };
+
+  const getGenreTarget = (genreId: string) => {
+    const preset = GENRE_PRESETS[genreId];
+    return preset ? preset.targetLufs : -9.0;
+  };
+
+  const getGenrePeak = (genreId: string) => {
+    const preset = GENRE_PRESETS[genreId];
+    return preset ? preset.truePeak : -0.3;
+  };
+
+  const processAudioWithGenre = async (audioFile: File, genre: any): Promise<Blob> => {
+    return new Promise(async (resolve, reject) => {
+      try {
+        // Create audio context for offline processing
+        const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+        
+        // Read the audio file
+        const arrayBuffer = await audioFile.arrayBuffer();
+        const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+        
+        // Create offline context for processing
+        const offlineContext = new OfflineAudioContext(
+          audioBuffer.numberOfChannels,
+          audioBuffer.length,
+          audioBuffer.sampleRate
+        );
+        
+        // Create audio source
+        const source = offlineContext.createBufferSource();
+        source.buffer = audioBuffer;
+        
+        // Create processing nodes
+        const gainNode = offlineContext.createGain();
+        const compressorNode = offlineContext.createDynamicsCompressor();
+        
+        // Get genre preset
+        const preset = genre && GENRE_PRESETS[genre.id] ? GENRE_PRESETS[genre.id] : {
+          gain: 1.0,
+          compression: { threshold: -24, ratio: 2, attack: 0.01, release: 0.25 },
+          eq: { low: 1.0, mid: 1.0, high: 1.0 },
+          truePeak: -0.3,
+          targetLufs: -9.0
+        };
+        
+        // Apply genre preset
+        gainNode.gain.value = preset.gain;
+        compressorNode.threshold.value = preset.compression.threshold;
+        compressorNode.ratio.value = preset.compression.ratio;
+        compressorNode.attack.value = preset.compression.attack;
+        compressorNode.release.value = preset.compression.release;
+        compressorNode.knee.value = 10;
+        
+        // Connect the processing chain
+        source.connect(compressorNode);
+        compressorNode.connect(gainNode);
+        gainNode.connect(offlineContext.destination);
+        
+        // Start processing
+        source.start(0);
+        
+        // Render the processed audio
+        const renderedBuffer = await offlineContext.startRendering();
+        
+        // Convert to blob
+        const numberOfChannels = renderedBuffer.numberOfChannels;
+        const length = renderedBuffer.length;
+        const sampleRate = renderedBuffer.sampleRate;
+        
+        // Create WAV file
+        const wavBuffer = new ArrayBuffer(44 + length * numberOfChannels * 2);
+        const view = new DataView(wavBuffer);
+        
+        // WAV header
+        const writeString = (offset: number, string: string) => {
+          for (let i = 0; i < string.length; i++) {
+            view.setUint8(offset + i, string.charCodeAt(i));
+          }
+        };
+        
+        writeString(0, 'RIFF');
+        view.setUint32(4, 36 + length * numberOfChannels * 2, true);
+        writeString(8, 'WAVE');
+        writeString(12, 'fmt ');
+        view.setUint32(16, 16, true);
+        view.setUint16(20, 1, true);
+        view.setUint16(22, numberOfChannels, true);
+        view.setUint32(24, sampleRate, true);
+        view.setUint32(28, sampleRate * numberOfChannels * 2, true);
+        view.setUint16(32, numberOfChannels * 2, true);
+        view.setUint16(34, 16, true);
+        writeString(36, 'data');
+        view.setUint32(40, length * numberOfChannels * 2, true);
+        
+        // Write audio data
+        let offset = 44;
+        for (let i = 0; i < length; i++) {
+          for (let channel = 0; channel < numberOfChannels; channel++) {
+            const sample = Math.max(-1, Math.min(1, renderedBuffer.getChannelData(channel)[i]));
+            view.setInt16(offset, sample * 0x7FFF, true);
+            offset += 2;
+          }
+        }
+        
+        // Create blob
+        const blob = new Blob([wavBuffer], { type: 'audio/wav' });
+        resolve(blob);
+        
+      } catch (error) {
+        console.error('Error processing audio:', error);
+        reject(error);
+      }
+    });
+  };
+
   const handleDownload = async () => {
-    if (!processedAudioUrl) return;
+    if (!selectedFile || !selectedGenre) return;
 
     setIsDownloading(true);
     
     try {
-      // Create a temporary link element
+      console.log('Processing audio for download...');
+      
+      // Process the audio with the selected genre
+      const processedBlob = await processAudioWithGenre(selectedFile, selectedGenre);
+      
+      // Create download link
+      const url = URL.createObjectURL(processedBlob);
       const link = document.createElement('a');
-      link.href = processedAudioUrl;
+      link.href = url;
       
       // Generate filename
-      const originalName = selectedFile?.name || 'audio';
+      const originalName = selectedFile.name;
       const nameWithoutExt = originalName.replace(/\.[^/.]+$/, '');
-      const genreName = selectedGenre?.name || 'mastered';
+      const genreName = selectedGenre.name;
       const filename = `${nameWithoutExt}_${genreName}_mastered.${downloadFormat}`;
       
       link.download = filename;
@@ -40,9 +172,16 @@ const ExportStep: React.FC<ExportStepProps> = ({
       link.click();
       document.body.removeChild(link);
       
-      console.log(`Downloaded ${filename}`);
+      // Clean up
+      URL.revokeObjectURL(url);
+      
+      console.log(`Successfully processed and downloaded: ${filename}`);
+      
+      // Show success message
+      alert(`Successfully processed and downloaded: ${filename}`);
     } catch (error) {
-      console.error('Error downloading file:', error);
+      console.error('Error processing/downloading file:', error);
+      alert('Error processing audio. Please try again.');
     } finally {
       setIsDownloading(false);
     }
@@ -81,6 +220,31 @@ const ExportStep: React.FC<ExportStepProps> = ({
             <p className="text-xs text-gray-500">Professional mastering preset</p>
           </div>
         </div>
+        
+        {/* Applied Changes */}
+        {selectedGenre && (
+          <div className="mt-4 bg-gray-700 rounded-lg p-4">
+            <h4 className="font-medium mb-3 text-crys-gold">Applied Changes</h4>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="text-center">
+                <div className="text-lg font-semibold text-crys-gold">+{getGenreGain(selectedGenre.id)}dB</div>
+                <div className="text-xs text-gray-400">Gain Boost</div>
+              </div>
+              <div className="text-center">
+                <div className="text-lg font-semibold text-crys-gold">{getGenreCompression(selectedGenre.id)}</div>
+                <div className="text-xs text-gray-400">Compression</div>
+              </div>
+              <div className="text-center">
+                <div className="text-lg font-semibold text-crys-gold">{getGenreTarget(selectedGenre.id)} LUFS</div>
+                <div className="text-xs text-gray-400">Target Loudness</div>
+              </div>
+              <div className="text-center">
+                <div className="text-lg font-semibold text-crys-gold">{getGenrePeak(selectedGenre.id)} dB</div>
+                <div className="text-xs text-gray-400">True Peak</div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Download Options */}
@@ -125,9 +289,9 @@ const ExportStep: React.FC<ExportStepProps> = ({
           <div className="bg-gray-700 rounded-lg p-4">
             <button
               onClick={handleDownload}
-              disabled={!processedAudioUrl || isDownloading}
+              disabled={!selectedGenre || isDownloading}
               className={`w-full py-4 px-6 rounded-lg font-semibold transition-all flex items-center justify-center space-x-2 ${
-                processedAudioUrl && !isDownloading
+                selectedGenre && !isDownloading
                   ? 'bg-crys-gold hover:bg-yellow-400 text-black'
                   : 'bg-gray-600 text-gray-400 cursor-not-allowed'
               }`}
@@ -135,7 +299,7 @@ const ExportStep: React.FC<ExportStepProps> = ({
               {isDownloading ? (
                 <>
                   <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin"></div>
-                  <span>Downloading...</span>
+                  <span>Downloading {downloadFormat.toUpperCase()}...</span>
                 </>
               ) : (
                 <>
@@ -145,10 +309,15 @@ const ExportStep: React.FC<ExportStepProps> = ({
               )}
             </button>
             
-            {processedAudioUrl && (
-              <p className="text-xs text-gray-400 mt-2 text-center">
-                Your mastered audio is ready for download
-              </p>
+            {selectedGenre && (
+              <div className="mt-3 text-center space-y-1">
+                <p className="text-xs text-gray-400">
+                  Your audio will be processed with {selectedGenre.name} mastering
+                </p>
+                <p className="text-xs text-crys-gold">
+                  Format: {downloadFormat.toUpperCase()} • Quality: {downloadFormat === 'wav' ? 'Lossless' : 'Compressed'}
+                </p>
+              </div>
             )}
           </div>
         </div>

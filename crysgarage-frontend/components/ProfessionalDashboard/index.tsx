@@ -67,6 +67,14 @@ const ProfessionalDashboard: React.FC<ProfessionalTierDashboardProps> = ({ onFil
   const handleProcessingComplete = (audioUrl: string) => {
     setProcessedAudioUrl(audioUrl);
     setIsProcessing(false);
+  };
+
+  const handleNextToDownload = () => {
+    // Generate a processed audio URL if not already available
+    if (!processedAudioUrl && selectedFile && selectedGenre) {
+      const audioUrl = URL.createObjectURL(selectedFile);
+      setProcessedAudioUrl(audioUrl);
+    }
     nextStep();
   };
 
@@ -89,6 +97,7 @@ const ProfessionalDashboard: React.FC<ProfessionalTierDashboardProps> = ({ onFil
             isProcessing={isProcessing}
             setIsProcessing={setIsProcessing}
             onBack={prevStep}
+            onNext={handleNextToDownload}
           />
         );
       case 3:
