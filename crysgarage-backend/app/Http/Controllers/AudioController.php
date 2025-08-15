@@ -669,4 +669,154 @@ class AudioController extends Controller
     {
         return $this->getMasteringResults($audioId);
     }
+
+    /**
+     * Clean up completed audio files (called automatically by scheduler)
+     */
+    public function cleanupCompletedFiles()
+    {
+        try {
+            $cutoffTime = now()->subMinutes(10); // 10 minutes after completion
+            
+            $completedAudios = Audio::where('status', 'done')
+                ->where('processing_completed_at', '<', $cutoffTime)
+                ->get();
+
+            $deletedCount = 0;
+            
+            foreach ($completedAudios as $audio) {
+                try {
+                    // Delete original file
+                    $originalPath = "uploads/{$audio->id}.wav";
+                    if (Storage::disk('local')->exists($originalPath)) {
+                        Storage::disk('local')->delete($originalPath);
+                    }
+
+                    // Delete processed files
+                    if ($audio->output_files) {
+                        $outputFiles = json_decode($audio->output_files, true);
+                        if (is_array($outputFiles)) {
+                            foreach ($outputFiles as $format => $path) {
+                                if (Storage::disk('local')->exists($path)) {
+                                    Storage::disk('local')->delete($path);
+                                }
+                            }
+                        }
+                    }
+
+                    // Delete processing status file
+                    $processingPath = "processing/{$audio->id}.json";
+                    if (Storage::disk('local')->exists($processingPath)) {
+                        Storage::disk('local')->delete($processingPath);
+                    }
+
+                    // Delete database record
+                    $audio->delete();
+                    $deletedCount++;
+
+                    Log::info('Cleaned up completed audio file', [
+                        'audio_id' => $audio->id,
+                        'file_name' => $audio->file_name
+                    ]);
+
+                } catch (\Exception $e) {
+                    Log::error('Error cleaning up audio file', [
+                        'audio_id' => $audio->id,
+                        'error' => $e->getMessage()
+                    ]);
+                }
+            }
+
+            Log::info('Audio cleanup completed', [
+                'deleted_count' => $deletedCount
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'deleted_count' => $deletedCount
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Audio cleanup failed', [
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'error' => 'Cleanup failed: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Manual cleanup endpoint for immediate cleanup
+     */
+    public function manualCleanup(Request $request)
+    {
+        try {
+            // Validate request
+            $request->validate([
+                'older_than_minutes' => 'integer|min:1|max:60'
+            ]);
+
+            $olderThan = $request->input('older_than_minutes', 10);
+            $cutoffTime = now()->subMinutes($olderThan);
+            
+            $completedAudios = Audio::where('status', 'done')
+                ->where('processing_completed_at', '<', $cutoffTime)
+                ->get();
+
+            $deletedCount = 0;
+            
+            foreach ($completedAudios as $audio) {
+                try {
+                    // Delete original file
+                    $originalPath = "uploads/{$audio->id}.wav";
+                    if (Storage::disk('local')->exists($originalPath)) {
+                        Storage::disk('local')->delete($originalPath);
+                    }
+
+                    // Delete processed files
+                    if ($audio->output_files) {
+                        $outputFiles = json_decode($audio->output_files, true);
+                        if (is_array($outputFiles)) {
+                            foreach ($outputFiles as $format => $path) {
+                                if (Storage::disk('local')->exists($path)) {
+                                    Storage::disk('local')->delete($path);
+                                }
+                            }
+                        }
+                    }
+
+                    // Delete processing status file
+                    $processingPath = "processing/{$audio->id}.json";
+                    if (Storage::disk('local')->exists($processingPath)) {
+                        Storage::disk('local')->delete($processingPath);
+                    }
+
+                    // Delete database record
+                    $audio->delete();
+                    $deletedCount++;
+
+                } catch (\Exception $e) {
+                    Log::error('Error cleaning up audio file', [
+                        'audio_id' => $audio->id,
+                        'error' => $e->getMessage()
+                    ]);
+                }
+            }
+
+            return response()->json([
+                'success' => true,
+                'deleted_count' => $deletedCount,
+                'message' => "Cleaned up {$deletedCount} audio files older than {$olderThan} minutes"
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Manual cleanup failed: ' . $e->getMessage()
+            ], 500);
+        }
+    }
 } 

@@ -291,3 +291,9 @@ Route::get('/public/status/{audio_id}', [AudioController::class, 'getPublicStatu
 
 // Public result route for free tier (no auth required)
 Route::get('/public/result/{audio_id}', [AudioController::class, 'getPublicResult']);
+
+// Cleanup routes (admin only)
+Route::middleware(ApiTokenAuth::class)->group(function () {
+    Route::post('/admin/audio/cleanup', [AudioController::class, 'manualCleanup']);
+    Route::post('/admin/audio/cleanup-auto', [AudioController::class, 'cleanupCompletedFiles']);
+});
