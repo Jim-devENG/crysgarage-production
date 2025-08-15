@@ -1,6 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Play, Pause } from 'lucide-react';
-import StyledAudioPlayer from '../../StyledAudioPlayer';
 import FrequencySpectrum from '../../FrequencySpectrum';
 import { GenrePreset } from '../types';
 
@@ -23,21 +22,18 @@ const AudioPlayers: React.FC<AudioPlayersProps> = ({
   isProcessing,
   setIsProcessing
 }) => {
-  const [isPlayingOriginal, setIsPlayingOriginal] = useState(false);
   const [isPlayingMastered, setIsPlayingMastered] = useState(false);
-  const [originalAudioElement, setOriginalAudioElement] = useState<HTMLAudioElement | null>(null);
   const [audioContext, setAudioContext] = useState<AudioContext | null>(null);
   const [audioSource, setAudioSource] = useState<MediaElementAudioSourceNode | null>(null);
   const [gainNode, setGainNode] = useState<GainNode | null>(null);
   const [compressorNode, setCompressorNode] = useState<DynamicsCompressorNode | null>(null);
+  const [originalAudioElement, setOriginalAudioElement] = useState<HTMLAudioElement | null>(null);
   const [isProcessingReady, setIsProcessingReady] = useState(false);
 
-  // Initialize audio processing when audio element is ready
+  // Initialize audio processing when component mounts
   useEffect(() => {
-    if (originalAudioElement && !audioContext) {
-      initializeAudioProcessing();
-    }
-  }, [originalAudioElement]);
+    initializeAudioProcessing();
+  }, []);
 
   // Apply genre preset when genre changes
   useEffect(() => {
@@ -60,8 +56,6 @@ const AudioPlayers: React.FC<AudioPlayersProps> = ({
   }, [audioContext]);
 
   const initializeAudioProcessing = async () => {
-    if (!originalAudioElement) return;
-
     try {
       console.log('Initializing audio processing...');
       
@@ -123,28 +117,21 @@ const AudioPlayers: React.FC<AudioPlayersProps> = ({
     }
   };
 
-  const handleOriginalPlay = () => {
-    setIsPlayingOriginal(true);
-    setIsPlayingMastered(false);
-  };
-
-  const handleOriginalPause = () => {
-    setIsPlayingOriginal(false);
-  };
-
   const handleMasteredPlay = async () => {
-    if (!originalAudioElement || !isProcessingReady) {
+    if (!isProcessingReady) {
       console.log('Cannot play mastered audio - not ready');
       return;
     }
 
     try {
-      // Create audio source only once
-      if (!audioSource) {
-        const source = audioContext!.createMediaElementSource(originalAudioElement);
-        source.connect(compressorNode!);
-        setAudioSource(source);
-      }
+      // Create a hidden audio element for the mastered playback
+      const audio = new Audio(selectedFile ? URL.createObjectURL(selectedFile) : '');
+      
+      // Create audio source
+      const source = audioContext!.createMediaElementSource(audio);
+      source.connect(compressorNode!);
+      setAudioSource(source);
+      setOriginalAudioElement(audio);
 
       // Apply current genre preset
       if (selectedGenre) {
@@ -152,10 +139,9 @@ const AudioPlayers: React.FC<AudioPlayersProps> = ({
       }
 
       setIsPlayingMastered(true);
-      setIsPlayingOriginal(false);
       
       // Play the audio
-      await originalAudioElement.play();
+      await audio.play();
       console.log('Playing mastered audio');
       
     } catch (error) {
@@ -172,101 +158,66 @@ const AudioPlayers: React.FC<AudioPlayersProps> = ({
   };
 
   return (
-    <div className="grid md:grid-cols-2 gap-6">
-      {/* Original Audio */}
-      <div className="bg-gray-700 rounded-xl p-6">
-        <h4 className="text-lg font-semibold mb-4 text-center">Original Audio</h4>
-        <div className="space-y-4">
-          <StyledAudioPlayer
-            src={selectedFile ? URL.createObjectURL(selectedFile) : ''}
-            title="Original Audio"
-            onPlay={handleOriginalPlay}
-            onPause={handleOriginalPause}
-            className="w-full"
-            onAudioElementReady={(audioElement) => {
-              setOriginalAudioElement(audioElement);
-            }}
-          />
-          
-          <FrequencySpectrum
-            audioElement={originalAudioElement}
-            isPlaying={isPlayingOriginal}
-            title="Original Frequency Spectrum"
-            targetLufs={selectedGenre ? genrePresets[selectedGenre.id]?.targetLufs : undefined}
-            targetTruePeak={selectedGenre ? genrePresets[selectedGenre.id]?.truePeak : undefined}
-          />
-          
-          <div className="text-center">
-            <p className="text-xs text-gray-400">Original, unprocessed audio</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Mastered Audio */}
-      <div className="bg-gray-700 rounded-xl p-6">
-        <h4 className="text-lg font-semibold mb-4 text-center text-crys-gold">
-          {selectedGenre ? `${selectedGenre.name} Mastered` : 'Mastered Audio'}
-        </h4>
-        <div className="space-y-4">
-          {isProcessingReady ? (
-            <>
-              {/* Mastered audio controls */}
-              <div className="bg-gray-600 rounded-lg p-4">
-                <div className="flex items-center justify-center space-x-4">
-                  <button
-                    onClick={isPlayingMastered ? handleMasteredPause : handleMasteredPlay}
-                    disabled={!selectedGenre}
-                    className={`p-3 rounded-full transition-all duration-300 ${
-                      isPlayingMastered
-                        ? 'bg-red-500 hover:bg-red-600 text-white'
-                        : 'bg-crys-gold hover:bg-yellow-400 text-black'
-                    } disabled:bg-gray-500 disabled:cursor-not-allowed`}
-                  >
-                    {isPlayingMastered ? (
-                      <Pause className="w-6 h-6" />
-                    ) : (
-                      <Play className="w-6 h-6" />
-                    )}
-                  </button>
-                  
-                  {isPlayingMastered && (
-                    <div className="flex items-center space-x-2">
-                      <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                      <span className="text-sm text-green-400 font-medium">Live Processing</span>
-                    </div>
+    <div className="bg-gray-700 rounded-xl p-6">
+      <div className="space-y-4">
+        {isProcessingReady ? (
+          <>
+            {/* Mastered audio controls */}
+            <div className="bg-gray-600 rounded-lg p-4">
+              <div className="flex items-center justify-center space-x-4">
+                <button
+                  onClick={isPlayingMastered ? handleMasteredPause : handleMasteredPlay}
+                  disabled={!selectedGenre}
+                  className={`p-3 rounded-full transition-all duration-300 ${
+                    isPlayingMastered
+                      ? 'bg-red-500 hover:bg-red-600 text-white'
+                      : 'bg-crys-gold hover:bg-yellow-400 text-black'
+                  } disabled:bg-gray-500 disabled:cursor-not-allowed`}
+                >
+                  {isPlayingMastered ? (
+                    <Pause className="w-6 h-6" />
+                  ) : (
+                    <Play className="w-6 h-6" />
                   )}
-                </div>
+                </button>
                 
-                <div className="mt-3 text-center">
-                  <p className="text-xs text-gray-400">
-                    {selectedGenre 
-                      ? `${selectedGenre.name} preset applied in real-time`
-                      : 'Select a genre to enable mastering'
-                    }
-                  </p>
-                </div>
+                {isPlayingMastered && (
+                  <div className="flex items-center space-x-2">
+                    <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                    <span className="text-sm text-green-400 font-medium">Live Processing</span>
+                  </div>
+                )}
               </div>
               
-              <FrequencySpectrum
-                audioElement={originalAudioElement}
-                isPlaying={isPlayingMastered}
-                title={`${selectedGenre?.name || 'Mastered'} Frequency Spectrum`}
-                targetLufs={selectedGenre ? genrePresets[selectedGenre.id]?.targetLufs : undefined}
-                targetTruePeak={selectedGenre ? genrePresets[selectedGenre.id]?.truePeak : undefined}
-              />
-            </>
-          ) : (
-            <div className="bg-gray-600 rounded-lg p-6 text-center">
-              <div className="w-6 h-6 border-2 border-crys-gold border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
-              <p className="text-xs text-gray-400">Initializing audio processing...</p>
+              <div className="mt-3 text-center">
+                <p className="text-xs text-gray-400">
+                  {selectedGenre 
+                    ? `${selectedGenre.name} preset applied in real-time`
+                    : 'Select a genre to enable mastering'
+                  }
+                </p>
+              </div>
             </div>
-          )}
-          
-          <div className="text-center">
-            <p className="text-xs text-crys-gold">
-              {selectedGenre ? `Real-time ${selectedGenre.name} mastering` : 'Real-time audio processing'}
-            </p>
+            
+            <FrequencySpectrum
+              audioElement={originalAudioElement}
+              isPlaying={isPlayingMastered}
+              title={`${selectedGenre?.name || 'Mastered'} Frequency Spectrum`}
+              targetLufs={selectedGenre ? genrePresets[selectedGenre.id]?.targetLufs : undefined}
+              targetTruePeak={selectedGenre ? genrePresets[selectedGenre.id]?.truePeak : undefined}
+            />
+          </>
+        ) : (
+          <div className="bg-gray-600 rounded-lg p-6 text-center">
+            <div className="w-6 h-6 border-2 border-crys-gold border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+            <p className="text-xs text-gray-400">Initializing audio processing...</p>
           </div>
+        )}
+        
+        <div className="text-center">
+          <p className="text-xs text-crys-gold">
+            {selectedGenre ? `Real-time ${selectedGenre.name} mastering` : 'Real-time audio processing'}
+          </p>
         </div>
       </div>
     </div>
