@@ -380,23 +380,40 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
     compressorNode.knee.setValueAtTime(10, compressorNode.context.currentTime);
     
     console.log(`Applied ${genre.name} preset in real-time`);
+    
+    // If mastered audio is playing, don't interrupt it
+    if (isPlayingMastered && masteredAudioElement && !masteredAudioElement.paused) {
+      console.log('Mastered audio is playing, real-time changes applied to original audio only');
+    }
   };
 
   const processAudioWithGenre = async (genre: GenreType) => {
     if (!selectedFile) return;
     
+    // Store current playback state
+    const wasPlayingMastered = isPlayingMastered && masteredAudioElement && !masteredAudioElement.paused;
+    const wasPlayingOriginal = isPlayingOriginal && originalAudioElement && !originalAudioElement.paused;
+    
     setSelectedGenre(genre);
     
     // If real-time processing is available and audio is playing, use real-time
     if (isRealTimeProcessing && originalAudioElement && !originalAudioElement.paused) {
-      console.log('Using real-time processing for genre change');
+      console.log('Using real-time processing for genre change while audio is playing');
       applyGenrePresetRealTime(genre);
+      
+      // Restore mastered audio playback if it was playing
+      if (wasPlayingMastered && masteredAudioElement && processedAudioUrl) {
+        console.log('Restoring mastered audio playback after genre change');
+        setTimeout(() => {
+          masteredAudioElement.play().catch(console.error);
+        }, 100);
+      }
       return;
     }
     
-    // If real-time processing is available but audio is not playing, initialize it
+    // If real-time processing is available but audio is paused, just apply the preset
     if (isRealTimeProcessing && originalAudioElement && originalAudioElement.paused) {
-      console.log('Real-time processing available but audio paused, applying preset');
+      console.log('Real-time processing available but audio paused, applying preset for next play');
       applyGenrePresetRealTime(genre);
       return;
     }
@@ -405,6 +422,7 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
     if (!isRealTimeProcessing && originalAudioElement) {
       console.log('Attempting to initialize real-time processing...');
       await initializeRealTimeProcessing();
+      // Check again after initialization
       if (isRealTimeProcessing) {
         console.log('Real-time processing initialized, applying preset');
         applyGenrePresetRealTime(genre);
@@ -855,7 +873,7 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
                               console.log('Mastered audio element ready:', audioElement);
                               setMasteredAudioElement(audioElement);
                             }}
-                            key={processedAudioUrl} // Force re-render when URL changes
+                            key={`${processedAudioUrl}-${selectedGenre?.id}`} // Force re-render when URL or genre changes
                           />
                          
                          {/* Frequency Spectrum Analysis for Mastered */}
