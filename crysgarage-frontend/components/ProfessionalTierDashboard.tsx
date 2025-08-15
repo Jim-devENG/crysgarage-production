@@ -315,9 +315,25 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
   const processAudioWithGenre = async (genre: GenreType) => {
     if (!selectedFile) return;
     
+    // Store current playing state
+    const wasPlayingMastered = isPlayingMastered;
+    const wasPlayingOriginal = isPlayingOriginal;
+    
+    // Pause any currently playing audio
+    if (isPlayingMastered && masteredAudioElement) {
+      masteredAudioElement.pause();
+      setIsPlayingMastered(false);
+    }
+    if (isPlayingOriginal && originalAudioElement) {
+      originalAudioElement.pause();
+      setIsPlayingOriginal(false);
+    }
+    
     setIsProcessing(true);
     setSelectedGenre(genre);
-    setMasteredAudioElement(null); // Clear mastered audio element when processing starts
+    
+    // Don't clear the mastered audio element immediately - keep it until new one is ready
+    // setMasteredAudioElement(null); // Removed this line to prevent blank state
     
     try {
       console.log(`Starting ${genre.name} audio processing...`);
@@ -367,13 +383,34 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
       // Convert to WAV and create URL
       const wavBlob = await audioBufferToWav(renderedBuffer);
       const masteredUrl = URL.createObjectURL(wavBlob);
+      
+      // Clean up old processed audio URL to prevent memory leaks
+      if (processedAudioUrl) {
+        URL.revokeObjectURL(processedAudioUrl);
+      }
+      
       setProcessedAudioUrl(masteredUrl);
       
       console.log(`${genre.name} preset mastered audio created successfully:`, masteredUrl);
       audioContext.close();
       
+      // Resume playing if it was playing before
+      if (wasPlayingMastered) {
+        // Small delay to ensure the new audio element is ready
+        setTimeout(() => {
+          if (masteredAudioElement) {
+            masteredAudioElement.play().catch(error => {
+              console.error('Error resuming mastered audio after genre change:', error);
+            });
+            setIsPlayingMastered(true);
+          }
+        }, 100);
+      }
+      
     } catch (error) {
       console.error(`Error processing audio with ${genre.name} preset:`, error);
+      // Show user-friendly error message
+      alert(`Error processing audio with ${genre.name} preset. Please try again.`);
     } finally {
       setIsProcessing(false);
     }
@@ -620,8 +657,13 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
                          isSelected
                            ? 'border-crys-gold shadow-lg shadow-crys-gold/30 scale-105'
                            : 'border-white/20 hover:border-white/40 hover:scale-110'
-                       } disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100`}
+                       } disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 relative`}
                      >
+                       {isProcessing && isSelected && (
+                         <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center">
+                           <div className="w-4 h-4 border-2 border-crys-gold border-t-transparent rounded-full animate-spin"></div>
+                         </div>
+                       )}
                        <h3 className="font-semibold text-sm mb-1 text-white drop-shadow-sm">{genre.name}</h3>
                        <p className="text-xs text-white/80 leading-tight drop-shadow-sm">{genre.description}</p>
                      </button>
@@ -715,6 +757,7 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
                               console.log('Mastered audio element ready:', audioElement);
                               setMasteredAudioElement(audioElement);
                             }}
+                            key={processedAudioUrl} // Force re-render when URL changes
                           />
                          
                          {/* Frequency Spectrum Analysis for Mastered */}
@@ -731,7 +774,10 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
                          {isProcessing ? (
                            <>
                              <div className="w-6 h-6 border-2 border-crys-gold border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
-                             <p className="text-xs text-gray-400">Processing audio...</p>
+                             <p className="text-xs text-gray-400">
+                               {selectedGenre ? `Processing ${selectedGenre.name} preset...` : 'Processing audio...'}
+                             </p>
+                             <p className="text-xs text-crys-gold mt-1">Please wait, this may take a few seconds</p>
                            </>
                          ) : (
                            <p className="text-xs text-gray-400">Select a genre to process</p>
