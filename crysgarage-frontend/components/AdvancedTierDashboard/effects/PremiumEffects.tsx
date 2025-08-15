@@ -144,6 +144,7 @@ const PremiumEffects: React.FC<PremiumEffectsProps> = ({
             }}
             enabled={audioEffects.gMasteringCompressor?.enabled || false}
             onToggle={(enabled) => onTogglePremiumEffect('gMasteringCompressor', enabled)}
+            onManualInit={onManualInit}
           />
         </div>
 

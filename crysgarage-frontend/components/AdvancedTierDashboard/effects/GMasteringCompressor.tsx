@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Zap, Settings, Target, Gauge } from 'lucide-react';
+import HardwareKnob from '../HardwareKnob';
 
 interface GMasteringCompressorProps {
   threshold: number;
@@ -16,6 +17,7 @@ interface GMasteringCompressorProps {
   onMakeupChange: (value: number) => void;
   enabled: boolean;
   onToggle: (enabled: boolean) => void;
+  onManualInit?: () => void;
 }
 
 const GMasteringCompressor: React.FC<GMasteringCompressorProps> = ({
@@ -32,7 +34,8 @@ const GMasteringCompressor: React.FC<GMasteringCompressorProps> = ({
   onReleaseChange,
   onMakeupChange,
   enabled,
-  onToggle
+  onToggle,
+  onManualInit
 }) => {
   const [bypass, setBypass] = useState(false);
   const [autoGain, setAutoGain] = useState(false);
@@ -40,6 +43,33 @@ const GMasteringCompressor: React.FC<GMasteringCompressorProps> = ({
   const [lookahead, setLookahead] = useState<'Off' | 'Low' | 'High'>('Off');
   const [stereoLink, setStereoLink] = useState<'Off' | 'Low' | 'High'>('Low');
   const [sidechain, setSidechain] = useState<'Off' | 'On'>('Off');
+  const [editingKnob, setEditingKnob] = useState<string | null>(null);
+
+  const handleKnobChange = (setting: string, value: number) => {
+    console.log(`G-Mastering Compressor knob changed: ${setting} = ${value}`);
+    switch (setting) {
+      case 'threshold':
+        onThresholdChange(value);
+        break;
+      case 'ratio':
+        onRatioChange(value);
+        break;
+      case 'attack':
+        onAttackChange(value);
+        break;
+      case 'release':
+        onReleaseChange(value);
+        break;
+      case 'makeup':
+        onMakeupChange(value);
+        break;
+    }
+    onManualInit?.();
+  };
+
+  const handleKnobClick = () => {
+    onManualInit?.();
+  };
 
   return (
     <div className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 rounded-lg border border-gray-700 shadow-lg overflow-hidden w-full max-w-sm">
@@ -86,77 +116,56 @@ const GMasteringCompressor: React.FC<GMasteringCompressorProps> = ({
 
         {enabled && (
           <>
-            {/* Main Control Knobs - Compact Layout */}
+            {/* Main Control Knobs - Enhanced with HardwareKnob */}
             <div className="grid grid-cols-3 gap-3 mb-4">
               {/* Threshold Knob */}
               <div className="text-center">
-                <div className="relative w-12 h-12 mx-auto mb-1">
-                  <div className="w-full h-full rounded-full bg-gradient-to-br from-gray-700 to-gray-800 border border-gray-600 shadow-inner flex items-center justify-center">
-                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-gray-600 to-gray-700 border border-gray-500 flex items-center justify-center">
-                      <div className="w-0.5 h-4 bg-crys-gold rounded-full transform origin-bottom" 
-                           style={{ transform: `rotate(${(threshold + 60) * 1.5}deg)` }}></div>
-                    </div>
-                  </div>
-                  <div className="absolute -bottom-0.5 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-crys-gold rounded-full"></div>
-                </div>
-                <div className="text-crys-gold font-mono text-xs mb-0.5">{threshold.toFixed(1)}dB</div>
-                <div className="text-gray-400 text-[8px]">THRESH</div>
-                <input
-                  type="range"
-                  min="-60"
-                  max="0"
-                  step="0.1"
+                <HardwareKnob
                   value={threshold}
-                  onChange={(e) => onThresholdChange(parseFloat(e.target.value))}
-                  className="w-full mt-1"
+                  min={-60}
+                  max={0}
+                  step={0.1}
+                  label="THRESH"
+                  unit="dB"
+                  size="small"
+                  onChange={(value) => handleKnobChange('threshold', value)}
+                  onKnobClick={handleKnobClick}
+                  isEditing={editingKnob === 'threshold'}
+                  onEditingChange={(editing) => setEditingKnob(editing ? 'threshold' : null)}
                 />
               </div>
 
               {/* Ratio Knob */}
               <div className="text-center">
-                <div className="relative w-12 h-12 mx-auto mb-1">
-                  <div className="w-full h-full rounded-full bg-gradient-to-br from-gray-700 to-gray-800 border border-gray-600 shadow-inner flex items-center justify-center">
-                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-gray-600 to-gray-700 border border-gray-500 flex items-center justify-center">
-                      <div className="w-0.5 h-4 bg-crys-gold rounded-full transform origin-bottom" 
-                           style={{ transform: `rotate(${(ratio - 1) * 10}deg)` }}></div>
-                    </div>
-                  </div>
-                  <div className="absolute -bottom-0.5 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-crys-gold rounded-full"></div>
-                </div>
-                <div className="text-crys-gold font-mono text-xs mb-0.5">{ratio.toFixed(1)}:1</div>
-                <div className="text-gray-400 text-[8px]">RATIO</div>
-                <input
-                  type="range"
-                  min="1"
-                  max="20"
-                  step="0.1"
+                <HardwareKnob
                   value={ratio}
-                  onChange={(e) => onRatioChange(parseFloat(e.target.value))}
-                  className="w-full mt-1"
+                  min={1}
+                  max={20}
+                  step={0.1}
+                  label="RATIO"
+                  unit=":1"
+                  size="small"
+                  onChange={(value) => handleKnobChange('ratio', value)}
+                  onKnobClick={handleKnobClick}
+                  isEditing={editingKnob === 'ratio'}
+                  onEditingChange={(editing) => setEditingKnob(editing ? 'ratio' : null)}
                 />
               </div>
 
               {/* Makeup Gain Knob */}
               <div className="text-center">
-                <div className="relative w-12 h-12 mx-auto mb-1">
-                  <div className="w-full h-full rounded-full bg-gradient-to-br from-gray-700 to-gray-800 border border-gray-600 shadow-inner flex items-center justify-center">
-                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-gray-600 to-gray-700 border border-gray-500 flex items-center justify-center">
-                      <div className="w-0.5 h-4 bg-crys-gold rounded-full transform origin-bottom" 
-                           style={{ transform: `rotate(${(makeup + 20) * 2}deg)` }}></div>
-                    </div>
-                  </div>
-                  <div className="absolute -bottom-0.5 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-crys-gold rounded-full"></div>
-                </div>
-                <div className="text-crys-gold font-mono text-xs mb-0.5">{makeup.toFixed(1)}dB</div>
-                <div className="text-gray-400 text-[8px]">MAKEUP</div>
-                <input
-                  type="range"
-                  min="-20"
-                  max="20"
-                  step="0.1"
+                <HardwareKnob
                   value={makeup}
-                  onChange={(e) => onMakeupChange(parseFloat(e.target.value))}
-                  className="w-full mt-1"
+                  min={-20}
+                  max={20}
+                  step={0.1}
+                  label="MAKEUP"
+                  unit="dB"
+                  size="small"
+                  onChange={(value) => handleKnobChange('makeup', value)}
+                  onKnobClick={handleKnobClick}
+                  isEditing={editingKnob === 'makeup'}
+                  onEditingChange={(editing) => setEditingKnob(editing ? 'makeup' : null)}
                 />
               </div>
             </div>
@@ -165,49 +174,35 @@ const GMasteringCompressor: React.FC<GMasteringCompressorProps> = ({
             <div className="grid grid-cols-2 gap-3 mb-4">
               {/* Attack Knob */}
               <div className="text-center">
-                <div className="relative w-12 h-12 mx-auto mb-1">
-                  <div className="w-full h-full rounded-full bg-gradient-to-br from-gray-700 to-gray-800 border border-gray-600 shadow-inner flex items-center justify-center">
-                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-gray-600 to-gray-700 border border-gray-500 flex items-center justify-center">
-                      <div className="w-0.5 h-4 bg-crys-gold rounded-full transform origin-bottom" 
-                           style={{ transform: `rotate(${(attack / 100) * 300}deg)` }}></div>
-                    </div>
-                  </div>
-                  <div className="absolute -bottom-0.5 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-crys-gold rounded-full"></div>
-                </div>
-                <div className="text-crys-gold font-mono text-xs mb-0.5">{attack}ms</div>
-                <div className="text-gray-400 text-[8px]">ATTACK</div>
-                <input
-                  type="range"
-                  min="0.1"
-                  max="100"
-                  step="0.1"
+                <HardwareKnob
                   value={attack}
-                  onChange={(e) => onAttackChange(parseFloat(e.target.value))}
-                  className="w-full mt-1"
+                  min={0.1}
+                  max={100}
+                  step={0.1}
+                  label="ATTACK"
+                  unit="ms"
+                  size="small"
+                  onChange={(value) => handleKnobChange('attack', value)}
+                  onKnobClick={handleKnobClick}
+                  isEditing={editingKnob === 'attack'}
+                  onEditingChange={(editing) => setEditingKnob(editing ? 'attack' : null)}
                 />
               </div>
 
               {/* Release Knob */}
               <div className="text-center">
-                <div className="relative w-12 h-12 mx-auto mb-1">
-                  <div className="w-full h-full rounded-full bg-gradient-to-br from-gray-700 to-gray-800 border border-gray-600 shadow-inner flex items-center justify-center">
-                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-gray-600 to-gray-700 border border-gray-500 flex items-center justify-center">
-                      <div className="w-0.5 h-4 bg-crys-gold rounded-full transform origin-bottom" 
-                           style={{ transform: `rotate(${(release / 1000) * 300}deg)` }}></div>
-                    </div>
-                  </div>
-                  <div className="absolute -bottom-0.5 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-crys-gold rounded-full"></div>
-                </div>
-                <div className="text-crys-gold font-mono text-xs mb-0.5">{release}ms</div>
-                <div className="text-gray-400 text-[8px]">RELEASE</div>
-                <input
-                  type="range"
-                  min="10"
-                  max="1000"
-                  step="1"
+                <HardwareKnob
                   value={release}
-                  onChange={(e) => onReleaseChange(parseFloat(e.target.value))}
-                  className="w-full mt-1"
+                  min={10}
+                  max={1000}
+                  step={1}
+                  label="RELEASE"
+                  unit="ms"
+                  size="small"
+                  onChange={(value) => handleKnobChange('release', value)}
+                  onKnobClick={handleKnobClick}
+                  isEditing={editingKnob === 'release'}
+                  onEditingChange={(editing) => setEditingKnob(editing ? 'release' : null)}
                 />
               </div>
             </div>
