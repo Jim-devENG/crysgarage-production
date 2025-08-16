@@ -468,7 +468,7 @@ function AppContent() {
         {currentPage === 'landing' && (
           <LandingPage 
             onGetStarted={() => {
-              setCurrentPage('dashboard');
+              setCurrentPage('studio');
             }}
             onTryMastering={() => {
               setCurrentPage('dashboard');
