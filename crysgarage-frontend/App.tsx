@@ -559,8 +559,8 @@ function AppContent() {
         />
       )}
       
-      {/* Auto auth fix for development */}
-      <AutoAuthFix />
+      {/* Auto auth fix for development - temporarily disabled */}
+      {/* <AutoAuthFix /> */}
       </div>
   );
 }
