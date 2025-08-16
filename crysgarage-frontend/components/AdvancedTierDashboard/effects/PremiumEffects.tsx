@@ -40,13 +40,97 @@ const PremiumEffects: React.FC<PremiumEffectsProps> = ({
 
       {/* Effects Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        {/* G-Precision EQ */}
+        <div className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 rounded-lg border border-gray-700 shadow-lg overflow-hidden">
+          {/* Header - Gold Style */}
+          <div className="bg-gradient-to-r from-yellow-900 to-yellow-800 p-3 border-b border-yellow-600">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <div className="w-3 h-3 bg-green-500 rounded-full shadow-sm"></div>
+                <div className="flex items-center space-x-2">
+                  <div className="bg-gradient-to-r from-yellow-400 to-yellow-300 p-1 rounded">
+                    <BarChart3 className="w-3 h-3 text-yellow-900" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-white">G-PRECISION EQ</h3>
+                    <p className="text-[9px] text-yellow-200">Surgical EQ</p>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex space-x-1">
+                <div className="w-1.5 h-1.5 bg-yellow-400 rounded-full border border-yellow-300"></div>
+                <div className="w-1.5 h-1.5 bg-yellow-400 rounded-full border border-yellow-300"></div>
+                <div className="w-1.5 h-1.5 bg-yellow-400 rounded-full border border-yellow-300"></div>
+                <div className="w-1.5 h-1.5 bg-yellow-400 rounded-full border border-yellow-300"></div>
+              </div>
+            </div>
+          </div>
+
+          {/* Main Content */}
+          <div className="p-4">
+            {/* Enable/Disable Toggle */}
+            <div className="flex items-center justify-between mb-4">
+              <h4 className="text-white font-semibold text-sm">G-Precision EQ</h4>
+              <label className="flex items-center">
+                <input
+                  type="checkbox"
+                  checked={audioEffects.gPrecisionEQ?.enabled || false}
+                  onChange={(e) => onTogglePremiumEffect('gPrecisionEQ', e.target.checked)}
+                  className="mr-2"
+                />
+                <span className="text-gray-300 text-xs">Enable</span>
+              </label>
+            </div>
+
+            {audioEffects.gPrecisionEQ?.enabled && (
+              <div className="text-center">
+                <HardwareKnob
+                  value={audioEffects.gPrecisionEQ.bands?.[0]?.gain || 0}
+                  min={-12}
+                  max={12}
+                  step={0.1}
+                  label="BAND 1"
+                  unit="dB"
+                  size="medium"
+                  onChange={(value) => {
+                    const bands = [...(audioEffects.gPrecisionEQ.bands || [])];
+                    if (bands[0]) bands[0].gain = value;
+                    onUpdateEffectSettings('gPrecisionEQ', { ...audioEffects.gPrecisionEQ, bands });
+                  }}
+                  onKnobClick={handleKnobClick}
+                  isEditing={editingKnob === 'gPrecisionEQ.band1'}
+                  onEditingChange={(editing) => setEditingKnob(editing ? 'gPrecisionEQ.band1' : null)}
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Footer - Gold Style */}
+          <div className="bg-gradient-to-r from-yellow-800 to-yellow-900 p-2 border-t border-yellow-600">
+            <div className="flex justify-between items-center">
+              <div className="flex space-x-1">
+                <div className="w-1 h-1 bg-yellow-400 rounded-full"></div>
+                <div className="w-1 h-1 bg-yellow-400 rounded-full"></div>
+                <div className="w-1 h-1 bg-yellow-400 rounded-full"></div>
+              </div>
+              <div className="text-[8px] text-yellow-200">G-Precision EQ v1.0</div>
+              <div className="flex space-x-1">
+                <div className="w-1 h-1 bg-yellow-400 rounded-full"></div>
+                <div className="w-1 h-1 bg-yellow-400 rounded-full"></div>
+                <div className="w-1 h-1 bg-yellow-400 rounded-full"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* G-Mastering Compressor */}
         <div className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 rounded-lg border border-gray-700 shadow-lg overflow-hidden">
           {/* Header - Gold Style */}
           <div className="bg-gradient-to-r from-yellow-900 to-yellow-800 p-3 border-b border-yellow-600">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
-                <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse shadow-sm"></div>
+                <div className="w-3 h-3 bg-green-500 rounded-full shadow-sm"></div>
                 <div className="flex items-center space-x-2">
                   <div className="bg-gradient-to-r from-yellow-400 to-yellow-300 p-1 rounded">
                     <Activity className="w-3 h-3 text-yellow-900" />
@@ -140,20 +224,20 @@ const PremiumEffects: React.FC<PremiumEffectsProps> = ({
           </div>
         </div>
 
-        {/* G-Precision EQ */}
+        {/* G-Multi-Band */}
         <div className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 rounded-lg border border-gray-700 shadow-lg overflow-hidden">
           {/* Header - Gold Style */}
           <div className="bg-gradient-to-r from-yellow-900 to-yellow-800 p-3 border-b border-yellow-600">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
-                <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse shadow-sm"></div>
+                <div className="w-3 h-3 bg-green-500 rounded-full shadow-sm"></div>
                 <div className="flex items-center space-x-2">
                   <div className="bg-gradient-to-r from-yellow-400 to-yellow-300 p-1 rounded">
-                    <BarChart3 className="w-3 h-3 text-yellow-900" />
+                    <Layers className="w-3 h-3 text-yellow-900" />
                   </div>
                   <div>
-                    <h3 className="text-sm font-bold text-white">G-PRECISION EQ</h3>
-                    <p className="text-[9px] text-yellow-200">Surgical EQ</p>
+                    <h3 className="text-sm font-bold text-white">G-MULTI-BAND</h3>
+                    <p className="text-[9px] text-yellow-200">Frequency Split</p>
                   </div>
                 </div>
               </div>
@@ -171,36 +255,36 @@ const PremiumEffects: React.FC<PremiumEffectsProps> = ({
           <div className="p-4">
             {/* Enable/Disable Toggle */}
             <div className="flex items-center justify-between mb-4">
-              <h4 className="text-white font-semibold text-sm">G-Precision EQ</h4>
+              <h4 className="text-white font-semibold text-sm">G-Multi-Band</h4>
               <label className="flex items-center">
                 <input
                   type="checkbox"
-                  checked={audioEffects.gPrecisionEQ?.enabled || false}
-                  onChange={(e) => onTogglePremiumEffect('gPrecisionEQ', e.target.checked)}
+                  checked={audioEffects.gMultiBand?.enabled || false}
+                  onChange={(e) => onTogglePremiumEffect('gMultiBand', e.target.checked)}
                   className="mr-2"
                 />
                 <span className="text-gray-300 text-xs">Enable</span>
               </label>
             </div>
 
-            {audioEffects.gPrecisionEQ?.enabled && (
+            {audioEffects.gMultiBand?.enabled && (
               <div className="text-center">
                 <HardwareKnob
-                  value={audioEffects.gPrecisionEQ.bands?.[0]?.gain || 0}
-                  min={-12}
-                  max={12}
+                  value={audioEffects.gMultiBand.thresholds?.[0] || -20}
+                  min={-60}
+                  max={0}
                   step={0.1}
-                  label="BAND 1"
+                  label="THRESH 1"
                   unit="dB"
                   size="medium"
                   onChange={(value) => {
-                    const bands = [...(audioEffects.gPrecisionEQ.bands || [])];
-                    if (bands[0]) bands[0].gain = value;
-                    onUpdateEffectSettings('gPrecisionEQ', { ...audioEffects.gPrecisionEQ, bands });
+                    const thresholds = [...(audioEffects.gMultiBand.thresholds || [])];
+                    if (thresholds[0] !== undefined) thresholds[0] = value;
+                    onUpdateEffectSettings('gMultiBand', { ...audioEffects.gMultiBand, thresholds });
                   }}
                   onKnobClick={handleKnobClick}
-                  isEditing={editingKnob === 'gPrecisionEQ.band1'}
-                  onEditingChange={(editing) => setEditingKnob(editing ? 'gPrecisionEQ.band1' : null)}
+                  isEditing={editingKnob === 'gMultiBand.threshold1'}
+                  onEditingChange={(editing) => setEditingKnob(editing ? 'gMultiBand.threshold1' : null)}
                 />
               </div>
             )}
@@ -214,7 +298,7 @@ const PremiumEffects: React.FC<PremiumEffectsProps> = ({
                 <div className="w-1 h-1 bg-yellow-400 rounded-full"></div>
                 <div className="w-1 h-1 bg-yellow-400 rounded-full"></div>
               </div>
-              <div className="text-[8px] text-yellow-200">G-Precision EQ v1.0</div>
+              <div className="text-[8px] text-yellow-200">G-Multi-Band v1.0</div>
               <div className="flex space-x-1">
                 <div className="w-1 h-1 bg-yellow-400 rounded-full"></div>
                 <div className="w-1 h-1 bg-yellow-400 rounded-full"></div>
@@ -230,7 +314,7 @@ const PremiumEffects: React.FC<PremiumEffectsProps> = ({
           <div className="bg-gradient-to-r from-yellow-900 to-yellow-800 p-3 border-b border-yellow-600">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
-                <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse shadow-sm"></div>
+                <div className="w-3 h-3 bg-green-500 rounded-full shadow-sm"></div>
                 <div className="flex items-center space-x-2">
                   <div className="bg-gradient-to-r from-yellow-400 to-yellow-300 p-1 rounded">
                     <Mic className="w-3 h-3 text-yellow-900" />
@@ -355,93 +439,6 @@ const PremiumEffects: React.FC<PremiumEffectsProps> = ({
             overshoot={audioEffects.gLimiter?.overshoot}
           />
         </div>
-
-        {/* G-Multi-Band */}
-        <div className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 rounded-lg border border-gray-700 shadow-lg overflow-hidden">
-          {/* Header - Gold Style */}
-          <div className="bg-gradient-to-r from-yellow-900 to-yellow-800 p-3 border-b border-yellow-600">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse shadow-sm"></div>
-                <div className="flex items-center space-x-2">
-                  <div className="bg-gradient-to-r from-yellow-400 to-yellow-300 p-1 rounded">
-                    <Layers className="w-3 h-3 text-yellow-900" />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-bold text-white">G-MULTI-BAND</h3>
-                    <p className="text-[9px] text-yellow-200">Frequency Split</p>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="flex space-x-1">
-                <div className="w-1.5 h-1.5 bg-yellow-400 rounded-full border border-yellow-300"></div>
-                <div className="w-1.5 h-1.5 bg-yellow-400 rounded-full border border-yellow-300"></div>
-                <div className="w-1.5 h-1.5 bg-yellow-400 rounded-full border border-yellow-300"></div>
-                <div className="w-1.5 h-1.5 bg-yellow-400 rounded-full border border-yellow-300"></div>
-              </div>
-            </div>
-          </div>
-
-          {/* Main Content */}
-          <div className="p-4">
-            {/* Enable/Disable Toggle */}
-            <div className="flex items-center justify-between mb-4">
-              <h4 className="text-white font-semibold text-sm">G-Multi-Band</h4>
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={audioEffects.gMultiBand?.enabled || false}
-                  onChange={(e) => onTogglePremiumEffect('gMultiBand', e.target.checked)}
-                  className="mr-2"
-                />
-                <span className="text-gray-300 text-xs">Enable</span>
-              </label>
-            </div>
-
-            {audioEffects.gMultiBand?.enabled && (
-              <div className="text-center">
-                <HardwareKnob
-                  value={audioEffects.gMultiBand.thresholds?.[0] || -20}
-                  min={-60}
-                  max={0}
-                  step={0.1}
-                  label="THRESH 1"
-                  unit="dB"
-                  size="medium"
-                  onChange={(value) => {
-                    const thresholds = [...(audioEffects.gMultiBand.thresholds || [])];
-                    if (thresholds[0] !== undefined) thresholds[0] = value;
-                    onUpdateEffectSettings('gMultiBand', { ...audioEffects.gMultiBand, thresholds });
-                  }}
-                  onKnobClick={handleKnobClick}
-                  isEditing={editingKnob === 'gMultiBand.threshold1'}
-                  onEditingChange={(editing) => setEditingKnob(editing ? 'gMultiBand.threshold1' : null)}
-                />
-              </div>
-            )}
-          </div>
-
-          {/* Footer - Gold Style */}
-          <div className="bg-gradient-to-r from-yellow-800 to-yellow-900 p-2 border-t border-yellow-600">
-            <div className="flex justify-between items-center">
-              <div className="flex space-x-1">
-                <div className="w-1 h-1 bg-yellow-400 rounded-full"></div>
-                <div className="w-1 h-1 bg-yellow-400 rounded-full"></div>
-                <div className="w-1 h-1 bg-yellow-400 rounded-full"></div>
-              </div>
-              <div className="text-[8px] text-yellow-200">G-Multi-Band v1.0</div>
-              <div className="flex space-x-1">
-                <div className="w-1 h-1 bg-yellow-400 rounded-full"></div>
-                <div className="w-1 h-1 bg-yellow-400 rounded-full"></div>
-                <div className="w-1 h-1 bg-yellow-400 rounded-full"></div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-
-
 
       </div>
     </div>

@@ -44,7 +44,7 @@ const BasicEffects: React.FC<BasicEffectsProps> = ({
           <div className="bg-gradient-to-r from-yellow-900 to-yellow-800 p-3 border-b border-yellow-600">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
-                <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse shadow-sm"></div>
+                <div className="w-3 h-3 bg-green-500 rounded-full shadow-sm"></div>
                 <div className="flex items-center space-x-2">
                   <div className="bg-gradient-to-r from-yellow-400 to-yellow-300 p-1 rounded">
                     <Radio className="w-3 h-3 text-yellow-900" />
@@ -161,7 +161,7 @@ const BasicEffects: React.FC<BasicEffectsProps> = ({
           <div className="bg-gradient-to-r from-yellow-900 to-yellow-800 p-3 border-b border-yellow-600">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
-                <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse shadow-sm"></div>
+                <div className="w-3 h-3 bg-green-500 rounded-full shadow-sm"></div>
                 <div className="flex items-center space-x-2">
                   <div className="bg-gradient-to-r from-yellow-400 to-yellow-300 p-1 rounded">
                     <Zap className="w-3 h-3 text-yellow-900" />
@@ -260,18 +260,18 @@ const BasicEffects: React.FC<BasicEffectsProps> = ({
           {/* Header - Gold Style */}
           <div className="bg-gradient-to-r from-yellow-900 to-yellow-800 p-3 border-b border-yellow-600">
             <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse shadow-sm"></div>
-                <div className="flex items-center space-x-2">
-                  <div className="bg-gradient-to-r from-yellow-400 to-yellow-300 p-1 rounded">
-                    <Waves className="w-3 h-3 text-yellow-900" />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-bold text-white">STEREO WIDENER</h3>
-                    <p className="text-[9px] text-yellow-200">Width Control</p>
-                  </div>
-                </div>
-              </div>
+                             <div className="flex items-center space-x-2">
+                 <div className="w-3 h-3 bg-green-500 rounded-full shadow-sm"></div>
+                 <div className="flex items-center space-x-2">
+                   <div className="bg-gradient-to-r from-yellow-400 to-yellow-300 p-1 rounded">
+                     <Waves className="w-3 h-3 text-yellow-900" />
+                   </div>
+                   <div>
+                     <h3 className="text-sm font-bold text-white">STEREO WIDENER</h3>
+                     <p className="text-[9px] text-yellow-200">Width Control</p>
+                   </div>
+                 </div>
+               </div>
               
               <div className="flex space-x-1">
                 <div className="w-1.5 h-1.5 bg-yellow-400 rounded-full border border-yellow-300"></div>
@@ -340,18 +340,18 @@ const BasicEffects: React.FC<BasicEffectsProps> = ({
           {/* Header - Gold Style */}
           <div className="bg-gradient-to-r from-yellow-900 to-yellow-800 p-3 border-b border-yellow-600">
             <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse shadow-sm"></div>
-                <div className="flex items-center space-x-2">
-                  <div className="bg-gradient-to-r from-yellow-400 to-yellow-300 p-1 rounded">
-                    <Volume2 className="w-3 h-3 text-yellow-900" />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-bold text-white">LOUDNESS</h3>
-                    <p className="text-[9px] text-yellow-200">Volume Control</p>
-                  </div>
-                </div>
-              </div>
+                             <div className="flex items-center space-x-2">
+                 <div className="w-3 h-3 bg-green-500 rounded-full shadow-sm"></div>
+                 <div className="flex items-center space-x-2">
+                   <div className="bg-gradient-to-r from-yellow-400 to-yellow-300 p-1 rounded">
+                     <Volume2 className="w-3 h-3 text-yellow-900" />
+                   </div>
+                   <div>
+                     <h3 className="text-sm font-bold text-white">LOUDNESS</h3>
+                     <p className="text-[9px] text-yellow-200">Volume Control</p>
+                   </div>
+                 </div>
+               </div>
               
               <div className="flex space-x-1">
                 <div className="w-1.5 h-1.5 bg-yellow-400 rounded-full border border-yellow-300"></div>
@@ -420,18 +420,18 @@ const BasicEffects: React.FC<BasicEffectsProps> = ({
           {/* Header - Gold Style */}
           <div className="bg-gradient-to-r from-yellow-900 to-yellow-800 p-3 border-b border-yellow-600">
             <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse shadow-sm"></div>
-                <div className="flex items-center space-x-2">
-                  <div className="bg-gradient-to-r from-yellow-400 to-yellow-300 p-1 rounded">
-                    <Gauge className="w-3 h-3 text-yellow-900" />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-bold text-white">LIMITER</h3>
-                    <p className="text-[9px] text-yellow-200">Peak Control</p>
-                  </div>
-                </div>
-              </div>
+                             <div className="flex items-center space-x-2">
+                 <div className="w-3 h-3 bg-green-500 rounded-full shadow-sm"></div>
+                 <div className="flex items-center space-x-2">
+                   <div className="bg-gradient-to-r from-yellow-400 to-yellow-300 p-1 rounded">
+                     <Gauge className="w-3 h-3 text-yellow-900" />
+                   </div>
+                   <div>
+                     <h3 className="text-sm font-bold text-white">LIMITER</h3>
+                     <p className="text-[9px] text-yellow-200">Peak Control</p>
+                   </div>
+                 </div>
+               </div>
               
               <div className="flex space-x-1">
                 <div className="w-1.5 h-1.5 bg-yellow-400 rounded-full border border-yellow-300"></div>
@@ -459,20 +459,40 @@ const BasicEffects: React.FC<BasicEffectsProps> = ({
             </div>
 
             {audioEffects.limiter?.enabled && (
-              <div className="text-center">
-                <HardwareKnob
-                  value={audioEffects.limiter.threshold || -1}
-                  min={-20}
-                  max={0}
-                  step={0.01}
-                  label="THRESH"
-                  unit="dB"
-                  size="medium"
-                  onChange={(value) => handleKnobChange('limiter', 'threshold', value)}
-                  onKnobClick={handleKnobClick}
-                  isEditing={editingKnob === 'limiter.threshold'}
-                  onEditingChange={(editing) => setEditingKnob(editing ? 'limiter.threshold' : null)}
-                />
+              <div className="grid grid-cols-2 gap-3">
+                {/* Threshold */}
+                <div className="text-center">
+                  <HardwareKnob
+                    value={audioEffects.limiter.threshold || -1}
+                    min={-20}
+                    max={0}
+                    step={0.01}
+                    label="THRESH"
+                    unit="dB"
+                    size="small"
+                    onChange={(value) => handleKnobChange('limiter', 'threshold', value)}
+                    onKnobClick={handleKnobClick}
+                    isEditing={editingKnob === 'limiter.threshold'}
+                    onEditingChange={(editing) => setEditingKnob(editing ? 'limiter.threshold' : null)}
+                  />
+                </div>
+
+                {/* Outceiling */}
+                <div className="text-center">
+                  <HardwareKnob
+                    value={audioEffects.limiter.outceiling || -0.1}
+                    min={-1}
+                    max={0}
+                    step={0.01}
+                    label="CEILING"
+                    unit="dB"
+                    size="small"
+                    onChange={(value) => handleKnobChange('limiter', 'outceiling', value)}
+                    onKnobClick={handleKnobClick}
+                    isEditing={editingKnob === 'limiter.outceiling'}
+                    onEditingChange={(editing) => setEditingKnob(editing ? 'limiter.outceiling' : null)}
+                  />
+                </div>
               </div>
             )}
           </div>
