@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Settings, Volume2, Zap, Gauge, Radio, Waves, Activity, BarChart3, Target, Mic, Headphones, Layers, Globe, Cpu, Palette, Sparkles } from 'lucide-react';
+import { Settings, Volume2, Zap, Gauge, Radio, Waves, Activity, BarChart3, Target, Mic, Headphones, Layers, Globe, Cpu } from 'lucide-react';
 import HardwareKnob from '../HardwareKnob';
 
 interface AdvancedFeaturesProps {
@@ -139,7 +139,7 @@ const AdvancedFeatures: React.FC<AdvancedFeaturesProps> = ({
           </div>
         </div>
 
-        {/* G-Tuner - Enhanced with HardwareKnob */}
+        {/* G-Tuner - Static with fixed 444Hz */}
         <div className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 rounded-lg border border-gray-700 shadow-lg overflow-hidden">
           {/* Header - Gold Style */}
           <div className="bg-gradient-to-r from-yellow-900 to-yellow-800 p-3 border-b border-yellow-600">
@@ -152,7 +152,7 @@ const AdvancedFeatures: React.FC<AdvancedFeaturesProps> = ({
                   </div>
                   <div>
                     <h3 className="text-sm font-bold text-white">G-TUNER</h3>
-                    <p className="text-[9px] text-yellow-200">AI Pitch Correction</p>
+                    <p className="text-[9px] text-yellow-200">444Hz Reference</p>
                   </div>
                 </div>
               </div>
@@ -183,39 +183,11 @@ const AdvancedFeatures: React.FC<AdvancedFeaturesProps> = ({
             </div>
 
             {audioEffects.gTuner?.enabled && (
-              <div className="grid grid-cols-2 gap-3">
-                {/* Correction */}
-                <div className="text-center">
-                  <HardwareKnob
-                    value={audioEffects.gTuner.correction || 0}
-                    min={0}
-                    max={100}
-                    step={1}
-                    label="CORR"
-                    unit="%"
-                    size="small"
-                    onChange={(value) => handleKnobChange('gTuner', 'correction', value)}
-                    onKnobClick={handleKnobClick}
-                    isEditing={editingKnob === 'gTuner.correction'}
-                    onEditingChange={(editing) => setEditingKnob(editing ? 'gTuner.correction' : null)}
-                  />
-                </div>
-
-                {/* Speed */}
-                <div className="text-center">
-                  <HardwareKnob
-                    value={audioEffects.gTuner.speed || 50}
-                    min={0}
-                    max={100}
-                    step={1}
-                    label="SPEED"
-                    unit="%"
-                    size="small"
-                    onChange={(value) => handleKnobChange('gTuner', 'speed', value)}
-                    onKnobClick={handleKnobClick}
-                    isEditing={editingKnob === 'gTuner.speed'}
-                    onEditingChange={(editing) => setEditingKnob(editing ? 'gTuner.speed' : null)}
-                  />
+              <div className="text-center">
+                <div className="bg-gradient-to-r from-yellow-800 to-yellow-900 rounded-lg p-4 border border-yellow-600">
+                  <div className="text-yellow-200 text-lg font-bold mb-2">444 Hz</div>
+                  <div className="text-yellow-300 text-xs">Reference Frequency</div>
+                  <div className="text-yellow-400 text-[10px] mt-1">Auto-Applied</div>
                 </div>
               </div>
             )}
@@ -230,206 +202,6 @@ const AdvancedFeatures: React.FC<AdvancedFeaturesProps> = ({
                 <div className="w-1 h-1 bg-yellow-400 rounded-full"></div>
               </div>
               <div className="text-[8px] text-yellow-200">G-Tuner v1.0</div>
-              <div className="flex space-x-1">
-                <div className="w-1 h-1 bg-yellow-400 rounded-full"></div>
-                <div className="w-1 h-1 bg-yellow-400 rounded-full"></div>
-                <div className="w-1 h-1 bg-yellow-400 rounded-full"></div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* G-Harmonic Enhancer */}
-        <div className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 rounded-lg border border-gray-700 shadow-lg overflow-hidden">
-          {/* Header - Gold Style */}
-          <div className="bg-gradient-to-r from-yellow-900 to-yellow-800 p-3 border-b border-yellow-600">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse shadow-sm"></div>
-                <div className="flex items-center space-x-2">
-                  <div className="bg-gradient-to-r from-yellow-400 to-yellow-300 p-1 rounded">
-                    <Sparkles className="w-3 h-3 text-yellow-900" />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-bold text-white">G-HARMONIC</h3>
-                    <p className="text-[9px] text-yellow-200">Harmonic Enhancement</p>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="flex space-x-1">
-                <div className="w-1.5 h-1.5 bg-yellow-400 rounded-full border border-yellow-300"></div>
-                <div className="w-1.5 h-1.5 bg-yellow-400 rounded-full border border-yellow-300"></div>
-                <div className="w-1.5 h-1.5 bg-yellow-400 rounded-full border border-yellow-300"></div>
-                <div className="w-1.5 h-1.5 bg-yellow-400 rounded-full border border-yellow-300"></div>
-              </div>
-            </div>
-          </div>
-
-          {/* Main Content */}
-          <div className="p-4">
-            {/* Enable/Disable Toggle */}
-            <div className="flex items-center justify-between mb-4">
-              <h4 className="text-white font-semibold text-sm">G-Harmonic</h4>
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={audioEffects.gHarmonic?.enabled || false}
-                  onChange={(e) => onTogglePremiumEffect('gHarmonic', e.target.checked)}
-                  className="mr-2"
-                />
-                <span className="text-gray-300 text-xs">Enable</span>
-              </label>
-            </div>
-
-            {audioEffects.gHarmonic?.enabled && (
-              <div className="grid grid-cols-2 gap-3">
-                {/* Amount */}
-                <div className="text-center">
-                  <HardwareKnob
-                    value={audioEffects.gHarmonic.amount || 0}
-                    min={0}
-                    max={100}
-                    step={1}
-                    label="AMOUNT"
-                    unit="%"
-                    size="small"
-                    onChange={(value) => handleKnobChange('gHarmonic', 'amount', value)}
-                    onKnobClick={handleKnobClick}
-                    isEditing={editingKnob === 'gHarmonic.amount'}
-                    onEditingChange={(editing) => setEditingKnob(editing ? 'gHarmonic.amount' : null)}
-                  />
-                </div>
-
-                {/* Frequency */}
-                <div className="text-center">
-                  <HardwareKnob
-                    value={audioEffects.gHarmonic.frequency || 1000}
-                    min={20}
-                    max={20000}
-                    step={10}
-                    label="FREQ"
-                    unit="Hz"
-                    size="small"
-                    onChange={(value) => handleKnobChange('gHarmonic', 'frequency', value)}
-                    onKnobClick={handleKnobClick}
-                    isEditing={editingKnob === 'gHarmonic.frequency'}
-                    onEditingChange={(editing) => setEditingKnob(editing ? 'gHarmonic.frequency' : null)}
-                  />
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Footer - Gold Style */}
-          <div className="bg-gradient-to-r from-yellow-800 to-yellow-900 p-2 border-t border-yellow-600">
-            <div className="flex justify-between items-center">
-              <div className="flex space-x-1">
-                <div className="w-1 h-1 bg-yellow-400 rounded-full"></div>
-                <div className="w-1 h-1 bg-yellow-400 rounded-full"></div>
-                <div className="w-1 h-1 bg-yellow-400 rounded-full"></div>
-              </div>
-              <div className="text-[8px] text-yellow-200">G-Harmonic v1.0</div>
-              <div className="flex space-x-1">
-                <div className="w-1 h-1 bg-yellow-400 rounded-full"></div>
-                <div className="w-1 h-1 bg-yellow-400 rounded-full"></div>
-                <div className="w-1 h-1 bg-yellow-400 rounded-full"></div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* G-Color Enhancer */}
-        <div className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 rounded-lg border border-gray-700 shadow-lg overflow-hidden">
-          {/* Header - Gold Style */}
-          <div className="bg-gradient-to-r from-yellow-900 to-yellow-800 p-3 border-b border-yellow-600">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse shadow-sm"></div>
-                <div className="flex items-center space-x-2">
-                  <div className="bg-gradient-to-r from-yellow-400 to-yellow-300 p-1 rounded">
-                    <Palette className="w-3 h-3 text-yellow-900" />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-bold text-white">G-COLOR</h3>
-                    <p className="text-[9px] text-yellow-200">Spectral Enhancement</p>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="flex space-x-1">
-                <div className="w-1.5 h-1.5 bg-yellow-400 rounded-full border border-yellow-300"></div>
-                <div className="w-1.5 h-1.5 bg-yellow-400 rounded-full border border-yellow-300"></div>
-                <div className="w-1.5 h-1.5 bg-yellow-400 rounded-full border border-yellow-300"></div>
-                <div className="w-1.5 h-1.5 bg-yellow-400 rounded-full border border-yellow-300"></div>
-              </div>
-            </div>
-          </div>
-
-          {/* Main Content */}
-          <div className="p-4">
-            {/* Enable/Disable Toggle */}
-            <div className="flex items-center justify-between mb-4">
-              <h4 className="text-white font-semibold text-sm">G-Color</h4>
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={audioEffects.gColor?.enabled || false}
-                  onChange={(e) => onTogglePremiumEffect('gColor', e.target.checked)}
-                  className="mr-2"
-                />
-                <span className="text-gray-300 text-xs">Enable</span>
-              </label>
-            </div>
-
-            {audioEffects.gColor?.enabled && (
-              <div className="grid grid-cols-2 gap-3">
-                {/* Warmth */}
-                <div className="text-center">
-                  <HardwareKnob
-                    value={audioEffects.gColor.warmth || 0}
-                    min={-50}
-                    max={50}
-                    step={1}
-                    label="WARM"
-                    unit="%"
-                    size="small"
-                    onChange={(value) => handleKnobChange('gColor', 'warmth', value)}
-                    onKnobClick={handleKnobClick}
-                    isEditing={editingKnob === 'gColor.warmth'}
-                    onEditingChange={(editing) => setEditingKnob(editing ? 'gColor.warmth' : null)}
-                  />
-                </div>
-
-                {/* Presence */}
-                <div className="text-center">
-                  <HardwareKnob
-                    value={audioEffects.gColor.presence || 0}
-                    min={-50}
-                    max={50}
-                    step={1}
-                    label="PRES"
-                    unit="%"
-                    size="small"
-                    onChange={(value) => handleKnobChange('gColor', 'presence', value)}
-                    onKnobClick={handleKnobClick}
-                    isEditing={editingKnob === 'gColor.presence'}
-                    onEditingChange={(editing) => setEditingKnob(editing ? 'gColor.presence' : null)}
-                  />
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Footer - Gold Style */}
-          <div className="bg-gradient-to-r from-yellow-800 to-yellow-900 p-2 border-t border-yellow-600">
-            <div className="flex justify-between items-center">
-              <div className="flex space-x-1">
-                <div className="w-1 h-1 bg-yellow-400 rounded-full"></div>
-                <div className="w-1 h-1 bg-yellow-400 rounded-full"></div>
-                <div className="w-1 h-1 bg-yellow-400 rounded-full"></div>
-              </div>
-              <div className="text-[8px] text-yellow-200">G-Color v1.0</div>
               <div className="flex space-x-1">
                 <div className="w-1 h-1 bg-yellow-400 rounded-full"></div>
                 <div className="w-1 h-1 bg-yellow-400 rounded-full"></div>
