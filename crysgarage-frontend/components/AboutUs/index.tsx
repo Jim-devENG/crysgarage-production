@@ -3,7 +3,6 @@ import { motion } from 'framer-motion';
 import AboutHero from './AboutHero';
 import VisionMission from './VisionMission';
 import TeamSection from './TeamSection';
-import TechnologyStack from './TechnologyStack';
 import ContactSection from './ContactSection';
 
 const AboutUs: React.FC = () => {
@@ -31,7 +30,6 @@ const AboutUs: React.FC = () => {
         <AboutHero />
         <VisionMission />
         <TeamSection />
-        <TechnologyStack />
         <ContactSection />
       </div>
     </div>
