@@ -1,14 +1,21 @@
 import React, { useState } from 'react';
-import { Music, Music2, Music3, Music4, Palette } from 'lucide-react';
+import { Music, Music2, Music3, Music4, Palette, Lock, Unlock } from 'lucide-react';
 import { availableGenres, Genre as GenreType } from '../GenreDropdown';
 import { GENRE_PRESETS, getGenreGradient } from './sharedGenrePresets';
 
 interface GenrePresetsProps {
   selectedGenre: string;
   onGenreSelect: (genreId: string) => void;
+  genreLocked?: boolean;
+  onToggleGenreLock?: () => void;
 }
 
-const GenrePresets: React.FC<GenrePresetsProps> = ({ selectedGenre, onGenreSelect }) => {
+const GenrePresets: React.FC<GenrePresetsProps> = ({ 
+  selectedGenre, 
+  onGenreSelect, 
+  genreLocked = false, 
+  onToggleGenreLock 
+}) => {
   const [activeTab, setActiveTab] = useState<'popular' | 'all'>('popular');
 
   // Popular genres (first 12)
@@ -118,12 +125,38 @@ const GenrePresets: React.FC<GenrePresetsProps> = ({ selectedGenre, onGenreSelec
                 );
               })()}
             </div>
-            <button
-              onClick={() => onGenreSelect('')}
-              className="text-gray-400 hover:text-white text-xs px-2 py-1 rounded border border-gray-600 hover:border-gray-500 transition-colors"
-            >
-              Clear
-            </button>
+            <div className="flex items-center space-x-2">
+              {/* Genre Lock Button */}
+              {onToggleGenreLock && (
+                <button
+                  onClick={onToggleGenreLock}
+                  className={`flex items-center space-x-1 px-2 py-1 rounded text-xs transition-colors ${
+                    genreLocked
+                      ? 'bg-crys-gold text-black hover:bg-yellow-400'
+                      : 'text-gray-400 hover:text-white border border-gray-600 hover:border-gray-500'
+                  }`}
+                  title={genreLocked ? 'Unlock Genre Preset' : 'Lock Genre Preset'}
+                >
+                  {genreLocked ? (
+                    <>
+                      <Lock className="w-3 h-3" />
+                      <span>Locked</span>
+                    </>
+                  ) : (
+                    <>
+                      <Unlock className="w-3 h-3" />
+                      <span>Lock</span>
+                    </>
+                  )}
+                </button>
+              )}
+              <button
+                onClick={() => onGenreSelect('')}
+                className="text-gray-400 hover:text-white text-xs px-2 py-1 rounded border border-gray-600 hover:border-gray-500 transition-colors"
+              >
+                Clear
+              </button>
+            </div>
           </div>
         </div>
       )}

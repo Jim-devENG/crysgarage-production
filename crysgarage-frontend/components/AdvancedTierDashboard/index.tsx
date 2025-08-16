@@ -111,6 +111,10 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
   
   // Store backup of effect states before genre presets
   const [effectStateBackup, setEffectStateBackup] = useState<Record<string, any>>({});
+  
+  // Genre lock system
+  const [genreLocked, setGenreLocked] = useState(false);
+  const [lockedGenrePreset, setLockedGenrePreset] = useState<any>(null);
 
   // Refs for real-time analysis
   const realTimeMasteringPlayerRef = useRef<RealTimeMasteringPlayerRef>(null);
@@ -178,28 +182,84 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
     setAudioEffects(prev => {
       const currentEffect = prev[effectType as keyof typeof prev];
       if (currentEffect) {
-        if (enabled && effectStateBackup[effectType]) {
-          // Restore the previous state when enabling
-          return {
-            ...prev,
-            [effectType]: { ...effectStateBackup[effectType], enabled: true }
-          };
-        } else if (!enabled) {
-          // Store current state before disabling
+        if (enabled) {
+          // When enabling an effect
+          if (genreLocked && lockedGenrePreset) {
+            // If genre is locked, restore the genre preset values
+            switch (effectType) {
+              case 'eq':
+                return {
+                  ...prev,
+                  [effectType]: {
+                    low: multiplierToDb(lockedGenrePreset.eq.low),
+                    mid: multiplierToDb(lockedGenrePreset.eq.mid),
+                    high: multiplierToDb(lockedGenrePreset.eq.high),
+                    enabled: true
+                  }
+                };
+              case 'compressor':
+                return {
+                  ...prev,
+                  [effectType]: {
+                    threshold: lockedGenrePreset.compression.threshold,
+                    ratio: lockedGenrePreset.compression.ratio,
+                    attack: Math.round(lockedGenrePreset.compression.attack * 1000),
+                    release: Math.round(lockedGenrePreset.compression.release * 1000),
+                    enabled: true
+                  }
+                };
+              case 'loudness':
+                return {
+                  ...prev,
+                  [effectType]: {
+                    volume: lockedGenrePreset.gain,
+                    enabled: true
+                  }
+                };
+              case 'limiter':
+                return {
+                  ...prev,
+                  [effectType]: {
+                    threshold: -1,
+                    ceiling: lockedGenrePreset.truePeak,
+                    enabled: true
+                  }
+                };
+              default:
+                // For other effects, restore from backup if available
+                if (effectStateBackup[effectType]) {
+                  return {
+                    ...prev,
+                    [effectType]: { ...effectStateBackup[effectType], enabled: true }
+                  };
+                }
+                return {
+                  ...prev,
+                  [effectType]: { ...currentEffect, enabled: true }
+                };
+            }
+          } else if (effectStateBackup[effectType]) {
+            // If genre is not locked, restore from backup
+            return {
+              ...prev,
+              [effectType]: { ...effectStateBackup[effectType], enabled: true }
+            };
+          } else {
+            // Just enable with current settings
+            return {
+              ...prev,
+              [effectType]: { ...currentEffect, enabled: true }
+            };
+          }
+        } else {
+          // When disabling an effect, store current state
           setEffectStateBackup(prevBackup => ({
             ...prevBackup,
             [effectType]: { ...currentEffect }
           }));
-          // Disable the effect but keep settings
           return {
             ...prev,
             [effectType]: { ...currentEffect, enabled: false }
-          };
-        } else {
-          // Just preserve existing settings
-          return {
-            ...prev,
-            [effectType]: { ...currentEffect, enabled }
           };
         }
       }
@@ -211,28 +271,28 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
     setAudioEffects(prev => {
       const currentEffect = prev[effectType as keyof typeof prev];
       if (currentEffect) {
-        if (enabled && effectStateBackup[effectType]) {
-          // Restore the previous state when enabling
-          return {
-            ...prev,
-            [effectType]: { ...effectStateBackup[effectType], enabled: true }
-          };
-        } else if (!enabled) {
-          // Store current state before disabling
+        if (enabled) {
+          // For premium effects, restore from backup if available
+          if (effectStateBackup[effectType]) {
+            return {
+              ...prev,
+              [effectType]: { ...effectStateBackup[effectType], enabled: true }
+            };
+          } else {
+            return {
+              ...prev,
+              [effectType]: { ...currentEffect, enabled: true }
+            };
+          }
+        } else {
+          // When disabling, store current state
           setEffectStateBackup(prevBackup => ({
             ...prevBackup,
             [effectType]: { ...currentEffect }
           }));
-          // Disable the effect but keep settings
           return {
             ...prev,
             [effectType]: { ...currentEffect, enabled: false }
-          };
-        } else {
-          // Just preserve existing settings
-          return {
-            ...prev,
-            [effectType]: { ...currentEffect, enabled }
           };
         }
       }
@@ -245,6 +305,9 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
     setSelectedGenre(genreId);
     const preset = GENRE_PRESETS[genreId];
     if (preset) {
+      // Store the preset for genre lock system
+      setLockedGenrePreset(preset);
+      
       // Store current effect states before applying presets
       setAudioEffects(prev => {
         const backup = {
@@ -318,6 +381,19 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
     setTimeout(() => setShowToast(false), 3000);
   };
 
+  // Genre lock toggle
+  const handleToggleGenreLock = () => {
+    if (selectedGenre && lockedGenrePreset) {
+      setGenreLocked(!genreLocked);
+      showToastNotification(
+        `Genre lock ${!genreLocked ? 'enabled' : 'disabled'} for ${selectedGenre}`,
+        'success'
+      );
+    } else {
+      showToastNotification('Please select a genre first', 'error');
+    }
+  };
+
   // New session handler
   const handleNewSession = () => {
     setCurrentStep(1);
@@ -375,6 +451,9 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
     setManualAdjustments(new Set());
     // Reset effect state backup
     setEffectStateBackup({});
+    // Reset genre lock system
+    setGenreLocked(false);
+    setLockedGenrePreset(null);
   };
 
   // Render current step
@@ -425,6 +504,8 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
                 <GenrePresets
                   selectedGenre={selectedGenre}
                   onGenreSelect={handleGenreSelect}
+                  genreLocked={genreLocked}
+                  onToggleGenreLock={handleToggleGenreLock}
                 />
               </div>
 
