@@ -282,7 +282,7 @@ export function LandingPage({ onGetStarted, onTryMastering }: LandingPageProps) 
           </div>
         </div>
 
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+        <div className="container mx-auto px-6 sm:px-8 lg:px-12 relative z-10">
           <div className="grid lg:grid-cols-2 gap-12 items-center max-w-7xl mx-auto">
             {/* Left Content */}
             <motion.div 
@@ -499,7 +499,7 @@ export function LandingPage({ onGetStarted, onTryMastering }: LandingPageProps) 
           <div className="absolute inset-0 bg-crys-charcoal/80"></div>
         </div>
 
-        <div className="container mx-auto relative z-10">
+        <div className="container mx-auto px-6 sm:px-8 lg:px-12 relative z-10">
           <motion.div 
             className="text-center mb-16"
             initial={{ opacity: 0, y: 50 }}
@@ -599,7 +599,7 @@ export function LandingPage({ onGetStarted, onTryMastering }: LandingPageProps) 
           <div className="absolute inset-0 bg-gradient-to-br from-crys-gold/20 via-crys-gold/10 to-crys-gold/20"></div>
         </div>
 
-        <div className="container mx-auto text-center relative z-10">
+        <div className="container mx-auto px-6 sm:px-8 lg:px-12 text-center relative z-10">
           <motion.div 
             className="max-w-3xl mx-auto"
             initial={{ opacity: 0, y: 50 }}

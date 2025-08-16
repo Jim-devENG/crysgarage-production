@@ -171,7 +171,7 @@ export function CoursesPage({ onGetStarted }: CoursesPageProps) {
 
   return (
     <div className="min-h-screen">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-24 lg:py-36">
+      <div className="container mx-auto px-6 sm:px-8 lg:px-12 py-16 sm:py-24 lg:py-36">
         {/* Header */}
         <div className="text-center mb-16 max-w-4xl mx-auto">
           <Badge variant="secondary" className="bg-crys-gold/20 text-crys-gold mb-4">
