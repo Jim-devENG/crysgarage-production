@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 const AboutHero: React.FC = () => {
   return (
     <section className="relative overflow-hidden pt-12 pb-20 px-4">
-      <div className="absolute inset-0 bg-gradient-to-br from-crys-black via-crys-graphite to-crys-black"></div>
+      {/* Background is now handled by parent component */}
       
       {/* Animated background elements */}
       <div className="absolute inset-0 opacity-20">
