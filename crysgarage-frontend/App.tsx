@@ -464,7 +464,7 @@ function AppContent() {
         onShowProfile={() => setShowAuthModal(true)}
       />
       
-      <main className={currentPage === 'about' ? 'pt-0' : 'pt-20'}>
+      <main className={currentPage === 'about' ? 'pt-12' : 'pt-20'}>
         {currentPage === 'landing' && (
           <LandingPage 
             onGetStarted={() => {
