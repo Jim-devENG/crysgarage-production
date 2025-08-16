@@ -187,6 +187,10 @@ function AppContent() {
       console.log('Setting current page to: community');
       setCurrentPage('community');
       window.history.pushState({}, '', '/community');
+    } else if (section === 'about') {
+      console.log('Setting current page to: about');
+      setCurrentPage('about');
+      window.history.pushState({}, '', '/about');
     }
     // Note: 'professional' and 'advanced' are intentionally excluded to prevent direct navigation
   };
