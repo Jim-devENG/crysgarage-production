@@ -120,6 +120,12 @@ const GenrePresets: React.FC<GenrePresetsProps> = ({
                           Target LUFS {GENRE_PRESETS[genre.id].targetLufs} | True Peak {GENRE_PRESETS[genre.id].truePeak}
                         </p>
                       )}
+                      {genreLocked && (
+                        <div className="flex items-center space-x-1 mt-1">
+                          <Lock className="w-2 h-2 text-crys-gold" />
+                          <span className="text-[8px] text-crys-gold font-medium">Genre Locked</span>
+                        </div>
+                      )}
                     </div>
                   </>
                 );

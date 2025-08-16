@@ -94,13 +94,13 @@ const RealTimeMeters: React.FC<RealTimeMetersProps> = ({
                 threshold: newThreshold 
               });
 
-              // Also adjust G-Limiter if enabled
-              if (audioEffects.gLimiter?.enabled) {
-                onUpdateEffectSettings('gLimiter', {
-                  ...audioEffects.gLimiter,
-                  threshold: newThreshold
-                });
-              }
+              // Remove G-Limiter auto-adjustment to prevent knob movement
+              // if (audioEffects.gLimiter?.enabled) {
+              //   onUpdateEffectSettings('gLimiter', {
+              //     ...audioEffects.gLimiter,
+              //     threshold: newThreshold
+              //   });
+              // }
 
               onManualInit();
             }
@@ -208,14 +208,6 @@ const RealTimeMeters: React.FC<RealTimeMetersProps> = ({
           onUpdateEffectSettings('limiter', { 
             ...audioEffects.limiter, 
             threshold: newThreshold 
-          });
-        }
-
-        if (audioEffects.gLimiter?.enabled) {
-          const newThreshold = Math.max(-20, Math.min(0, (audioEffects.gLimiter.threshold || -1) + adjustment));
-          onUpdateEffectSettings('gLimiter', {
-            ...audioEffects.gLimiter,
-            threshold: newThreshold
           });
         }
 
