@@ -282,7 +282,7 @@ function AppContent() {
           {currentPage === 'home' && (
             <LandingPage 
               onGetStarted={() => {
-                setCurrentPage('dashboard');
+                setCurrentPage('studio');
               }}
               onTryMastering={() => {
                 setCurrentPage('dashboard');
@@ -479,7 +479,7 @@ function AppContent() {
       {currentPage === 'home' && (
         <LandingPage 
           onGetStarted={() => {
-            setCurrentPage('dashboard');
+            setCurrentPage('studio');
           }}
           onTryMastering={() => {
             setCurrentPage('dashboard');
