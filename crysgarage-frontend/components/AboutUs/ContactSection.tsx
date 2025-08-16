@@ -1,6 +1,10 @@
 import React from 'react';
 
-const ContactSection: React.FC = () => {
+interface ContactSectionProps {
+  onNavigate?: (section: string) => void;
+}
+
+const ContactSection: React.FC<ContactSectionProps> = ({ onNavigate }) => {
   return (
     <section className="py-20 px-4 bg-gray-800">
       <div className="max-w-6xl mx-auto text-center">
