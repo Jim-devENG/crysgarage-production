@@ -161,6 +161,13 @@ export const GENRE_PRESETS: Record<string, any> = {
     eq: { low: 1.0, mid: 1.8, high: 2.0 },
     truePeak: -0.4,
     targetLufs: -9.0
+  },
+  'crysgarage': {
+    gain: 2.1,
+    compression: { threshold: -16, ratio: 4.5, attack: 0.001, release: 0.15 },
+    eq: { low: 3.2, mid: 2.2, high: 1.5 },
+    truePeak: -0.15,
+    targetLufs: -7.8
   }
 };
 
@@ -188,7 +195,8 @@ export const getGenreGradient = (genreId: string) => {
     soul: 'from-pink-500 to-pink-700',
     'content-creator': 'from-pink-400 to-pink-600',
     pop: 'from-pink-600 to-pink-800',
-    jazz: 'from-indigo-500 to-indigo-700'
+    jazz: 'from-indigo-500 to-indigo-700',
+    'crysgarage': 'from-orange-500 to-orange-700'
   };
   return colorMap[genreId] || 'from-gray-500 to-gray-600';
 };

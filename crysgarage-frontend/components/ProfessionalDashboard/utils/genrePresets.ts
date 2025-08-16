@@ -39,13 +39,6 @@ export const GENRE_PRESETS: Record<string, GenrePreset> = {
     truePeak: -0.3,
     targetLufs: -8.5
   },
-  'r-b': {
-    gain: 2.6,
-    compression: { threshold: -24, ratio: 2.2, attack: 0.015, release: 0.2 },
-    eq: { low: 1.2, mid: 2.5, high: 1.8 },
-    truePeak: -0.35,
-    targetLufs: -8.8
-  },
   'lofi-hiphop': {
     gain: 2.2,
     compression: { threshold: -26, ratio: 1.8, attack: 0.025, release: 0.3 },
@@ -55,10 +48,10 @@ export const GENRE_PRESETS: Record<string, GenrePreset> = {
   },
   
   // ORANGE - Energetic, Dynamic (Punchy & Clear)
-  'hip-hop': {
-    gain: 3.5,
-    compression: { threshold: -16, ratio: 5, attack: 0.001, release: 0.1 },
-    eq: { low: 3.0, mid: 1.5, high: 0.8 },
+  'crysgarage': {
+    gain: 3.4,
+    compression: { threshold: -16, ratio: 4.5, attack: 0.001, release: 0.15 },
+    eq: { low: 3.2, mid: 2.2, high: 1.5 },
     truePeak: -0.15,
     targetLufs: -7.8
   },
