@@ -10,9 +10,6 @@ import {
   MessageCircle, 
   Mail, 
   Phone, 
-  HelpCircle,
-  ChevronDown,
-  ChevronRight,
   PlayCircle,
   Zap,
   Music,
@@ -28,59 +25,9 @@ interface HelpPageProps {
 
 export function HelpPage({ onGetStarted }: HelpPageProps) {
   const [searchTerm, setSearchTerm] = useState('');
-  const [expandedFaq, setExpandedFaq] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('getting-started');
 
-  const faqData = [
-    {
-      id: 'what-is-crysgarage',
-      question: 'What is Crysgarage Studio?',
-      answer: 'Crysgarage Studio is a professional audio mastering platform designed specifically for African music producers and artists. We provide studio-quality mastering in minutes, not days, at a fraction of traditional costs.',
-      category: 'general'
-    },
-    {
-      id: 'how-it-works',
-      question: 'How does the mastering process work?',
-      answer: 'Our Crysgarage Engine analyzes your audio file, applies genre-specific optimization, and processes dynamics, EQ, and limiting to create a professional master. The process typically takes under 2 minutes.',
-      category: 'general'
-    },
-    {
-      id: 'supported-formats',
-      question: 'What audio formats do you support?',
-      answer: 'We support WAV, MP3, FLAC, AAC, and OGG formats. Professional and Advanced tiers support all formats, while Free tier supports MP3 and WAV up to 60MB.',
-      category: 'technical'
-    },
-    {
-      id: 'studio-tiers',
-question: 'What are the differences between studio tiers?',
-      answer: 'Free tier offers 5 credits with preview-only results. Professional tier ($9) includes 100 credits with full downloads. Advanced tier ($20/month) provides unlimited mastering with manual controls.',
-      category: 'billing'
-    },
-    {
-      id: 'genre-optimization',
-      question: 'How does genre optimization work?',
-      answer: 'Our Crysgarage Engine analyzes musical characteristics specific to each genre (Afrobeats, Gospel, Hip-Hop, etc.) and applies appropriate processing curves, dynamics, and frequency response tailored to that style.',
-      category: 'technical'
-    },
-    {
-      id: 'quality-settings',
-      question: 'What quality settings are available?',
-      answer: 'Free tier: 44.1kHz/16-bit. Professional: 44.1kHz-48kHz/16-bit, 192kHz (+$5), 24/32-bit (+$1). Advanced: All sample rates and bit depths included.',
-      category: 'technical'
-    },
-    {
-      id: 'refund-policy',
-      question: 'What is your refund policy?',
-      answer: 'We offer a 30-day money-back guarantee if you\'re not satisfied with our service. Free tier credits are non-refundable, but paid tiers can be refunded within 30 days.',
-      category: 'billing'
-    },
-    {
-      id: 'file-security',
-      question: 'How secure are my audio files?',
-      answer: 'All files are encrypted in transit and at rest. We automatically delete processed files after 30 days. We never share or use your audio for training without explicit consent.',
-      category: 'security'
-    }
-  ];
+
 
   const tutorials = [
     {
@@ -140,14 +87,7 @@ question: 'What are the differences between studio tiers?',
     }
   ];
 
-  const filteredFaqs = faqData.filter(faq => 
-    faq.question.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    faq.answer.toLowerCase().includes(searchTerm.toLowerCase())
-  );
 
-  const toggleFaq = (id: string) => {
-    setExpandedFaq(expandedFaq === id ? null : id);
-  };
 
   return (
     <div className="min-h-screen">
@@ -232,9 +172,8 @@ question: 'What are the differences between studio tiers?',
 
       {/* Main Content Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-4 bg-crys-graphite/50 mb-8">
+        <TabsList className="grid w-full grid-cols-3 bg-crys-graphite/50 mb-8">
           <TabsTrigger value="getting-started" className="text-crys-white">Getting Started</TabsTrigger>
-          <TabsTrigger value="faq" className="text-crys-white">FAQ</TabsTrigger>
           <TabsTrigger value="tutorials" className="text-crys-white">Tutorials</TabsTrigger>
           <TabsTrigger value="contact" className="text-crys-white">Contact</TabsTrigger>
         </TabsList>
@@ -340,38 +279,7 @@ question: 'What are the differences between studio tiers?',
           </div>
         </TabsContent>
 
-        {/* FAQ Tab */}
-        <TabsContent value="faq" className="space-y-6">
-          <div className="space-y-4">
-            {filteredFaqs.map((faq) => (
-              <Card key={faq.id} className="bg-audio-panel-bg border-audio-panel-border">
-                <CardContent className="p-0">
-                  <button
-                    onClick={() => toggleFaq(faq.id)}
-                    className="w-full p-6 text-left flex items-center justify-between hover:bg-crys-gold/5 transition-colors"
-                  >
-                    <div className="flex items-center gap-3">
-                      <HelpCircle className="w-5 h-5 text-crys-gold flex-shrink-0" />
-                      <h3 className="text-crys-white font-medium">{faq.question}</h3>
-                    </div>
-                    {expandedFaq === faq.id ? (
-                      <ChevronDown className="w-5 h-5 text-crys-light-grey" />
-                    ) : (
-                      <ChevronRight className="w-5 h-5 text-crys-light-grey" />
-                    )}
-                  </button>
-                  {expandedFaq === faq.id && (
-                    <div className="px-6 pb-6">
-                      <p className="text-crys-light-grey leading-relaxed ml-8">
-                        {faq.answer}
-                      </p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </TabsContent>
+
 
         {/* Tutorials Tab */}
         <TabsContent value="tutorials" className="space-y-6">

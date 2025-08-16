@@ -14,7 +14,7 @@ import StudioHeader from './StudioHeader';
 import FileUpload from './FileUpload';
 import RealTimeMeters from './RealTimeMeters';
 import AudioEffects from './AudioEffects';
-import ExportGate from './ExportGate';
+import ExportGate from './ExportGate/index';
 import RealTimeMasteringPlayer, { RealTimeMasteringPlayerRef } from './RealTimeMasteringPlayer';
 import StudioDashboard from './StudioDashboard';
 import GenrePresets from './GenrePresets';
@@ -592,6 +592,7 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
             processedAudioUrl={processedAudioUrl}
             audioEffects={audioEffects}
             onBack={() => setCurrentStep(2)}
+            onUpdateEffectSettings={handleUpdateEffectSettings}
           />
         );
       

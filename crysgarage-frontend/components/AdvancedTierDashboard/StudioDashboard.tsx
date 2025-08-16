@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import StudioRack from './StudioRack';
 import BasicEffects from './effects/BasicEffects';
 import PremiumEffects from './effects/PremiumEffects';
-import AdvancedFeatures from './effects/AdvancedFeatures';
 
 interface StudioDashboardProps {
   audioEffects: any;
@@ -29,7 +28,7 @@ const StudioDashboard: React.FC<StudioDashboardProps> = ({
   onLoadSettings,
   onManualInit
 }) => {
-  const [activeTab, setActiveTab] = useState<'basic' | 'premium' | 'advanced'>('basic');
+  const [activeTab, setActiveTab] = useState<'basic' | 'premium'>('basic');
 
   return (
     <div className="backdrop-blur-md bg-black bg-opacity-30 rounded-lg p-4 border border-gray-500 border-opacity-50 shadow-2xl">
@@ -84,16 +83,6 @@ const StudioDashboard: React.FC<StudioDashboardProps> = ({
         >
           Premium Effects
         </button>
-        <button
-          onClick={() => setActiveTab('advanced')}
-          className={`flex-1 py-1.5 px-3 rounded text-xs font-medium transition-colors ${
-            activeTab === 'advanced'
-              ? 'bg-crys-gold text-black'
-              : 'text-gray-400 hover:text-white'
-          }`}
-        >
-          Advanced Features
-        </button>
       </div>
 
       {/* Content */}
@@ -115,17 +104,6 @@ const StudioDashboard: React.FC<StudioDashboardProps> = ({
               audioEffects={audioEffects}
               onUpdateEffectSettings={onUpdateEffectSettings}
               onTogglePremiumEffect={onTogglePremiumEffect}
-              onManualInit={onManualInit}
-            />
-          </div>
-        )}
-
-        {activeTab === 'advanced' && (
-          <div className="md:col-span-2 lg:col-span-3">
-            <AdvancedFeatures
-              audioEffects={audioEffects}
-              onUpdateEffectSettings={onUpdateEffectSettings}
-              onTogglePremiumEffect={onToggleEffect}
               onManualInit={onManualInit}
             />
           </div>

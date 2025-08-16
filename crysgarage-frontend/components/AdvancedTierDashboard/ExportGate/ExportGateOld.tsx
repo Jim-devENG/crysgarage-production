@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Download, ArrowLeft, Play, Pause, Volume2, Settings, DollarSign } from 'lucide-react';
+import { Download, ArrowLeft, Play, Pause, Volume2, Settings, DollarSign, Cpu } from 'lucide-react';
 
 interface ExportGateProps {
   originalFile: File | null;
@@ -152,50 +152,48 @@ const ExportGate: React.FC<ExportGateProps> = ({
   };
 
   const handleOriginalLoadedMetadata = () => {
-    console.log('Original audio metadata loaded');
     if (originalAudioRef.current) {
       setOriginalDuration(originalAudioRef.current.duration);
       setOriginalAudioReady(true);
+      console.log('Original audio metadata loaded');
     }
   };
 
   const handleProcessedLoadedMetadata = () => {
-    console.log('Processed audio metadata loaded');
     if (processedAudioRef.current) {
       setProcessedDuration(processedAudioRef.current.duration);
       setProcessedAudioReady(true);
+      console.log('Processed audio metadata loaded');
     }
   };
 
   const handleOriginalEnded = () => {
-    console.log('Original audio ended');
     setIsPlayingOriginal(false);
     setOriginalCurrentTime(0);
   };
 
   const handleProcessedEnded = () => {
-    console.log('Processed audio ended');
     setIsPlayingProcessed(false);
     setProcessedCurrentTime(0);
   };
 
-  const handleOriginalError = (e: any) => {
-    console.error('Original audio error:', e);
+  const handleOriginalError = (error: any) => {
+    console.error('Original audio error:', error);
     setOriginalAudioReady(false);
   };
 
-  const handleProcessedError = (e: any) => {
-    console.error('Processed audio error:', e);
+  const handleProcessedError = (error: any) => {
+    console.error('Processed audio error:', error);
     setProcessedAudioReady(false);
   };
 
+  // Download handler
   const handleDownload = () => {
-    // Implementation for actual download
-    console.log('Downloading with settings:', {
+    console.log('Download clicked with settings:', {
       format: downloadFormat,
       sampleRate,
-      gSurround: gSurroundEnabled,
-      gTuner: gTunerEnabled,
+      gSurroundEnabled,
+      gTunerEnabled,
       totalCost
     });
 
@@ -277,6 +275,79 @@ const ExportGate: React.FC<ExportGateProps> = ({
           <div className="text-sm text-gray-400">Total Cost</div>
           <div className="text-2xl font-bold text-crys-gold">
             ${totalCost.toFixed(2)}
+          </div>
+        </div>
+      </div>
+
+      {/* G-Tuner Section - Prominent Display */}
+      <div className="bg-gradient-to-br from-gray-800 to-gray-700 rounded-xl p-6 border border-gray-600">
+        <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
+          <Cpu className="w-5 h-5 mr-2 text-crys-gold" />
+          G-Tuner (444Hz Reference)
+        </h3>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* G-Tuner Control */}
+          <div className="bg-gray-900 rounded-lg p-4">
+            <div className="flex items-center justify-between mb-4">
+              <h4 className="text-white font-medium">Pitch Correction</h4>
+              <label className="flex items-center">
+                <input
+                  type="checkbox"
+                  checked={gTunerEnabled}
+                  onChange={(e) => setGTunerEnabled(e.target.checked)}
+                  className="mr-2"
+                />
+                <span className="text-gray-300 text-sm">Enable</span>
+              </label>
+            </div>
+            
+            {gTunerEnabled && (
+              <div className="bg-gradient-to-r from-yellow-800 to-yellow-900 rounded-lg p-4 border border-yellow-600">
+                <div className="text-center">
+                  <div className="text-yellow-200 text-2xl font-bold mb-2">444 Hz</div>
+                  <div className="text-yellow-300 text-sm mb-1">Reference Frequency</div>
+                  <div className="text-yellow-400 text-xs">Auto-Applied on Export</div>
+                </div>
+              </div>
+            )}
+            
+            <div className="mt-3 text-xs text-gray-400">
+              Automatically corrects pitch to 444Hz reference frequency for optimal tuning
+            </div>
+          </div>
+
+          {/* Preview with G-Tuner */}
+          <div className="bg-gray-900 rounded-lg p-4">
+            <h4 className="text-white font-medium mb-3">Preview with G-Tuner</h4>
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-sm text-gray-400">Audio Preview</span>
+              <button
+                onClick={handleProcessedPlayPause}
+                disabled={!processedAudioReady}
+                className={`p-2 rounded-lg transition-colors ${
+                  processedAudioReady 
+                    ? 'bg-crys-gold hover:bg-yellow-400' 
+                    : 'bg-gray-600 cursor-not-allowed'
+                }`}
+              >
+                {isPlayingProcessed ? (
+                  <Pause className="w-4 h-4 text-gray-900" />
+                ) : (
+                  <Play className="w-4 h-4 text-gray-900" />
+                )}
+              </button>
+            </div>
+            <div className="w-full bg-gray-800 rounded-lg h-2">
+              <div className="bg-crys-gold h-2 rounded-lg" style={{ width: `${getProgressPercentage(processedCurrentTime, processedDuration)}%` }}></div>
+            </div>
+            <div className="flex justify-between text-xs text-gray-400 mt-1">
+              <span>{formatTime(processedCurrentTime)}</span>
+              <span>{formatTime(processedDuration)}</span>
+            </div>
+            <div className="mt-2 text-xs text-gray-400">
+              {gTunerEnabled ? 'G-Tuner applied to preview' : 'G-Tuner will be applied on export'}
+            </div>
           </div>
         </div>
       </div>
@@ -624,24 +695,6 @@ const ExportGate: React.FC<ExportGateProps> = ({
                 <div className="text-white font-medium">$5.00</div>
               </div>
             </label>
-
-            <label className="flex items-center justify-between p-4 bg-gray-900 rounded-lg border border-gray-600 cursor-pointer hover:bg-gray-800 transition-colors">
-              <div className="flex items-center space-x-3">
-                <input
-                  type="checkbox"
-                  checked={gTunerEnabled}
-                  onChange={(e) => setGTunerEnabled(e.target.checked)}
-                  className="text-crys-gold"
-                />
-                <div>
-                  <div className="text-white font-medium">G-Tuner</div>
-                  <div className="text-sm text-gray-400">Automatic pitch correction</div>
-                </div>
-              </div>
-              <div className="text-right">
-                <div className="text-white font-medium">$3.00</div>
-              </div>
-            </label>
           </div>
         </div>
       </div>
@@ -655,9 +708,14 @@ const ExportGate: React.FC<ExportGateProps> = ({
           <Download className="w-5 h-5" />
           <span>Download Mastered Audio</span>
         </button>
+        {gTunerEnabled && (
+          <div className="mt-2 text-sm text-crys-gold">
+            ✓ G-Tuner (444Hz) will be applied to final export
+          </div>
+        )}
       </div>
     </div>
   );
-  };
- 
+};
+
 export default ExportGate;
