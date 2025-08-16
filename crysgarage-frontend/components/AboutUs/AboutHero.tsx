@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 
 const AboutHero: React.FC = () => {
   return (
-    <section className="relative overflow-hidden py-20 px-4">
+    <section className="relative overflow-hidden pt-8 pb-20 px-4">
       <div className="absolute inset-0 bg-gradient-to-br from-crys-black via-crys-graphite to-crys-black"></div>
       
       {/* Animated background elements */}
