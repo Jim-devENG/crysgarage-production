@@ -134,7 +134,7 @@ export function PricingPage({ onSelectTier, onGoToDashboard }: PricingPageProps)
 
   return (
     <div className="min-h-screen">
-              <div className="container mx-auto">
+              <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="text-center mb-16 max-w-4xl mx-auto">
           <Badge variant="secondary" className="bg-crys-gold/20 text-crys-gold mb-4">
