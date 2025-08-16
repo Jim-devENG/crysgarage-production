@@ -108,6 +108,9 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
   
   // Track manual adjustments to prevent unwanted resets
   const [manualAdjustments, setManualAdjustments] = useState<Set<string>>(new Set());
+  
+  // Store backup of effect states before genre presets
+  const [effectStateBackup, setEffectStateBackup] = useState<Record<string, any>>({});
 
   // Refs for real-time analysis
   const realTimeMasteringPlayerRef = useRef<RealTimeMasteringPlayerRef>(null);
@@ -175,11 +178,30 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
     setAudioEffects(prev => {
       const currentEffect = prev[effectType as keyof typeof prev];
       if (currentEffect) {
-        // Preserve all existing settings, only change the enabled state
-        return {
-          ...prev,
-          [effectType]: { ...currentEffect, enabled }
-        };
+        if (enabled && effectStateBackup[effectType]) {
+          // Restore the previous state when enabling
+          return {
+            ...prev,
+            [effectType]: { ...effectStateBackup[effectType], enabled: true }
+          };
+        } else if (!enabled) {
+          // Store current state before disabling
+          setEffectStateBackup(prevBackup => ({
+            ...prevBackup,
+            [effectType]: { ...currentEffect }
+          }));
+          // Disable the effect but keep settings
+          return {
+            ...prev,
+            [effectType]: { ...currentEffect, enabled: false }
+          };
+        } else {
+          // Just preserve existing settings
+          return {
+            ...prev,
+            [effectType]: { ...currentEffect, enabled }
+          };
+        }
       }
       return prev;
     });
@@ -189,11 +211,30 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
     setAudioEffects(prev => {
       const currentEffect = prev[effectType as keyof typeof prev];
       if (currentEffect) {
-        // Preserve all existing settings, only change the enabled state
-        return {
-          ...prev,
-          [effectType]: { ...currentEffect, enabled }
-        };
+        if (enabled && effectStateBackup[effectType]) {
+          // Restore the previous state when enabling
+          return {
+            ...prev,
+            [effectType]: { ...effectStateBackup[effectType], enabled: true }
+          };
+        } else if (!enabled) {
+          // Store current state before disabling
+          setEffectStateBackup(prevBackup => ({
+            ...prevBackup,
+            [effectType]: { ...currentEffect }
+          }));
+          // Disable the effect but keep settings
+          return {
+            ...prev,
+            [effectType]: { ...currentEffect, enabled: false }
+          };
+        } else {
+          // Just preserve existing settings
+          return {
+            ...prev,
+            [effectType]: { ...currentEffect, enabled }
+          };
+        }
       }
       return prev;
     });
@@ -204,54 +245,65 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
     setSelectedGenre(genreId);
     const preset = GENRE_PRESETS[genreId];
     if (preset) {
-      // Check if effects have been manually adjusted using our tracking system
-      const hasManualAdjustments = 
-        manualAdjustments.has('eq') || 
-        manualAdjustments.has('compressor') || 
-        manualAdjustments.has('loudness') || 
-        manualAdjustments.has('limiter');
-      
-      if (!hasManualAdjustments) {
-        // Apply genre preset only if no manual adjustments have been made
-        setAudioEffects(prev => ({
-          ...prev,
-          eq: { 
-            ...prev.eq, 
-            low: multiplierToDb(preset.eq.low), 
-            mid: multiplierToDb(preset.eq.mid), 
-            high: multiplierToDb(preset.eq.high), 
-            enabled: true 
-          },
-          compressor: { 
-            ...prev.compressor, 
-            threshold: preset.compression.threshold, 
-            ratio: preset.compression.ratio, 
-            attack: Math.round(preset.compression.attack * 1000), 
-            release: Math.round(preset.compression.release * 1000), 
-            enabled: true 
-          },
-          loudness: { 
-            ...prev.loudness, 
-            volume: preset.gain, 
-            enabled: true 
-          },
-          limiter: { 
-            ...prev.limiter, 
-            threshold: -1, 
-            ceiling: preset.truePeak, 
-            enabled: true 
-          }
-        }));
-      } else {
-        // Keep existing settings, just enable effects if they're not already enabled
-        setAudioEffects(prev => ({
-          ...prev,
-          eq: { ...prev.eq, enabled: true },
-          compressor: { ...prev.compressor, enabled: true },
-          loudness: { ...prev.loudness, enabled: true },
-          limiter: { ...prev.limiter, enabled: true }
-        }));
-      }
+      // Store current effect states before applying presets
+      setAudioEffects(prev => {
+        const backup = {
+          eq: { ...prev.eq },
+          compressor: { ...prev.compressor },
+          loudness: { ...prev.loudness },
+          limiter: { ...prev.limiter }
+        };
+        setEffectStateBackup(backup);
+        
+        // Check if effects have been manually adjusted using our tracking system
+        const hasManualAdjustments = 
+          manualAdjustments.has('eq') || 
+          manualAdjustments.has('compressor') || 
+          manualAdjustments.has('loudness') || 
+          manualAdjustments.has('limiter');
+        
+        if (!hasManualAdjustments) {
+          // Apply genre preset only if no manual adjustments have been made
+          return {
+            ...prev,
+            eq: { 
+              ...prev.eq, 
+              low: multiplierToDb(preset.eq.low), 
+              mid: multiplierToDb(preset.eq.mid), 
+              high: multiplierToDb(preset.eq.high), 
+              enabled: true 
+            },
+            compressor: { 
+              ...prev.compressor, 
+              threshold: preset.compression.threshold, 
+              ratio: preset.compression.ratio, 
+              attack: Math.round(preset.compression.attack * 1000), 
+              release: Math.round(preset.compression.release * 1000), 
+              enabled: true 
+            },
+            loudness: { 
+              ...prev.loudness, 
+              volume: preset.gain, 
+              enabled: true 
+            },
+            limiter: { 
+              ...prev.limiter, 
+              threshold: -1, 
+              ceiling: preset.truePeak, 
+              enabled: true 
+            }
+          };
+        } else {
+          // Keep existing settings, just enable effects if they're not already enabled
+          return {
+            ...prev,
+            eq: { ...prev.eq, enabled: true },
+            compressor: { ...prev.compressor, enabled: true },
+            loudness: { ...prev.loudness, enabled: true },
+            limiter: { ...prev.limiter, enabled: true }
+          };
+        }
+      });
       
       // Ensure audio is initialized for immediate preview
       setTimeout(() => manualInit(), 0);
@@ -321,6 +373,8 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
     });
     // Reset manual adjustments tracking
     setManualAdjustments(new Set());
+    // Reset effect state backup
+    setEffectStateBackup({});
   };
 
   // Render current step
