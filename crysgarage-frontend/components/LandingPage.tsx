@@ -337,14 +337,6 @@ export function LandingPage({ onGetStarted, onTryMastering }: LandingPageProps) 
                 >
                   Unleash the Realm
                 </motion.span>
-                <motion.span 
-                  className="block font-chakra text-crys-gold text-xl md:text-2xl mt-4 musical-wave"
-                  initial={{ opacity: 0, y: 30 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 1, delay: 0.6 }}
-                >
-                  Can You Make It?
-                </motion.span>
               </motion.h1>
               
               {/* Subheadline */}
