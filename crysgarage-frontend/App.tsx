@@ -69,7 +69,10 @@ function AppContent() {
   useEffect(() => {
     const handleRouteChange = () => {
       const path = window.location.pathname;
+      console.log('=== ROUTE CHANGE ===');
       console.log('Current path:', path);
+      console.log('Current page state:', currentPage);
+      console.log('Is authenticated:', isAuthenticated);
       
       if (path === '/admin') {
         setCurrentPage('admin');
@@ -93,10 +96,11 @@ function AppContent() {
         setCurrentPage('about');
       } else if (path === '/') {
         setCurrentPage('landing');
-      } else {
-        // Default to landing page for unknown routes
-        setCurrentPage('landing');
-      }
+              } else {
+          // Default to landing page for unknown routes
+          setCurrentPage('landing');
+        }
+        console.log('=== END ROUTE CHANGE ===');
     };
 
     // Handle initial route
@@ -465,24 +469,32 @@ function AppContent() {
       />
       
       <main className={currentPage === 'about' ? 'pt-12' : 'pt-20'}>
-        {currentPage === 'landing' && (
-          <LandingPage 
-            onGetStarted={() => {
-              setCurrentPage('studio');
-            }}
-            onTryMastering={() => {
-              setCurrentPage('dashboard');
-            }}
-          />
-        )}
+                  {currentPage === 'landing' && (
+            <LandingPage 
+              onGetStarted={() => {
+                console.log('Landing: onGetStarted clicked - navigating to studio');
+                setCurrentPage('studio');
+                window.history.pushState({}, '', '/studio');
+              }}
+              onTryMastering={() => {
+                console.log('Landing: onTryMastering clicked - navigating to dashboard');
+                setCurrentPage('dashboard');
+                window.history.pushState({}, '', '/dashboard');
+              }}
+            />
+          )}
       
       {currentPage === 'home' && (
         <LandingPage 
           onGetStarted={() => {
+            console.log('Home: onGetStarted clicked - navigating to studio');
             setCurrentPage('studio');
+            window.history.pushState({}, '', '/studio');
           }}
           onTryMastering={() => {
+            console.log('Home: onTryMastering clicked - navigating to dashboard');
             setCurrentPage('dashboard');
+            window.history.pushState({}, '', '/dashboard');
           }}
         />
       )}
