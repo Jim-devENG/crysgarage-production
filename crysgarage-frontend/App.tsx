@@ -21,6 +21,7 @@ import { AutoAuthFix } from './components/AutoAuthFix';
 import { AdminDashboard } from './components/AdminDashboard';
 import { CommunityPage } from './components/CommunityPage';
 import AboutUs from './components/AboutUs';
+import { AutomaticTierAuth } from './components/AutomaticTierAuth';
 
 // Main App Component
 function AppContent() {
@@ -42,7 +43,8 @@ function AppContent() {
   const [showBillingModal, setShowBillingModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showProfileEditModal, setShowProfileEditModal] = useState(false);
-    const [selectedTier, setSelectedTier] = useState<string>('free'); // Add selected tier state 
+  const [selectedTier, setSelectedTier] = useState<string>('free'); // Add selected tier state
+  const [showAutomaticTierAuth, setShowAutomaticTierAuth] = useState(false); 
 
   // Authentication wrapper functions
   const handleSignIn = async (email: string, password: string) => {
@@ -207,9 +209,8 @@ function AppContent() {
     // Route to appropriate dashboard based on tier
     switch (tierId) {
       case 'free':
-        console.log('Routing to free dashboard');
-        setCurrentPage('dashboard'); // Free tier dashboard
-        window.history.pushState({}, '', '/dashboard');
+        console.log('Showing automatic tier auth modal');
+        setShowAutomaticTierAuth(true);
         break;
       case 'professional':
         console.log('Routing to professional dashboard');
@@ -568,6 +569,16 @@ function AppContent() {
           onSignIn={signIn}
           onSignUp={signUp}
           onClose={() => setShowAuthModal(false)}
+        />
+      )}
+      
+      {showAutomaticTierAuth && (
+        <AutomaticTierAuth
+          onClose={() => setShowAutomaticTierAuth(false)}
+          onUpgrade={() => {
+            setShowAutomaticTierAuth(false);
+            setCurrentPage('studio');
+          }}
         />
       )}
       

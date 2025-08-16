@@ -22,8 +22,7 @@ const AdvancedFeatures: React.FC<AdvancedFeaturesProps> = ({
   const handleKnobChange = (effectType: string, setting: string, value: number) => {
     console.log(`Advanced knob changed: ${effectType}.${setting} = ${value}`);
     onUpdateEffectSettings(effectType, { ...audioEffects[effectType], [setting]: value });
-    // Ensure audio context is resumed for real-time control
-    onManualInit?.();
+    // Remove onManualInit call to prevent parameter instability
   };
 
   const handleKnobClick = () => {

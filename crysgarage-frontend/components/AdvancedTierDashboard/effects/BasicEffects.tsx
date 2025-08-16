@@ -21,12 +21,11 @@ const BasicEffects: React.FC<BasicEffectsProps> = ({
   const handleKnobChange = (effectType: string, setting: string, value: number) => {
     console.log(`Knob changed: ${effectType}.${setting} = ${value}`);
     onUpdateEffectSettings(effectType, { ...audioEffects[effectType], [setting]: value });
-    // Ensure audio context is resumed for real-time control
-    onManualInit?.();
+    // Remove onManualInit call to prevent parameter instability
   };
 
   const handleKnobClick = () => {
-    // Resume audio context when knob is clicked
+    // Only resume audio context when knob is clicked, not on every change
     onManualInit?.();
   };
 

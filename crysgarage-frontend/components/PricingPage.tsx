@@ -22,9 +22,14 @@ interface PricingPageProps {
 export function PricingPage({ onSelectTier, onGoToDashboard }: PricingPageProps) {
   const handleTierSelection = (tierId: string) => {
     console.log('PricingPage: Tier selection clicked:', tierId);
-    // Direct access to all tiers without payment popup
-    onSelectTier(tierId);
-    // Don't call onGoToDashboard here - let the App.tsx handle routing based on tier
+    
+    if (tierId === 'free') {
+      // For free tier, show authentication modal
+      onSelectTier(tierId);
+    } else {
+      // For other tiers, direct access (as requested)
+      onSelectTier(tierId);
+    }
   };
 
   const pricingTiers = [

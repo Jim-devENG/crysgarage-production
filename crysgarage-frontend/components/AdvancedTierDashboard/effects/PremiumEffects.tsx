@@ -23,12 +23,11 @@ const PremiumEffects: React.FC<PremiumEffectsProps> = ({
   const handleKnobChange = (effectType: string, setting: string, value: number) => {
     console.log(`Premium knob changed: ${effectType}.${setting} = ${value}`);
     onUpdateEffectSettings(effectType, { ...audioEffects[effectType], [setting]: value });
-    // Ensure audio context is resumed for real-time control
-    onManualInit?.();
+    // Remove onManualInit call to prevent parameter instability
   };
 
   const handleKnobClick = () => {
-    // Resume audio context when knob is clicked
+    // Only resume audio context when knob is clicked, not on every change
     onManualInit?.();
   };
 
@@ -74,7 +73,7 @@ const PremiumEffects: React.FC<PremiumEffectsProps> = ({
                         const newBands = [...audioEffects.gPrecisionEQ.bands];
                         newBands[index] = { ...band, gain: value };
                         onUpdateEffectSettings('gPrecisionEQ', { ...audioEffects.gPrecisionEQ, bands: newBands });
-                        onManualInit?.();
+                        // Remove onManualInit call to prevent parameter instability
                       }}
                       onKnobClick={handleKnobClick}
                       isEditing={editingKnob === `gPrecisionEQ-band-${index}`}
@@ -119,7 +118,7 @@ const PremiumEffects: React.FC<PremiumEffectsProps> = ({
                         ...audioEffects.gMultiBand, 
                         low: { ...audioEffects.gMultiBand.low, threshold: value }
                       });
-                      onManualInit?.();
+                      // Remove onManualInit call to prevent parameter instability
                     }}
                     onKnobClick={handleKnobClick}
                     isEditing={editingKnob === 'gMultiBand-low-threshold'}
@@ -141,7 +140,7 @@ const PremiumEffects: React.FC<PremiumEffectsProps> = ({
                         ...audioEffects.gMultiBand, 
                         mid: { ...audioEffects.gMultiBand.mid, threshold: value }
                       });
-                      onManualInit?.();
+                      // Remove onManualInit call to prevent parameter instability
                     }}
                     onKnobClick={handleKnobClick}
                     isEditing={editingKnob === 'gMultiBand-mid-threshold'}
@@ -163,7 +162,7 @@ const PremiumEffects: React.FC<PremiumEffectsProps> = ({
                         ...audioEffects.gMultiBand, 
                         high: { ...audioEffects.gMultiBand.high, threshold: value }
                       });
-                      onManualInit?.();
+                      // Remove onManualInit call to prevent parameter instability
                     }}
                     onKnobClick={handleKnobClick}
                     isEditing={editingKnob === 'gMultiBand-high-threshold'}
@@ -187,23 +186,23 @@ const PremiumEffects: React.FC<PremiumEffectsProps> = ({
             outputLevel={audioEffects.gMasteringCompressor?.outputLevel || -20}
             onThresholdChange={(value) => {
               onUpdateEffectSettings('gMasteringCompressor', { ...audioEffects.gMasteringCompressor, threshold: value });
-              onManualInit?.();
+              // Remove onManualInit call to prevent parameter instability
             }}
             onRatioChange={(value) => {
               onUpdateEffectSettings('gMasteringCompressor', { ...audioEffects.gMasteringCompressor, ratio: value });
-              onManualInit?.();
+              // Remove onManualInit call to prevent parameter instability
             }}
             onAttackChange={(value) => {
               onUpdateEffectSettings('gMasteringCompressor', { ...audioEffects.gMasteringCompressor, attack: value });
-              onManualInit?.();
+              // Remove onManualInit call to prevent parameter instability
             }}
             onReleaseChange={(value) => {
               onUpdateEffectSettings('gMasteringCompressor', { ...audioEffects.gMasteringCompressor, release: value });
-              onManualInit?.();
+              // Remove onManualInit call to prevent parameter instability
             }}
             onMakeupChange={(value) => {
               onUpdateEffectSettings('gMasteringCompressor', { ...audioEffects.gMasteringCompressor, makeup: value });
-              onManualInit?.();
+              // Remove onManualInit call to prevent parameter instability
             }}
             enabled={audioEffects.gMasteringCompressor?.enabled || false}
             onToggle={(enabled) => onTogglePremiumEffect('gMasteringCompressor', enabled)}
@@ -211,27 +210,27 @@ const PremiumEffects: React.FC<PremiumEffectsProps> = ({
             // Control button handlers
             onKneeChange={(knee) => {
               onUpdateEffectSettings('gMasteringCompressor', { ...audioEffects.gMasteringCompressor, knee: knee });
-              onManualInit?.();
+              // Remove onManualInit call to prevent parameter instability
             }}
             onLookaheadChange={(lookahead) => {
               onUpdateEffectSettings('gMasteringCompressor', { ...audioEffects.gMasteringCompressor, lookahead: lookahead });
-              onManualInit?.();
+              // Remove onManualInit call to prevent parameter instability
             }}
             onStereoLinkChange={(stereoLink) => {
               onUpdateEffectSettings('gMasteringCompressor', { ...audioEffects.gMasteringCompressor, stereoLink: stereoLink });
-              onManualInit?.();
+              // Remove onManualInit call to prevent parameter instability
             }}
             onSidechainChange={(sidechain) => {
               onUpdateEffectSettings('gMasteringCompressor', { ...audioEffects.gMasteringCompressor, sidechain: sidechain });
-              onManualInit?.();
+              // Remove onManualInit call to prevent parameter instability
             }}
             onAutoReleaseChange={(autoRelease) => {
               onUpdateEffectSettings('gMasteringCompressor', { ...audioEffects.gMasteringCompressor, autoRelease: autoRelease });
-              onManualInit?.();
+              // Remove onManualInit call to prevent parameter instability
             }}
             onRMSDetectionChange={(rmsDetection) => {
               onUpdateEffectSettings('gMasteringCompressor', { ...audioEffects.gMasteringCompressor, rmsDetection: rmsDetection });
-              onManualInit?.();
+              // Remove onManualInit call to prevent parameter instability
             }}
             // Current settings
             knee={audioEffects.gMasteringCompressor?.knee || 'Soft'}

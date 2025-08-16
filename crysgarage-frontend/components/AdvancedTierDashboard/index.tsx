@@ -166,32 +166,96 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
   };
 
   const handleToggleEffect = (effectType: string, enabled: boolean) => {
-    setAudioEffects(prev => ({
-      ...prev,
-      [effectType]: { ...prev[effectType as keyof typeof prev], enabled }
-    }));
+    setAudioEffects(prev => {
+      const currentEffect = prev[effectType as keyof typeof prev];
+      if (currentEffect) {
+        // Preserve all existing settings, only change the enabled state
+        return {
+          ...prev,
+          [effectType]: { ...currentEffect, enabled }
+        };
+      }
+      return prev;
+    });
   };
 
   const handleTogglePremiumEffect = (effectType: string, enabled: boolean) => {
-    setAudioEffects(prev => ({
-      ...prev,
-      [effectType]: { ...prev[effectType as keyof typeof prev], enabled }
-    }));
+    setAudioEffects(prev => {
+      const currentEffect = prev[effectType as keyof typeof prev];
+      if (currentEffect) {
+        // Preserve all existing settings, only change the enabled state
+        return {
+          ...prev,
+          [effectType]: { ...currentEffect, enabled }
+        };
+      }
+      return prev;
+    });
   };
 
-  // Genre selection
+  // Genre selection - preserve existing settings
   const handleGenreSelect = (genreId: string) => {
     setSelectedGenre(genreId);
     const preset = GENRE_PRESETS[genreId];
     if (preset) {
-      // Map preset to current effect controls
-      setAudioEffects(prev => ({
-        ...prev,
-        eq: { ...prev.eq, low: multiplierToDb(preset.eq.low), mid: multiplierToDb(preset.eq.mid), high: multiplierToDb(preset.eq.high), enabled: true },
-        compressor: { ...prev.compressor, threshold: preset.compression.threshold, ratio: preset.compression.ratio, attack: Math.round(preset.compression.attack * 1000), release: Math.round(preset.compression.release * 1000), enabled: true },
-        loudness: { ...prev.loudness, volume: preset.gain, enabled: true },
-        limiter: { ...prev.limiter, threshold: -1, ceiling: preset.truePeak, enabled: true }
-      }));
+      // Only apply genre preset if no manual adjustments have been made
+      // or if this is the first genre selection
+      setAudioEffects(prev => {
+        const currentEq = prev.eq;
+        const currentCompressor = prev.compressor;
+        const currentLoudness = prev.loudness;
+        const currentLimiter = prev.limiter;
+        
+        // Check if effects have been manually adjusted (non-zero values)
+        const hasManualAdjustments = 
+          currentEq.low !== 0 || currentEq.mid !== 0 || currentEq.high !== 0 ||
+          currentCompressor.threshold !== -20 || currentCompressor.ratio !== 4 ||
+          currentLoudness.volume !== 1 ||
+          currentLimiter.threshold !== -1;
+        
+        if (!hasManualAdjustments) {
+          // Apply genre preset only if no manual adjustments
+          return {
+            ...prev,
+            eq: { 
+              ...currentEq, 
+              low: multiplierToDb(preset.eq.low), 
+              mid: multiplierToDb(preset.eq.mid), 
+              high: multiplierToDb(preset.eq.high), 
+              enabled: true 
+            },
+            compressor: { 
+              ...currentCompressor, 
+              threshold: preset.compression.threshold, 
+              ratio: preset.compression.ratio, 
+              attack: Math.round(preset.compression.attack * 1000), 
+              release: Math.round(preset.compression.release * 1000), 
+              enabled: true 
+            },
+            loudness: { 
+              ...currentLoudness, 
+              volume: preset.gain, 
+              enabled: true 
+            },
+            limiter: { 
+              ...currentLimiter, 
+              threshold: -1, 
+              ceiling: preset.truePeak, 
+              enabled: true 
+            }
+          };
+        } else {
+          // Keep existing settings, just enable effects if they're not already enabled
+          return {
+            ...prev,
+            eq: { ...currentEq, enabled: true },
+            compressor: { ...currentCompressor, enabled: true },
+            loudness: { ...currentLoudness, enabled: true },
+            limiter: { ...currentLimiter, enabled: true }
+          };
+        }
+      });
+      
       // Ensure audio is initialized for immediate preview
       setTimeout(() => manualInit(), 0);
     }
