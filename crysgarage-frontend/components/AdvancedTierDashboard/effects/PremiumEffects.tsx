@@ -374,42 +374,42 @@ const PremiumEffects: React.FC<PremiumEffectsProps> = ({
             outputGain={audioEffects.gLimiter?.outputGain || 0}
             reduction={audioEffects.gLimiter?.reduction || 0}
             outputPeak={audioEffects.gLimiter?.outputPeak || -20}
-            onLimitLevelChange={(value) => {
-              onUpdateEffectSettings('gLimiter', { ...audioEffects.gLimiter, threshold: value });
-              onManualInit?.();
-            }}
-            onInputGainChange={(value) => {
-              onUpdateEffectSettings('gLimiter', { ...audioEffects.gLimiter, inputGain: value });
-              onManualInit?.();
-            }}
-            onOutputGainChange={(value) => {
-              onUpdateEffectSettings('gLimiter', { ...audioEffects.gLimiter, outputGain: value });
-              onManualInit?.();
-            }}
+                         onLimitLevelChange={(value) => {
+               onUpdateEffectSettings('gLimiter', { ...audioEffects.gLimiter, threshold: value });
+               // Remove onManualInit call to prevent parameter instability
+             }}
+             onInputGainChange={(value) => {
+               onUpdateEffectSettings('gLimiter', { ...audioEffects.gLimiter, inputGain: value });
+               // Remove onManualInit call to prevent parameter instability
+             }}
+             onOutputGainChange={(value) => {
+               onUpdateEffectSettings('gLimiter', { ...audioEffects.gLimiter, outputGain: value });
+               // Remove onManualInit call to prevent parameter instability
+             }}
             enabled={audioEffects.gLimiter?.enabled || false}
             onToggle={(enabled) => onTogglePremiumEffect('gLimiter', enabled)}
             onManualInit={onManualInit}
-            // Control button handlers
-            onChannelModeChange={(mode) => {
-              onUpdateEffectSettings('gLimiter', { ...audioEffects.gLimiter, channelMode: mode });
-              onManualInit?.();
-            }}
-            onShapeChange={(shape) => {
-              onUpdateEffectSettings('gLimiter', { ...audioEffects.gLimiter, shape: shape });
-              onManualInit?.();
-            }}
-            onOversamplingChange={(oversampling) => {
-              onUpdateEffectSettings('gLimiter', { ...audioEffects.gLimiter, oversampling: oversampling });
-              onManualInit?.();
-            }}
-            onLatencyChange={(latency) => {
-              onUpdateEffectSettings('gLimiter', { ...audioEffects.gLimiter, latency: latency });
-              onManualInit?.();
-            }}
-            onOvershootChange={(overshoot) => {
-              onUpdateEffectSettings('gLimiter', { ...audioEffects.gLimiter, overshoot: overshoot });
-              onManualInit?.();
-            }}
+                         // Control button handlers
+             onChannelModeChange={(mode) => {
+               onUpdateEffectSettings('gLimiter', { ...audioEffects.gLimiter, channelMode: mode });
+               // Remove onManualInit call to prevent parameter instability
+             }}
+             onShapeChange={(shape) => {
+               onUpdateEffectSettings('gLimiter', { ...audioEffects.gLimiter, shape: shape });
+               // Remove onManualInit call to prevent parameter instability
+             }}
+             onOversamplingChange={(oversampling) => {
+               onUpdateEffectSettings('gLimiter', { ...audioEffects.gLimiter, oversampling: oversampling });
+               // Remove onManualInit call to prevent parameter instability
+             }}
+             onLatencyChange={(latency) => {
+               onUpdateEffectSettings('gLimiter', { ...audioEffects.gLimiter, latency: latency });
+               // Remove onManualInit call to prevent parameter instability
+             }}
+             onOvershootChange={(overshoot) => {
+               onUpdateEffectSettings('gLimiter', { ...audioEffects.gLimiter, overshoot: overshoot });
+               // Remove onManualInit call to prevent parameter instability
+             }}
             // Current settings
             channelMode={audioEffects.gLimiter?.channelMode || 'L/R'}
             shape={audioEffects.gLimiter?.shape || 'Linear'}

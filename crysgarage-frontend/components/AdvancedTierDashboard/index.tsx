@@ -105,6 +105,9 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState<'success' | 'error'>('success');
+  
+  // Track manual adjustments to prevent unwanted resets
+  const [manualAdjustments, setManualAdjustments] = useState<Set<string>>(new Set());
 
   // Refs for real-time analysis
   const realTimeMasteringPlayerRef = useRef<RealTimeMasteringPlayerRef>(null);
@@ -159,6 +162,9 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
 
   // Effect update handlers
   const handleUpdateEffectSettings = (effectType: string, settings: any) => {
+    // Track that this effect has been manually adjusted
+    setManualAdjustments(prev => new Set(prev).add(effectType));
+    
     setAudioEffects(prev => ({
       ...prev,
       [effectType]: { ...prev[effectType as keyof typeof prev], ...settings }
@@ -198,63 +204,54 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
     setSelectedGenre(genreId);
     const preset = GENRE_PRESETS[genreId];
     if (preset) {
-      // Only apply genre preset if no manual adjustments have been made
-      // or if this is the first genre selection
-      setAudioEffects(prev => {
-        const currentEq = prev.eq;
-        const currentCompressor = prev.compressor;
-        const currentLoudness = prev.loudness;
-        const currentLimiter = prev.limiter;
-        
-        // Check if effects have been manually adjusted (non-zero values)
-        const hasManualAdjustments = 
-          currentEq.low !== 0 || currentEq.mid !== 0 || currentEq.high !== 0 ||
-          currentCompressor.threshold !== -20 || currentCompressor.ratio !== 4 ||
-          currentLoudness.volume !== 1 ||
-          currentLimiter.threshold !== -1;
-        
-        if (!hasManualAdjustments) {
-          // Apply genre preset only if no manual adjustments
-          return {
-            ...prev,
-            eq: { 
-              ...currentEq, 
-              low: multiplierToDb(preset.eq.low), 
-              mid: multiplierToDb(preset.eq.mid), 
-              high: multiplierToDb(preset.eq.high), 
-              enabled: true 
-            },
-            compressor: { 
-              ...currentCompressor, 
-              threshold: preset.compression.threshold, 
-              ratio: preset.compression.ratio, 
-              attack: Math.round(preset.compression.attack * 1000), 
-              release: Math.round(preset.compression.release * 1000), 
-              enabled: true 
-            },
-            loudness: { 
-              ...currentLoudness, 
-              volume: preset.gain, 
-              enabled: true 
-            },
-            limiter: { 
-              ...currentLimiter, 
-              threshold: -1, 
-              ceiling: preset.truePeak, 
-              enabled: true 
-            }
-          };
-        } else {
-          // Keep existing settings, just enable effects if they're not already enabled
-          return {
-            ...prev,
-            eq: { ...currentEq, enabled: true },
-            compressor: { ...currentCompressor, enabled: true },
-            loudness: { ...currentLoudness, enabled: true },
-            limiter: { ...currentLimiter, enabled: true }
-          };
-        }
-      });
+      // Check if effects have been manually adjusted using our tracking system
+      const hasManualAdjustments = 
+        manualAdjustments.has('eq') || 
+        manualAdjustments.has('compressor') || 
+        manualAdjustments.has('loudness') || 
+        manualAdjustments.has('limiter');
+      
+      if (!hasManualAdjustments) {
+        // Apply genre preset only if no manual adjustments have been made
+        setAudioEffects(prev => ({
+          ...prev,
+          eq: { 
+            ...prev.eq, 
+            low: multiplierToDb(preset.eq.low), 
+            mid: multiplierToDb(preset.eq.mid), 
+            high: multiplierToDb(preset.eq.high), 
+            enabled: true 
+          },
+          compressor: { 
+            ...prev.compressor, 
+            threshold: preset.compression.threshold, 
+            ratio: preset.compression.ratio, 
+            attack: Math.round(preset.compression.attack * 1000), 
+            release: Math.round(preset.compression.release * 1000), 
+            enabled: true 
+          },
+          loudness: { 
+            ...prev.loudness, 
+            volume: preset.gain, 
+            enabled: true 
+          },
+          limiter: { 
+            ...prev.limiter, 
+            threshold: -1, 
+            ceiling: preset.truePeak, 
+            enabled: true 
+          }
+        }));
+      } else {
+        // Keep existing settings, just enable effects if they're not already enabled
+        setAudioEffects(prev => ({
+          ...prev,
+          eq: { ...prev.eq, enabled: true },
+          compressor: { ...prev.compressor, enabled: true },
+          loudness: { ...prev.loudness, enabled: true },
+          limiter: { ...prev.limiter, enabled: true }
+        }));
+      }
       
       // Ensure audio is initialized for immediate preview
       setTimeout(() => manualInit(), 0);
@@ -322,6 +319,8 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
       gSurround: { width: 0, depth: 0, enabled: false },
       gTuner: { enabled: false, frequency: 450 }
     });
+    // Reset manual adjustments tracking
+    setManualAdjustments(new Set());
   };
 
   // Render current step
