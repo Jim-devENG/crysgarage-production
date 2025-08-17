@@ -26,8 +26,11 @@ export interface SignupCredentials {
   password: string;
 }
 
-// API Base URL - Updated to work with your live server
-const API_BASE_URL = (typeof process !== 'undefined' && process.env?.REACT_APP_API_URL) || 'https://crysgarage.studio/api';
+// API Base URL - Updated to work with both local and live server
+const API_BASE_URL = (typeof process !== 'undefined' && process.env?.REACT_APP_API_URL) || 
+                     (typeof window !== 'undefined' && window.location.hostname === 'localhost') 
+                     ? 'http://localhost:8000/api' 
+                     : 'https://crysgarage.studio/api';
 
 // Token management
 const TOKEN_KEY = 'crysgarage_token';
@@ -48,11 +51,24 @@ export const tokenService = {
 
   getUser: (): User | null => {
     const userStr = localStorage.getItem(USER_KEY);
-    return userStr ? JSON.parse(userStr) : null;
+    if (!userStr || userStr === 'undefined' || userStr === 'null') {
+      return null;
+    }
+    try {
+      return JSON.parse(userStr);
+    } catch (error) {
+      console.error('Error parsing user data from localStorage:', error);
+      localStorage.removeItem(USER_KEY);
+      return null;
+    }
   },
 
   setUser: (user: User): void => {
-    localStorage.setItem(USER_KEY, JSON.stringify(user));
+    if (user && typeof user === 'object') {
+      localStorage.setItem(USER_KEY, JSON.stringify(user));
+    } else {
+      localStorage.removeItem(USER_KEY);
+    }
   },
 
   removeUser: (): void => {

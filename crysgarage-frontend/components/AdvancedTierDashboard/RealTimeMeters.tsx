@@ -265,8 +265,8 @@ const RealTimeMeters: React.FC<RealTimeMetersProps> = ({
 
     return () => clearInterval(autoAdjustInterval);
   }, [meterData, meterSettings, autoAdjust, audioEffects, onUpdateEffectSettings, onManualInit]);
-
-  return (
+    
+    return (
     <div className="backdrop-blur-md bg-black bg-opacity-30 rounded-xl p-6 border border-gray-500 border-opacity-50 shadow-2xl">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
@@ -277,32 +277,32 @@ const RealTimeMeters: React.FC<RealTimeMetersProps> = ({
           <h3 className="text-xl font-bold text-white">Real-Time Meters</h3>
         </div>
         
-        {/* Tab Navigation */}
+          {/* Tab Navigation */}
         <div className="flex space-x-1 bg-black bg-opacity-50 backdrop-blur-sm rounded-lg p-1 border border-gray-600 border-opacity-50">
-          <button
-            onClick={() => setActiveTab('overview')}
+            <button
+              onClick={() => setActiveTab('overview')}
             className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
-              activeTab === 'overview'
+                activeTab === 'overview' 
                 ? 'bg-crys-gold text-black'
                 : 'text-gray-400 hover:text-white'
-            }`}
-          >
+              }`}
+            >
             Overview
-          </button>
-          <button
-            onClick={() => setActiveTab('detailed')}
+            </button>
+            <button
+              onClick={() => setActiveTab('detailed')}
             className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
-              activeTab === 'detailed'
+                activeTab === 'detailed' 
                 ? 'bg-crys-gold text-black'
                 : 'text-gray-400 hover:text-white'
-            }`}
-          >
+              }`}
+            >
             Detailed
-          </button>
-          <button
-            onClick={() => setActiveTab('stereo')}
+            </button>
+            <button
+              onClick={() => setActiveTab('stereo')}
             className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
-              activeTab === 'stereo'
+                activeTab === 'stereo' 
                 ? 'bg-crys-gold text-black'
                 : 'text-gray-400 hover:text-white'
             }`}
@@ -430,7 +430,7 @@ const RealTimeMeters: React.FC<RealTimeMetersProps> = ({
         <h4 className="text-lg font-semibold text-white mb-4 flex items-center">
           <Settings className="w-5 h-5 mr-2" />
           Meter Settings & Auto-Adjustment
-        </h4>
+          </h4>
         
         {/* Auto-Adjustment Toggles */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
@@ -474,60 +474,60 @@ const RealTimeMeters: React.FC<RealTimeMetersProps> = ({
 
         {/* Meter Targets */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div>
+            <div>
             <label className="block text-sm text-gray-400 mb-1">LUFS Target</label>
-            <input
-              type="range"
-              min="-30"
+              <input
+                type="range"
+                min="-30"
               max="-5"
-              step="0.1"
-              value={meterSettings.lufsTarget}
-              onChange={(e) => updateMeterSetting('lufsTarget', parseFloat(e.target.value))}
+                step="0.1"
+                value={meterSettings.lufsTarget}
+                onChange={(e) => updateMeterSetting('lufsTarget', parseFloat(e.target.value))}
               className="w-full"
-            />
+              />
             <span className="text-sm text-white">{meterSettings.lufsTarget} dB</span>
-          </div>
-          <div>
+            </div>
+            <div>
             <label className="block text-sm text-gray-400 mb-1">Peak Target</label>
-            <input
-              type="range"
+              <input
+                type="range"
               min="-10"
-              max="0"
-              step="0.1"
-              value={meterSettings.peakTarget}
-              onChange={(e) => updateMeterSetting('peakTarget', parseFloat(e.target.value))}
+                max="0"
+                step="0.1"
+                value={meterSettings.peakTarget}
+                onChange={(e) => updateMeterSetting('peakTarget', parseFloat(e.target.value))}
               className="w-full"
-            />
+              />
             <span className="text-sm text-white">{meterSettings.peakTarget} dB</span>
-          </div>
-          <div>
+            </div>
+            <div>
             <label className="block text-sm text-gray-400 mb-1">RMS Target</label>
-            <input
-              type="range"
-              min="-20"
+              <input
+                type="range"
+                min="-20"
               max="-5"
-              step="0.1"
-              value={meterSettings.rmsTarget}
-              onChange={(e) => updateMeterSetting('rmsTarget', parseFloat(e.target.value))}
+                step="0.1"
+                value={meterSettings.rmsTarget}
+                onChange={(e) => updateMeterSetting('rmsTarget', parseFloat(e.target.value))}
               className="w-full"
-            />
+              />
             <span className="text-sm text-white">{meterSettings.rmsTarget} dB</span>
-          </div>
-          <div>
+            </div>
+            <div>
             <label className="block text-sm text-gray-400 mb-1">Correlation Target</label>
-            <input
-              type="range"
-              min="0"
-              max="1"
-              step="0.01"
-              value={meterSettings.correlationTarget}
-              onChange={(e) => updateMeterSetting('correlationTarget', parseFloat(e.target.value))}
+              <input
+                type="range"
+                min="0"
+                max="1"
+                step="0.01"
+                value={meterSettings.correlationTarget}
+                onChange={(e) => updateMeterSetting('correlationTarget', parseFloat(e.target.value))}
               className="w-full"
             />
             <span className="text-sm text-white">{meterSettings.correlationTarget}</span>
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
     </div>
   );
 };
