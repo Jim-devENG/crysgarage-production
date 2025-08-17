@@ -267,7 +267,20 @@ export function Header({
               </div>
             ) : (
               <div className="flex items-center gap-3">
-                {/* Authentication buttons removed */}
+                {/* Authentication buttons */}
+                <Button
+                  onClick={() => onNavigate?.('signin')}
+                  variant="ghost"
+                  className="text-crys-white hover:text-crys-gold hover:bg-crys-gold/10"
+                >
+                  Sign In
+                </Button>
+                <Button
+                  onClick={() => onNavigate?.('signup')}
+                  className="bg-crys-gold hover:bg-crys-gold/80 text-black font-medium"
+                >
+                  Get Started
+                </Button>
               </div>
             )}
 
@@ -345,7 +358,27 @@ export function Header({
               {!user && (
                 <>
                   <div className="border-t border-crys-graphite my-3"></div>
-                  {/* Authentication buttons removed */}
+                  {/* Authentication buttons */}
+                  <button
+                    onClick={() => {
+                      onNavigate?.('signin');
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className="w-full flex items-center gap-3 px-4 py-3 text-crys-white hover:text-crys-gold hover:bg-crys-gold/10 rounded-lg transition-colors text-left"
+                  >
+                    <User className="w-4 h-4" />
+                    Sign In
+                  </button>
+                  <button
+                    onClick={() => {
+                      onNavigate?.('signup');
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className="w-full flex items-center gap-3 px-4 py-3 bg-crys-gold hover:bg-crys-gold/80 text-black font-medium rounded-lg transition-colors text-left"
+                  >
+                    <Zap className="w-4 h-4" />
+                    Get Started
+                  </button>
                 </>
               )}
             </nav>
