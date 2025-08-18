@@ -8,11 +8,11 @@ import ContactSection from './ContactSection';
 const AboutUs: React.FC = () => {
   return (
     <div className="min-h-screen relative overflow-hidden">
-      {/* Extended background covering entire page including header area */}
-      <div className="absolute inset-0 bg-gradient-to-br from-crys-black via-crys-graphite to-crys-black -z-10" style={{ top: '-80px', height: 'calc(100% + 80px)' }}></div>
+      {/* Background for the page content only */}
+      <div className="absolute inset-0 bg-gradient-to-br from-crys-black via-crys-graphite to-crys-black -z-10"></div>
       
-      {/* Animated background elements extending to header */}
-      <div className="absolute inset-0 opacity-20 -z-10" style={{ top: '-80px', height: 'calc(100% + 80px)' }}>
+      {/* Animated background elements */}
+      <div className="absolute inset-0 opacity-20 -z-10">
         {[...Array(8)].map((_, i) => (
           <div
             key={`bg-wave-${i}`}

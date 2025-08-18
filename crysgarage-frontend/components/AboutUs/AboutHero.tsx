@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 
 const AboutHero: React.FC = () => {
   return (
-    <section className="relative overflow-hidden pt-12 pb-20 px-4">
+    <section className="relative overflow-hidden pt-8 pb-20 px-4">
       {/* Background is now handled by parent component */}
       
       {/* Animated background elements */}

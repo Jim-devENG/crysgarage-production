@@ -411,7 +411,7 @@ function AppContent() {
         onSignOut={signOut}
       />
       
-      <main className={currentPage === 'about' ? 'pt-12' : 'pt-20'}>
+      <main className="pt-20">
         {/* Always show landing page for non-authenticated users */}
         {(currentPage === 'landing' || currentPage === 'home' || window.location.pathname === '/') && (
           <LandingPage 
