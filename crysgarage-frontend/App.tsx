@@ -22,6 +22,7 @@ import { CommunityPage } from './components/CommunityPage';
 import AboutUs from './components/AboutUs';
 import { AutomaticTierAuth } from './components/AutomaticTierAuth';
 import { ProtectedRoute } from './components/ProtectedRoute';
+import { Footer } from './components/Footer';
 
 // Main App Component
 function AppContent() {
@@ -350,6 +351,9 @@ function AppContent() {
           )}
         </main>
 
+        {/* Footer */}
+        <Footer onNavigate={handleNavigation} />
+
         {/* Modals */}
         {showBillingModal && (
           <BillingModal 
@@ -480,6 +484,9 @@ function AppContent() {
           <AboutUs />
         )}
       </main>
+      
+      {/* Footer */}
+      <Footer onNavigate={handleNavigation} />
       
       {showAuthModal && (
         <AuthModal 

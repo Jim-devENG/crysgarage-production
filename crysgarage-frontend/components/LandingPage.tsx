@@ -4,6 +4,7 @@ import { Badge } from "./ui/badge";
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { CrysGarageLogo } from './CrysGarageLogo';
 import { motion } from "framer-motion";
+import { WhyUsSection } from './WhyUsSection';
 import { 
   Music, 
   Zap, 
@@ -486,6 +487,12 @@ export function LandingPage({ onGetStarted, onTryMastering }: LandingPageProps) 
 
 
 
+
+      {/* Why Us Section */}
+      <WhyUsSection 
+        onGetStarted={onGetStarted}
+        onTryMastering={onTryMastering}
+      />
 
       {/* Perfect For Section */}
       <section className="bg-crys-charcoal/50 relative pt-16 pb-16">
