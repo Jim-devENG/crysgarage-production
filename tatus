@@ -1,5 +1,5 @@
-[33m84c94e8[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmaster[m[33m, [m[1;31morigin/master[m[33m, [m[1;31morigin/HEAD[m[33m)[m Complete component restoration: Fixed TypeScript errors, restored navigation, integrated all services, added deployment scripts
-[33m2f9c3ee[m Quick deploy: Tue 29/07/2025 15:15:05.84
-[33m5e5f189[m Quick deploy: Tue 29/07/2025 15:03:55.06
-[33m91f689c[m Update: Tue 29/07/2025 14:53:20.53
-[33mb0a6be7[m Fix nginx API proxy configuration - resolve 404 errors for frontend API calls
+[33mf6db19d[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmaster[m[33m, [m[1;31morigin/master[m[33m, [m[1;31morigin/HEAD[m[33m)[m 🚨 CRITICAL: Disable aggressive caching - fixes 1+ hour update delays
+[33mbb96a07[m Force complete rebuild deployment
+[33m2469ace[m Trigger deployment workflow
+[33mee3d98a[m Fix double header issue on About/Join Us page
+[33mfb18647[m Add Why Us section and social media footer to landing page
