@@ -22,6 +22,7 @@ const RealTimeAudioPlayer: React.FC<RealTimeAudioPlayerProps> = ({
   const [volume, setVolume] = useState(1);
   const [isMuted, setIsMuted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [currentGenre, setCurrentGenre] = useState<any>(null);
 
   // Audio elements and context
   const audioElementRef = useRef<HTMLAudioElement | null>(null);
@@ -39,6 +40,7 @@ const RealTimeAudioPlayer: React.FC<RealTimeAudioPlayerProps> = ({
 
     try {
       setIsLoading(true);
+      console.log('Initializing audio context...');
 
       // Create audio context
       audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -59,6 +61,8 @@ const RealTimeAudioPlayer: React.FC<RealTimeAudioPlayerProps> = ({
 
       // Create Web Audio API nodes
       if (audioElementRef.current && audioContextRef.current) {
+        console.log('Creating audio processing chain...');
+        
         // Create source from audio element
         sourceNodeRef.current = audioContextRef.current.createMediaElementSource(audioElementRef.current);
         
@@ -87,6 +91,8 @@ const RealTimeAudioPlayer: React.FC<RealTimeAudioPlayerProps> = ({
         
         // Set initial duration
         setDuration(audioElementRef.current.duration);
+        
+        console.log('Audio processing chain created successfully');
       }
 
       setIsLoading(false);
@@ -96,45 +102,63 @@ const RealTimeAudioPlayer: React.FC<RealTimeAudioPlayerProps> = ({
     }
   }, [audioFile]);
 
-  // Apply genre effects in real-time
+  // Apply genre effects in real-time with immediate changes
   const applyGenreEffects = useCallback(() => {
-    if (!selectedGenre || !audioContextRef.current) return;
-
-    const preset = GENRE_PRESETS[selectedGenre.id];
-    if (!preset) return;
-
-    const currentTime = audioContextRef.current.currentTime;
-
-    // Apply gain
-    if (gainNodeRef.current) {
-      gainNodeRef.current.gain.setValueAtTime(preset.gain * volume, currentTime);
+    if (!selectedGenre || !audioContextRef.current) {
+      console.log('No genre selected or audio context not ready');
+      return;
     }
 
-    // Apply compression
+    const preset = GENRE_PRESETS[selectedGenre.id];
+    if (!preset) {
+      console.log('No preset found for genre:', selectedGenre.id);
+      return;
+    }
+
+    console.log('Applying genre effects:', selectedGenre.name, preset);
+    const currentTime = audioContextRef.current.currentTime;
+
+    // Apply gain with immediate effect
+    if (gainNodeRef.current) {
+      const newGain = preset.gain * volume;
+      gainNodeRef.current.gain.setValueAtTime(newGain, currentTime);
+      console.log('Applied gain:', newGain);
+    }
+
+    // Apply compression with immediate effect
     if (compressorNodeRef.current) {
       compressorNodeRef.current.threshold.setValueAtTime(preset.compression.threshold, currentTime);
       compressorNodeRef.current.ratio.setValueAtTime(preset.compression.ratio, currentTime);
       compressorNodeRef.current.attack.setValueAtTime(preset.compression.attack, currentTime);
       compressorNodeRef.current.release.setValueAtTime(preset.compression.release, currentTime);
       compressorNodeRef.current.knee.setValueAtTime(10, currentTime);
+      console.log('Applied compression:', preset.compression);
     }
 
-    // Apply EQ (using filters)
+    // Apply EQ with more dramatic effects
     if (lowPassFilterRef.current && highPassFilterRef.current) {
-      // Low frequency boost/cut
-      const lowFreq = preset.eq.low > 1 ? 200 : 100;
-      const lowQ = preset.eq.low > 1 ? 1 : 0.5;
+      // Low frequency boost/cut - more dramatic
+      const lowFreq = preset.eq.low > 1 ? 300 : 80;
+      const lowQ = preset.eq.low > 1 ? 2 : 0.3;
+      const lowGain = (preset.eq.low - 1) * 20; // More dramatic gain changes
+      
       lowPassFilterRef.current.frequency.setValueAtTime(lowFreq, currentTime);
       lowPassFilterRef.current.Q.setValueAtTime(lowQ, currentTime);
-      lowPassFilterRef.current.gain.setValueAtTime((preset.eq.low - 1) * 12, currentTime);
+      lowPassFilterRef.current.gain.setValueAtTime(lowGain, currentTime);
 
-      // High frequency boost/cut
-      const highFreq = preset.eq.high > 1 ? 8000 : 4000;
-      const highQ = preset.eq.high > 1 ? 1 : 0.5;
+      // High frequency boost/cut - more dramatic
+      const highFreq = preset.eq.high > 1 ? 10000 : 3000;
+      const highQ = preset.eq.high > 1 ? 2 : 0.3;
+      const highGain = (preset.eq.high - 1) * 20; // More dramatic gain changes
+      
       highPassFilterRef.current.frequency.setValueAtTime(highFreq, currentTime);
       highPassFilterRef.current.Q.setValueAtTime(highQ, currentTime);
-      highPassFilterRef.current.gain.setValueAtTime((preset.eq.high - 1) * 12, currentTime);
+      highPassFilterRef.current.gain.setValueAtTime(highGain, currentTime);
+      
+      console.log('Applied EQ - Low:', { freq: lowFreq, gain: lowGain }, 'High:', { freq: highFreq, gain: highGain });
     }
+
+    setCurrentGenre(selectedGenre);
   }, [selectedGenre, volume]);
 
   // Play audio
@@ -142,9 +166,12 @@ const RealTimeAudioPlayer: React.FC<RealTimeAudioPlayerProps> = ({
     if (!audioElementRef.current || isPlaying) return;
 
     try {
+      console.log('Starting playback...');
+      
       // Resume audio context if suspended
       if (audioContextRef.current && audioContextRef.current.state === 'suspended') {
         await audioContextRef.current.resume();
+        console.log('Audio context resumed');
       }
 
       // Apply current genre effects
@@ -153,6 +180,7 @@ const RealTimeAudioPlayer: React.FC<RealTimeAudioPlayerProps> = ({
       // Play the audio
       await audioElementRef.current.play();
       setIsPlaying(true);
+      console.log('Audio playback started');
       
     } catch (error) {
       console.error('Error playing audio:', error);
@@ -164,19 +192,22 @@ const RealTimeAudioPlayer: React.FC<RealTimeAudioPlayerProps> = ({
     if (audioElementRef.current && isPlaying) {
       audioElementRef.current.pause();
       setIsPlaying(false);
+      console.log('Audio playback paused');
     }
   }, [isPlaying]);
 
   // Handle genre change while playing
   const handleGenreChange = useCallback((newGenre: any) => {
+    console.log('Genre changed to:', newGenre?.name);
     onGenreChange(newGenre);
     
     // Apply new effects immediately if playing
     if (isPlaying && audioContextRef.current) {
-      // Schedule effect changes for smooth transition
+      console.log('Applying new genre effects while playing...');
+      // Apply effects immediately for instant change
       setTimeout(() => {
         applyGenreEffects();
-      }, 50);
+      }, 10);
     }
   }, [onGenreChange, isPlaying, applyGenreEffects]);
 
@@ -185,7 +216,9 @@ const RealTimeAudioPlayer: React.FC<RealTimeAudioPlayerProps> = ({
     setVolume(newVolume);
     if (gainNodeRef.current && audioContextRef.current) {
       const preset = selectedGenre ? GENRE_PRESETS[selectedGenre.id] : { gain: 1.0 };
-      gainNodeRef.current.gain.setValueAtTime(preset.gain * newVolume, audioContextRef.current.currentTime);
+      const newGain = preset.gain * newVolume;
+      gainNodeRef.current.gain.setValueAtTime(newGain, audioContextRef.current.currentTime);
+      console.log('Volume changed to:', newVolume, 'Gain:', newGain);
     }
   }, [selectedGenre]);
 
@@ -194,11 +227,14 @@ const RealTimeAudioPlayer: React.FC<RealTimeAudioPlayerProps> = ({
     if (gainNodeRef.current && audioContextRef.current) {
       if (isMuted) {
         const preset = selectedGenre ? GENRE_PRESETS[selectedGenre.id] : { gain: 1.0 };
-        gainNodeRef.current.gain.setValueAtTime(preset.gain * volume, audioContextRef.current.currentTime);
+        const newGain = preset.gain * volume;
+        gainNodeRef.current.gain.setValueAtTime(newGain, audioContextRef.current.currentTime);
         setIsMuted(false);
+        console.log('Unmuted, gain:', newGain);
       } else {
         gainNodeRef.current.gain.setValueAtTime(0, audioContextRef.current.currentTime);
         setIsMuted(true);
+        console.log('Muted');
       }
     }
   }, [isMuted, selectedGenre, volume]);
@@ -218,7 +254,10 @@ const RealTimeAudioPlayer: React.FC<RealTimeAudioPlayerProps> = ({
 
   // Apply effects when genre changes
   useEffect(() => {
-    applyGenreEffects();
+    if (selectedGenre && audioContextRef.current) {
+      console.log('Genre effect triggered for:', selectedGenre.name);
+      applyGenreEffects();
+    }
   }, [selectedGenre, applyGenreEffects]);
 
   // Update progress
@@ -275,6 +314,11 @@ const RealTimeAudioPlayer: React.FC<RealTimeAudioPlayerProps> = ({
           <p className="text-sm text-gray-400">
             Switch genres while playing to hear instant changes
           </p>
+          {currentGenre && (
+            <p className="text-xs text-green-400 mt-1">
+              ⚡ Currently processing: {currentGenre.name}
+            </p>
+          )}
         </div>
 
         {/* Audio Controls */}
