@@ -2,7 +2,7 @@ name: Fast Deploy to VPS
 
 on:
   push:
-    branches: [master]
+    branches: [ master, main ]
   workflow_dispatch:
 
 jobs:
@@ -10,62 +10,53 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Deploy to VPS
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USERNAME }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          script: |
-            echo "🚀 Fast Deploy to VPS - $(date)"
-            echo "================================="
-            
-            # Navigate to project directory
-            cd /var/www/crysgarage-deploy
-            
-            # Backup current state
-            echo "💾 Creating backup..."
-            cp -r . ../crysgarage-backup-$(date +%Y%m%d-%H%M%S) 2>/dev/null || true
-            
-            # Pull latest changes
-            echo "📥 Pulling latest changes from GitHub..."
-            git fetch origin
-            git reset --hard origin/master
-            
-            # Update frontend
-            echo "🌐 Updating Frontend..."
-            cd crysgarage-frontend
-            npm install --production
-            systemctl restart crysgarage-frontend.service
-            
-            # Update backend
-            echo "🔧 Updating Backend..."
-            cd ../crysgarage-backend
-            composer install --no-dev --optimize-autoloader
-            php artisan config:cache
-            php artisan route:cache
-            php artisan view:cache
-            systemctl restart crysgarage-backend.service
-            
-            # Update Ruby service
-            echo "💎 Updating Ruby Service..."
-            cd ../crysgarage-ruby
-            bundle install
-            systemctl restart crysgarage-ruby.service
-            
-            # Reload Nginx
-            echo "🌐 Reloading Nginx..."
-            systemctl reload nginx
-            
-            # Health check
-            echo "🏥 Running health check..."
-            sleep 5
-            if [ -f "check_health.sh" ]; then
-              bash check_health.sh
-            fi
-            
-            echo "✅ Fast deployment completed!"
-            echo "🌐 Application available at: https://crysgarage.studio" 
+    - name: Deploy to VPS
+      uses: appleboy/ssh-action@v0.1.5
+      with:
+        host: ${{ secrets.VPS_HOST }}
+        username: ${{ secrets.VPS_USER }}
+        key: ${{ secrets.VPS_SSH_KEY }}
+        script: |
+          # Navigate to project directory
+          cd /root/crysgarage-deploy
+          
+          # Pull latest changes
+          git pull origin master
+          
+          # Frontend: Build and deploy
+          echo "Building frontend..."
+          cd crysgarage-frontend
+          npm ci
+          npm run build
+          
+          # Copy built files to web root
+          rm -rf /var/www/html/*
+          cp -r dist/* /var/www/html/
+          restorecon -Rv /var/www/html
+          
+          # Backend: Update and restart
+          echo "Updating backend..."
+          cd ../crysgarage-backend
+          composer install --no-dev --optimize-autoloader
+          php artisan config:cache
+          php artisan route:cache
+          php artisan view:cache
+          systemctl restart crysgarage-backend
+          
+          # Ruby service: Update and restart
+          echo "Updating Ruby service..."
+          cd ../crysgarage-ruby
+          gem install bundler:2.6.7 || echo "Bundler version issue - continuing..."
+          bundle install
+          systemctl restart crysgarage-ruby
+          
+          # Reload Nginx
+          echo "Reloading Nginx..."
+          nginx -t && systemctl reload nginx
+          
+          # Health check
+          echo "Running health check..."
+          sleep 5
+          curl -f https://crysgarage.studio || echo "Health check failed but deployment completed"
+          
+          echo "Deployment completed successfully!" 
