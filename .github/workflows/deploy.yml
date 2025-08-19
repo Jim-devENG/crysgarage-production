@@ -11,6 +11,9 @@ jobs:
     timeout-minutes: 30  # Increase timeout for build process
 
     steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
       - name: Set up SSH key
         run: |
           mkdir -p ~/.ssh
@@ -18,11 +21,23 @@ jobs:
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
           echo "SSH key setup completed"
+          echo "SSH key length: $(wc -l < ~/.ssh/id_rsa) lines"
+          echo "SSH key permissions: $(ls -la ~/.ssh/id_rsa)"
+      
+      - name: Debug SSH configuration
+        run: |
+          echo "=== SSH Debug Information ==="
+          echo "Host: ${{ secrets.VPS_HOST }}"
+          echo "Username: ${{ secrets.VPS_USERNAME }}"
+          echo "SSH key exists: $(test -f ~/.ssh/id_rsa && echo 'YES' || echo 'NO')"
+          echo "SSH key content (first line): $(head -1 ~/.ssh/id_rsa)"
+          echo "SSH key content (last line): $(tail -1 ~/.ssh/id_rsa)"
+          echo "Known hosts: $(cat ~/.ssh/known_hosts)"
       
       - name: Test SSH connection
         run: |
           echo "Testing SSH connection to ${{ secrets.VPS_HOST }}..."
-          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa ${{ secrets.VPS_USERNAME }}@${{ secrets.VPS_HOST }} "echo 'SSH connection successful!' && whoami && pwd"
+          ssh -v -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa ${{ secrets.VPS_USERNAME }}@${{ secrets.VPS_HOST }} "echo 'SSH connection successful!' && whoami && pwd"
       
       - name: Deploy to VPS
         run: |
