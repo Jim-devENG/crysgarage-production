@@ -1,18 +1,20 @@
 # Deployment Trigger
 
-This file is used to trigger the GitHub Actions deployment workflow.
+This file is used to trigger GitHub Actions workflows for deployment.
 
-Last updated: $(date)
+## Last Update
+- **Date**: $(date)
+- **Purpose**: Trigger deployment with fixed systemd-based workflow
+- **Status**: Ready for deployment
 
-## Purpose
-- Triggers automatic deployment when pushed to master branch
-- Ensures latest changes are deployed to production
-- Forces cache refresh and rebuild
+## Changes Made
+- Updated main deploy.yml to use systemd-based deployment instead of Docker
+- Fixed team section with actual team members
+- Resolved caching issues
 
 ## Next Steps
-1. Push this file to trigger deployment
+1. Push this change to trigger deployment
 2. Monitor GitHub Actions workflow
-3. Verify changes on live site
-4. Remove this file after successful deployment
+3. Verify live site updates
 
 
