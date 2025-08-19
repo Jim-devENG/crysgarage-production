@@ -10,53 +10,63 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-    - name: Deploy to VPS
-      uses: appleboy/ssh-action@v0.1.5
-      with:
-        host: ${{ secrets.VPS_HOST }}
-        username: ${{ secrets.VPS_USER }}
-        key: ${{ secrets.VPS_SSH_KEY }}
-        script: |
-          # Navigate to project directory
-          cd /root/crysgarage-deploy
-          
-          # Pull latest changes
-          git pull origin master
-          
-          # Frontend: Build and deploy
-          echo "Building frontend..."
-          cd crysgarage-frontend
-          npm ci
-          npm run build
-          
-          # Copy built files to web root
-          rm -rf /var/www/html/*
-          cp -r dist/* /var/www/html/
-          restorecon -Rv /var/www/html
-          
-          # Backend: Update and restart
-          echo "Updating backend..."
-          cd ../crysgarage-backend
-          composer install --no-dev --optimize-autoloader
-          php artisan config:cache
-          php artisan route:cache
-          php artisan view:cache
-          systemctl restart crysgarage-backend
-          
-          # Ruby service: Update and restart
-          echo "Updating Ruby service..."
-          cd ../crysgarage-ruby
-          gem install bundler:2.6.7 || echo "Bundler version issue - continuing..."
-          bundle install
-          systemctl restart crysgarage-ruby
-          
-          # Reload Nginx
-          echo "Reloading Nginx..."
-          nginx -t && systemctl reload nginx
-          
-          # Health check
-          echo "Running health check..."
-          sleep 5
-          curl -f https://crysgarage.studio || echo "Health check failed but deployment completed"
-          
-          echo "Deployment completed successfully!" 
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Deploy to VPS
+        run: |
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa ${{ secrets.VPS_USERNAME }}@${{ secrets.VPS_HOST }} << 'EOF'
+            set -e  # Exit on any error
+            echo "🚀 Starting fast deployment via GitHub Actions..."
+            
+            # Navigate to project directory
+            cd /root/crysgarage-deploy
+            
+            # Pull latest changes
+            git pull origin master
+            
+            # Frontend: Build and deploy
+            echo "🌐 Building frontend..."
+            cd crysgarage-frontend
+            npm ci
+            npm run build
+            
+            # Copy built files to web root
+            rm -rf /var/www/html/*
+            cp -r dist/* /var/www/html/
+            restorecon -Rv /var/www/html
+            
+            # Backend: Update and restart
+            echo "🔧 Updating backend..."
+            cd ../crysgarage-backend
+            composer install --no-dev --optimize-autoloader
+            php artisan config:cache
+            php artisan route:cache
+            php artisan view:cache
+            systemctl restart crysgarage-backend
+            
+            # Ruby service: Update and restart
+            echo "💎 Updating Ruby service..."
+            cd ../crysgarage-ruby
+            gem install bundler:2.6.7 || echo "Bundler version issue - continuing..."
+            bundle install
+            systemctl restart crysgarage-ruby
+            
+            # Reload Nginx
+            echo "🌐 Reloading Nginx..."
+            nginx -t && systemctl reload nginx
+            
+            # Health check
+            echo "🏥 Running health check..."
+            sleep 5
+            curl -f https://crysgarage.studio || echo "Health check failed but deployment completed"
+            
+            echo "✅ Fast deployment completed successfully!"
+          EOF 
