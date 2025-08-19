@@ -11,9 +11,6 @@ jobs:
     timeout-minutes: 30  # Increase timeout for build process
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
       - name: Deploy to VPS
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -24,23 +21,47 @@ jobs:
           script: |
             echo "🚀 Starting deployment via GitHub Actions..."
             
-            # Set environment variables for better memory management
-            export NODE_OPTIONS="--max-old-space-size=2048"
-            export DOCKER_BUILDKIT=1
-            export COMPOSE_DOCKER_CLI_BUILD=1
+            # Navigate to project directory
+            cd /root/crysgarage-deploy
             
-            # Navigate to deployment directory
-            cd /var/www/crysgarage-deploy
+            # Pull latest changes
+            git pull origin master
             
-            # Make sure the deployment script is executable
-            chmod +x deploy_vps_simple.sh
+            # Frontend: Build and deploy
+            echo "Building frontend..."
+            cd crysgarage-frontend
+            npm ci
+            npm run build
             
-            # Run the enhanced deployment script
-            ./deploy_vps_simple.sh
+            # Copy built files to web root
+            rm -rf /var/www/html/*
+            cp -r dist/* /var/www/html/
+            restorecon -Rv /var/www/html
             
-            # Additional verification
-            echo "🔍 Verifying deployment..."
-            if curl -s -f https://crysgarage.studio > /dev/null; then
+            # Backend: Update and restart
+            echo "Updating backend..."
+            cd ../crysgarage-backend
+            composer install --no-dev --optimize-autoloader
+            php artisan config:cache
+            php artisan route:cache
+            php artisan view:cache
+            systemctl restart crysgarage-backend
+            
+            # Ruby service: Update and restart
+            echo "Updating Ruby service..."
+            cd ../crysgarage-ruby
+            gem install bundler:2.6.7 || echo "Bundler version issue - continuing..."
+            bundle install
+            systemctl restart crysgarage-ruby
+            
+            # Reload Nginx
+            echo "Reloading Nginx..."
+            nginx -t && systemctl reload nginx
+            
+            # Health check
+            echo "Running health check..."
+            sleep 5
+            if curl -f https://crysgarage.studio > /dev/null; then
               echo "✅ GitHub Actions deployment successful!"
             else
               echo "❌ GitHub Actions deployment failed!"
