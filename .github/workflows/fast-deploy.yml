@@ -20,8 +20,30 @@ jobs:
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
 
+      - name: Check VPS directory structure
+        run: |
+          echo "Checking VPS directory structure..."
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa ${{ secrets.VPS_USERNAME }}@${{ secrets.VPS_HOST }} << 'EOF'
+            echo "=== VPS Directory Check ==="
+            echo "Current user: $(whoami)"
+            echo "Current directory: $(pwd)"
+            echo "Home directory: $HOME"
+            echo "Root directory contents:"
+            ls -la /root/
+            echo "Checking for crysgarage-deploy:"
+            if [ -d "/root/crysgarage-deploy" ]; then
+              echo "✅ /root/crysgarage-deploy exists"
+              ls -la /root/crysgarage-deploy/
+            else
+              echo "❌ /root/crysgarage-deploy does not exist"
+              echo "Available directories in /root/:"
+              ls -la /root/ | grep "^d"
+            fi
+          EOF
+
       - name: Deploy to VPS
         run: |
+          echo "Starting deployment to VPS..."
           ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa ${{ secrets.VPS_USERNAME }}@${{ secrets.VPS_HOST }} << 'EOF'
             set -e  # Exit on any error
             echo "🚀 Starting fast deployment via GitHub Actions..."
