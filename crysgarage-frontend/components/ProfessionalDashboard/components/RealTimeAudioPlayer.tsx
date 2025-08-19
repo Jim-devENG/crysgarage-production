@@ -1,7 +1,32 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Play, Pause, Volume2, VolumeX, Zap } from 'lucide-react';
+import { Play, Pause, Volume2, VolumeX } from 'lucide-react';
 import { GENRE_PRESETS } from '../utils/genrePresets';
 import FrequencySpectrum from '../../FrequencySpectrum';
+
+interface AudioEffects {
+  eq: {
+    low: number;
+    mid: number;
+    high: number;
+    enabled: boolean;
+  };
+  compressor: {
+    threshold: number;
+    ratio: number;
+    attack: number;
+    release: number;
+    enabled: boolean;
+  };
+  loudness: {
+    volume: number;
+    enabled: boolean;
+  };
+  limiter: {
+    threshold: number;
+    ceiling: number;
+    enabled: boolean;
+  };
+}
 
 interface RealTimeAudioPlayerProps {
   audioFile: File | null;
@@ -23,17 +48,27 @@ const RealTimeAudioPlayer: React.FC<RealTimeAudioPlayerProps> = ({
   const [isMuted, setIsMuted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [currentGenre, setCurrentGenre] = useState<any>(null);
-  const [testMode, setTestMode] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   // Audio elements and context
   const audioElementRef = useRef<HTMLAudioElement | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const sourceNodeRef = useRef<MediaElementAudioSourceNode | null>(null);
   const gainNodeRef = useRef<GainNode | null>(null);
-  const compressorNodeRef = useRef<DynamicsCompressorNode | null>(null);
-  const lowPassFilterRef = useRef<BiquadFilterNode | null>(null);
-  const highPassFilterRef = useRef<BiquadFilterNode | null>(null);
   const analyserNodeRef = useRef<AnalyserNode | null>(null);
+  
+  // Effect nodes
+  const eqNodesRef = useRef<BiquadFilterNode[]>([]);
+  const compressorRef = useRef<DynamicsCompressorNode | null>(null);
+  const limiterRef = useRef<DynamicsCompressorNode | null>(null);
+
+  // Audio effects state - structured like Advanced tier
+  const [audioEffects, setAudioEffects] = useState<AudioEffects>({
+    eq: { low: 0, mid: 0, high: 0, enabled: true },
+    compressor: { threshold: -20, ratio: 4, attack: 10, release: 100, enabled: true },
+    loudness: { volume: 1, enabled: true },
+    limiter: { threshold: -1, ceiling: -0.1, enabled: true }
+  });
 
   // Initialize Web Audio API
   const initializeAudioContext = useCallback(async () => {
@@ -41,11 +76,20 @@ const RealTimeAudioPlayer: React.FC<RealTimeAudioPlayerProps> = ({
 
     try {
       setIsLoading(true);
-      console.log('Initializing audio context...');
+      console.log('=== INITIALIZING AUDIO CONTEXT ===');
 
       // Create audio context
-      audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
-      
+      if (!audioContextRef.current) {
+        console.log('Creating new audio context...');
+        audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+      }
+
+      // Resume audio context if suspended
+      if (audioContextRef.current.state === 'suspended') {
+        console.log('Resuming suspended audio context...');
+        await audioContextRef.current.resume();
+      }
+
       // Create audio element
       const audioUrl = URL.createObjectURL(audioFile);
       if (audioElementRef.current) {
@@ -67,84 +111,161 @@ const RealTimeAudioPlayer: React.FC<RealTimeAudioPlayerProps> = ({
         // Create source from audio element
         sourceNodeRef.current = audioContextRef.current.createMediaElementSource(audioElementRef.current);
         
-        // Create processing nodes
-        gainNodeRef.current = audioContextRef.current.createGain();
-        compressorNodeRef.current = audioContextRef.current.createDynamicsCompressor();
-        lowPassFilterRef.current = audioContextRef.current.createBiquadFilter();
-        highPassFilterRef.current = audioContextRef.current.createBiquadFilter();
+        // Create analyser
         analyserNodeRef.current = audioContextRef.current.createAnalyser();
-        
-        // Set up filter types
-        lowPassFilterRef.current.type = 'lowpass';
-        highPassFilterRef.current.type = 'highpass';
-        
-        // Set up analyser
-        analyserNodeRef.current.fftSize = 256;
+        analyserNodeRef.current.fftSize = 2048;
         analyserNodeRef.current.smoothingTimeConstant = 0.8;
         
+        // Create gain node for volume control
+        gainNodeRef.current = audioContextRef.current.createGain();
+        
+        // Create effect nodes
+        createEffectNodes();
+        
         // Connect the processing chain
-        sourceNodeRef.current.connect(highPassFilterRef.current);
-        highPassFilterRef.current.connect(lowPassFilterRef.current);
-        lowPassFilterRef.current.connect(compressorNodeRef.current);
-        compressorNodeRef.current.connect(gainNodeRef.current);
-        gainNodeRef.current.connect(analyserNodeRef.current);
-        analyserNodeRef.current.connect(audioContextRef.current.destination);
+        connectProcessingChain();
         
         // Set initial duration
         setDuration(audioElementRef.current.duration);
         
-        console.log('Audio processing chain created successfully');
+        console.log('✅ Audio processing chain created successfully');
       }
 
+      setIsInitialized(true);
       setIsLoading(false);
     } catch (error) {
-      console.error('Error initializing audio context:', error);
+      console.error('❌ Error initializing audio context:', error);
       setIsLoading(false);
+      setIsInitialized(false);
     }
   }, [audioFile]);
 
-  // Test function to apply extreme effects
-  const applyTestEffects = useCallback(() => {
+  // Create all effect nodes
+  const createEffectNodes = useCallback(() => {
     if (!audioContextRef.current) return;
 
-    console.log('Applying test effects...');
-    const currentTime = audioContextRef.current.currentTime;
+    const ctx = audioContextRef.current;
 
-    // Apply extreme effects
-    if (gainNodeRef.current) {
-      gainNodeRef.current.gain.setValueAtTime(5.0, currentTime); // Very loud
-      console.log('Applied extreme gain: 5.0');
-    }
+    // Create EQ nodes (3-band)
+    eqNodesRef.current = [
+      ctx.createBiquadFilter(), // Low
+      ctx.createBiquadFilter(), // Mid
+      ctx.createBiquadFilter()  // High
+    ];
+    
+    // Set EQ types
+    eqNodesRef.current[0].type = 'lowshelf';
+    eqNodesRef.current[0].frequency.value = 200;
+    
+    eqNodesRef.current[1].type = 'peaking';
+    eqNodesRef.current[1].frequency.value = 1000;
+    eqNodesRef.current[1].Q.value = 1;
+    
+    eqNodesRef.current[2].type = 'highshelf';
+    eqNodesRef.current[2].frequency.value = 5000;
 
-    if (compressorNodeRef.current) {
-      compressorNodeRef.current.threshold.setValueAtTime(-6, currentTime);
-      compressorNodeRef.current.ratio.setValueAtTime(10, currentTime);
-      compressorNodeRef.current.attack.setValueAtTime(0.001, currentTime);
-      compressorNodeRef.current.release.setValueAtTime(0.01, currentTime);
-      console.log('Applied extreme compression');
-    }
-
-    if (lowPassFilterRef.current && highPassFilterRef.current) {
-      // Extreme low boost
-      lowPassFilterRef.current.frequency.setValueAtTime(500, currentTime);
-      lowPassFilterRef.current.Q.setValueAtTime(5, currentTime);
-      lowPassFilterRef.current.gain.setValueAtTime(30, currentTime);
-
-      // Extreme high boost
-      highPassFilterRef.current.frequency.setValueAtTime(15000, currentTime);
-      highPassFilterRef.current.Q.setValueAtTime(5, currentTime);
-      highPassFilterRef.current.gain.setValueAtTime(30, currentTime);
-      
-      console.log('Applied extreme EQ effects');
-    }
-
-    setTestMode(true);
+    // Create compressor
+    compressorRef.current = ctx.createDynamicsCompressor();
+    
+    // Create limiter
+    limiterRef.current = ctx.createDynamicsCompressor();
+    limiterRef.current.ratio.value = 20;
+    limiterRef.current.attack.value = 0.001;
+    
+    console.log('✅ Effect nodes created');
   }, []);
 
-  // Apply genre effects in real-time with immediate changes
+  // Connect the processing chain
+  const connectProcessingChain = useCallback(() => {
+    if (!sourceNodeRef.current || !analyserNodeRef.current || !gainNodeRef.current) {
+      console.log('Audio nodes not available for connection');
+      return;
+    }
+    
+    console.log('Connecting processing chain...');
+
+    // Disconnect all existing connections
+    try {
+      sourceNodeRef.current.disconnect();
+      eqNodesRef.current.forEach(node => node.disconnect());
+      if (compressorRef.current) compressorRef.current.disconnect();
+      if (limiterRef.current) limiterRef.current.disconnect();
+    } catch (error) {
+      console.log('Error disconnecting nodes:', error);
+    }
+
+    let currentNode: AudioNode = sourceNodeRef.current;
+
+    // Connect EQ if enabled
+    if (audioEffects.eq?.enabled && eqNodesRef.current.length >= 3) {
+      eqNodesRef.current[0].connect(eqNodesRef.current[1]);
+      eqNodesRef.current[1].connect(eqNodesRef.current[2]);
+      currentNode.connect(eqNodesRef.current[0]);
+      currentNode = eqNodesRef.current[2];
+    }
+
+    // Connect compressor if enabled
+    if (compressorRef.current && audioEffects.compressor?.enabled) {
+      currentNode.connect(compressorRef.current);
+      currentNode = compressorRef.current;
+    }
+
+    // Connect limiter if enabled
+    if (limiterRef.current && audioEffects.limiter?.enabled) {
+      currentNode.connect(limiterRef.current);
+      currentNode = limiterRef.current;
+    }
+
+    // Connect to analyser and output
+    currentNode.connect(analyserNodeRef.current);
+    analyserNodeRef.current.connect(gainNodeRef.current);
+    gainNodeRef.current.connect(audioContextRef.current!.destination);
+
+    console.log('✅ Processing chain connected successfully');
+  }, [audioEffects]);
+
+  // Update effect parameters in real-time
+  const updateEffectParameters = useCallback(() => {
+    if (!audioContextRef.current || !eqNodesRef.current) {
+      return;
+    }
+    
+    console.log('Updating effect parameters:', audioEffects);
+    
+    // Update EQ
+    if (eqNodesRef.current.length >= 3 && audioEffects.eq?.enabled) {
+      eqNodesRef.current[0].gain.value = audioEffects.eq.low;
+      eqNodesRef.current[1].gain.value = audioEffects.eq.mid;
+      eqNodesRef.current[2].gain.value = audioEffects.eq.high;
+      console.log('EQ updated:', { low: audioEffects.eq.low, mid: audioEffects.eq.mid, high: audioEffects.eq.high });
+    }
+
+    // Update compressor
+    if (compressorRef.current && audioEffects.compressor?.enabled) {
+      compressorRef.current.threshold.value = audioEffects.compressor.threshold;
+      compressorRef.current.ratio.value = audioEffects.compressor.ratio;
+      compressorRef.current.attack.value = audioEffects.compressor.attack / 1000;
+      compressorRef.current.release.value = audioEffects.compressor.release / 1000;
+      console.log('Compressor updated:', audioEffects.compressor);
+    }
+
+    // Update volume
+    if (gainNodeRef.current && audioEffects.loudness?.enabled) {
+      gainNodeRef.current.gain.value = audioEffects.loudness.volume * (isMuted ? 0 : volume);
+      console.log('Volume updated:', audioEffects.loudness.volume * (isMuted ? 0 : volume));
+    }
+
+    // Update limiter
+    if (limiterRef.current && audioEffects.limiter?.enabled) {
+      limiterRef.current.threshold.value = audioEffects.limiter.threshold;
+      console.log('Limiter updated:', audioEffects.limiter);
+    }
+  }, [audioEffects, volume, isMuted]);
+
+  // Apply genre effects to audio effects state
   const applyGenreEffects = useCallback(() => {
-    if (!selectedGenre || !audioContextRef.current) {
-      console.log('No genre selected or audio context not ready');
+    if (!selectedGenre) {
+      console.log('No genre selected');
       return;
     }
 
@@ -155,58 +276,52 @@ const RealTimeAudioPlayer: React.FC<RealTimeAudioPlayerProps> = ({
     }
 
     console.log('Applying genre effects:', selectedGenre.name, preset);
-    const currentTime = audioContextRef.current.currentTime;
 
-    // Apply gain with immediate effect
-    if (gainNodeRef.current) {
-      const newGain = preset.gain * volume;
-      gainNodeRef.current.gain.setValueAtTime(newGain, currentTime);
-      console.log('Applied gain:', newGain);
-    }
+    // Convert multiplier values to dB for EQ
+    const multiplierToDb = (multiplier: number) => {
+      return 20 * Math.log10(multiplier);
+    };
 
-    // Apply compression with immediate effect
-    if (compressorNodeRef.current) {
-      compressorNodeRef.current.threshold.setValueAtTime(preset.compression.threshold, currentTime);
-      compressorNodeRef.current.ratio.setValueAtTime(preset.compression.ratio, currentTime);
-      compressorNodeRef.current.attack.setValueAtTime(preset.compression.attack, currentTime);
-      compressorNodeRef.current.release.setValueAtTime(preset.compression.release, currentTime);
-      compressorNodeRef.current.knee.setValueAtTime(10, currentTime);
-      console.log('Applied compression:', preset.compression);
-    }
-
-    // Apply EQ with more dramatic effects
-    if (lowPassFilterRef.current && highPassFilterRef.current) {
-      // Low frequency boost/cut - more dramatic
-      const lowFreq = preset.eq.low > 1 ? 300 : 80;
-      const lowQ = preset.eq.low > 1 ? 2 : 0.3;
-      const lowGain = (preset.eq.low - 1) * 20; // More dramatic gain changes
-      
-      lowPassFilterRef.current.frequency.setValueAtTime(lowFreq, currentTime);
-      lowPassFilterRef.current.Q.setValueAtTime(lowQ, currentTime);
-      lowPassFilterRef.current.gain.setValueAtTime(lowGain, currentTime);
-
-      // High frequency boost/cut - more dramatic
-      const highFreq = preset.eq.high > 1 ? 10000 : 3000;
-      const highQ = preset.eq.high > 1 ? 2 : 0.3;
-      const highGain = (preset.eq.high - 1) * 20; // More dramatic gain changes
-      
-      highPassFilterRef.current.frequency.setValueAtTime(highFreq, currentTime);
-      highPassFilterRef.current.Q.setValueAtTime(highQ, currentTime);
-      highPassFilterRef.current.gain.setValueAtTime(highGain, currentTime);
-      
-      console.log('Applied EQ - Low:', { freq: lowFreq, gain: lowGain }, 'High:', { freq: highFreq, gain: highGain });
-    }
+    // Update audio effects state with genre preset
+    setAudioEffects(prev => ({
+      ...prev,
+      eq: { 
+        ...prev.eq, 
+        low: multiplierToDb(preset.eq.low), 
+        mid: multiplierToDb(preset.eq.mid), 
+        high: multiplierToDb(preset.eq.high), 
+        enabled: true 
+      },
+      compressor: { 
+        ...prev.compressor, 
+        threshold: preset.compression.threshold, 
+        ratio: preset.compression.ratio, 
+        attack: Math.round(preset.compression.attack * 1000), 
+        release: Math.round(preset.compression.release * 1000), 
+        enabled: true 
+      },
+      loudness: { 
+        ...prev.loudness, 
+        volume: preset.gain, 
+        enabled: true 
+      },
+      limiter: { 
+        ...prev.limiter, 
+        threshold: -1, 
+        ceiling: preset.truePeak, 
+        enabled: true 
+      }
+    }));
 
     setCurrentGenre(selectedGenre);
-    setTestMode(false);
-  }, [selectedGenre, volume]);
+  }, [selectedGenre]);
 
   // Play audio
   const playAudio = useCallback(async () => {
     if (!audioElementRef.current || isPlaying) return;
 
     try {
-      console.log('Starting playback...');
+      console.log('=== STARTING PLAYBACK ===');
       
       // Resume audio context if suspended
       if (audioContextRef.current && audioContextRef.current.state === 'suspended') {
@@ -214,25 +329,27 @@ const RealTimeAudioPlayer: React.FC<RealTimeAudioPlayerProps> = ({
         console.log('Audio context resumed');
       }
 
-      // Apply current genre effects
-      applyGenreEffects();
+      // Ensure the processing chain is connected
+      if (audioContextRef.current && sourceNodeRef.current) {
+        connectProcessingChain();
+      }
       
       // Play the audio
       await audioElementRef.current.play();
       setIsPlaying(true);
-      console.log('Audio playback started');
+      console.log('✅ Audio playback started');
       
     } catch (error) {
-      console.error('Error playing audio:', error);
+      console.error('❌ Error playing audio:', error);
     }
-  }, [isPlaying, applyGenreEffects]);
+  }, [isPlaying, connectProcessingChain]);
 
   // Pause audio
   const pauseAudio = useCallback(() => {
     if (audioElementRef.current && isPlaying) {
       audioElementRef.current.pause();
       setIsPlaying(false);
-      console.log('Audio playback paused');
+      console.log('✅ Audio playback paused');
     }
   }, [isPlaying]);
 
@@ -241,13 +358,10 @@ const RealTimeAudioPlayer: React.FC<RealTimeAudioPlayerProps> = ({
     console.log('Genre changed to:', newGenre?.name);
     onGenreChange(newGenre);
     
-    // Apply new effects immediately if playing
+    // Apply new effects immediately
     if (isPlaying && audioContextRef.current) {
       console.log('Applying new genre effects while playing...');
-      // Apply effects immediately for instant change
-      setTimeout(() => {
-        applyGenreEffects();
-      }, 10);
+      applyGenreEffects();
     }
   }, [onGenreChange, isPlaying, applyGenreEffects]);
 
@@ -255,19 +369,17 @@ const RealTimeAudioPlayer: React.FC<RealTimeAudioPlayerProps> = ({
   const handleVolumeChange = useCallback((newVolume: number) => {
     setVolume(newVolume);
     if (gainNodeRef.current && audioContextRef.current) {
-      const preset = selectedGenre ? GENRE_PRESETS[selectedGenre.id] : { gain: 1.0 };
-      const newGain = preset.gain * newVolume;
+      const newGain = audioEffects.loudness.volume * newVolume;
       gainNodeRef.current.gain.setValueAtTime(newGain, audioContextRef.current.currentTime);
       console.log('Volume changed to:', newVolume, 'Gain:', newGain);
     }
-  }, [selectedGenre]);
+  }, [audioEffects.loudness.volume]);
 
   // Handle mute toggle
   const toggleMute = useCallback(() => {
     if (gainNodeRef.current && audioContextRef.current) {
       if (isMuted) {
-        const preset = selectedGenre ? GENRE_PRESETS[selectedGenre.id] : { gain: 1.0 };
-        const newGain = preset.gain * volume;
+        const newGain = audioEffects.loudness.volume * volume;
         gainNodeRef.current.gain.setValueAtTime(newGain, audioContextRef.current.currentTime);
         setIsMuted(false);
         console.log('Unmuted, gain:', newGain);
@@ -277,7 +389,7 @@ const RealTimeAudioPlayer: React.FC<RealTimeAudioPlayerProps> = ({
         console.log('Muted');
       }
     }
-  }, [isMuted, selectedGenre, volume]);
+  }, [isMuted, audioEffects.loudness.volume, volume]);
 
   // Initialize audio context when file changes
   useEffect(() => {
@@ -294,11 +406,19 @@ const RealTimeAudioPlayer: React.FC<RealTimeAudioPlayerProps> = ({
 
   // Apply effects when genre changes
   useEffect(() => {
-    if (selectedGenre && audioContextRef.current) {
+    if (selectedGenre) {
       console.log('Genre effect triggered for:', selectedGenre.name);
       applyGenreEffects();
     }
   }, [selectedGenre, applyGenreEffects]);
+
+  // Update effect parameters when audio effects change
+  useEffect(() => {
+    if (audioContextRef.current && eqNodesRef.current) {
+      updateEffectParameters();
+      connectProcessingChain();
+    }
+  }, [audioEffects, updateEffectParameters, connectProcessingChain]);
 
   // Update progress
   useEffect(() => {
@@ -359,9 +479,9 @@ const RealTimeAudioPlayer: React.FC<RealTimeAudioPlayerProps> = ({
               ⚡ Currently processing: {currentGenre.name}
             </p>
           )}
-          {testMode && (
-            <p className="text-xs text-red-400 mt-1">
-              🧪 Test mode active - extreme effects applied
+          {isInitialized && (
+            <p className="text-xs text-blue-400 mt-1">
+              🎛️ Effects: Active
             </p>
           )}
         </div>
@@ -388,19 +508,6 @@ const RealTimeAudioPlayer: React.FC<RealTimeAudioPlayerProps> = ({
               )}
             </button>
           </div>
-
-          {/* Test Effects Button */}
-          {isPlaying && (
-            <div className="flex justify-center">
-              <button
-                onClick={applyTestEffects}
-                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm rounded-lg transition-colors flex items-center space-x-2"
-              >
-                <Zap className="w-4 h-4" />
-                <span>Test Extreme Effects</span>
-              </button>
-            </div>
-          )}
 
           {/* Progress Bar */}
           <div className="space-y-2">
