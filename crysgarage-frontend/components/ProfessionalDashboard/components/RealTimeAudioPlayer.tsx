@@ -74,40 +74,40 @@ const RealTimeAudioPlayer: React.FC<RealTimeAudioPlayerProps> = ({
     limiter: { threshold: -1, ceiling: -0.1, enabled: true }
   });
 
-  // Test function to apply extreme effects - DIRECT TEST
+  // Test function to apply moderate effects - INDUSTRY STANDARD TEST
   const applyTestEffects = useCallback(() => {
     if (!audioContextRef.current) {
       console.log('❌ No audio context for test effects');
       return;
     }
 
-    console.log('🧪 Applying DIRECT test effects...');
+    console.log('🧪 Applying MODERATE test effects...');
     const currentTime = audioContextRef.current.currentTime;
 
-    // DIRECT TEST: Apply extreme effects immediately
+    // MODERATE TEST: Apply industry-standard effects
     if (gainNodeRef.current) {
-      gainNodeRef.current.gain.setValueAtTime(5.0, currentTime); // Very loud
-      console.log('✅ Applied extreme gain: 5.0');
+      gainNodeRef.current.gain.setValueAtTime(2.0, currentTime); // Moderate boost
+      console.log('✅ Applied moderate gain: 2.0');
     } else {
       console.log('❌ No gain node for test');
     }
 
     if (compressorRef.current) {
-      compressorRef.current.threshold.setValueAtTime(-6, currentTime);
-      compressorRef.current.ratio.setValueAtTime(10, currentTime);
-      compressorRef.current.attack.setValueAtTime(0.001, currentTime);
-      compressorRef.current.release.setValueAtTime(0.01, currentTime);
-      console.log('✅ Applied extreme compression');
+      compressorRef.current.threshold.setValueAtTime(-12, currentTime);
+      compressorRef.current.ratio.setValueAtTime(4, currentTime);
+      compressorRef.current.attack.setValueAtTime(0.01, currentTime);
+      compressorRef.current.release.setValueAtTime(0.1, currentTime);
+      console.log('✅ Applied moderate compression');
     } else {
       console.log('❌ No compressor node for test');
     }
 
     if (eqNodesRef.current.length >= 3) {
-      // Extreme EQ boost
-      eqNodesRef.current[0].gain.setValueAtTime(30, currentTime);
-      eqNodesRef.current[1].gain.setValueAtTime(20, currentTime);
-      eqNodesRef.current[2].gain.setValueAtTime(30, currentTime);
-      console.log('✅ Applied extreme EQ effects');
+      // Moderate EQ boost
+      eqNodesRef.current[0].gain.setValueAtTime(6, currentTime);  // +6dB low
+      eqNodesRef.current[1].gain.setValueAtTime(3, currentTime);  // +3dB mid
+      eqNodesRef.current[2].gain.setValueAtTime(6, currentTime);  // +6dB high
+      console.log('✅ Applied moderate EQ effects');
     } else {
       console.log('❌ No EQ nodes for test');
     }
@@ -305,12 +305,12 @@ const RealTimeAudioPlayer: React.FC<RealTimeAudioPlayerProps> = ({
     
     console.log('🔄 Updating effect parameters:', audioEffects);
     
-    // Update EQ with more dramatic values
+    // Update EQ with industry standard values (no extreme multipliers)
     if (eqNodesRef.current.length >= 3 && audioEffects.eq?.enabled) {
-      // Make EQ changes more dramatic
-      const lowGain = audioEffects.eq.low * 2; // Double the effect
-      const midGain = audioEffects.eq.mid * 2;
-      const highGain = audioEffects.eq.high * 2;
+      // Use standard EQ values without extreme multipliers
+      const lowGain = audioEffects.eq.low;
+      const midGain = audioEffects.eq.mid;
+      const highGain = audioEffects.eq.high;
       
       eqNodesRef.current[0].gain.setValueAtTime(lowGain, audioContextRef.current.currentTime);
       eqNodesRef.current[1].gain.setValueAtTime(midGain, audioContextRef.current.currentTime);
@@ -327,9 +327,9 @@ const RealTimeAudioPlayer: React.FC<RealTimeAudioPlayerProps> = ({
       console.log('🎛️ Compressor updated:', audioEffects.compressor);
     }
 
-    // Update volume
+    // Update volume with slightly more gain
     if (gainNodeRef.current && audioEffects.loudness?.enabled) {
-      const newGain = audioEffects.loudness.volume * (isMuted ? 0 : volume);
+      const newGain = audioEffects.loudness.volume * 1.2 * (isMuted ? 0 : volume); // 20% more volume
       gainNodeRef.current.gain.setValueAtTime(newGain, audioContextRef.current.currentTime);
       console.log('🎛️ Volume updated:', newGain);
     }
@@ -356,9 +356,9 @@ const RealTimeAudioPlayer: React.FC<RealTimeAudioPlayerProps> = ({
 
     console.log('🎵 Applying genre effects:', selectedGenre.name, preset);
 
-    // Convert multiplier values to dB for EQ - make more dramatic
+    // Convert multiplier values to dB for EQ - industry standard conversion
     const multiplierToDb = (multiplier: number) => {
-      return 20 * Math.log10(multiplier) * 2; // Double the effect
+      return 20 * Math.log10(multiplier); // Standard conversion, no extreme multipliers
     };
 
     // Update audio effects state with genre preset
@@ -567,8 +567,8 @@ const RealTimeAudioPlayer: React.FC<RealTimeAudioPlayerProps> = ({
             </p>
           )}
           {testMode && (
-            <p className="text-xs text-red-400 mt-1">
-              🧪 Test mode active - extreme effects applied
+            <p className="text-xs text-blue-400 mt-1">
+              🧪 Industry test mode active - moderate effects applied
             </p>
           )}
         </div>
@@ -601,10 +601,10 @@ const RealTimeAudioPlayer: React.FC<RealTimeAudioPlayerProps> = ({
             <div className="flex justify-center">
               <button
                 onClick={applyTestEffects}
-                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm rounded-lg transition-colors flex items-center space-x-2"
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition-colors flex items-center space-x-2"
               >
                 <Zap className="w-4 h-4" />
-                <span>Test Extreme Effects</span>
+                <span>Test Industry Effects</span>
               </button>
             </div>
           )}
