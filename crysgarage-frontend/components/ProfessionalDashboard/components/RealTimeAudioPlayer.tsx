@@ -63,6 +63,9 @@ const RealTimeAudioPlayer: React.FC<RealTimeAudioPlayerProps> = ({
   const compressorRef = useRef<DynamicsCompressorNode | null>(null);
   const limiterRef = useRef<DynamicsCompressorNode | null>(null);
 
+  // Track if audio element has been connected
+  const hasBeenConnectedRef = useRef(false);
+
   // Audio effects state - structured like Advanced tier
   const [audioEffects, setAudioEffects] = useState<AudioEffects>({
     eq: { low: 0, mid: 0, high: 0, enabled: true },
@@ -150,9 +153,32 @@ const RealTimeAudioPlayer: React.FC<RealTimeAudioPlayerProps> = ({
       if (audioElementRef.current && audioContextRef.current) {
         console.log('Creating audio processing chain...');
         
-        // Create source from audio element
-        sourceNodeRef.current = audioContextRef.current.createMediaElementSource(audioElementRef.current);
-        console.log('✅ MediaElementSource created');
+        // Create source from audio element - ONLY IF NOT ALREADY CONNECTED
+        if (!hasBeenConnectedRef.current) {
+          try {
+            sourceNodeRef.current = audioContextRef.current.createMediaElementSource(audioElementRef.current);
+            hasBeenConnectedRef.current = true;
+            console.log('✅ MediaElementSource created');
+          } catch (error) {
+            console.log('⚠️ MediaElementSource already exists, reusing...');
+            // If already connected, we need to create a new audio element
+            const newAudioElement = new Audio();
+            newAudioElement.src = audioUrl;
+            newAudioElement.load();
+            audioElementRef.current = newAudioElement;
+            
+            // Wait for new audio to load
+            await new Promise((resolve) => {
+              newAudioElement.addEventListener('loadedmetadata', resolve, { once: true });
+            });
+            
+            sourceNodeRef.current = audioContextRef.current.createMediaElementSource(newAudioElement);
+            hasBeenConnectedRef.current = true;
+            console.log('✅ New MediaElementSource created');
+          }
+        } else {
+          console.log('✅ MediaElementSource already exists');
+        }
         
         // Create analyser
         analyserNodeRef.current = audioContextRef.current.createAnalyser();
@@ -449,6 +475,8 @@ const RealTimeAudioPlayer: React.FC<RealTimeAudioPlayerProps> = ({
   // Initialize audio context when file changes
   useEffect(() => {
     if (audioFile) {
+      // Reset connection flag when file changes
+      hasBeenConnectedRef.current = false;
       initializeAudioContext();
     }
     
