@@ -23,6 +23,8 @@ jobs:
           echo "SSH key setup completed"
           echo "SSH key length: $(wc -l < ~/.ssh/id_rsa) lines"
           echo "SSH key permissions: $(ls -la ~/.ssh/id_rsa)"
+          echo "SSH key first line: $(head -1 ~/.ssh/id_rsa)"
+          echo "SSH key last line: $(tail -1 ~/.ssh/id_rsa)"
       
       - name: Debug SSH configuration
         run: |
@@ -30,14 +32,13 @@ jobs:
           echo "Host: ${{ secrets.VPS_HOST }}"
           echo "Username: ${{ secrets.VPS_USERNAME }}"
           echo "SSH key exists: $(test -f ~/.ssh/id_rsa && echo 'YES' || echo 'NO')"
-          echo "SSH key content (first line): $(head -1 ~/.ssh/id_rsa)"
-          echo "SSH key content (last line): $(tail -1 ~/.ssh/id_rsa)"
+          echo "SSH key size: $(wc -c < ~/.ssh/id_rsa) bytes"
           echo "Known hosts: $(cat ~/.ssh/known_hosts)"
       
-      - name: Test SSH connection
+      - name: Test SSH connection with verbose output
         run: |
           echo "Testing SSH connection to ${{ secrets.VPS_HOST }}..."
-          ssh -v -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa ${{ secrets.VPS_USERNAME }}@${{ secrets.VPS_HOST }} "echo 'SSH connection successful!' && whoami && pwd"
+          ssh -vvv -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa ${{ secrets.VPS_USERNAME }}@${{ secrets.VPS_HOST }} "echo 'SSH connection successful!' && whoami && pwd"
       
       - name: Deploy to VPS
         run: |
