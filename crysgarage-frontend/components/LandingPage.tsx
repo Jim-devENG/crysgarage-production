@@ -346,7 +346,7 @@ export function LandingPage({ onGetStarted, onTryMastering }: LandingPageProps) 
                 variants={itemVariants}
               >
                 Professional audio mastering platform designed for African artists and producers. 
-                Get studio-quality masters in minutes, not days.
+                Get studio-quality masters in minutes, not hours.
               </motion.p>
               
               {/* Problem Statement */}
