@@ -87,7 +87,7 @@ export function WhyUsSection({ onGetStarted, onTryMastering }: WhyUsSectionProps
     { number: "2", label: "Minutes Processing", suffix: "" },
     { number: "99", label: "Artist Satisfaction", suffix: "%" },
     { number: "50", label: "Countries Served", suffix: "+" },
-    { number: "10", label: "Years Combined Experience", suffix: "" }
+    { number: "15", label: "Years Combined Experience", suffix: "" }
   ];
 
   return (
