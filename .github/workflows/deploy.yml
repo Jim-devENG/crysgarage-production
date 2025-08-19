@@ -25,6 +25,7 @@ jobs:
           echo "SSH key permissions: $(ls -la ~/.ssh/id_rsa)"
           echo "SSH key first line: $(head -1 ~/.ssh/id_rsa)"
           echo "SSH key last line: $(tail -1 ~/.ssh/id_rsa)"
+          echo "SSH key size: $(wc -c < ~/.ssh/id_rsa) bytes"
       
       - name: Debug SSH configuration
         run: |
@@ -34,6 +35,9 @@ jobs:
           echo "SSH key exists: $(test -f ~/.ssh/id_rsa && echo 'YES' || echo 'NO')"
           echo "SSH key size: $(wc -c < ~/.ssh/id_rsa) bytes"
           echo "Known hosts: $(cat ~/.ssh/known_hosts)"
+          echo "SSH key format check:"
+          head -1 ~/.ssh/id_rsa | grep -q "BEGIN" && echo "✅ Key starts with BEGIN" || echo "❌ Key doesn't start with BEGIN"
+          tail -1 ~/.ssh/id_rsa | grep -q "END" && echo "✅ Key ends with END" || echo "❌ Key doesn't end with END"
       
       - name: Test SSH connection with verbose output
         run: |
