@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
-import { ArrowLeft, Download, RotateCcw } from 'lucide-react';
+import { ArrowLeft, Download, RotateCcw, Play, Pause } from 'lucide-react';
 import { GENRE_PRESETS } from './utils/genrePresets';
+import StyledAudioPlayer from '../StyledAudioPlayer';
+import FrequencySpectrum from '../FrequencySpectrum';
 
 interface ExportStepProps {
   selectedFile: File | null;
@@ -19,6 +21,10 @@ const ExportStep: React.FC<ExportStepProps> = ({
 }) => {
   const [downloadFormat, setDownloadFormat] = useState<'mp3' | 'wav'>('wav');
   const [isDownloading, setIsDownloading] = useState(false);
+  const [isPlayingOriginal, setIsPlayingOriginal] = useState(false);
+  const [isPlayingMastered, setIsPlayingMastered] = useState(false);
+  const [originalAudioElement, setOriginalAudioElement] = useState<HTMLAudioElement | null>(null);
+  const [masteredAudioElement, setMasteredAudioElement] = useState<HTMLAudioElement | null>(null);
 
   // Helper functions to get genre preset values
   const getGenreGain = (genreId: string) => {
@@ -187,6 +193,24 @@ const ExportStep: React.FC<ExportStepProps> = ({
     }
   };
 
+  const handleOriginalPlay = () => {
+    setIsPlayingOriginal(true);
+    setIsPlayingMastered(false);
+  };
+
+  const handleOriginalPause = () => {
+    setIsPlayingOriginal(false);
+  };
+
+  const handleMasteredPlay = () => {
+    setIsPlayingMastered(true);
+    setIsPlayingOriginal(false);
+  };
+
+  const handleMasteredPause = () => {
+    setIsPlayingMastered(false);
+  };
+
   return (
     <div className="space-y-8">
       {/* Header */}
@@ -200,7 +224,65 @@ const ExportStep: React.FC<ExportStepProps> = ({
           </button>
           <div>
             <h2 className="text-2xl font-bold text-crys-gold">Export Your Mastered Audio</h2>
-            <p className="text-gray-400">Download your professionally mastered track</p>
+            <p className="text-gray-400">Compare and download your professionally mastered track</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Before/After Comparison */}
+      <div className="bg-gray-800 rounded-xl p-6">
+        <h3 className="text-lg font-semibold mb-6 text-center">Before & After Comparison</h3>
+        <div className="grid md:grid-cols-2 gap-6">
+          {/* Original Audio */}
+          <div className="space-y-4">
+            <h4 className="text-center font-medium">Original Audio</h4>
+            <StyledAudioPlayer
+              src={selectedFile ? URL.createObjectURL(selectedFile) : ''}
+              title="Original Audio"
+              onPlay={handleOriginalPlay}
+              onPause={handleOriginalPause}
+              className="w-full"
+              onAudioElementReady={(audioElement) => {
+                setOriginalAudioElement(audioElement);
+              }}
+            />
+            <FrequencySpectrum
+              audioElement={originalAudioElement}
+              isPlaying={isPlayingOriginal}
+              title="Original Frequency Spectrum"
+              targetLufs={selectedGenre ? GENRE_PRESETS[selectedGenre.id]?.targetLufs : undefined}
+              targetTruePeak={selectedGenre ? GENRE_PRESETS[selectedGenre.id]?.truePeak : undefined}
+            />
+            <div className="text-center">
+              <p className="text-xs text-gray-400">Unprocessed, raw audio</p>
+            </div>
+          </div>
+
+          {/* Mastered Audio */}
+          <div className="space-y-4">
+            <h4 className="text-center font-medium text-crys-gold">
+              {selectedGenre ? `${selectedGenre.name} Mastered` : 'Mastered Audio'}
+            </h4>
+            <StyledAudioPlayer
+              src={processedAudioUrl || ''}
+              title="Mastered Audio"
+              onPlay={handleMasteredPlay}
+              onPause={handleMasteredPause}
+              className="w-full"
+              onAudioElementReady={(audioElement) => {
+                setMasteredAudioElement(audioElement);
+              }}
+            />
+            <FrequencySpectrum
+              audioElement={masteredAudioElement}
+              isPlaying={isPlayingMastered}
+              title="Mastered Frequency Spectrum"
+              targetLufs={selectedGenre ? GENRE_PRESETS[selectedGenre.id]?.targetLufs : undefined}
+              targetTruePeak={selectedGenre ? GENRE_PRESETS[selectedGenre.id]?.truePeak : undefined}
+            />
+            <div className="text-center">
+              <p className="text-xs text-crys-gold">Professionally mastered with {selectedGenre?.name} effects</p>
+            </div>
           </div>
         </div>
       </div>
