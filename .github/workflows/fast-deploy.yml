@@ -28,8 +28,10 @@ jobs:
             
             # Navigate to project directory
             cd /root/crysgarage-deploy
+            echo "📁 Current directory: $(pwd)"
             
             # Pull latest changes
+            echo "📥 Pulling latest changes..."
             git pull origin master
             
             # Frontend: Build and deploy
@@ -39,6 +41,7 @@ jobs:
             npm run build
             
             # Copy built files to web root
+            echo "📁 Copying files to web root..."
             rm -rf /var/www/html/*
             cp -r dist/* /var/www/html/
             restorecon -Rv /var/www/html
