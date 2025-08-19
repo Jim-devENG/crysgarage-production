@@ -71,17 +71,22 @@ const RealTimeAudioPlayer: React.FC<RealTimeAudioPlayerProps> = ({
     limiter: { threshold: -1, ceiling: -0.1, enabled: true }
   });
 
-  // Test function to apply extreme effects
+  // Test function to apply extreme effects - DIRECT TEST
   const applyTestEffects = useCallback(() => {
-    if (!audioContextRef.current) return;
+    if (!audioContextRef.current) {
+      console.log('❌ No audio context for test effects');
+      return;
+    }
 
-    console.log('🧪 Applying test effects...');
+    console.log('🧪 Applying DIRECT test effects...');
     const currentTime = audioContextRef.current.currentTime;
 
-    // Apply extreme effects
+    // DIRECT TEST: Apply extreme effects immediately
     if (gainNodeRef.current) {
       gainNodeRef.current.gain.setValueAtTime(5.0, currentTime); // Very loud
-      console.log('Applied extreme gain: 5.0');
+      console.log('✅ Applied extreme gain: 5.0');
+    } else {
+      console.log('❌ No gain node for test');
     }
 
     if (compressorRef.current) {
@@ -89,15 +94,19 @@ const RealTimeAudioPlayer: React.FC<RealTimeAudioPlayerProps> = ({
       compressorRef.current.ratio.setValueAtTime(10, currentTime);
       compressorRef.current.attack.setValueAtTime(0.001, currentTime);
       compressorRef.current.release.setValueAtTime(0.01, currentTime);
-      console.log('Applied extreme compression');
+      console.log('✅ Applied extreme compression');
+    } else {
+      console.log('❌ No compressor node for test');
     }
 
     if (eqNodesRef.current.length >= 3) {
-      // Extreme low boost
+      // Extreme EQ boost
       eqNodesRef.current[0].gain.setValueAtTime(30, currentTime);
       eqNodesRef.current[1].gain.setValueAtTime(20, currentTime);
       eqNodesRef.current[2].gain.setValueAtTime(30, currentTime);
-      console.log('Applied extreme EQ effects');
+      console.log('✅ Applied extreme EQ effects');
+    } else {
+      console.log('❌ No EQ nodes for test');
     }
 
     setTestMode(true);
@@ -143,20 +152,20 @@ const RealTimeAudioPlayer: React.FC<RealTimeAudioPlayerProps> = ({
         
         // Create source from audio element
         sourceNodeRef.current = audioContextRef.current.createMediaElementSource(audioElementRef.current);
+        console.log('✅ MediaElementSource created');
         
         // Create analyser
         analyserNodeRef.current = audioContextRef.current.createAnalyser();
         analyserNodeRef.current.fftSize = 2048;
         analyserNodeRef.current.smoothingTimeConstant = 0.8;
+        console.log('✅ Analyser created');
         
         // Create gain node for volume control
         gainNodeRef.current = audioContextRef.current.createGain();
+        console.log('✅ Gain node created');
         
         // Create effect nodes
         createEffectNodes();
-        
-        // Connect the processing chain
-        connectProcessingChain();
         
         // Set initial duration
         setDuration(audioElementRef.current.duration);
@@ -208,14 +217,14 @@ const RealTimeAudioPlayer: React.FC<RealTimeAudioPlayerProps> = ({
     console.log('✅ Effect nodes created');
   }, []);
 
-  // Connect the processing chain
+  // Connect the processing chain - FIXED VERSION
   const connectProcessingChain = useCallback(() => {
     if (!sourceNodeRef.current || !analyserNodeRef.current || !gainNodeRef.current) {
-      console.log('Audio nodes not available for connection');
+      console.log('❌ Audio nodes not available for connection');
       return;
     }
     
-    console.log('Connecting processing chain...');
+    console.log('🔗 Connecting processing chain...');
 
     // Disconnect all existing connections
     try {
@@ -228,9 +237,10 @@ const RealTimeAudioPlayer: React.FC<RealTimeAudioPlayerProps> = ({
     }
 
     let currentNode: AudioNode = sourceNodeRef.current;
+    console.log('🔗 Starting with source node');
 
-    // Connect EQ if enabled
-    if (audioEffects.eq?.enabled && eqNodesRef.current.length >= 3) {
+    // ALWAYS connect EQ chain (don't check audioEffects.eq.enabled during init)
+    if (eqNodesRef.current.length >= 3) {
       eqNodesRef.current[0].connect(eqNodesRef.current[1]);
       eqNodesRef.current[1].connect(eqNodesRef.current[2]);
       currentNode.connect(eqNodesRef.current[0]);
@@ -238,15 +248,15 @@ const RealTimeAudioPlayer: React.FC<RealTimeAudioPlayerProps> = ({
       console.log('✅ EQ chain connected');
     }
 
-    // Connect compressor if enabled
-    if (compressorRef.current && audioEffects.compressor?.enabled) {
+    // ALWAYS connect compressor (don't check audioEffects.compressor.enabled during init)
+    if (compressorRef.current) {
       currentNode.connect(compressorRef.current);
       currentNode = compressorRef.current;
       console.log('✅ Compressor connected');
     }
 
-    // Connect limiter if enabled
-    if (limiterRef.current && audioEffects.limiter?.enabled) {
+    // ALWAYS connect limiter (don't check audioEffects.limiter.enabled during init)
+    if (limiterRef.current) {
       currentNode.connect(limiterRef.current);
       currentNode = limiterRef.current;
       console.log('✅ Limiter connected');
@@ -258,7 +268,7 @@ const RealTimeAudioPlayer: React.FC<RealTimeAudioPlayerProps> = ({
     gainNodeRef.current.connect(audioContextRef.current!.destination);
 
     console.log('✅ Processing chain connected successfully');
-  }, [audioEffects]);
+  }, []);
 
   // Update effect parameters in real-time
   const updateEffectParameters = useCallback(() => {
@@ -375,6 +385,7 @@ const RealTimeAudioPlayer: React.FC<RealTimeAudioPlayerProps> = ({
 
       // Ensure the processing chain is connected
       if (audioContextRef.current && sourceNodeRef.current) {
+        console.log('🔗 Connecting processing chain before playback...');
         connectProcessingChain();
       }
       
@@ -460,9 +471,8 @@ const RealTimeAudioPlayer: React.FC<RealTimeAudioPlayerProps> = ({
   useEffect(() => {
     if (audioContextRef.current && eqNodesRef.current) {
       updateEffectParameters();
-      connectProcessingChain();
     }
-  }, [audioEffects, updateEffectParameters, connectProcessingChain]);
+  }, [audioEffects, updateEffectParameters]);
 
   // Update progress
   useEffect(() => {
