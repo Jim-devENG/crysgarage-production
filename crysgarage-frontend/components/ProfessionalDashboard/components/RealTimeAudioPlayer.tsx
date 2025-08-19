@@ -23,18 +23,17 @@ const RealTimeAudioPlayer: React.FC<RealTimeAudioPlayerProps> = ({
   const [isMuted, setIsMuted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Audio context and nodes
+  // Audio elements and context
+  const audioElementRef = useRef<HTMLAudioElement | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
-  const audioSourceRef = useRef<AudioBufferSourceNode | null>(null);
+  const sourceNodeRef = useRef<MediaElementAudioSourceNode | null>(null);
   const gainNodeRef = useRef<GainNode | null>(null);
   const compressorNodeRef = useRef<DynamicsCompressorNode | null>(null);
   const lowPassFilterRef = useRef<BiquadFilterNode | null>(null);
   const highPassFilterRef = useRef<BiquadFilterNode | null>(null);
-  const audioBufferRef = useRef<AudioBuffer | null>(null);
-  const startTimeRef = useRef<number>(0);
-  const animationFrameRef = useRef<number>(0);
+  const analyserNodeRef = useRef<AnalyserNode | null>(null);
 
-  // Initialize audio context and processing chain
+  // Initialize Web Audio API
   const initializeAudioContext = useCallback(async () => {
     if (!audioFile) return;
 
@@ -44,27 +43,52 @@ const RealTimeAudioPlayer: React.FC<RealTimeAudioPlayerProps> = ({
       // Create audio context
       audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
       
-      // Read and decode audio file
-      const arrayBuffer = await audioFile.arrayBuffer();
-      audioBufferRef.current = await audioContextRef.current.decodeAudioData(arrayBuffer);
-      
-      // Create processing nodes
-      gainNodeRef.current = audioContextRef.current.createGain();
-      compressorNodeRef.current = audioContextRef.current.createDynamicsCompressor();
-      lowPassFilterRef.current = audioContextRef.current.createBiquadFilter();
-      highPassFilterRef.current = audioContextRef.current.createBiquadFilter();
-      
-      // Set up filter types
-      lowPassFilterRef.current.type = 'lowpass';
-      highPassFilterRef.current.type = 'highpass';
-      
-      // Connect the processing chain
-      highPassFilterRef.current.connect(lowPassFilterRef.current);
-      lowPassFilterRef.current.connect(compressorNodeRef.current);
-      compressorNodeRef.current.connect(gainNodeRef.current);
-      gainNodeRef.current.connect(audioContextRef.current.destination);
-      
-      setDuration(audioBufferRef.current.duration);
+      // Create audio element
+      const audioUrl = URL.createObjectURL(audioFile);
+      if (audioElementRef.current) {
+        audioElementRef.current.src = audioUrl;
+        audioElementRef.current.load();
+      }
+
+      // Wait for audio to be loaded
+      await new Promise((resolve) => {
+        if (audioElementRef.current) {
+          audioElementRef.current.addEventListener('loadedmetadata', resolve, { once: true });
+        }
+      });
+
+      // Create Web Audio API nodes
+      if (audioElementRef.current && audioContextRef.current) {
+        // Create source from audio element
+        sourceNodeRef.current = audioContextRef.current.createMediaElementSource(audioElementRef.current);
+        
+        // Create processing nodes
+        gainNodeRef.current = audioContextRef.current.createGain();
+        compressorNodeRef.current = audioContextRef.current.createDynamicsCompressor();
+        lowPassFilterRef.current = audioContextRef.current.createBiquadFilter();
+        highPassFilterRef.current = audioContextRef.current.createBiquadFilter();
+        analyserNodeRef.current = audioContextRef.current.createAnalyser();
+        
+        // Set up filter types
+        lowPassFilterRef.current.type = 'lowpass';
+        highPassFilterRef.current.type = 'highpass';
+        
+        // Set up analyser
+        analyserNodeRef.current.fftSize = 256;
+        analyserNodeRef.current.smoothingTimeConstant = 0.8;
+        
+        // Connect the processing chain
+        sourceNodeRef.current.connect(highPassFilterRef.current);
+        highPassFilterRef.current.connect(lowPassFilterRef.current);
+        lowPassFilterRef.current.connect(compressorNodeRef.current);
+        compressorNodeRef.current.connect(gainNodeRef.current);
+        gainNodeRef.current.connect(analyserNodeRef.current);
+        analyserNodeRef.current.connect(audioContextRef.current.destination);
+        
+        // Set initial duration
+        setDuration(audioElementRef.current.duration);
+      }
+
       setIsLoading(false);
     } catch (error) {
       console.error('Error initializing audio context:', error);
@@ -79,18 +103,20 @@ const RealTimeAudioPlayer: React.FC<RealTimeAudioPlayerProps> = ({
     const preset = GENRE_PRESETS[selectedGenre.id];
     if (!preset) return;
 
+    const currentTime = audioContextRef.current.currentTime;
+
     // Apply gain
     if (gainNodeRef.current) {
-      gainNodeRef.current.gain.setValueAtTime(preset.gain, audioContextRef.current.currentTime);
+      gainNodeRef.current.gain.setValueAtTime(preset.gain * volume, currentTime);
     }
 
     // Apply compression
     if (compressorNodeRef.current) {
-      compressorNodeRef.current.threshold.setValueAtTime(preset.compression.threshold, audioContextRef.current.currentTime);
-      compressorNodeRef.current.ratio.setValueAtTime(preset.compression.ratio, audioContextRef.current.currentTime);
-      compressorNodeRef.current.attack.setValueAtTime(preset.compression.attack, audioContextRef.current.currentTime);
-      compressorNodeRef.current.release.setValueAtTime(preset.compression.release, audioContextRef.current.currentTime);
-      compressorNodeRef.current.knee.setValueAtTime(10, audioContextRef.current.currentTime);
+      compressorNodeRef.current.threshold.setValueAtTime(preset.compression.threshold, currentTime);
+      compressorNodeRef.current.ratio.setValueAtTime(preset.compression.ratio, currentTime);
+      compressorNodeRef.current.attack.setValueAtTime(preset.compression.attack, currentTime);
+      compressorNodeRef.current.release.setValueAtTime(preset.compression.release, currentTime);
+      compressorNodeRef.current.knee.setValueAtTime(10, currentTime);
     }
 
     // Apply EQ (using filters)
@@ -98,83 +124,46 @@ const RealTimeAudioPlayer: React.FC<RealTimeAudioPlayerProps> = ({
       // Low frequency boost/cut
       const lowFreq = preset.eq.low > 1 ? 200 : 100;
       const lowQ = preset.eq.low > 1 ? 1 : 0.5;
-      lowPassFilterRef.current.frequency.setValueAtTime(lowFreq, audioContextRef.current.currentTime);
-      lowPassFilterRef.current.Q.setValueAtTime(lowQ, audioContextRef.current.currentTime);
-      lowPassFilterRef.current.gain.setValueAtTime((preset.eq.low - 1) * 12, audioContextRef.current.currentTime);
+      lowPassFilterRef.current.frequency.setValueAtTime(lowFreq, currentTime);
+      lowPassFilterRef.current.Q.setValueAtTime(lowQ, currentTime);
+      lowPassFilterRef.current.gain.setValueAtTime((preset.eq.low - 1) * 12, currentTime);
 
       // High frequency boost/cut
       const highFreq = preset.eq.high > 1 ? 8000 : 4000;
       const highQ = preset.eq.high > 1 ? 1 : 0.5;
-      highPassFilterRef.current.frequency.setValueAtTime(highFreq, audioContextRef.current.currentTime);
-      highPassFilterRef.current.Q.setValueAtTime(highQ, audioContextRef.current.currentTime);
-      highPassFilterRef.current.gain.setValueAtTime((preset.eq.high - 1) * 12, audioContextRef.current.currentTime);
+      highPassFilterRef.current.frequency.setValueAtTime(highFreq, currentTime);
+      highPassFilterRef.current.Q.setValueAtTime(highQ, currentTime);
+      highPassFilterRef.current.gain.setValueAtTime((preset.eq.high - 1) * 12, currentTime);
     }
-  }, [selectedGenre]);
+  }, [selectedGenre, volume]);
 
   // Play audio
-  const playAudio = useCallback(() => {
-    if (!audioContextRef.current || !audioBufferRef.current || isPlaying) return;
+  const playAudio = useCallback(async () => {
+    if (!audioElementRef.current || isPlaying) return;
 
     try {
       // Resume audio context if suspended
-      if (audioContextRef.current.state === 'suspended') {
-        audioContextRef.current.resume();
+      if (audioContextRef.current && audioContextRef.current.state === 'suspended') {
+        await audioContextRef.current.resume();
       }
 
-      // Create new audio source
-      audioSourceRef.current = audioContextRef.current.createBufferSource();
-      audioSourceRef.current.buffer = audioBufferRef.current;
-      
-      // Connect source to processing chain
-      audioSourceRef.current.connect(highPassFilterRef.current!);
-      
       // Apply current genre effects
       applyGenreEffects();
       
-      // Start playback
-      startTimeRef.current = audioContextRef.current.currentTime - currentTime;
-      audioSourceRef.current.start(0, currentTime);
-      
+      // Play the audio
+      await audioElementRef.current.play();
       setIsPlaying(true);
-      
-      // Update progress
-      const updateProgress = () => {
-        if (audioContextRef.current && isPlaying) {
-          const newTime = audioContextRef.current.currentTime - startTimeRef.current;
-          setCurrentTime(Math.max(0, Math.min(newTime, duration)));
-          
-          if (newTime < duration) {
-            animationFrameRef.current = requestAnimationFrame(updateProgress);
-          } else {
-            setIsPlaying(false);
-            setCurrentTime(0);
-          }
-        }
-      };
-      
-      animationFrameRef.current = requestAnimationFrame(updateProgress);
-      
-      // Handle playback end
-      audioSourceRef.current.onended = () => {
-        setIsPlaying(false);
-        setCurrentTime(0);
-      };
       
     } catch (error) {
       console.error('Error playing audio:', error);
     }
-  }, [audioContextRef, audioBufferRef, isPlaying, currentTime, duration, applyGenreEffects]);
+  }, [isPlaying, applyGenreEffects]);
 
   // Pause audio
   const pauseAudio = useCallback(() => {
-    if (audioSourceRef.current && isPlaying) {
-      audioSourceRef.current.stop();
-      audioSourceRef.current = null;
+    if (audioElementRef.current && isPlaying) {
+      audioElementRef.current.pause();
       setIsPlaying(false);
-      
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
-      }
     }
   }, [isPlaying]);
 
@@ -191,6 +180,29 @@ const RealTimeAudioPlayer: React.FC<RealTimeAudioPlayerProps> = ({
     }
   }, [onGenreChange, isPlaying, applyGenreEffects]);
 
+  // Handle volume change
+  const handleVolumeChange = useCallback((newVolume: number) => {
+    setVolume(newVolume);
+    if (gainNodeRef.current && audioContextRef.current) {
+      const preset = selectedGenre ? GENRE_PRESETS[selectedGenre.id] : { gain: 1.0 };
+      gainNodeRef.current.gain.setValueAtTime(preset.gain * newVolume, audioContextRef.current.currentTime);
+    }
+  }, [selectedGenre]);
+
+  // Handle mute toggle
+  const toggleMute = useCallback(() => {
+    if (gainNodeRef.current && audioContextRef.current) {
+      if (isMuted) {
+        const preset = selectedGenre ? GENRE_PRESETS[selectedGenre.id] : { gain: 1.0 };
+        gainNodeRef.current.gain.setValueAtTime(preset.gain * volume, audioContextRef.current.currentTime);
+        setIsMuted(false);
+      } else {
+        gainNodeRef.current.gain.setValueAtTime(0, audioContextRef.current.currentTime);
+        setIsMuted(true);
+      }
+    }
+  }, [isMuted, selectedGenre, volume]);
+
   // Initialize audio context when file changes
   useEffect(() => {
     if (audioFile) {
@@ -198,11 +210,8 @@ const RealTimeAudioPlayer: React.FC<RealTimeAudioPlayerProps> = ({
     }
     
     return () => {
-      if (audioSourceRef.current) {
-        audioSourceRef.current.stop();
-      }
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
+      if (audioElementRef.current) {
+        audioElementRef.current.pause();
       }
     };
   }, [audioFile, initializeAudioContext]);
@@ -212,6 +221,35 @@ const RealTimeAudioPlayer: React.FC<RealTimeAudioPlayerProps> = ({
     applyGenreEffects();
   }, [selectedGenre, applyGenreEffects]);
 
+  // Update progress
+  useEffect(() => {
+    const audioElement = audioElementRef.current;
+    if (!audioElement) return;
+
+    const updateProgress = () => {
+      setCurrentTime(audioElement.currentTime);
+    };
+
+    const handleEnded = () => {
+      setIsPlaying(false);
+      setCurrentTime(0);
+    };
+
+    const handleLoadedMetadata = () => {
+      setDuration(audioElement.duration);
+    };
+
+    audioElement.addEventListener('timeupdate', updateProgress);
+    audioElement.addEventListener('ended', handleEnded);
+    audioElement.addEventListener('loadedmetadata', handleLoadedMetadata);
+
+    return () => {
+      audioElement.removeEventListener('timeupdate', updateProgress);
+      audioElement.removeEventListener('ended', handleEnded);
+      audioElement.removeEventListener('loadedmetadata', handleLoadedMetadata);
+    };
+  }, []);
+
   // Format time
   const formatTime = (time: number) => {
     const minutes = Math.floor(time / 60);
@@ -219,30 +257,16 @@ const RealTimeAudioPlayer: React.FC<RealTimeAudioPlayerProps> = ({
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   };
 
-  // Handle volume change
-  const handleVolumeChange = (newVolume: number) => {
-    setVolume(newVolume);
-    if (gainNodeRef.current) {
-      gainNodeRef.current.gain.setValueAtTime(newVolume, audioContextRef.current?.currentTime || 0);
-    }
-  };
-
-  // Handle mute toggle
-  const toggleMute = () => {
-    if (gainNodeRef.current) {
-      if (isMuted) {
-        gainNodeRef.current.gain.setValueAtTime(volume, audioContextRef.current?.currentTime || 0);
-        setIsMuted(false);
-      } else {
-        gainNodeRef.current.gain.setValueAtTime(0, audioContextRef.current?.currentTime || 0);
-        setIsMuted(true);
-      }
-    }
-  };
-
   return (
     <div className={`bg-gray-800 rounded-xl p-6 ${className}`}>
       <div className="space-y-4">
+        {/* Hidden audio element */}
+        <audio
+          ref={audioElementRef}
+          preload="metadata"
+          style={{ display: 'none' }}
+        />
+
         {/* Header */}
         <div className="text-center">
           <h3 className="text-lg font-semibold text-crys-gold">
@@ -315,7 +339,7 @@ const RealTimeAudioPlayer: React.FC<RealTimeAudioPlayerProps> = ({
 
         {/* Frequency Spectrum */}
         <FrequencySpectrum
-          audioElement={null} // We'll need to modify this for real-time processing
+          audioElement={audioElementRef.current}
           isPlaying={isPlaying}
           title="Real-Time Frequency Spectrum"
           targetLufs={selectedGenre ? GENRE_PRESETS[selectedGenre.id]?.targetLufs : undefined}
