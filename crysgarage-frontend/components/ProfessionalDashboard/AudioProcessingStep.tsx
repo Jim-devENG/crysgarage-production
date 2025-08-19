@@ -27,14 +27,24 @@ const AudioProcessingStep: React.FC<AudioProcessingStepProps> = ({
   onNext
 }) => {
   const [isAudioReady, setIsAudioReady] = useState(false);
+  const [currentGenre, setCurrentGenre] = useState<any>(selectedGenre);
+
+  // Update current genre when selectedGenre prop changes
+  useEffect(() => {
+    setCurrentGenre(selectedGenre);
+  }, [selectedGenre]);
 
   const handleGenreSelect = (genre: any) => {
-    onGenreSelect(genre);
+    console.log('Genre selected in AudioProcessingStep:', genre?.name);
+    setCurrentGenre(genre); // Update local state immediately
+    onGenreSelect(genre); // Update parent state
     setIsAudioReady(true);
   };
 
   const handleGenreChange = (newGenre: any) => {
-    onGenreSelect(newGenre);
+    console.log('Genre changed in RealTimeAudioPlayer:', newGenre?.name);
+    setCurrentGenre(newGenre); // Update local state immediately
+    onGenreSelect(newGenre); // Update parent state
   };
 
   return (
@@ -76,14 +86,14 @@ const AudioProcessingStep: React.FC<AudioProcessingStepProps> = ({
         <h3 className="text-lg font-semibold mb-4 text-center">Choose Your Genre</h3>
         <GenreGrid
           genres={availableGenres}
-          selectedGenre={selectedGenre}
+          selectedGenre={currentGenre}
           onGenreSelect={handleGenreSelect}
           isProcessing={isProcessing}
           isRealTimeProcessing={true}
           isPlayingOriginal={false}
         />
         
-        {!selectedGenre && (
+        {!currentGenre && (
           <div className="mt-6 text-center">
             <div className="w-12 h-12 bg-crys-gold/20 rounded-full flex items-center justify-center mx-auto mb-3">
               <span className="text-xl">🎵</span>
@@ -99,7 +109,7 @@ const AudioProcessingStep: React.FC<AudioProcessingStepProps> = ({
       <div className="max-w-4xl mx-auto">
         <RealTimeAudioPlayer
           audioFile={selectedFile}
-          selectedGenre={selectedGenre}
+          selectedGenre={currentGenre}
           onGenreChange={handleGenreChange}
           className="w-full"
         />
@@ -131,10 +141,21 @@ const AudioProcessingStep: React.FC<AudioProcessingStepProps> = ({
             <p className="text-sm text-gray-400">Change genres while playing to hear instant differences</p>
           </div>
         </div>
+        
+        {/* Real-time switching instructions */}
+        {currentGenre && (
+          <div className="mt-6 p-4 bg-crys-gold/10 rounded-lg border border-crys-gold/20">
+            <h4 className="font-medium text-crys-gold mb-2">Real-Time Switching Active</h4>
+            <p className="text-sm text-gray-300">
+              Click on any genre above while your audio is playing to hear instant changes. 
+              The effects will apply immediately without stopping the playback.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Next Button */}
-      {selectedGenre && (
+      {currentGenre && (
         <div className="flex justify-center">
           <button
             onClick={onNext}

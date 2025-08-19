@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Play, Pause, Volume2, VolumeX } from 'lucide-react';
+import { Play, Pause, Volume2, VolumeX, Zap } from 'lucide-react';
 import { GENRE_PRESETS } from '../utils/genrePresets';
 import FrequencySpectrum from '../../FrequencySpectrum';
 
@@ -23,6 +23,7 @@ const RealTimeAudioPlayer: React.FC<RealTimeAudioPlayerProps> = ({
   const [isMuted, setIsMuted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [currentGenre, setCurrentGenre] = useState<any>(null);
+  const [testMode, setTestMode] = useState(false);
 
   // Audio elements and context
   const audioElementRef = useRef<HTMLAudioElement | null>(null);
@@ -102,6 +103,44 @@ const RealTimeAudioPlayer: React.FC<RealTimeAudioPlayerProps> = ({
     }
   }, [audioFile]);
 
+  // Test function to apply extreme effects
+  const applyTestEffects = useCallback(() => {
+    if (!audioContextRef.current) return;
+
+    console.log('Applying test effects...');
+    const currentTime = audioContextRef.current.currentTime;
+
+    // Apply extreme effects
+    if (gainNodeRef.current) {
+      gainNodeRef.current.gain.setValueAtTime(5.0, currentTime); // Very loud
+      console.log('Applied extreme gain: 5.0');
+    }
+
+    if (compressorNodeRef.current) {
+      compressorNodeRef.current.threshold.setValueAtTime(-6, currentTime);
+      compressorNodeRef.current.ratio.setValueAtTime(10, currentTime);
+      compressorNodeRef.current.attack.setValueAtTime(0.001, currentTime);
+      compressorNodeRef.current.release.setValueAtTime(0.01, currentTime);
+      console.log('Applied extreme compression');
+    }
+
+    if (lowPassFilterRef.current && highPassFilterRef.current) {
+      // Extreme low boost
+      lowPassFilterRef.current.frequency.setValueAtTime(500, currentTime);
+      lowPassFilterRef.current.Q.setValueAtTime(5, currentTime);
+      lowPassFilterRef.current.gain.setValueAtTime(30, currentTime);
+
+      // Extreme high boost
+      highPassFilterRef.current.frequency.setValueAtTime(15000, currentTime);
+      highPassFilterRef.current.Q.setValueAtTime(5, currentTime);
+      highPassFilterRef.current.gain.setValueAtTime(30, currentTime);
+      
+      console.log('Applied extreme EQ effects');
+    }
+
+    setTestMode(true);
+  }, []);
+
   // Apply genre effects in real-time with immediate changes
   const applyGenreEffects = useCallback(() => {
     if (!selectedGenre || !audioContextRef.current) {
@@ -159,6 +198,7 @@ const RealTimeAudioPlayer: React.FC<RealTimeAudioPlayerProps> = ({
     }
 
     setCurrentGenre(selectedGenre);
+    setTestMode(false);
   }, [selectedGenre, volume]);
 
   // Play audio
@@ -319,6 +359,11 @@ const RealTimeAudioPlayer: React.FC<RealTimeAudioPlayerProps> = ({
               ⚡ Currently processing: {currentGenre.name}
             </p>
           )}
+          {testMode && (
+            <p className="text-xs text-red-400 mt-1">
+              🧪 Test mode active - extreme effects applied
+            </p>
+          )}
         </div>
 
         {/* Audio Controls */}
@@ -343,6 +388,19 @@ const RealTimeAudioPlayer: React.FC<RealTimeAudioPlayerProps> = ({
               )}
             </button>
           </div>
+
+          {/* Test Effects Button */}
+          {isPlaying && (
+            <div className="flex justify-center">
+              <button
+                onClick={applyTestEffects}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm rounded-lg transition-colors flex items-center space-x-2"
+              >
+                <Zap className="w-4 h-4" />
+                <span>Test Extreme Effects</span>
+              </button>
+            </div>
+          )}
 
           {/* Progress Bar */}
           <div className="space-y-2">
