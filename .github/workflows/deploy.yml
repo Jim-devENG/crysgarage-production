@@ -17,18 +17,23 @@ jobs:
           echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
+          echo "SSH key setup completed"
       
       - name: Test SSH connection
         run: |
-          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa ${{ secrets.VPS_USERNAME }}@${{ secrets.VPS_HOST }} "echo 'SSH connection successful!'"
+          echo "Testing SSH connection to ${{ secrets.VPS_HOST }}..."
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa ${{ secrets.VPS_USERNAME }}@${{ secrets.VPS_HOST }} "echo 'SSH connection successful!' && whoami && pwd"
       
       - name: Deploy to VPS
         run: |
+          echo "Starting deployment to VPS..."
           ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa ${{ secrets.VPS_USERNAME }}@${{ secrets.VPS_HOST }} << 'EOF'
+            set -e  # Exit on any error
             echo "🚀 Starting deployment via GitHub Actions..."
             
             # Navigate to project directory
             cd /root/crysgarage-deploy
+            echo "📁 Current directory: $(pwd)"
             
             # Pull latest changes
             echo "📥 Pulling latest changes..."
