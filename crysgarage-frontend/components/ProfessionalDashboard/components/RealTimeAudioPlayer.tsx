@@ -76,6 +76,7 @@ const RealTimeAudioPlayer: React.FC<RealTimeAudioPlayerProps> = ({
 
   // Test function to apply moderate effects - INDUSTRY STANDARD TEST
   // Updated for deployment testing - SSH authentication fix
+  // Enhanced debugging deployment test
   const applyTestEffects = useCallback(() => {
     if (!audioContextRef.current) {
       console.log('❌ No audio context for test effects');
