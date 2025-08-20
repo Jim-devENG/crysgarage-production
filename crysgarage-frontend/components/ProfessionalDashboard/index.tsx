@@ -16,7 +16,9 @@ const ProfessionalDashboard: React.FC<ProfessionalTierDashboardProps> = ({ onFil
   useEffect(() => {
     const savedState = loadStateFromStorage();
     if (savedState) {
-      setCurrentStep(savedState.currentStep || 1);
+      // If there is no file, always start at step 1
+      const startStep = savedState.selectedFile ? (savedState.currentStep || 1) : 1;
+      setCurrentStep(startStep);
       setSelectedFile(savedState.selectedFile || null);
       setSelectedGenre(savedState.selectedGenre || null);
       setIsProcessing(savedState.isProcessing || false);
@@ -45,6 +47,8 @@ const ProfessionalDashboard: React.FC<ProfessionalTierDashboardProps> = ({ onFil
   };
 
   const nextStep = () => {
+    // Prevent advancing to processing if no file is selected
+    if (currentStep === 1 && !selectedFile) return;
     setCurrentStep(prev => Math.min(prev + 1, 3));
   };
 
@@ -57,7 +61,7 @@ const ProfessionalDashboard: React.FC<ProfessionalTierDashboardProps> = ({ onFil
     if (onFileUpload) {
       onFileUpload(file);
     }
-    nextStep();
+    setCurrentStep(2);
   };
 
   const handleGenreSelect = (genre: any) => {
@@ -75,7 +79,7 @@ const ProfessionalDashboard: React.FC<ProfessionalTierDashboardProps> = ({ onFil
       const audioUrl = URL.createObjectURL(selectedFile);
       setProcessedAudioUrl(audioUrl);
     }
-    nextStep();
+    setCurrentStep(3);
   };
 
   const renderCurrentStep = () => {
@@ -90,6 +94,18 @@ const ProfessionalDashboard: React.FC<ProfessionalTierDashboardProps> = ({ onFil
           />
         );
       case 2:
+        // If somehow at step 2 without a file, bounce back to step 1
+        if (!selectedFile) {
+          setCurrentStep(1);
+          return (
+            <FileUploadStep
+              onFileUpload={handleFileUpload}
+              selectedFile={selectedFile}
+              fileInfo={null}
+              onNext={nextStep}
+            />
+          );
+        }
         return (
           <AudioProcessingStep
             selectedFile={selectedFile}

@@ -3,8 +3,9 @@ export const loadStateFromStorage = () => {
     const savedState = sessionStorage.getItem('professionalDashboardState');
     if (savedState) {
       const parsed = JSON.parse(savedState);
+      const hasFile = !!(parsed.selectedFile || parsed.fileInfo);
       return {
-        currentStep: parsed.currentStep || 1,
+        currentStep: hasFile ? (parsed.currentStep || 1) : 1,
         selectedFile: parsed.selectedFile || null,
         selectedGenre: parsed.selectedGenre || null,
         processedAudioUrl: parsed.processedAudioUrl || null,
