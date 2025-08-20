@@ -10,35 +10,49 @@ param(
 Write-Host "Quick Deploy - Crys Garage" -ForegroundColor Cyan
 Write-Host ""
 
+# Check for uncommitted changes and commit them
+Write-Host "Checking for uncommitted changes..." -ForegroundColor Yellow
+$gitStatus = git status --porcelain
+if ($gitStatus) {
+    Write-Host "Found uncommitted changes. Committing..." -ForegroundColor Yellow
+    git add .
+    git commit -m "Auto-commit: Quick deploy $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+    Write-Host "Changes committed successfully." -ForegroundColor Green
+} else {
+    Write-Host "No uncommitted changes found." -ForegroundColor Green
+}
+
+# Push to remote repository
+Write-Host "Pushing to remote repository..." -ForegroundColor Yellow
+git push
+Write-Host "Changes pushed to repository." -ForegroundColor Green
+
 # Build frontend
 Write-Host "Building frontend..." -ForegroundColor Yellow
 Set-Location crysgarage-frontend
 npm run build
 Set-Location ..
 
-# Ensure remote temp directory exists
-Write-Host "Preparing remote temp directory..." -ForegroundColor Yellow
-ssh -i $SSH_KEY_PATH -o StrictHostKeyChecking=no ${VPS_USER}@${VPS_HOST} "rm -rf /tmp/frontend && mkdir -p /tmp/frontend"
-
-# Deploy to VPS
-Write-Host "Deploying to VPS..." -ForegroundColor Yellow
-scp -i $SSH_KEY_PATH -o StrictHostKeyChecking=no -r "crysgarage-frontend/dist/*" "${VPS_USER}@${VPS_HOST}:/tmp/frontend/"
-
-# Create and run deployment script on VPS
-$remoteScript = @'
+# Deploy to VPS using git pull (more reliable than direct file copy)
+Write-Host "Deploying to VPS via git pull..." -ForegroundColor Yellow
+$remoteDeployScript = @'
 #!/usr/bin/env bash
 set -e
+cd /root/crysgarage-deploy
+git pull origin master
+cd crysgarage-frontend
+npm run build
 rm -rf /var/www/html/*
-cp -r /tmp/frontend/* /var/www/html/
+cp -r dist/* /var/www/html/
 chown -R nginx:nginx /var/www/html/
 chmod -R 755 /var/www/html/
 nginx -t
 systemctl reload nginx
-rm -rf /tmp/frontend
+echo "Deployment completed successfully"
 '@
 
 Write-Host "Running remote deployment script..." -ForegroundColor Yellow
-$remoteScript | ssh -i $SSH_KEY_PATH -o StrictHostKeyChecking=no ${VPS_USER}@${VPS_HOST} "cat > /tmp/deploy_quick.sh && chmod +x /tmp/deploy_quick.sh && /tmp/deploy_quick.sh && rm -f /tmp/deploy_quick.sh"
+$remoteDeployScript | ssh -i $SSH_KEY_PATH -o StrictHostKeyChecking=no ${VPS_USER}@${VPS_HOST} "cat > /tmp/deploy_quick.sh && chmod +x /tmp/deploy_quick.sh && /tmp/deploy_quick.sh && rm -f /tmp/deploy_quick.sh"
 
 Write-Host "Quick deploy completed!" -ForegroundColor Green
 Write-Host "Site: https://crysgarage.studio" -ForegroundColor Blue
