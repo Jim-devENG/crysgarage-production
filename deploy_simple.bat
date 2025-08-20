@@ -44,10 +44,10 @@ del temp_repo_status.txt
 
 if "%REPO_STATUS%"=="exists" (
     echo Repository exists, pulling latest changes...
-    ssh -i %SSH_KEY% -o StrictHostKeyChecking=no %VPS_USER%@%VPS_IP% "cd %PROJECT_DIR% && git pull origin main"
+    ssh -i %SSH_KEY% -o StrictHostKeyChecking=no %VPS_USER%@%VPS_IP% "cd %PROJECT_DIR% && git pull origin master"
     if %errorlevel% neq 0 (
         echo Warning: Failed to pull, trying reset and pull...
-        ssh -i %SSH_KEY% -o StrictHostKeyChecking=no %VPS_USER%@%VPS_IP% "cd %PROJECT_DIR% && git reset --hard HEAD && git pull origin main"
+        ssh -i %SSH_KEY% -o StrictHostKeyChecking=no %VPS_USER%@%VPS_IP% "cd %PROJECT_DIR% && git reset --hard HEAD && git pull origin master"
     )
     echo ✓ Repository updated
 ) else (
