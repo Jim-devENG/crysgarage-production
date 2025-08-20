@@ -35,7 +35,10 @@ Set-Location ..
 
 # Deploy to VPS using git pull (more reliable than direct file copy)
 Write-Host "Deploying to VPS via git pull..." -ForegroundColor Yellow
-$remoteDeployScript = @'
+
+# Create a temporary script file with proper line endings
+$tempScriptPath = "temp_deploy_script.sh"
+$remoteDeployScript = @"
 #!/usr/bin/env bash
 set -e
 cd /root/crysgarage-deploy
@@ -49,10 +52,18 @@ chmod -R 755 /var/www/html/
 nginx -t
 systemctl reload nginx
 echo "Deployment completed successfully"
-'@
+"@
+
+# Write script to temporary file
+$remoteDeployScript | Out-File -FilePath $tempScriptPath -Encoding UTF8 -NoNewline
 
 Write-Host "Running remote deployment script..." -ForegroundColor Yellow
-$remoteDeployScript | ssh -i $SSH_KEY_PATH -o StrictHostKeyChecking=no ${VPS_USER}@${VPS_HOST} "cat > /tmp/deploy_quick.sh && chmod +x /tmp/deploy_quick.sh && /tmp/deploy_quick.sh && rm -f /tmp/deploy_quick.sh"
+# Copy the script to VPS and execute it
+scp -i $SSH_KEY_PATH -o StrictHostKeyChecking=no $tempScriptPath "${VPS_USER}@${VPS_HOST}:/tmp/deploy_quick.sh"
+ssh -i $SSH_KEY_PATH -o StrictHostKeyChecking=no ${VPS_USER}@${VPS_HOST} "chmod +x /tmp/deploy_quick.sh && /tmp/deploy_quick.sh && rm -f /tmp/deploy_quick.sh"
+
+# Clean up temporary file
+Remove-Item $tempScriptPath -ErrorAction SilentlyContinue
 
 Write-Host "Quick deploy completed!" -ForegroundColor Green
 Write-Host "Site: https://crysgarage.studio" -ForegroundColor Blue
