@@ -45,6 +45,9 @@ set -e
 # Clear the web directory
 rm -rf /var/www/html/*
 
+# Copy files from temp to web directory
+cp -r /tmp/frontend/* /var/www/html/
+
 # Set proper permissions
 chown -R nginx:nginx /var/www/html/
 chmod -R 755 /var/www/html/
@@ -59,9 +62,10 @@ echo "Deployment completed successfully"
 # Write script to temporary file and convert to Unix line endings
 $remoteDeployScript -replace "`r`n", "`n" | Out-File -FilePath $tempScriptPath -Encoding UTF8 -NoNewline
 
-Write-Host "Copying built files to VPS..." -ForegroundColor Yellow
-# Copy the built frontend files directly to VPS
-scp -i $SSH_KEY_PATH -o StrictHostKeyChecking=no -r "crysgarage-frontend/dist/*" "${VPS_USER}@${VPS_HOST}:/var/www/html/"
+Write-Host "Copying built files to VPS temp directory..." -ForegroundColor Yellow
+# Copy the built frontend files to temp directory first
+ssh -i $SSH_KEY_PATH -o StrictHostKeyChecking=no ${VPS_USER}@${VPS_HOST} "rm -rf /tmp/frontend && mkdir -p /tmp/frontend"
+scp -i $SSH_KEY_PATH -o StrictHostKeyChecking=no -r "crysgarage-frontend/dist/*" "${VPS_USER}@${VPS_HOST}:/tmp/frontend/"
 
 Write-Host "Running remote deployment script..." -ForegroundColor Yellow
 # Copy the script to VPS and execute it

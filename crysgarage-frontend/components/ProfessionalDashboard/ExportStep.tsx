@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ArrowLeft, Download, RotateCcw, Play, Pause } from 'lucide-react';
 import { GENRE_PRESETS } from './utils/genrePresets';
 import StyledAudioPlayer from '../StyledAudioPlayer';
@@ -28,31 +28,48 @@ const ExportStep: React.FC<ExportStepProps> = ({
   const [processedAudioBlob, setProcessedAudioBlob] = useState<Blob | null>(null);
   const [isGeneratingProcessed, setIsGeneratingProcessed] = useState(false);
   const [processedAudioUrlLocal, setProcessedAudioUrlLocal] = useState<string | null>(null);
+  const [hasGenerated, setHasGenerated] = useState(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
-  // Generate processed audio when component mounts or when genre changes
+  // Generate processed audio when component mounts (only once)
   useEffect(() => {
-    if (selectedFile && selectedGenre && !processedAudioBlob) {
+    if (selectedFile && selectedGenre && !hasGenerated && !processedAudioBlob) {
       generateProcessedAudio();
     }
-  }, [selectedFile, selectedGenre]);
+  }, []); // Empty dependency array to run only once
 
-  // Clean up URLs when component unmounts
+  // Clean up URLs and abort controller when component unmounts
   useEffect(() => {
     return () => {
       if (processedAudioUrlLocal) {
         URL.revokeObjectURL(processedAudioUrlLocal);
       }
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
     };
   }, [processedAudioUrlLocal]);
 
   const generateProcessedAudio = async () => {
-    if (!selectedFile || !selectedGenre) return;
+    if (!selectedFile || !selectedGenre || hasGenerated) return;
 
+    // Abort any existing processing
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    
+    abortControllerRef.current = new AbortController();
     setIsGeneratingProcessed(true);
+    setHasGenerated(true);
     
     try {
       console.log('Generating processed audio for comparison...');
-      const processedBlob = await processAudioWithGenre(selectedFile, selectedGenre);
+      const processedBlob = await processAudioWithGenre(selectedFile, selectedGenre, abortControllerRef.current.signal);
+      
+      if (abortControllerRef.current.signal.aborted) {
+        return; // Don't update state if aborted
+      }
+      
       setProcessedAudioBlob(processedBlob);
       
       // Create URL for the processed audio
@@ -61,10 +78,16 @@ const ExportStep: React.FC<ExportStepProps> = ({
       
       console.log('Processed audio generated successfully');
     } catch (error) {
+      if (error.name === 'AbortError') {
+        console.log('Audio processing was aborted');
+        return;
+      }
       console.error('Error generating processed audio:', error);
       alert('Error generating processed audio. Please try again.');
     } finally {
-      setIsGeneratingProcessed(false);
+      if (!abortControllerRef.current?.signal.aborted) {
+        setIsGeneratingProcessed(false);
+      }
     }
   };
 
@@ -89,15 +112,34 @@ const ExportStep: React.FC<ExportStepProps> = ({
     return preset ? preset.truePeak : -0.3;
   };
 
-  const processAudioWithGenre = async (audioFile: File, genre: any): Promise<Blob> => {
+  const processAudioWithGenre = async (audioFile: File, genre: any, signal?: AbortSignal): Promise<Blob> => {
     return new Promise(async (resolve, reject) => {
       try {
+        // Check if aborted
+        if (signal?.aborted) {
+          reject(new Error('Aborted'));
+          return;
+        }
+
         // Create audio context for offline processing
         const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
         
         // Read the audio file
         const arrayBuffer = await audioFile.arrayBuffer();
+        
+        // Check if aborted
+        if (signal?.aborted) {
+          reject(new Error('Aborted'));
+          return;
+        }
+        
         const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+        
+        // Check if aborted
+        if (signal?.aborted) {
+          reject(new Error('Aborted'));
+          return;
+        }
         
         // Create offline context for processing
         const offlineContext = new OfflineAudioContext(
@@ -141,6 +183,12 @@ const ExportStep: React.FC<ExportStepProps> = ({
         
         // Render the processed audio
         const renderedBuffer = await offlineContext.startRendering();
+        
+        // Check if aborted
+        if (signal?.aborted) {
+          reject(new Error('Aborted'));
+          return;
+        }
         
         // Convert to blob
         const numberOfChannels = renderedBuffer.numberOfChannels;
