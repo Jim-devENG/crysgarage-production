@@ -54,8 +54,8 @@ systemctl reload nginx
 echo "Deployment completed successfully"
 "@
 
-# Write script to temporary file
-$remoteDeployScript | Out-File -FilePath $tempScriptPath -Encoding UTF8 -NoNewline
+# Write script to temporary file and convert to Unix line endings
+$remoteDeployScript -replace "`r`n", "`n" | Out-File -FilePath $tempScriptPath -Encoding UTF8 -NoNewline
 
 Write-Host "Running remote deployment script..." -ForegroundColor Yellow
 # Copy the script to VPS and execute it
