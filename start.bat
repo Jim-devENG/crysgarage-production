@@ -1,3 +1,0 @@
-@echo off
-echo 🎵 Starting Crys Garage...
-start_all_servers.bat

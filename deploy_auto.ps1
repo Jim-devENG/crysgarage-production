@@ -6,7 +6,7 @@ param(
     [string]$VPS_USER = "root",
     [string]$SSH_KEY_PATH = ".\github_actions_key",
     [string]$PROJECT_DIR = "/root/crysgarage-deploy",
-    [string]$REPO_URL = "https://github.com/Jim-devENG/Crysgarage.git"
+    [string]$REPO_URL = "https://github.com/Jim-devENG/crysgarage-production.git"
 )
 
 # Color functions for better output
@@ -139,3 +139,4 @@ try {
 Write-Success "Deployment script completed!"
 Write-Info "Your application should now be running on: http://$VPS_IP"
 Write-Info "To check status manually, run: ssh -i `"$SSH_KEY_PATH`" $VPS_USER@$VPS_IP 'cd $PROJECT_DIR && docker-compose ps'"
+
