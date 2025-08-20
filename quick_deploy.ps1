@@ -27,30 +27,37 @@ Write-Host "Pushing to remote repository..." -ForegroundColor Yellow
 git push
 Write-Host "Changes pushed to repository." -ForegroundColor Green
 
-# Build frontend
+# Build frontend locally
 Write-Host "Building frontend..." -ForegroundColor Yellow
 Set-Location crysgarage-frontend
 npm run build
 Set-Location ..
 
-# Deploy to VPS using git pull (more reliable than direct file copy)
-Write-Host "Deploying to VPS via git pull..." -ForegroundColor Yellow
+# Deploy to VPS using git pull and copy built files
+Write-Host "Deploying to VPS..." -ForegroundColor Yellow
 
 # Create a temporary script file with proper line endings
 $tempScriptPath = "temp_deploy_script.sh"
 $remoteDeployScript = @"
-#!/usr/bin/env bash
+#!/bin/bash
 set -e
+
+# Pull latest changes
 cd /root/crysgarage-deploy
 git pull origin master
-cd crysgarage-frontend
-npm run build
+
+# Copy the built frontend files from the repository
 rm -rf /var/www/html/*
-cp -r dist/* /var/www/html/
+cp -r crysgarage-frontend/dist/* /var/www/html/
+
+# Set proper permissions
 chown -R nginx:nginx /var/www/html/
 chmod -R 755 /var/www/html/
+
+# Test and reload nginx
 nginx -t
 systemctl reload nginx
+
 echo "Deployment completed successfully"
 "@
 
