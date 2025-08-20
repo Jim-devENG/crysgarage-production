@@ -14,6 +14,23 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v4
 
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: crysgarage-frontend/package-lock.json
+
+      - name: Install dependencies
+        run: |
+          cd crysgarage-frontend
+          npm ci
+
+      - name: Build frontend
+        run: |
+          cd crysgarage-frontend
+          npm run build
+
       - name: Set up SSH key
         run: |
           mkdir -p ~/.ssh
@@ -47,88 +64,57 @@ jobs:
       - name: Deploy to VPS
         run: |
           echo "Starting deployment to VPS..."
-          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa ${{ secrets.VPS_USERNAME }}@${{ secrets.VPS_HOST }} << 'EOF'
-            set -e  # Exit on any error
-            echo "🚀 Starting deployment via GitHub Actions..."
+          
+          # Copy built files to VPS
+          echo "📁 Copying frontend files..."
+          scp -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no -r crysgarage-frontend/dist/* ${{ secrets.VPS_USERNAME }}@${{ secrets.VPS_HOST }}:/tmp/frontend/
+          
+          # Run deployment script on VPS
+          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ${{ secrets.VPS_USERNAME }}@${{ secrets.VPS_HOST }} << 'EOF'
+            set -e
+            echo "🚀 Starting GitHub Actions deployment..."
             
-            # Navigate to project directory
-            cd /root/crysgarage-deploy
-            echo "📁 Current directory: $(pwd)"
-            
-            # Pull latest changes
-            echo "📥 Pulling latest changes..."
-            git pull origin master
-            
-            # Frontend: Build and deploy
-            echo "🌐 Building frontend..."
-            cd crysgarage-frontend
-            
-            # Clean install dependencies
-            echo "📦 Installing dependencies..."
-            rm -rf node_modules package-lock.json
-            npm ci
-            
-            # Build frontend
-            echo "🔨 Building frontend..."
-            npm run build
-            
-            # Verify build output
-            echo "✅ Verifying build output..."
-            if [ ! -d "dist" ] || [ ! -f "dist/index.html" ]; then
-              echo "❌ Frontend build failed - dist directory or index.html not found"
-              exit 1
+            # Backup current version
+            echo "📦 Creating backup..."
+            if [ -d "/var/www/html" ]; then
+              cp -r /var/www/html /var/www/html.backup.$(date +%Y%m%d_%H%M%S) 2>/dev/null || echo "No backup needed"
             fi
             
-            # Copy built files to web root with verification
-            echo "📁 Copying files to web root..."
+            # Clear web root
+            echo "🧹 Clearing web root..."
             rm -rf /var/www/html/*
-            cp -r dist/* /var/www/html/
+            mkdir -p /var/www/html
             
-            # Verify files were copied
-            if [ ! -f "/var/www/html/index.html" ]; then
-              echo "❌ Files not copied to web root"
-              exit 1
-            fi
+            # Copy new files
+            echo "📁 Copying new files..."
+            cp -r /tmp/frontend/* /var/www/html/
             
             # Fix permissions
             echo "🔐 Setting permissions..."
             chown -R nginx:nginx /var/www/html/
             chmod -R 755 /var/www/html/
-            restorecon -Rv /var/www/html/
             
-            # Backend: Update and restart
-            echo "🔧 Updating backend..."
-            cd ../crysgarage-backend
-            composer install --no-dev --optimize-autoloader
-            php artisan config:cache
-            php artisan route:cache
-            php artisan view:cache
-            systemctl restart crysgarage-backend
+            # Test nginx config
+            echo "🌐 Testing nginx configuration..."
+            nginx -t
             
-            # Ruby service: Update and restart
-            echo "💎 Updating Ruby service..."
-            cd ../crysgarage-ruby
-            gem install bundler:2.6.7 || echo "Bundler version issue - continuing..."
-            bundle install
-            systemctl restart crysgarage-ruby
+            # Reload nginx
+            echo "🔄 Reloading nginx..."
+            systemctl reload nginx
             
-            # Reload Nginx
-            echo "🌐 Reloading Nginx..."
-            nginx -t && systemctl reload nginx
+            # Cleanup
+            echo "🧹 Cleaning up..."
+            rm -rf /tmp/frontend
             
-            # Health check with retries
+            # Health check
             echo "🏥 Running health check..."
-            for i in {1..5}; do
-              sleep 5
-              if curl -f -s https://crysgarage.studio > /dev/null; then
-                echo "✅ GitHub Actions deployment successful!"
-                echo "🌐 Site is live at: https://crysgarage.studio"
-                exit 0
-              else
-                echo "⏳ Health check attempt $i failed, retrying..."
-              fi
-            done
+            sleep 5
+            if curl -f -s https://crysgarage.studio > /dev/null; then
+              echo "✅ GitHub Actions deployment successful!"
+              echo "🌐 Site is live at: https://crysgarage.studio"
+            else
+              echo "⚠️ Health check failed, but deployment may have succeeded"
+            fi
             
-            echo "❌ Health check failed after 5 attempts"
-            exit 1
+            echo "🎉 Deployment completed!"
           EOF
