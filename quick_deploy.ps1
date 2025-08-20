@@ -33,7 +33,7 @@ Set-Location crysgarage-frontend
 npm run build
 Set-Location ..
 
-# Deploy to VPS using git pull and copy built files
+# Deploy to VPS by copying built files directly
 Write-Host "Deploying to VPS..." -ForegroundColor Yellow
 
 # Create a temporary script file with proper line endings
@@ -42,13 +42,8 @@ $remoteDeployScript = @"
 #!/bin/bash
 set -e
 
-# Pull latest changes
-cd /root/crysgarage-deploy
-git pull origin master
-
-# Copy the built frontend files from the repository
+# Clear the web directory
 rm -rf /var/www/html/*
-cp -r crysgarage-frontend/dist/* /var/www/html/
 
 # Set proper permissions
 chown -R nginx:nginx /var/www/html/
@@ -63,6 +58,10 @@ echo "Deployment completed successfully"
 
 # Write script to temporary file and convert to Unix line endings
 $remoteDeployScript -replace "`r`n", "`n" | Out-File -FilePath $tempScriptPath -Encoding UTF8 -NoNewline
+
+Write-Host "Copying built files to VPS..." -ForegroundColor Yellow
+# Copy the built frontend files directly to VPS
+scp -i $SSH_KEY_PATH -o StrictHostKeyChecking=no -r "crysgarage-frontend/dist/*" "${VPS_USER}@${VPS_HOST}:/var/www/html/"
 
 Write-Host "Running remote deployment script..." -ForegroundColor Yellow
 # Copy the script to VPS and execute it
