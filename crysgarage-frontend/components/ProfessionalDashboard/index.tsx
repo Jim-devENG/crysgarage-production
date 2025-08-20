@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ProfessionalTierDashboardProps } from './types';
 import FileUploadStep from './FileUploadStep';
 import AudioProcessingStep from './AudioProcessingStep';
 import ExportStep from './ExportStep';
-import { loadStateFromStorage, saveStateToStorage } from './utils/storageUtils';
+import { loadStateFromStorage, saveStateToStorage, idbLoad, idbSave, idbDelete } from './utils/storageUtils';
 
 const ProfessionalDashboard: React.FC<ProfessionalTierDashboardProps> = ({ onFileUpload, credits = 0 }) => {
   const [currentStep, setCurrentStep] = useState(1);
@@ -11,23 +11,109 @@ const ProfessionalDashboard: React.FC<ProfessionalTierDashboardProps> = ({ onFil
   const [selectedGenre, setSelectedGenre] = useState<any>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [processedAudioUrl, setProcessedAudioUrl] = useState<string | null>(null);
+  const [isRestoring, setIsRestoring] = useState(false);
+  const hasRestored = useRef(false);
 
-  // Load state from session storage on mount
+  // Load state from session storage + IndexedDB on mount (only once)
   useEffect(() => {
-    const savedState = loadStateFromStorage();
-    if (savedState) {
-      // If there is no file, always start at step 1
-      const startStep = savedState.selectedFile ? (savedState.currentStep || 1) : 1;
-      setCurrentStep(startStep);
-      setSelectedFile(savedState.selectedFile || null);
-      setSelectedGenre(savedState.selectedGenre || null);
-      setIsProcessing(savedState.isProcessing || false);
-      setProcessedAudioUrl(savedState.processedAudioUrl || null);
-    }
+    if (hasRestored.current) return; // Prevent multiple restorations
+    
+    const init = async () => {
+      if (isRestoring) return; // Prevent concurrent restoration
+      
+      setIsRestoring(true);
+      hasRestored.current = true;
+      
+      try {
+        const savedState = loadStateFromStorage();
+        if (savedState) {
+          const hasMeta = !!savedState.selectedFileMeta && !!savedState.selectedFileKey;
+          
+          // Set basic state first
+          setSelectedGenre(savedState.selectedGenre || null);
+          setIsProcessing(false); // Always reset processing state
+          setProcessedAudioUrl(savedState.processedAudioUrl || null);
+
+          // Try to restore File from IndexedDB
+          if (hasMeta) {
+            try {
+              const blob = await idbLoad(savedState.selectedFileKey as string);
+              if (blob) {
+                const file = new File([blob], savedState.selectedFileMeta!.name, {
+                  type: savedState.selectedFileMeta!.type || blob.type || 'audio/wav',
+                  lastModified: savedState.selectedFileMeta!.lastModified || Date.now()
+                });
+                setSelectedFile(file);
+                
+                // Set step after file is restored
+                const startStep = Math.max(1, Math.min(savedState.currentStep || 1, 3));
+                setCurrentStep(startStep);
+              } else {
+                // If blob missing, force back to step 1
+                setSelectedFile(null);
+                setCurrentStep(1);
+              }
+            } catch (e) {
+              console.error('Failed to restore file from IndexedDB:', e);
+              setSelectedFile(null);
+              setCurrentStep(1);
+            }
+          } else {
+            // No file metadata, start at step 1
+            setSelectedFile(null);
+            setCurrentStep(1);
+          }
+        }
+      } catch (error) {
+        console.error('Error during state restoration:', error);
+        // Fallback to clean state
+        setCurrentStep(1);
+        setSelectedFile(null);
+        setSelectedGenre(null);
+        setIsProcessing(false);
+        setProcessedAudioUrl(null);
+      } finally {
+        setIsRestoring(false);
+      }
+    };
+    
+    init();
   }, []);
 
-  // Save state to session storage whenever it changes
+  // Handle browser navigation events
   useEffect(() => {
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      // Save state before page unload
+      if (selectedFile || selectedGenre) {
+        saveStateToStorage({
+          currentStep,
+          selectedFile,
+          selectedGenre,
+          isProcessing: false, // Always save as not processing
+          processedAudioUrl
+        });
+      }
+    };
+
+    const handlePopState = (event: PopStateEvent) => {
+      // Handle back/forward navigation
+      console.log('Browser navigation detected, ensuring state is preserved');
+      // The state will be restored on the next mount if needed
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('popstate', handlePopState);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [currentStep, selectedFile, selectedGenre, processedAudioUrl]);
+
+  // Save state to session storage whenever it changes (but not during restoration)
+  useEffect(() => {
+    if (isRestoring) return;
+    
     saveStateToStorage({
       currentStep,
       selectedFile,
@@ -35,15 +121,38 @@ const ProfessionalDashboard: React.FC<ProfessionalTierDashboardProps> = ({ onFil
       isProcessing,
       processedAudioUrl
     });
-  }, [currentStep, selectedFile, selectedGenre, isProcessing, processedAudioUrl]);
+  }, [currentStep, selectedFile, selectedGenre, isProcessing, processedAudioUrl, isRestoring]);
 
-  const clearState = () => {
+  // Persist uploaded file in IndexedDB (but not during restoration)
+  useEffect(() => {
+    if (isRestoring) return;
+    
+    const persist = async () => {
+      if (selectedFile) {
+        try {
+          await idbSave('selectedFile', selectedFile);
+        } catch (e) {
+          console.error('Failed to save file to IndexedDB:', e);
+        }
+      }
+    };
+    persist();
+  }, [selectedFile, isRestoring]);
+
+  const clearState = async () => {
     setCurrentStep(1);
     setSelectedFile(null);
     setSelectedGenre(null);
     setIsProcessing(false);
     setProcessedAudioUrl(null);
-    sessionStorage.removeItem('professionalDashboardState');
+    hasRestored.current = false; // Allow restoration again
+    
+    try {
+      sessionStorage.removeItem('professionalDashboardState');
+      await idbDelete('selectedFile');
+    } catch (e) {
+      console.warn('Failed to clear state:', e);
+    }
   };
 
   const nextStep = () => {
@@ -73,14 +182,17 @@ const ProfessionalDashboard: React.FC<ProfessionalTierDashboardProps> = ({ onFil
     setIsProcessing(false);
   };
 
-  const handleNextToDownload = () => {
-    // Generate a processed audio URL if not already available
-    if (!processedAudioUrl && selectedFile && selectedGenre) {
-      const audioUrl = URL.createObjectURL(selectedFile);
-      setProcessedAudioUrl(audioUrl);
-    }
-    setCurrentStep(3);
-  };
+  // Show loading state during restoration
+  if (isRestoring) {
+    return (
+      <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 border-2 border-crys-gold border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-crys-gold">Restoring your session...</p>
+        </div>
+      </div>
+    );
+  }
 
   const renderCurrentStep = () => {
     switch (currentStep) {
@@ -115,7 +227,7 @@ const ProfessionalDashboard: React.FC<ProfessionalTierDashboardProps> = ({ onFil
             isProcessing={isProcessing}
             setIsProcessing={setIsProcessing}
             onBack={prevStep}
-            onNext={handleNextToDownload}
+            onNext={nextStep}
           />
         );
       case 3:

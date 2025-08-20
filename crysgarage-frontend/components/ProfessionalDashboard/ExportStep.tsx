@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Download, RotateCcw, Play, Pause } from 'lucide-react';
 import { GENRE_PRESETS } from './utils/genrePresets';
 import StyledAudioPlayer from '../StyledAudioPlayer';
@@ -25,6 +25,48 @@ const ExportStep: React.FC<ExportStepProps> = ({
   const [isPlayingMastered, setIsPlayingMastered] = useState(false);
   const [originalAudioElement, setOriginalAudioElement] = useState<HTMLAudioElement | null>(null);
   const [masteredAudioElement, setMasteredAudioElement] = useState<HTMLAudioElement | null>(null);
+  const [processedAudioBlob, setProcessedAudioBlob] = useState<Blob | null>(null);
+  const [isGeneratingProcessed, setIsGeneratingProcessed] = useState(false);
+  const [processedAudioUrlLocal, setProcessedAudioUrlLocal] = useState<string | null>(null);
+
+  // Generate processed audio when component mounts or when genre changes
+  useEffect(() => {
+    if (selectedFile && selectedGenre && !processedAudioBlob) {
+      generateProcessedAudio();
+    }
+  }, [selectedFile, selectedGenre]);
+
+  // Clean up URLs when component unmounts
+  useEffect(() => {
+    return () => {
+      if (processedAudioUrlLocal) {
+        URL.revokeObjectURL(processedAudioUrlLocal);
+      }
+    };
+  }, [processedAudioUrlLocal]);
+
+  const generateProcessedAudio = async () => {
+    if (!selectedFile || !selectedGenre) return;
+
+    setIsGeneratingProcessed(true);
+    
+    try {
+      console.log('Generating processed audio for comparison...');
+      const processedBlob = await processAudioWithGenre(selectedFile, selectedGenre);
+      setProcessedAudioBlob(processedBlob);
+      
+      // Create URL for the processed audio
+      const url = URL.createObjectURL(processedBlob);
+      setProcessedAudioUrlLocal(url);
+      
+      console.log('Processed audio generated successfully');
+    } catch (error) {
+      console.error('Error generating processed audio:', error);
+      alert('Error generating processed audio. Please try again.');
+    } finally {
+      setIsGeneratingProcessed(false);
+    }
+  };
 
   // Helper functions to get genre preset values
   const getGenreGain = (genreId: string) => {
@@ -159,8 +201,11 @@ const ExportStep: React.FC<ExportStepProps> = ({
     try {
       console.log('Processing audio for download...');
       
-      // Process the audio with the selected genre
-      const processedBlob = await processAudioWithGenre(selectedFile, selectedGenre);
+      // Use existing processed blob or generate new one
+      let processedBlob = processedAudioBlob;
+      if (!processedBlob) {
+        processedBlob = await processAudioWithGenre(selectedFile, selectedGenre);
+      }
       
       // Create download link
       const url = URL.createObjectURL(processedBlob);
@@ -232,59 +277,75 @@ const ExportStep: React.FC<ExportStepProps> = ({
       {/* Before/After Comparison */}
       <div className="bg-gray-800 rounded-xl p-6">
         <h3 className="text-lg font-semibold mb-6 text-center">Before & After Comparison</h3>
-        <div className="grid md:grid-cols-2 gap-6">
-          {/* Original Audio */}
-          <div className="space-y-4">
-            <h4 className="text-center font-medium">Original Audio</h4>
-            <StyledAudioPlayer
-              src={selectedFile ? URL.createObjectURL(selectedFile) : ''}
-              title="Original Audio"
-              onPlay={handleOriginalPlay}
-              onPause={handleOriginalPause}
-              className="w-full"
-              onAudioElementReady={(audioElement) => {
-                setOriginalAudioElement(audioElement);
-              }}
-            />
-            <FrequencySpectrum
-              audioElement={originalAudioElement}
-              isPlaying={isPlayingOriginal}
-              title="Original Frequency Spectrum"
-              targetLufs={selectedGenre ? GENRE_PRESETS[selectedGenre.id]?.targetLufs : undefined}
-              targetTruePeak={selectedGenre ? GENRE_PRESETS[selectedGenre.id]?.truePeak : undefined}
-            />
-            <div className="text-center">
-              <p className="text-xs text-gray-400">Unprocessed, raw audio</p>
-            </div>
+        
+        {isGeneratingProcessed ? (
+          <div className="text-center py-8">
+            <div className="w-8 h-8 border-2 border-crys-gold border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-crys-gold">Generating processed audio for comparison...</p>
           </div>
+        ) : (
+          <div className="grid md:grid-cols-2 gap-6">
+            {/* Original Audio */}
+            <div className="space-y-4">
+              <h4 className="text-center font-medium">Original Audio</h4>
+              <StyledAudioPlayer
+                src={selectedFile ? URL.createObjectURL(selectedFile) : ''}
+                title="Original Audio"
+                onPlay={handleOriginalPlay}
+                onPause={handleOriginalPause}
+                className="w-full"
+                onAudioElementReady={(audioElement) => {
+                  setOriginalAudioElement(audioElement);
+                }}
+              />
+              <FrequencySpectrum
+                audioElement={originalAudioElement}
+                isPlaying={isPlayingOriginal}
+                title="Original Frequency Spectrum"
+                targetLufs={selectedGenre ? GENRE_PRESETS[selectedGenre.id]?.targetLufs : undefined}
+                targetTruePeak={selectedGenre ? GENRE_PRESETS[selectedGenre.id]?.truePeak : undefined}
+              />
+              <div className="text-center">
+                <p className="text-xs text-gray-400">Unprocessed, raw audio</p>
+              </div>
+            </div>
 
-          {/* Mastered Audio */}
-          <div className="space-y-4">
-            <h4 className="text-center font-medium text-crys-gold">
-              {selectedGenre ? `${selectedGenre.name} Mastered` : 'Mastered Audio'}
-            </h4>
-            <StyledAudioPlayer
-              src={processedAudioUrl || ''}
-              title="Mastered Audio"
-              onPlay={handleMasteredPlay}
-              onPause={handleMasteredPause}
-              className="w-full"
-              onAudioElementReady={(audioElement) => {
-                setMasteredAudioElement(audioElement);
-              }}
-            />
-            <FrequencySpectrum
-              audioElement={masteredAudioElement}
-              isPlaying={isPlayingMastered}
-              title="Mastered Frequency Spectrum"
-              targetLufs={selectedGenre ? GENRE_PRESETS[selectedGenre.id]?.targetLufs : undefined}
-              targetTruePeak={selectedGenre ? GENRE_PRESETS[selectedGenre.id]?.truePeak : undefined}
-            />
-            <div className="text-center">
-              <p className="text-xs text-crys-gold">Professionally mastered with {selectedGenre?.name} effects</p>
+            {/* Mastered Audio */}
+            <div className="space-y-4">
+              <h4 className="text-center font-medium text-crys-gold">
+                {selectedGenre ? `${selectedGenre.name} Mastered` : 'Mastered Audio'}
+              </h4>
+              {processedAudioUrlLocal ? (
+                <>
+                  <StyledAudioPlayer
+                    src={processedAudioUrlLocal}
+                    title="Mastered Audio"
+                    onPlay={handleMasteredPlay}
+                    onPause={handleMasteredPause}
+                    className="w-full"
+                    onAudioElementReady={(audioElement) => {
+                      setMasteredAudioElement(audioElement);
+                    }}
+                  />
+                  <FrequencySpectrum
+                    audioElement={masteredAudioElement}
+                    isPlaying={isPlayingMastered}
+                    title="Mastered Frequency Spectrum"
+                    targetLufs={selectedGenre ? GENRE_PRESETS[selectedGenre.id]?.targetLufs : undefined}
+                    targetTruePeak={selectedGenre ? GENRE_PRESETS[selectedGenre.id]?.truePeak : undefined}
+                  />
+                  <div className="text-center">
+                    <p className="text-xs text-crys-gold">Professionally mastered with {selectedGenre?.name} effects</p>
+                  </div>
+                </>
+              ) : (
+                <div className="text-center py-8">
+                  <p className="text-gray-400">Processed audio not available</p>
+                </div>
+              )}
             </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Processing Summary */}
@@ -371,9 +432,9 @@ const ExportStep: React.FC<ExportStepProps> = ({
           <div className="bg-gray-700 rounded-lg p-4">
             <button
               onClick={handleDownload}
-              disabled={!selectedGenre || isDownloading}
+              disabled={!selectedGenre || isDownloading || isGeneratingProcessed}
               className={`w-full py-4 px-6 rounded-lg font-semibold transition-all flex items-center justify-center space-x-2 ${
-                selectedGenre && !isDownloading
+                selectedGenre && !isDownloading && !isGeneratingProcessed
                   ? 'bg-crys-gold hover:bg-yellow-400 text-black'
                   : 'bg-gray-600 text-gray-400 cursor-not-allowed'
               }`}
