@@ -656,7 +656,6 @@ const RealTimeAudioPlayer: React.FC<RealTimeAudioPlayerProps> = ({
           title="Real-Time Frequency Spectrum"
           targetLufs={selectedGenre ? GENRE_PRESETS[selectedGenre.id]?.targetLufs : undefined}
           targetTruePeak={selectedGenre ? GENRE_PRESETS[selectedGenre.id]?.truePeak : undefined}
-          isAudioConnected={true}
           analyserNode={analyserNodeRef.current}
         />
 
