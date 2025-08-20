@@ -1,45 +1,41 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 interface FrequencySpectrumProps {
   audioElement: HTMLAudioElement | null;
   isPlaying: boolean;
-  title: string;
+  title?: string;
   targetLufs?: number;
   targetTruePeak?: number;
-  isAudioConnected?: boolean; // New prop to indicate if audio is already connected to Web Audio API
-  analyserNode?: AnalyserNode | null; // Shared analyzer node from parent
+  analyserNode?: AnalyserNode | null; // Add shared analyser node prop
 }
 
 const FrequencySpectrum: React.FC<FrequencySpectrumProps> = ({
   audioElement,
   isPlaying,
-  title,
+  title = "Frequency Spectrum",
   targetLufs,
   targetTruePeak,
-  isAudioConnected = false,
-  analyserNode = null
+  analyserNode = null // Use shared analyser if provided
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const animationRef = useRef<number | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const sourceRef = useRef<MediaElementAudioSourceNode | null>(null);
-  const animationRef = useRef<number | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [lufsValue, setLufsValue] = useState<number>(0);
   const [peakValue, setPeakValue] = useState<number>(0);
 
   useEffect(() => {
-    if (!audioElement) {
-      return;
-    }
+    if (!audioElement || !canvasRef.current) return;
 
+    // If we have a shared analyser node, use it
     if (analyserNode) {
-      // Use the shared analyzer node from parent
       analyserRef.current = analyserNode;
       return;
     }
 
-    // Create audio context and analyzer
+    // Otherwise, create our own audio context and analyser
     const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
     const analyser = audioContext.createAnalyser();
     
@@ -47,13 +43,14 @@ const FrequencySpectrum: React.FC<FrequencySpectrumProps> = ({
     analyser.fftSize = 256;
     analyser.smoothingTimeConstant = 0.8;
     
-    if (!isAudioConnected) {
-      // Create source from audio element only if not already connected
+    // Only create MediaElementSource if we don't have a shared analyser
+    try {
       const source = audioContext.createMediaElementSource(audioElement);
       source.connect(analyser);
       analyser.connect(audioContext.destination);
       sourceRef.current = source;
-    } else {
+    } catch (error) {
+      console.warn('Audio element already connected, using existing connection');
       // If already connected, just connect analyzer to destination for visualization
       analyser.connect(audioContext.destination);
     }
@@ -66,11 +63,12 @@ const FrequencySpectrum: React.FC<FrequencySpectrumProps> = ({
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current);
       }
-      if (audioContextRef.current) {
+      // Only close context if we created it (not using shared analyser)
+      if (audioContextRef.current && !analyserNode) {
         audioContextRef.current.close();
       }
     };
-  }, [audioElement, isAudioConnected, analyserNode]);
+  }, [audioElement, analyserNode]);
 
   useEffect(() => {
     if (!isPlaying || !analyserRef.current || !canvasRef.current) {
@@ -143,19 +141,19 @@ const FrequencySpectrum: React.FC<FrequencySpectrumProps> = ({
           gradient.addColorStop(0, '#3b82f6');
           gradient.addColorStop(1, '#60a5fa');
         } else if (frequency < 2000) {
-          // Low mids - green
+          // Low mid - green
           gradient.addColorStop(0, '#059669');
           gradient.addColorStop(1, '#10b981');
         } else if (frequency < 4000) {
-          // High mids - yellow
+          // Mid - yellow
           gradient.addColorStop(0, '#d97706');
           gradient.addColorStop(1, '#f59e0b');
         } else if (frequency < 8000) {
-          // Presence - orange
+          // High mid - orange
           gradient.addColorStop(0, '#dc2626');
           gradient.addColorStop(1, '#ef4444');
         } else {
-          // Air - red
+          // High - red
           gradient.addColorStop(0, '#991b1b');
           gradient.addColorStop(1, '#dc2626');
         }
@@ -201,57 +199,23 @@ const FrequencySpectrum: React.FC<FrequencySpectrumProps> = ({
     };
   }, [isPlaying, targetLufs, targetTruePeak]);
 
-  // Handle canvas resize
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const resizeCanvas = () => {
-      const rect = canvas.getBoundingClientRect();
-      canvas.width = rect.width;
-      canvas.height = rect.height;
-    };
-
-    resizeCanvas();
-    window.addEventListener('resize', resizeCanvas);
-
-    return () => {
-      window.removeEventListener('resize', resizeCanvas);
-    };
-  }, []);
-
   return (
     <div className="space-y-2">
-      <div className="flex items-center justify-between">
-        <h4 className="text-sm font-medium text-gray-300">{title}</h4>
-        <div className="flex items-center space-x-4 text-xs">
-          <div className="flex items-center space-x-1">
-            <span className="text-gray-400">LUFS:</span>
-            <span className={`font-mono ${lufsValue > -14 ? 'text-red-400' : 'text-green-400'}`}>
-              {lufsValue.toFixed(1)}
-            </span>
-          </div>
-          <div className="flex items-center space-x-1">
-            <span className="text-gray-400">Peak:</span>
-            <span className={`font-mono ${peakValue > -1 ? 'text-red-400' : 'text-green-400'}`}>
-              {peakValue.toFixed(1)}
-            </span>
-          </div>
-        </div>
-      </div>
-      
-      <div className="relative bg-gray-800 rounded-lg overflow-hidden">
+      <h4 className="text-sm font-medium text-center">{title}</h4>
+      <div className="relative">
         <canvas
           ref={canvasRef}
-          className="w-full h-24"
-          style={{ background: 'linear-gradient(to bottom, #1f2937, #111827)' }}
+          width={300}
+          height={100}
+          className="w-full h-24 bg-gray-900 rounded-lg border border-gray-700"
         />
-        
-        {!isAnalyzing && isPlaying && (
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="text-center">
-              <div className="w-6 h-6 border-2 border-crys-gold border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
-              <p className="text-xs text-gray-400">Analyzing...</p>
+        {isAnalyzing && (
+          <div className="absolute top-2 left-2 text-xs space-y-1">
+            <div className="text-yellow-400">
+              LUFS: {lufsValue.toFixed(1)} dB
+            </div>
+            <div className="text-red-400">
+              Peak: {peakValue.toFixed(1)} dB
             </div>
           </div>
         )}

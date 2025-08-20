@@ -36,7 +36,7 @@ const ExportStep: React.FC<ExportStepProps> = ({
     if (selectedFile && selectedGenre && !hasGenerated && !processedAudioBlob) {
       generateProcessedAudio();
     }
-  }, []); // Empty dependency array to run only once
+  }, [selectedFile?.name, selectedGenre?.id]); // Use specific properties instead of empty array
 
   // Clean up URLs and abort controller when component unmounts
   useEffect(() => {
@@ -67,6 +67,7 @@ const ExportStep: React.FC<ExportStepProps> = ({
       const processedBlob = await processAudioWithGenre(selectedFile, selectedGenre, abortControllerRef.current.signal);
       
       if (abortControllerRef.current.signal.aborted) {
+        console.log('Audio processing was aborted during generation');
         return; // Don't update state if aborted
       }
       
@@ -78,7 +79,7 @@ const ExportStep: React.FC<ExportStepProps> = ({
       
       console.log('Processed audio generated successfully');
     } catch (error) {
-      if (error.name === 'AbortError') {
+      if (error.name === 'AbortError' || error.message === 'Aborted') {
         console.log('Audio processing was aborted');
         return;
       }
