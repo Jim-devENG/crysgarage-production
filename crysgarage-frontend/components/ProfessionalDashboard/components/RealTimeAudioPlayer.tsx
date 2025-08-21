@@ -130,8 +130,9 @@ const RealTimeAudioPlayer: React.FC<RealTimeAudioPlayerProps> = ({
       const existingAudioElements = document.querySelectorAll('audio[id^="audio-"]');
       existingAudioElements.forEach(element => {
         try {
-          element.pause();
-          element.src = '';
+          const audioElement = element as HTMLAudioElement;
+          audioElement.pause();
+          audioElement.src = '';
           element.remove();
           console.log('🧹 Cleaned up existing audio element:', element.id);
         } catch (error) {
@@ -503,8 +504,9 @@ const RealTimeAudioPlayer: React.FC<RealTimeAudioPlayerProps> = ({
       const existingAudioElements = document.querySelectorAll('audio[id^="audio-"]');
       existingAudioElements.forEach(element => {
         try {
-          element.pause();
-          element.src = '';
+          const audioElement = element as HTMLAudioElement;
+          audioElement.pause();
+          audioElement.src = '';
           element.remove();
           console.log('🧹 Cleaned up existing audio element:', element.id);
         } catch (error) {
@@ -552,8 +554,9 @@ const RealTimeAudioPlayer: React.FC<RealTimeAudioPlayerProps> = ({
       const existingAudioElements = document.querySelectorAll('audio[id^="audio-"]');
       existingAudioElements.forEach(element => {
         try {
-          element.pause();
-          element.src = '';
+          const audioElement = element as HTMLAudioElement;
+          audioElement.pause();
+          audioElement.src = '';
           element.remove();
         } catch (error) {
           console.log('Error cleaning up audio element on unmount:', error);
