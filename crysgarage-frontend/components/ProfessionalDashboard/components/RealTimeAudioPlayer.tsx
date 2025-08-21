@@ -144,14 +144,17 @@ const RealTimeAudioPlayer: React.FC<RealTimeAudioPlayerProps> = ({
         await audioContextRef.current.resume();
       }
 
-      // Create fresh audio element
+      // Create fresh audio element with unique ID to avoid conflicts
       const audioUrl = URL.createObjectURL(audioFile);
-      const newAudioElement = new Audio();
+      const newAudioElement = document.createElement('audio');
+      newAudioElement.id = `audio-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
       newAudioElement.src = audioUrl;
-      newAudioElement.load();
+      newAudioElement.preload = 'metadata';
+      newAudioElement.style.display = 'none';
+      document.body.appendChild(newAudioElement);
       audioElementRef.current = newAudioElement;
       
-      console.log('✅ New audio element created');
+      console.log('✅ New audio element created with ID:', newAudioElement.id);
 
       // Wait for audio to be loaded
       await new Promise((resolve) => {
@@ -482,6 +485,20 @@ const RealTimeAudioPlayer: React.FC<RealTimeAudioPlayerProps> = ({
         audioContextRef.current = null;
       }
       
+      // Clean up previous audio element
+      if (audioElementRef.current) {
+        try {
+          audioElementRef.current.pause();
+          audioElementRef.current.src = '';
+          if (audioElementRef.current.parentNode) {
+            audioElementRef.current.parentNode.removeChild(audioElementRef.current);
+          }
+        } catch (error) {
+          console.log('Error cleaning up previous audio element:', error);
+        }
+        audioElementRef.current = null;
+      }
+      
       // Reset all nodes
       sourceNodeRef.current = null;
       gainNodeRef.current = null;
@@ -495,7 +512,15 @@ const RealTimeAudioPlayer: React.FC<RealTimeAudioPlayerProps> = ({
     
     return () => {
       if (audioElementRef.current) {
-        audioElementRef.current.pause();
+        try {
+          audioElementRef.current.pause();
+          audioElementRef.current.src = '';
+          if (audioElementRef.current.parentNode) {
+            audioElementRef.current.parentNode.removeChild(audioElementRef.current);
+          }
+        } catch (error) {
+          console.log('Error cleaning up audio element:', error);
+        }
       }
     };
   }, [audioFile, initializeAudioContext]);
@@ -561,12 +586,7 @@ const RealTimeAudioPlayer: React.FC<RealTimeAudioPlayerProps> = ({
   return (
     <div className={`bg-gray-800 rounded-xl p-6 ${className}`}>
       <div className="space-y-4">
-        {/* Hidden audio element */}
-        <audio
-          ref={audioElementRef}
-          preload="metadata"
-          style={{ display: 'none' }}
-        />
+        {/* Audio element is created dynamically */}
 
         {/* Header */}
         <div className="text-center">
