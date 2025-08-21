@@ -779,27 +779,27 @@ const RealTimeMasteringPlayer = forwardRef<RealTimeMasteringPlayerRef, RealTimeM
 
   if (!audioFile) {
     return (
-      <div className="backdrop-blur-md bg-black bg-opacity-30 rounded-lg p-6 text-center border border-gray-500 border-opacity-50 shadow-2xl">
-        <div className="text-gray-400 mb-4">
+      <div className="backdrop-blur-md bg-black bg-opacity-30 rounded-lg p-4 text-center border border-gray-500 border-opacity-50 shadow-xl">
+        <div className="text-gray-400 mb-3">
           {/* Settings Icon */}
-          <div className="w-12 h-12 bg-crys-gold rounded-full mx-auto mb-2 flex items-center justify-center">
-            <RotateCcw className="w-6 h-6 text-black" />
+          <div className="w-8 h-8 bg-crys-gold rounded-full mx-auto mb-2 flex items-center justify-center">
+            <RotateCcw className="w-4 h-4 text-black" />
           </div>
-          <p>Upload an audio file to start real-time mastering</p>
+          <p className="text-sm">Upload an audio file to start real-time mastering</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="backdrop-blur-md bg-black bg-opacity-30 rounded-lg p-6 border border-gray-500 border-opacity-50 shadow-2xl">
+    <div className="backdrop-blur-md bg-black bg-opacity-30 rounded-lg p-4 border border-gray-500 border-opacity-50 shadow-xl">
       {/* Settings Icon */}
-      <div className="text-center mb-4">
-        <div className="w-12 h-12 bg-crys-gold rounded-full mx-auto mb-2 flex items-center justify-center">
-          <Settings className="w-6 h-6 text-black" />
+      <div className="text-center mb-3">
+        <div className="w-8 h-8 bg-crys-gold rounded-full mx-auto mb-2 flex items-center justify-center">
+          <Settings className="w-4 h-4 text-black" />
         </div>
-        <h3 className="text-lg font-semibold text-white">Real-Time Mastering Player</h3>
-        <p className="text-sm text-gray-400">Professional audio mastering with real-time effects</p>
+        <h3 className="text-base font-semibold text-white">Real-Time Mastering Player</h3>
+        <p className="text-xs text-gray-400">Professional audio mastering with real-time effects</p>
       </div>
 
 
@@ -807,10 +807,10 @@ const RealTimeMasteringPlayer = forwardRef<RealTimeMasteringPlayerRef, RealTimeM
       {/* Settings Toggle */}
       <button
         onClick={() => setShowSettings(!showSettings)}
-        className="w-full bg-gray-700 text-white py-2 px-4 rounded-lg mb-4 hover:bg-gray-600 transition-colors flex items-center justify-center space-x-2"
+        className="w-full bg-gray-700 text-white py-1.5 px-3 rounded-lg mb-3 hover:bg-gray-600 transition-colors flex items-center justify-center space-x-2 text-sm"
       >
         <span>Settings</span>
-        <Settings className="w-4 h-4 text-gray-300" />
+        <Settings className="w-3 h-3 text-gray-300" />
       </button>
 
       {/* Audio Element */}
@@ -829,20 +829,20 @@ const RealTimeMasteringPlayer = forwardRef<RealTimeMasteringPlayerRef, RealTimeM
       />
 
       {/* File Info */}
-      <div className="mb-4 p-3 bg-gray-800 rounded">
-        <p className="text-sm text-gray-300">
+      <div className="mb-3 p-2 bg-gray-800 rounded text-xs">
+        <p className="text-gray-300">
           <span className="font-medium">File:</span> {audioFile.name}
         </p>
-        <p className="text-sm text-gray-400">
+        <p className="text-gray-400">
           <span className="font-medium">Size:</span> {(audioFile.size / 1024 / 1024).toFixed(2)} MB
         </p>
-        <p className="text-sm text-gray-400">
+        <p className="text-gray-400">
           <span className="font-medium">Audio Context:</span> 
           <span className={`ml-1 ${audioContextState === 'running' ? 'text-green-400' : audioContextState === 'suspended' ? 'text-yellow-400' : 'text-red-400'}`}>
             {audioContextState}
           </span>
         </p>
-        <p className="text-sm text-gray-400">
+        <p className="text-gray-400">
           <span className="font-medium">Effects:</span> 
           <span className={`ml-1 ${isInitialized ? 'text-green-400' : 'text-red-400'}`}>
             {isInitialized ? 'Active' : 'Inactive'}
@@ -851,9 +851,9 @@ const RealTimeMasteringPlayer = forwardRef<RealTimeMasteringPlayerRef, RealTimeM
       </div>
 
       {/* Progress Bar */}
-      <div className="mb-4">
-        <div className="flex items-center space-x-2 mb-2">
-          <span className="text-xs text-gray-400 w-8">{formatTime(currentTime)}</span>
+      <div className="mb-3">
+        <div className="flex items-center space-x-2 mb-1">
+          <span className="text-xs text-gray-400 w-6">{formatTime(currentTime)}</span>
           <div className="flex-1 relative">
             <input
               type="range"
@@ -861,24 +861,24 @@ const RealTimeMasteringPlayer = forwardRef<RealTimeMasteringPlayerRef, RealTimeM
               max={duration || 0}
               value={currentTime}
               onChange={handleSeek}
-              className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer slider"
+              className="w-full h-1.5 bg-gray-700 rounded-lg appearance-none cursor-pointer slider"
               style={{
                 background: `linear-gradient(to right, #fbbf24 0%, #fbbf24 ${(currentTime / (duration || 1)) * 100}%, #4b5563 ${(currentTime / (duration || 1)) * 100}%, #4b5563 100%)`
               }}
             />
           </div>
-          <span className="text-xs text-gray-400 w-8">{formatTime(duration)}</span>
+          <span className="text-xs text-gray-400 w-6">{formatTime(duration)}</span>
         </div>
       </div>
 
       {/* Transport Controls */}
-      <div className="flex items-center justify-center space-x-4 mb-4">
+      <div className="flex items-center justify-center space-x-3 mb-3">
         {/* Skip Backward */}
         <button
           onClick={skipBackward}
-          className="p-2 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors"
+          className="p-1.5 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors"
         >
-          <SkipBack className="w-4 h-4 text-gray-300" />
+          <SkipBack className="w-3 h-3 text-gray-300" />
         </button>
 
         {/* Play/Pause Button */}
@@ -893,37 +893,37 @@ const RealTimeMasteringPlayer = forwardRef<RealTimeMasteringPlayerRef, RealTimeM
               handlePlay();
             }
           }}
-          className="p-4 bg-crys-gold rounded-full hover:bg-yellow-400 transition-colors flex items-center justify-center"
+          className="p-3 bg-crys-gold rounded-full hover:bg-yellow-400 transition-colors flex items-center justify-center"
         >
           {isPlaying ? (
-            <Pause className="w-5 h-5 text-black" />
+            <Pause className="w-4 h-4 text-black ml-0.5" />
           ) : (
-            <Play className="w-5 h-5 text-black ml-0.5" />
+            <Play className="w-4 h-4 text-black ml-0.5" />
           )}
         </button>
 
         {/* Skip Forward */}
         <button
           onClick={skipForward}
-          className="p-2 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors"
+          className="p-1.5 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors"
         >
-          <SkipForward className="w-4 h-4 text-gray-300" />
+          <SkipForward className="w-3 h-3 text-gray-300" />
         </button>
       </div>
 
       {/* Volume Control */}
-      <div className="flex items-center justify-center space-x-2 mb-4">
+      <div className="flex items-center justify-center space-x-2 mb-3">
         <button
           onClick={() => setVolume(volume === 0 ? 1 : 0)}
-          className="p-2 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors"
+          className="p-1.5 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors"
         >
           {volume === 0 ? (
-            <VolumeX className="w-4 h-4 text-gray-300" />
+            <VolumeX className="w-3 h-3 text-gray-300" />
           ) : (
-            <Volume2 className="w-4 h-4 text-gray-300" />
+            <Volume2 className="w-3 h-3 text-gray-300" />
           )}
         </button>
-        <div className="w-20">
+        <div className="w-16">
           <input
             type="range"
             min="0"
@@ -931,7 +931,7 @@ const RealTimeMasteringPlayer = forwardRef<RealTimeMasteringPlayerRef, RealTimeM
             step="0.01"
             value={isMuted ? 0 : volume}
             onChange={handleVolumeChange}
-            className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer slider"
+            className="w-full h-1.5 bg-gray-700 rounded-lg appearance-none cursor-pointer slider"
             style={{
               background: `linear-gradient(to right, #fbbf24 0%, #fbbf24 ${(isMuted ? 0 : volume) * 100}%, #4b5563 ${(isMuted ? 0 : volume) * 100}%, #4b5563 100%)`
             }}
@@ -941,9 +941,9 @@ const RealTimeMasteringPlayer = forwardRef<RealTimeMasteringPlayerRef, RealTimeM
 
       {/* Real-Time Effects Status */}
       {showSettings && (
-        <div className="mt-4 p-4 bg-gray-800 rounded">
-          <h4 className="text-sm font-medium text-white mb-3">Active Effects</h4>
-          <div className="grid grid-cols-2 gap-3 text-xs">
+        <div className="mt-3 p-3 bg-gray-800 rounded">
+          <h4 className="text-xs font-medium text-white mb-2">Active Effects</h4>
+          <div className="grid grid-cols-2 gap-2 text-xs">
             <div className="flex justify-between">
               <span className="text-gray-400">3-Band EQ:</span>
               <span className="text-green-400">Active</span>
@@ -996,10 +996,10 @@ const RealTimeMasteringPlayer = forwardRef<RealTimeMasteringPlayerRef, RealTimeM
 
       {/* Processing Status */}
       {isProcessing && (
-        <div className="mt-4 p-3 bg-yellow-900/20 border border-yellow-500/30 rounded">
+        <div className="mt-3 p-2 bg-yellow-900/20 border border-yellow-500/30 rounded">
           <div className="flex items-center space-x-2">
-            <div className="w-3 h-3 bg-yellow-500 rounded-full animate-pulse"></div>
-            <span className="text-sm text-yellow-400">Processing audio in real-time...</span>
+            <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></div>
+            <span className="text-xs text-yellow-400">Processing audio in real-time...</span>
           </div>
         </div>
       )}
@@ -1008,8 +1008,8 @@ const RealTimeMasteringPlayer = forwardRef<RealTimeMasteringPlayerRef, RealTimeM
       <style>{`
         .slider::-webkit-slider-thumb {
           appearance: none;
-          height: 16px;
-          width: 16px;
+          height: 12px;
+          width: 12px;
           border-radius: 50%;
           background: #fbbf24;
           cursor: pointer;
@@ -1017,8 +1017,8 @@ const RealTimeMasteringPlayer = forwardRef<RealTimeMasteringPlayerRef, RealTimeM
         }
         
         .slider::-moz-range-thumb {
-          height: 16px;
-          width: 16px;
+          height: 12px;
+          width: 12px;
           border-radius: 50%;
           background: #fbbf24;
           cursor: pointer;

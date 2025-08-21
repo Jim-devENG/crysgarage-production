@@ -31,21 +31,21 @@ const StudioDashboard: React.FC<StudioDashboardProps> = ({
   const [activeTab, setActiveTab] = useState<'basic' | 'premium'>('basic');
 
   return (
-    <div className="backdrop-blur-md bg-black bg-opacity-30 rounded-lg p-4 border border-gray-500 border-opacity-50 shadow-2xl">
+    <div className="backdrop-blur-md bg-black bg-opacity-30 rounded-lg p-3 border border-gray-500 border-opacity-50 shadow-xl">
       {/* Header */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-3">
         <div className="flex items-center space-x-2">
-          <div className="bg-gradient-to-r from-crys-gold to-yellow-500 p-1.5 rounded-md">
-            <div className="w-4 h-4 bg-gray-900 rounded"></div>
+          <div className="bg-gradient-to-r from-crys-gold to-yellow-500 p-1 rounded-md">
+            <div className="w-3 h-3 bg-gray-900 rounded"></div>
           </div>
-          <h3 className="text-lg font-bold text-white">Studio Dashboard</h3>
+          <h3 className="text-base font-bold text-white">Studio Dashboard</h3>
         </div>
         
         <div className="flex space-x-2">
           {onSaveSettings && (
             <button
               onClick={onSaveSettings}
-              className="bg-crys-gold text-black px-3 py-1.5 rounded-md text-sm font-medium hover:bg-yellow-400 transition-colors"
+              className="bg-crys-gold text-black px-2 py-1 rounded-md text-xs font-medium hover:bg-yellow-400 transition-colors"
             >
               Save Settings
             </button>
@@ -53,7 +53,7 @@ const StudioDashboard: React.FC<StudioDashboardProps> = ({
           {onLoadSettings && (
             <button
               onClick={onLoadSettings}
-              className="bg-gray-600 text-white px-3 py-1.5 rounded-md text-sm font-medium hover:bg-gray-500 transition-colors"
+              className="bg-gray-600 text-white px-2 py-1 rounded-md text-xs font-medium hover:bg-gray-500 transition-colors"
             >
               Load Settings
             </button>
@@ -62,10 +62,10 @@ const StudioDashboard: React.FC<StudioDashboardProps> = ({
       </div>
 
       {/* Tab Navigation */}
-      <div className="flex space-x-1 bg-black bg-opacity-50 backdrop-blur-sm rounded-md p-1 mb-4 border border-gray-600 border-opacity-50">
+      <div className="flex space-x-1 bg-black bg-opacity-50 backdrop-blur-sm rounded-md p-1 mb-3 border border-gray-600 border-opacity-50">
         <button
           onClick={() => setActiveTab('basic')}
-          className={`flex-1 py-1.5 px-3 rounded text-xs font-medium transition-colors ${
+          className={`flex-1 py-1 px-2 rounded text-xs font-medium transition-colors ${
             activeTab === 'basic'
               ? 'bg-crys-gold text-black'
               : 'text-gray-400 hover:text-white'
@@ -75,7 +75,7 @@ const StudioDashboard: React.FC<StudioDashboardProps> = ({
         </button>
         <button
           onClick={() => setActiveTab('premium')}
-          className={`flex-1 py-1.5 px-3 rounded text-xs font-medium transition-colors ${
+          className={`flex-1 py-1 px-2 rounded text-xs font-medium transition-colors ${
             activeTab === 'premium'
               ? 'bg-crys-gold text-black'
               : 'text-gray-400 hover:text-white'
@@ -86,7 +86,7 @@ const StudioDashboard: React.FC<StudioDashboardProps> = ({
       </div>
 
       {/* Content */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
         {activeTab === 'basic' && (
           <div className="md:col-span-2 lg:col-span-3">
             <BasicEffects

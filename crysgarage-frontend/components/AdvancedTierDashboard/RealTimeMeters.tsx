@@ -267,21 +267,21 @@ const RealTimeMeters: React.FC<RealTimeMetersProps> = ({
   }, [meterData, meterSettings, autoAdjust, audioEffects, onUpdateEffectSettings, onManualInit]);
     
     return (
-    <div className="backdrop-blur-md bg-black bg-opacity-30 rounded-xl p-6 border border-gray-500 border-opacity-50 shadow-2xl">
+    <div className="backdrop-blur-md bg-black bg-opacity-30 rounded-lg p-4 border border-gray-500 border-opacity-50 shadow-xl">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center space-x-3">
-          <div className="bg-gradient-to-r from-crys-gold to-yellow-500 p-2 rounded-lg">
-            <Gauge className="w-5 h-5 text-gray-900" />
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center space-x-2">
+          <div className="bg-gradient-to-r from-crys-gold to-yellow-500 p-1.5 rounded-lg">
+            <Gauge className="w-4 h-4 text-gray-900" />
           </div>
-          <h3 className="text-xl font-bold text-white">Real-Time Meters</h3>
+          <h3 className="text-base font-bold text-white">Real-Time Meters</h3>
         </div>
         
           {/* Tab Navigation */}
         <div className="flex space-x-1 bg-black bg-opacity-50 backdrop-blur-sm rounded-lg p-1 border border-gray-600 border-opacity-50">
             <button
               onClick={() => setActiveTab('overview')}
-            className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+            className={`px-2 py-1 rounded-md text-xs font-medium transition-colors ${
                 activeTab === 'overview' 
                 ? 'bg-crys-gold text-black'
                 : 'text-gray-400 hover:text-white'
@@ -291,7 +291,7 @@ const RealTimeMeters: React.FC<RealTimeMetersProps> = ({
             </button>
             <button
               onClick={() => setActiveTab('detailed')}
-            className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+            className={`px-2 py-1 rounded-md text-xs font-medium transition-colors ${
                 activeTab === 'detailed' 
                 ? 'bg-crys-gold text-black'
                 : 'text-gray-400 hover:text-white'
@@ -301,7 +301,7 @@ const RealTimeMeters: React.FC<RealTimeMetersProps> = ({
             </button>
             <button
               onClick={() => setActiveTab('stereo')}
-            className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+            className={`px-2 py-1 rounded-md text-xs font-medium transition-colors ${
                 activeTab === 'stereo' 
                 ? 'bg-crys-gold text-black'
                 : 'text-gray-400 hover:text-white'
@@ -313,11 +313,11 @@ const RealTimeMeters: React.FC<RealTimeMetersProps> = ({
       </div>
 
       {/* Meter Content */}
-      <div className="space-y-6">
+      <div className="space-y-4">
         {activeTab === 'overview' && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {/* LUFS Meter */}
-            <div className="backdrop-blur-sm bg-black bg-opacity-20 rounded-lg p-4 border border-gray-600 border-opacity-30">
+            <div className="backdrop-blur-sm bg-black bg-opacity-20 rounded-lg p-3 border border-gray-600 border-opacity-30">
               <LUFSMeter 
                 value={meterData.lufs} 
                 target={meterSettings.lufsTarget}
@@ -326,7 +326,7 @@ const RealTimeMeters: React.FC<RealTimeMetersProps> = ({
             </div>
 
             {/* Stereo Meter */}
-            <div className="backdrop-blur-sm bg-black bg-opacity-20 rounded-lg p-4 border border-gray-600 border-opacity-30">
+            <div className="backdrop-blur-sm bg-black bg-opacity-20 rounded-lg p-3 border border-gray-600 border-opacity-30">
               <StereoMeter 
                 leftLevel={meterData.leftLevel}
                 rightLevel={meterData.rightLevel}
@@ -336,7 +336,7 @@ const RealTimeMeters: React.FC<RealTimeMetersProps> = ({
             </div>
 
             {/* Correlation Meter */}
-            <div className="backdrop-blur-sm bg-black bg-opacity-20 rounded-lg p-4 border border-gray-600 border-opacity-30">
+            <div className="backdrop-blur-sm bg-black bg-opacity-20 rounded-lg p-3 border border-gray-600 border-opacity-30">
               <CorrelationMeter 
                 value={meterData.correlation}
                 target={meterSettings.correlationTarget}
@@ -344,7 +344,7 @@ const RealTimeMeters: React.FC<RealTimeMetersProps> = ({
             </div>
 
             {/* Frequency Meter */}
-            <div className="backdrop-blur-sm bg-black bg-opacity-20 rounded-lg p-4 border border-gray-600 border-opacity-30">
+            <div className="backdrop-blur-sm bg-black bg-opacity-20 rounded-lg p-3 border border-gray-600 border-opacity-30">
               <FrequencyMeter 
                 frequencyData={meterData.frequencyData}
                 title="Frequency Spectrum"
@@ -354,10 +354,10 @@ const RealTimeMeters: React.FC<RealTimeMetersProps> = ({
         )}
 
         {activeTab === 'detailed' && (
-          <div className="space-y-6">
+          <div className="space-y-4">
             {/* Detailed LUFS Analysis */}
-            <div className="backdrop-blur-sm bg-black bg-opacity-20 rounded-lg p-4 border border-gray-600 border-opacity-30">
-              <h4 className="text-lg font-semibold text-white mb-4">LUFS Analysis</h4>
+            <div className="backdrop-blur-sm bg-black bg-opacity-20 rounded-lg p-3 border border-gray-600 border-opacity-30">
+              <h4 className="text-sm font-semibold text-white mb-3">LUFS Analysis</h4>
               <LUFSMeter 
                 value={meterData.lufs} 
                 target={meterSettings.lufsTarget}
@@ -367,8 +367,8 @@ const RealTimeMeters: React.FC<RealTimeMetersProps> = ({
             </div>
 
             {/* Detailed Stereo Analysis */}
-            <div className="backdrop-blur-sm bg-black bg-opacity-20 rounded-lg p-4 border border-gray-600 border-opacity-30">
-              <h4 className="text-lg font-semibold text-white mb-4">Stereo Analysis</h4>
+            <div className="backdrop-blur-sm bg-black bg-opacity-20 rounded-lg p-3 border border-gray-600 border-opacity-30">
+              <h4 className="text-sm font-semibold text-white mb-3">Stereo Analysis</h4>
               <StereoMeter 
                 leftLevel={meterData.leftLevel}
                 rightLevel={meterData.rightLevel}
@@ -379,8 +379,8 @@ const RealTimeMeters: React.FC<RealTimeMetersProps> = ({
             </div>
 
             {/* Detailed Frequency Analysis */}
-            <div className="backdrop-blur-sm bg-black bg-opacity-20 rounded-lg p-4 border border-gray-600 border-opacity-30">
-              <h4 className="text-lg font-semibold text-white mb-4">Frequency Analysis</h4>
+            <div className="backdrop-blur-sm bg-black bg-opacity-20 rounded-lg p-3 border border-gray-600 border-opacity-30">
+              <h4 className="text-sm font-semibold text-white mb-3">Frequency Analysis</h4>
               <FrequencyMeter 
                 frequencyData={meterData.frequencyData}
                 title="Detailed Spectrum"
@@ -391,18 +391,18 @@ const RealTimeMeters: React.FC<RealTimeMetersProps> = ({
         )}
 
         {activeTab === 'stereo' && (
-          <div className="space-y-6">
+          <div className="space-y-4">
             {/* Goniometer */}
-            <div className="backdrop-blur-sm bg-black bg-opacity-20 rounded-lg p-4 border border-gray-600 border-opacity-30">
-              <h4 className="text-lg font-semibold text-white mb-4">Stereo Field (Goniometer)</h4>
+            <div className="backdrop-blur-sm bg-black bg-opacity-20 rounded-lg p-3 border border-gray-600 border-opacity-30">
+              <h4 className="text-sm font-semibold text-white mb-3">Stereo Field (Goniometer)</h4>
               <Goniometer 
                 goniometerData={meterData.goniometerData}
               />
             </div>
 
             {/* Correlation Meter */}
-            <div className="backdrop-blur-sm bg-black bg-opacity-20 rounded-lg p-4 border border-gray-600 border-opacity-30">
-              <h4 className="text-lg font-semibold text-white mb-4">Stereo Correlation</h4>
+            <div className="backdrop-blur-sm bg-black bg-opacity-20 rounded-lg p-3 border border-gray-600 border-opacity-30">
+              <h4 className="text-sm font-semibold text-white mb-3">Stereo Correlation</h4>
               <CorrelationMeter 
                 value={meterData.correlation}
                 target={meterSettings.correlationTarget}
@@ -411,8 +411,8 @@ const RealTimeMeters: React.FC<RealTimeMetersProps> = ({
             </div>
 
             {/* Stereo Balance */}
-            <div className="backdrop-blur-sm bg-black bg-opacity-20 rounded-lg p-4 border border-gray-600 border-opacity-30">
-              <h4 className="text-lg font-semibold text-white mb-4">Stereo Balance</h4>
+            <div className="backdrop-blur-sm bg-black bg-opacity-20 rounded-lg p-3 border border-gray-600 border-opacity-30">
+              <h4 className="text-sm font-semibold text-white mb-3">Stereo Balance</h4>
               <StereoMeter 
                 leftLevel={meterData.leftLevel}
                 rightLevel={meterData.rightLevel}
@@ -426,14 +426,14 @@ const RealTimeMeters: React.FC<RealTimeMetersProps> = ({
       </div>
 
       {/* Settings Panel */}
-      <div className="mt-6 backdrop-blur-sm bg-black bg-opacity-20 rounded-lg p-4 border border-gray-600 border-opacity-30">
-        <h4 className="text-lg font-semibold text-white mb-4 flex items-center">
-          <Settings className="w-5 h-5 mr-2" />
+      <div className="mt-4 backdrop-blur-sm bg-black bg-opacity-20 rounded-lg p-3 border border-gray-600 border-opacity-30">
+        <h4 className="text-sm font-semibold text-white mb-3 flex items-center">
+          <Settings className="w-4 h-4 mr-2" />
           Meter Settings & Auto-Adjustment
           </h4>
         
         {/* Auto-Adjustment Toggles */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
           <div className="flex items-center space-x-2">
             <input
               type="checkbox"
@@ -441,7 +441,7 @@ const RealTimeMeters: React.FC<RealTimeMetersProps> = ({
               onChange={(e) => setAutoAdjust(prev => ({ ...prev, lufs: e.target.checked }))}
               className="rounded"
             />
-            <span className="text-sm text-gray-300">Auto LUFS</span>
+            <span className="text-xs text-gray-300">Auto LUFS</span>
           </div>
           <div className="flex items-center space-x-2">
             <input
@@ -450,7 +450,7 @@ const RealTimeMeters: React.FC<RealTimeMetersProps> = ({
               onChange={(e) => setAutoAdjust(prev => ({ ...prev, peak: e.target.checked }))}
               className="rounded"
             />
-            <span className="text-sm text-gray-300">Auto Peak</span>
+            <span className="text-xs text-gray-300">Auto Peak</span>
           </div>
           <div className="flex items-center space-x-2">
             <input
@@ -459,7 +459,7 @@ const RealTimeMeters: React.FC<RealTimeMetersProps> = ({
               onChange={(e) => setAutoAdjust(prev => ({ ...prev, rms: e.target.checked }))}
               className="rounded"
             />
-            <span className="text-sm text-gray-300">Auto RMS</span>
+            <span className="text-xs text-gray-300">Auto RMS</span>
           </div>
           <div className="flex items-center space-x-2">
             <input
@@ -468,14 +468,14 @@ const RealTimeMeters: React.FC<RealTimeMetersProps> = ({
               onChange={(e) => setAutoAdjust(prev => ({ ...prev, correlation: e.target.checked }))}
               className="rounded"
             />
-            <span className="text-sm text-gray-300">Auto Correlation</span>
+            <span className="text-xs text-gray-300">Auto Correlation</span>
           </div>
         </div>
 
         {/* Meter Targets */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <div>
-            <label className="block text-sm text-gray-400 mb-1">LUFS Target</label>
+            <label className="block text-xs text-gray-400 mb-1">LUFS Target</label>
               <input
                 type="range"
                 min="-30"
@@ -485,10 +485,10 @@ const RealTimeMeters: React.FC<RealTimeMetersProps> = ({
                 onChange={(e) => updateMeterSetting('lufsTarget', parseFloat(e.target.value))}
               className="w-full"
               />
-            <span className="text-sm text-white">{meterSettings.lufsTarget} dB</span>
+            <span className="text-xs text-white">{meterSettings.lufsTarget} dB</span>
             </div>
             <div>
-            <label className="block text-sm text-gray-400 mb-1">Peak Target</label>
+            <label className="block text-xs text-gray-400 mb-1">Peak Target</label>
               <input
                 type="range"
               min="-10"
@@ -498,10 +498,10 @@ const RealTimeMeters: React.FC<RealTimeMetersProps> = ({
                 onChange={(e) => updateMeterSetting('peakTarget', parseFloat(e.target.value))}
               className="w-full"
               />
-            <span className="text-sm text-white">{meterSettings.peakTarget} dB</span>
+            <span className="text-xs text-white">{meterSettings.peakTarget} dB</span>
             </div>
             <div>
-            <label className="block text-sm text-gray-400 mb-1">RMS Target</label>
+            <label className="block text-xs text-gray-400 mb-1">RMS Target</label>
               <input
                 type="range"
                 min="-20"
@@ -511,10 +511,10 @@ const RealTimeMeters: React.FC<RealTimeMetersProps> = ({
                 onChange={(e) => updateMeterSetting('rmsTarget', parseFloat(e.target.value))}
               className="w-full"
               />
-            <span className="text-sm text-white">{meterSettings.rmsTarget} dB</span>
+            <span className="text-xs text-white">{meterSettings.rmsTarget} dB</span>
             </div>
             <div>
-            <label className="block text-sm text-gray-400 mb-1">Correlation Target</label>
+            <label className="block text-xs text-gray-400 mb-1">Correlation Target</label>
               <input
                 type="range"
                 min="0"
@@ -524,7 +524,7 @@ const RealTimeMeters: React.FC<RealTimeMetersProps> = ({
                 onChange={(e) => updateMeterSetting('correlationTarget', parseFloat(e.target.value))}
               className="w-full"
             />
-            <span className="text-sm text-white">{meterSettings.correlationTarget}</span>
+            <span className="text-xs text-white">{meterSettings.correlationTarget}</span>
               </div>
             </div>
           </div>
