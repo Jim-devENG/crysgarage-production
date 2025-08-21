@@ -27,6 +27,10 @@ const AudioPlayers: React.FC<AudioPlayersProps> = ({
   const [audioSource, setAudioSource] = useState<MediaElementAudioSourceNode | null>(null);
   const [gainNode, setGainNode] = useState<GainNode | null>(null);
   const [compressorNode, setCompressorNode] = useState<DynamicsCompressorNode | null>(null);
+  const [limiterNode, setLimiterNode] = useState<DynamicsCompressorNode | null>(null);
+  const [eqLowNode, setEqLowNode] = useState<BiquadFilterNode | null>(null);
+  const [eqMidNode, setEqMidNode] = useState<BiquadFilterNode | null>(null);
+  const [eqHighNode, setEqHighNode] = useState<BiquadFilterNode | null>(null);
   const [analyserNode, setAnalyserNode] = useState<AnalyserNode | null>(null);
   const [originalAudioElement, setOriginalAudioElement] = useState<HTMLAudioElement | null>(null);
   const [isProcessingReady, setIsProcessingReady] = useState(false);
@@ -102,14 +106,33 @@ const AudioPlayers: React.FC<AudioPlayersProps> = ({
       // Create processing nodes
       const gain = ctx.createGain();
       const compressor = ctx.createDynamicsCompressor();
+      const limiter = ctx.createDynamicsCompressor();
+      const eqLow = ctx.createBiquadFilter();
+      const eqMid = ctx.createBiquadFilter();
+      const eqHigh = ctx.createBiquadFilter();
       const analyser = ctx.createAnalyser();
       
       // Configure analyzer
       analyser.fftSize = 256;
       analyser.smoothingTimeConstant = 0.8;
       
-      // Connect processing chain: source -> compressor -> gain -> analyser -> destination
-      compressor.connect(gain).connect(analyser).connect(ctx.destination);
+      // Configure EQ
+      eqLow.type = 'lowshelf';
+      eqLow.frequency.value = 200;
+      
+      eqMid.type = 'peaking';
+      eqMid.frequency.value = 1000;
+      eqMid.Q.value = 1;
+      
+      eqHigh.type = 'highshelf';
+      eqHigh.frequency.value = 5000;
+      
+      // Configure limiter for true-peak control
+      limiter.ratio.value = 20;
+      limiter.attack.value = 0.001;
+      
+      // Connect processing chain: source -> EQ(L/M/H) -> compressor -> limiter -> gain -> analyser -> destination
+      eqLow.connect(eqMid).connect(eqHigh).connect(compressor).connect(limiter).connect(gain).connect(analyser).connect(ctx.destination);
       console.log('🔗 Processing chain connected');
       
       // Set initial values
@@ -123,6 +146,10 @@ const AudioPlayers: React.FC<AudioPlayersProps> = ({
       setAudioContext(ctx);
       setGainNode(gain);
       setCompressorNode(compressor);
+      setLimiterNode(limiter);
+      setEqLowNode(eqLow);
+      setEqMidNode(eqMid);
+      setEqHighNode(eqHigh);
       setAnalyserNode(analyser);
       setIsProcessingReady(true);
       
@@ -169,6 +196,27 @@ const AudioPlayers: React.FC<AudioPlayersProps> = ({
       
       compressorNode.knee.setValueAtTime(10, currentTime);
       
+      // Apply EQ in dB using multipliers from presets
+      const toDb = (mult: number) => 20 * Math.log10(mult);
+      if (eqLowNode && eqMidNode && eqHighNode) {
+        eqLowNode.gain.setValueAtTime(eqLowNode.gain.value, currentTime);
+        eqLowNode.gain.linearRampToValueAtTime(toDb(preset.eq.low), currentTime + transitionTime);
+        
+        eqMidNode.gain.setValueAtTime(eqMidNode.gain.value, currentTime);
+        eqMidNode.gain.linearRampToValueAtTime(toDb(preset.eq.mid), currentTime + transitionTime);
+        
+        eqHighNode.gain.setValueAtTime(eqHighNode.gain.value, currentTime);
+        eqHighNode.gain.linearRampToValueAtTime(toDb(preset.eq.high), currentTime + transitionTime);
+      }
+      
+      // Apply limiter target threshold around preset truePeak
+      if (limiterNode) {
+        // truePeak is dBTP target; set limiter threshold slightly below to catch peaks
+        const targetThreshold = Math.min(-0.1, preset.truePeak);
+        limiterNode.threshold.setValueAtTime(limiterNode.threshold.value, currentTime);
+        limiterNode.threshold.linearRampToValueAtTime(targetThreshold, currentTime + transitionTime);
+      }
+      
       console.log(`Applied ${genre.name} preset in real-time - Gain: ${preset.gain}, Threshold: ${preset.compression.threshold}, Ratio: ${preset.compression.ratio}`);
       
       // Hide indicator after transition
@@ -213,7 +261,13 @@ const AudioPlayers: React.FC<AudioPlayersProps> = ({
       
       console.log('🔌 Creating new audio source and connecting to processing chain');
       const source = audioContext!.createMediaElementSource(audio);
-      source.connect(compressorNode!);
+      // Connect new source to the start of the chain (EQ low)
+      if (eqLowNode) {
+        source.connect(eqLowNode);
+      } else if (compressorNode) {
+        // Fallback in case EQ isn't ready
+        source.connect(compressorNode);
+      }
       setAudioSource(source);
       console.log('✅ Audio source connected to processing chain');
 
