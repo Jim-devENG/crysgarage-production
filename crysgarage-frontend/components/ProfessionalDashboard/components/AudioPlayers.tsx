@@ -31,6 +31,7 @@ const AudioPlayers: React.FC<AudioPlayersProps> = ({
   const [originalAudioElement, setOriginalAudioElement] = useState<HTMLAudioElement | null>(null);
   const [isProcessingReady, setIsProcessingReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isApplyingPreset, setIsApplyingPreset] = useState(false);
 
   // Initialize audio processing when component mounts
   useEffect(() => {
@@ -46,9 +47,18 @@ const AudioPlayers: React.FC<AudioPlayersProps> = ({
   useEffect(() => {
     if (selectedGenre && isProcessingReady && gainNode && compressorNode) {
       console.log('Applying genre preset in real-time:', selectedGenre.name);
-      applyGenrePreset(selectedGenre);
+      
+      // Ensure audio context is resumed
+      if (audioContext && audioContext.state === 'suspended') {
+        audioContext.resume().then(() => {
+          console.log('Audio context resumed, applying preset');
+          applyGenrePreset(selectedGenre);
+        });
+      } else {
+        applyGenrePreset(selectedGenre);
+      }
     }
-  }, [selectedGenre, isProcessingReady, gainNode, compressorNode]);
+  }, [selectedGenre, isProcessingReady, gainNode, compressorNode, audioContext]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -117,31 +127,42 @@ const AudioPlayers: React.FC<AudioPlayersProps> = ({
     }
     
     try {
+      setIsApplyingPreset(true);
       const preset = genrePresets[genre.id] || genrePresets.afrobeats;
-      console.log('Applying preset:', preset);
+      console.log('Applying preset for', genre.name, ':', preset);
+      
+      const currentTime = gainNode.context.currentTime;
+      const transitionTime = 0.05; // Faster transition for more noticeable changes
       
       // Apply gain with smooth transition
-      gainNode.gain.setValueAtTime(gainNode.gain.value, gainNode.context.currentTime);
-      gainNode.gain.linearRampToValueAtTime(preset.gain, gainNode.context.currentTime + 0.1);
+      gainNode.gain.setValueAtTime(gainNode.gain.value, currentTime);
+      gainNode.gain.linearRampToValueAtTime(preset.gain, currentTime + transitionTime);
       
       // Apply compression with smooth transitions
-      compressorNode.threshold.setValueAtTime(compressorNode.threshold.value, compressorNode.context.currentTime);
-      compressorNode.threshold.linearRampToValueAtTime(preset.compression.threshold, compressorNode.context.currentTime + 0.1);
+      compressorNode.threshold.setValueAtTime(compressorNode.threshold.value, currentTime);
+      compressorNode.threshold.linearRampToValueAtTime(preset.compression.threshold, currentTime + transitionTime);
       
-      compressorNode.ratio.setValueAtTime(compressorNode.ratio.value, compressorNode.context.currentTime);
-      compressorNode.ratio.linearRampToValueAtTime(preset.compression.ratio, compressorNode.context.currentTime + 0.1);
+      compressorNode.ratio.setValueAtTime(compressorNode.ratio.value, currentTime);
+      compressorNode.ratio.linearRampToValueAtTime(preset.compression.ratio, currentTime + transitionTime);
       
-      compressorNode.attack.setValueAtTime(compressorNode.attack.value, compressorNode.context.currentTime);
-      compressorNode.attack.linearRampToValueAtTime(preset.compression.attack, compressorNode.context.currentTime + 0.1);
+      compressorNode.attack.setValueAtTime(compressorNode.attack.value, currentTime);
+      compressorNode.attack.linearRampToValueAtTime(preset.compression.attack, currentTime + transitionTime);
       
-      compressorNode.release.setValueAtTime(compressorNode.release.value, compressorNode.context.currentTime);
-      compressorNode.release.linearRampToValueAtTime(preset.compression.release, compressorNode.context.currentTime + 0.1);
+      compressorNode.release.setValueAtTime(compressorNode.release.value, currentTime);
+      compressorNode.release.linearRampToValueAtTime(preset.compression.release, currentTime + transitionTime);
       
-      compressorNode.knee.setValueAtTime(10, compressorNode.context.currentTime);
+      compressorNode.knee.setValueAtTime(10, currentTime);
       
-      console.log(`Applied ${genre.name} preset in real-time`);
+      console.log(`Applied ${genre.name} preset in real-time - Gain: ${preset.gain}, Threshold: ${preset.compression.threshold}, Ratio: ${preset.compression.ratio}`);
+      
+      // Hide indicator after transition
+      setTimeout(() => {
+        setIsApplyingPreset(false);
+      }, transitionTime * 1000 + 100);
+      
     } catch (error) {
       console.error('Error applying genre preset:', error);
+      setIsApplyingPreset(false);
     }
   };
 
@@ -254,13 +275,22 @@ const AudioPlayers: React.FC<AudioPlayersProps> = ({
                     <span className="text-sm text-green-400 font-medium">Live Processing</span>
                   </div>
                 )}
+                
+                {isApplyingPreset && (
+                  <div className="flex items-center space-x-2">
+                    <div className="w-2 h-2 bg-crys-gold rounded-full animate-pulse"></div>
+                    <span className="text-sm text-crys-gold font-medium">Applying Preset...</span>
+                  </div>
+                )}
               </div>
               
               <div className="mt-3 text-center">
                 <p className="text-xs text-gray-400">
-                  {selectedGenre 
-                    ? `${selectedGenre.name} preset applied in real-time`
-                    : 'Select a genre to enable mastering'
+                  {isApplyingPreset 
+                    ? `Applying ${selectedGenre?.name} preset...`
+                    : selectedGenre 
+                      ? `${selectedGenre.name} preset applied in real-time`
+                      : 'Select a genre to enable mastering'
                   }
                 </p>
               </div>
