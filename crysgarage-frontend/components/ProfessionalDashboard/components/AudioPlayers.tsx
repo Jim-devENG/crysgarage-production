@@ -86,14 +86,17 @@ const AudioPlayers: React.FC<AudioPlayersProps> = ({
 
   const initializeAudioProcessing = async () => {
     try {
-      console.log('Initializing audio processing...');
+      console.log('🎵 Initializing audio processing...');
       
       // Create audio context
       const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      console.log('🔧 Audio context created, state:', ctx.state);
       
       // Resume audio context if suspended
       if (ctx.state === 'suspended') {
+        console.log('⏸️ Audio context suspended, resuming...');
         await ctx.resume();
+        console.log('✅ Audio context resumed, state:', ctx.state);
       }
       
       // Create processing nodes
@@ -107,6 +110,7 @@ const AudioPlayers: React.FC<AudioPlayersProps> = ({
       
       // Connect processing chain: source -> compressor -> gain -> analyser -> destination
       compressor.connect(gain).connect(analyser).connect(ctx.destination);
+      console.log('🔗 Processing chain connected');
       
       // Set initial values
       gain.gain.value = 1.0;
@@ -122,11 +126,12 @@ const AudioPlayers: React.FC<AudioPlayersProps> = ({
       setAnalyserNode(analyser);
       setIsProcessingReady(true);
       
-      console.log('Audio processing initialized successfully');
+      console.log('✅ Audio processing initialized successfully');
+      console.log('🎚️ Initial values - Gain:', gain.gain.value, 'Threshold:', compressor.threshold.value, 'Ratio:', compressor.ratio.value);
       onAudioReady();
       
     } catch (error) {
-      console.error('Error initializing audio processing:', error);
+      console.error('❌ Error initializing audio processing:', error);
       setError('Failed to initialize audio processing');
     }
   };
@@ -179,11 +184,13 @@ const AudioPlayers: React.FC<AudioPlayersProps> = ({
 
   const handleMasteredPlay = async () => {
     if (!isProcessingReady || !selectedFile) {
-      console.log('Cannot play mastered audio - not ready or no file');
+      console.log('❌ Cannot play mastered audio - not ready or no file');
       return;
     }
 
     try {
+      console.log('🎵 Starting mastered audio playback...');
+      
       // Create a new audio element
       const audio = new Audio();
       audio.src = URL.createObjectURL(selectedFile);
@@ -195,21 +202,26 @@ const AudioPlayers: React.FC<AudioPlayersProps> = ({
         audio.load();
       });
 
+      console.log('✅ Audio loaded successfully');
+
       // Always create a new audio source for the new audio element
       // This ensures the processing chain is properly connected
       if (audioSource) {
-        // Disconnect old source if it exists
+        console.log('🔌 Disconnecting old audio source');
         audioSource.disconnect();
       }
       
+      console.log('🔌 Creating new audio source and connecting to processing chain');
       const source = audioContext!.createMediaElementSource(audio);
       source.connect(compressorNode!);
       setAudioSource(source);
+      console.log('✅ Audio source connected to processing chain');
 
       setOriginalAudioElement(audio);
 
       // Apply current genre preset immediately
       if (selectedGenre) {
+        console.log('🎛️ Applying genre preset before playback');
         applyGenrePreset(selectedGenre);
       }
 
@@ -217,10 +229,10 @@ const AudioPlayers: React.FC<AudioPlayersProps> = ({
       
       // Play the audio
       await audio.play();
-      console.log('Playing mastered audio with real-time processing');
+      console.log('✅ Playing mastered audio with real-time processing');
       
     } catch (error) {
-      console.error('Error playing mastered audio:', error);
+      console.error('❌ Error playing mastered audio:', error);
       setIsPlayingMastered(false);
       setError('Failed to play mastered audio');
     }
