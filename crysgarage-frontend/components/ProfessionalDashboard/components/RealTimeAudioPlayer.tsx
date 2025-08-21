@@ -127,14 +127,14 @@ const RealTimeAudioPlayer: React.FC<RealTimeAudioPlayerProps> = ({
       console.log('=== INITIALIZING AUDIO CONTEXT ===');
 
       // COMPLETE CLEANUP: Remove ALL existing audio elements from DOM
-      const existingAudioElements = document.querySelectorAll('audio[id^="audio-"]');
+      const existingAudioElements = document.querySelectorAll('audio');
       existingAudioElements.forEach(element => {
         try {
           const audioElement = element as HTMLAudioElement;
           audioElement.pause();
           audioElement.src = '';
           element.remove();
-          console.log('🧹 Cleaned up existing audio element:', element.id);
+          console.log('🧹 Cleaned up ALL existing audio element:', element.id || 'no-id');
         } catch (error) {
           console.log('Error cleaning up audio element:', error);
         }
@@ -501,14 +501,14 @@ const RealTimeAudioPlayer: React.FC<RealTimeAudioPlayerProps> = ({
       setIsLoading(true);
       
       // COMPLETE CLEANUP: Remove ALL existing audio elements from DOM
-      const existingAudioElements = document.querySelectorAll('audio[id^="audio-"]');
+      const existingAudioElements = document.querySelectorAll('audio');
       existingAudioElements.forEach(element => {
         try {
           const audioElement = element as HTMLAudioElement;
           audioElement.pause();
           audioElement.src = '';
           element.remove();
-          console.log('🧹 Cleaned up existing audio element:', element.id);
+          console.log('🧹 Cleaned up ALL existing audio element:', element.id || 'no-id');
         } catch (error) {
           console.log('Error cleaning up audio element:', error);
         }
@@ -551,7 +551,7 @@ const RealTimeAudioPlayer: React.FC<RealTimeAudioPlayerProps> = ({
     
     return () => {
       // Clean up on unmount
-      const existingAudioElements = document.querySelectorAll('audio[id^="audio-"]');
+      const existingAudioElements = document.querySelectorAll('audio');
       existingAudioElements.forEach(element => {
         try {
           const audioElement = element as HTMLAudioElement;
