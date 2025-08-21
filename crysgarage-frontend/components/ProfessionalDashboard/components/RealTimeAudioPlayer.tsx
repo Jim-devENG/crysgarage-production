@@ -168,15 +168,7 @@ const RealTimeAudioPlayer: React.FC<RealTimeAudioPlayerProps> = ({
       newAudioElement.style.display = 'none';
       newAudioElement.crossOrigin = 'anonymous';
       
-      // Append to a dedicated container to avoid conflicts
-      let audioContainer = document.getElementById('audio-container');
-      if (!audioContainer) {
-        audioContainer = document.createElement('div');
-        audioContainer.id = 'audio-container';
-        audioContainer.style.display = 'none';
-        document.body.appendChild(audioContainer);
-      }
-      audioContainer.appendChild(newAudioElement);
+      // IMPORTANT: Don't append to DOM yet - create MediaElementSource first
       audioElementRef.current = newAudioElement;
       
       console.log('✅ New audio element created with ID:', uniqueId);
@@ -192,7 +184,7 @@ const RealTimeAudioPlayer: React.FC<RealTimeAudioPlayerProps> = ({
       if (audioElementRef.current && audioContextRef.current) {
         console.log('Creating audio processing chain...');
         
-        // Create MediaElementSource for the fresh audio element
+        // Create MediaElementSource for the fresh audio element BEFORE appending to DOM
         try {
           sourceNodeRef.current = audioContextRef.current.createMediaElementSource(newAudioElement);
           hasBeenConnectedRef.current = true;
@@ -201,6 +193,16 @@ const RealTimeAudioPlayer: React.FC<RealTimeAudioPlayerProps> = ({
           console.error('❌ Error creating MediaElementSource:', error);
           throw error;
         }
+        
+        // NOW append to DOM after MediaElementSource is created
+        let audioContainer = document.getElementById('audio-container');
+        if (!audioContainer) {
+          audioContainer = document.createElement('div');
+          audioContainer.id = 'audio-container';
+          audioContainer.style.display = 'none';
+          document.body.appendChild(audioContainer);
+        }
+        audioContainer.appendChild(newAudioElement);
         
         // Create analyser
         analyserNodeRef.current = audioContextRef.current.createAnalyser();
