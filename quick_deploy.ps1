@@ -63,9 +63,20 @@ echo "Deployment completed successfully"
 $remoteDeployScript -replace "`r`n", "`n" | Out-File -FilePath $tempScriptPath -Encoding UTF8 -NoNewline
 
 Write-Host "Copying built files to VPS temp directory..." -ForegroundColor Yellow
-# Copy the built frontend files to temp directory first
+# Copy the built frontend files to temp directory first (excluding audio files)
 ssh -i $SSH_KEY_PATH -o StrictHostKeyChecking=no ${VPS_USER}@${VPS_HOST} "rm -rf /tmp/frontend && mkdir -p /tmp/frontend"
-scp -i $SSH_KEY_PATH -o StrictHostKeyChecking=no -r "crysgarage-frontend/dist/*" "${VPS_USER}@${VPS_HOST}:/tmp/frontend/"
+
+# Copy files individually to exclude audio files
+$distFiles = Get-ChildItem "crysgarage-frontend/dist/" -File | Where-Object { $_.Extension -notmatch '\.(wav|mp3|flac|aac|ogg|aiff|m4a|wma)$' }
+foreach ($file in $distFiles) {
+    scp -i $SSH_KEY_PATH -o StrictHostKeyChecking=no "crysgarage-frontend/dist/$($file.Name)" "${VPS_USER}@${VPS_HOST}:/tmp/frontend/"
+}
+
+# Copy directories (assets, etc.)
+$distDirs = Get-ChildItem "crysgarage-frontend/dist/" -Directory
+foreach ($dir in $distDirs) {
+    scp -i $SSH_KEY_PATH -o StrictHostKeyChecking=no -r "crysgarage-frontend/dist/$($dir.Name)" "${VPS_USER}@${VPS_HOST}:/tmp/frontend/"
+}
 
 Write-Host "Running remote deployment script..." -ForegroundColor Yellow
 # Copy the script to VPS and execute it
