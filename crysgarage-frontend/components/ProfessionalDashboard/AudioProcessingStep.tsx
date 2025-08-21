@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import GenreGrid from './components/GenreGrid';
-import RealTimeAudioPlayer from './components/RealTimeAudioPlayer';
+import AudioPlayers from './components/AudioPlayers';
 import { availableGenres } from '../GenreDropdown';
 import { GENRE_PRESETS } from './utils/genrePresets';
 
@@ -105,13 +105,16 @@ const AudioProcessingStep: React.FC<AudioProcessingStepProps> = ({
         )}
       </div>
 
-      {/* Real-Time Audio Player */}
+      {/* Real-Time Audio Player (stable implementation) */}
       <div className="max-w-4xl mx-auto">
-        <RealTimeAudioPlayer
-          audioFile={selectedFile}
-          selectedGenre={selectedGenre}
-          onGenreChange={handleGenreChange}
-          className="w-full"
+        <AudioPlayers
+          selectedFile={selectedFile}
+          selectedGenre={currentGenre}
+          genrePresets={GENRE_PRESETS}
+          onAudioReady={() => setIsAudioReady(true)}
+          onProcessingComplete={onProcessingComplete}
+          isProcessing={isProcessing}
+          setIsProcessing={setIsProcessing}
         />
       </div>
 
