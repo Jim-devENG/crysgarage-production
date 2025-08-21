@@ -156,32 +156,27 @@ const RealTimeAudioPlayer: React.FC<RealTimeAudioPlayerProps> = ({
       if (audioElementRef.current && audioContextRef.current) {
         console.log('Creating audio processing chain...');
         
-        // Create source from audio element - ONLY IF NOT ALREADY CONNECTED
-        if (!hasBeenConnectedRef.current) {
-          try {
-            sourceNodeRef.current = audioContextRef.current.createMediaElementSource(audioElementRef.current);
-            hasBeenConnectedRef.current = true;
-            console.log('✅ MediaElementSource created');
-          } catch (error) {
-            console.log('⚠️ MediaElementSource already exists, reusing...');
-            // If already connected, we need to create a new audio element
-            const newAudioElement = new Audio();
-            newAudioElement.src = audioUrl;
-            newAudioElement.load();
-            audioElementRef.current = newAudioElement;
-            
-            // Wait for new audio to load
-            await new Promise((resolve) => {
-              newAudioElement.addEventListener('loadedmetadata', resolve, { once: true });
-            });
-            
-            sourceNodeRef.current = audioContextRef.current.createMediaElementSource(newAudioElement);
-            hasBeenConnectedRef.current = true;
-            console.log('✅ New MediaElementSource created');
-          }
-        } else {
-          console.log('✅ MediaElementSource already exists');
-        }
+                 // Create source from audio element - handle connection properly
+         try {
+           // Always create a new audio element to avoid connection conflicts
+           const newAudioElement = new Audio();
+           newAudioElement.src = audioUrl;
+           newAudioElement.load();
+           audioElementRef.current = newAudioElement;
+           
+           // Wait for new audio to load
+           await new Promise((resolve) => {
+             newAudioElement.addEventListener('loadedmetadata', resolve, { once: true });
+           });
+           
+           // Create new MediaElementSource for the new audio element
+           sourceNodeRef.current = audioContextRef.current.createMediaElementSource(newAudioElement);
+           hasBeenConnectedRef.current = true;
+           console.log('✅ New MediaElementSource created successfully');
+         } catch (error) {
+           console.error('❌ Error creating MediaElementSource:', error);
+           throw error;
+         }
         
         // Create analyser
         analyserNodeRef.current = audioContextRef.current.createAnalyser();
@@ -476,8 +471,29 @@ const RealTimeAudioPlayer: React.FC<RealTimeAudioPlayerProps> = ({
   // Initialize audio context when file changes
   useEffect(() => {
     if (audioFile) {
-      // Reset connection flag when file changes
+      // Always reset connection flag and create fresh audio context
       hasBeenConnectedRef.current = false;
+      setIsInitialized(false);
+      setIsLoading(true);
+      
+      // Clean up previous audio context
+      if (audioContextRef.current) {
+        try {
+          audioContextRef.current.close();
+        } catch (error) {
+          console.log('Error closing previous audio context:', error);
+        }
+        audioContextRef.current = null;
+      }
+      
+      // Reset all nodes
+      sourceNodeRef.current = null;
+      gainNodeRef.current = null;
+      analyserNodeRef.current = null;
+      eqNodesRef.current = [];
+      compressorRef.current = null;
+      limiterRef.current = null;
+      
       initializeAudioContext();
     }
     
