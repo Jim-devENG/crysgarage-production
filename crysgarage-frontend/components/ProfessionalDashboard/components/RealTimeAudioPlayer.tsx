@@ -118,7 +118,7 @@ const RealTimeAudioPlayer: React.FC<RealTimeAudioPlayerProps> = ({
     setTestMode(true);
   }, []);
 
-  // Initialize Web Audio API
+    // Initialize Web Audio API
   const initializeAudioContext = useCallback(async () => {
     if (!audioFile) return;
 
@@ -126,11 +126,17 @@ const RealTimeAudioPlayer: React.FC<RealTimeAudioPlayerProps> = ({
       setIsLoading(true);
       console.log('=== INITIALIZING AUDIO CONTEXT ===');
 
-      // Create audio context
-      if (!audioContextRef.current) {
-        console.log('Creating new audio context...');
-        audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+      // Create fresh audio context
+      if (audioContextRef.current) {
+        try {
+          audioContextRef.current.close();
+        } catch (error) {
+          console.log('Error closing previous audio context:', error);
+        }
       }
+      
+      console.log('Creating new audio context...');
+      audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
 
       // Resume audio context if suspended
       if (audioContextRef.current.state === 'suspended') {
@@ -138,45 +144,35 @@ const RealTimeAudioPlayer: React.FC<RealTimeAudioPlayerProps> = ({
         await audioContextRef.current.resume();
       }
 
-      // Create audio element
+      // Create fresh audio element
       const audioUrl = URL.createObjectURL(audioFile);
-      if (audioElementRef.current) {
-        audioElementRef.current.src = audioUrl;
-        audioElementRef.current.load();
-      }
+      const newAudioElement = new Audio();
+      newAudioElement.src = audioUrl;
+      newAudioElement.load();
+      audioElementRef.current = newAudioElement;
+      
+      console.log('✅ New audio element created');
 
       // Wait for audio to be loaded
       await new Promise((resolve) => {
-        if (audioElementRef.current) {
-          audioElementRef.current.addEventListener('loadedmetadata', resolve, { once: true });
-        }
+        newAudioElement.addEventListener('loadedmetadata', resolve, { once: true });
       });
+      
+      console.log('✅ Audio element loaded');
 
       // Create Web Audio API nodes
       if (audioElementRef.current && audioContextRef.current) {
         console.log('Creating audio processing chain...');
         
-                 // Create source from audio element - handle connection properly
-         try {
-           // Always create a new audio element to avoid connection conflicts
-           const newAudioElement = new Audio();
-           newAudioElement.src = audioUrl;
-           newAudioElement.load();
-           audioElementRef.current = newAudioElement;
-           
-           // Wait for new audio to load
-           await new Promise((resolve) => {
-             newAudioElement.addEventListener('loadedmetadata', resolve, { once: true });
-           });
-           
-           // Create new MediaElementSource for the new audio element
-           sourceNodeRef.current = audioContextRef.current.createMediaElementSource(newAudioElement);
-           hasBeenConnectedRef.current = true;
-           console.log('✅ New MediaElementSource created successfully');
-         } catch (error) {
-           console.error('❌ Error creating MediaElementSource:', error);
-           throw error;
-         }
+        // Create MediaElementSource for the fresh audio element
+        try {
+          sourceNodeRef.current = audioContextRef.current.createMediaElementSource(newAudioElement);
+          hasBeenConnectedRef.current = true;
+          console.log('✅ MediaElementSource created successfully');
+        } catch (error) {
+          console.error('❌ Error creating MediaElementSource:', error);
+          throw error;
+        }
         
         // Create analyser
         analyserNodeRef.current = audioContextRef.current.createAnalyser();
@@ -409,7 +405,7 @@ const RealTimeAudioPlayer: React.FC<RealTimeAudioPlayerProps> = ({
       }
 
       // Ensure the processing chain is connected
-      if (audioContextRef.current && sourceNodeRef.current) {
+      if (audioContextRef.current && sourceNodeRef.current && !hasBeenConnectedRef.current) {
         console.log('🔗 Connecting processing chain before playback...');
         connectProcessingChain();
       }
