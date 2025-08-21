@@ -46,17 +46,28 @@ const AudioPlayers: React.FC<AudioPlayersProps> = ({
   // Apply genre preset when genre changes - this is the key for real-time changes
   useEffect(() => {
     if (selectedGenre && isProcessingReady && gainNode && compressorNode) {
-      console.log('Applying genre preset in real-time:', selectedGenre.name);
+      console.log('🎵 Genre changed to:', selectedGenre.name);
+      console.log('🔧 Audio context state:', audioContext?.state);
+      console.log('🎚️ Processing nodes ready:', !!gainNode, !!compressorNode);
       
       // Ensure audio context is resumed
       if (audioContext && audioContext.state === 'suspended') {
+        console.log('⏸️ Audio context suspended, resuming...');
         audioContext.resume().then(() => {
-          console.log('Audio context resumed, applying preset');
+          console.log('✅ Audio context resumed, applying preset');
           applyGenrePreset(selectedGenre);
         });
       } else {
+        console.log('✅ Audio context ready, applying preset immediately');
         applyGenrePreset(selectedGenre);
       }
+    } else {
+      console.log('❌ Cannot apply preset:', {
+        hasGenre: !!selectedGenre,
+        isReady: isProcessingReady,
+        hasGain: !!gainNode,
+        hasCompressor: !!compressorNode
+      });
     }
   }, [selectedGenre, isProcessingReady, gainNode, compressorNode, audioContext]);
 
@@ -184,12 +195,16 @@ const AudioPlayers: React.FC<AudioPlayersProps> = ({
         audio.load();
       });
 
-      // Create audio source only once
-      if (!audioSource) {
-        const source = audioContext!.createMediaElementSource(audio);
-        source.connect(compressorNode!);
-        setAudioSource(source);
+      // Always create a new audio source for the new audio element
+      // This ensures the processing chain is properly connected
+      if (audioSource) {
+        // Disconnect old source if it exists
+        audioSource.disconnect();
       }
+      
+      const source = audioContext!.createMediaElementSource(audio);
+      source.connect(compressorNode!);
+      setAudioSource(source);
 
       setOriginalAudioElement(audio);
 
@@ -202,7 +217,7 @@ const AudioPlayers: React.FC<AudioPlayersProps> = ({
       
       // Play the audio
       await audio.play();
-      console.log('Playing mastered audio');
+      console.log('Playing mastered audio with real-time processing');
       
     } catch (error) {
       console.error('Error playing mastered audio:', error);
@@ -293,6 +308,17 @@ const AudioPlayers: React.FC<AudioPlayersProps> = ({
                       : 'Select a genre to enable mastering'
                   }
                 </p>
+                
+                {/* Show current processing values */}
+                {selectedGenre && gainNode && compressorNode && (
+                  <div className="mt-2 text-xs text-crys-gold">
+                    <div className="flex justify-center space-x-4">
+                      <span>Gain: {gainNode.gain.value.toFixed(1)}</span>
+                      <span>Threshold: {compressorNode.threshold.value.toFixed(1)}dB</span>
+                      <span>Ratio: {compressorNode.ratio.value.toFixed(1)}:1</span>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
             
