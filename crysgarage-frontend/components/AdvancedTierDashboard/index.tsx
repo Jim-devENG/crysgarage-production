@@ -497,7 +497,7 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
       
       case 2:
         return (
-          <div className="space-y-6">
+          <div className="space-y-4">
             {/* Back Button */}
             <div className="mb-6">
               <button
@@ -512,9 +512,9 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
             </div>
             
             {/* Main Layout - Player/Meters on top, Genre under player */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
               {/* Left Column - Player and Genre */}
-              <div className="lg:col-span-2 space-y-4">
+              <div className="lg:col-span-2 space-y-3">
                 {/* Real-time Mastering Player */}
                 <RealTimeMasteringPlayer
                   ref={realTimeMasteringPlayerRef}
@@ -560,7 +560,7 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
             </div>
 
             {/* Studio Dashboard - Full width below */}
-            <div className="grid grid-cols-1 gap-4">
+            <div className="grid grid-cols-1 gap-3">
               <StudioDashboard
                 audioEffects={audioEffects}
                 onUpdateEffectSettings={handleUpdateEffectSettings}
@@ -614,7 +614,7 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
       </div>
       
       {/* Main Content */}
-      <div className="relative z-10 container mx-auto px-4 py-8">
+      <div className="relative z-10 container mx-auto px-4 py-4">
         {renderCurrentStep()}
       </div>
 
