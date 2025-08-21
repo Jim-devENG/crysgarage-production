@@ -88,10 +88,28 @@ class AudioManager {
       this.audioElement.preload = 'metadata';
       this.audioElement.style.display = 'none';
       this.audioElement.crossOrigin = 'anonymous';
+      // Ensure browser begins loading the resource
+      try {
+        this.audioElement.load();
+      } catch (e) {
+        console.log('Audio load() call error (safe to ignore in some browsers):', e);
+      }
 
-      // Wait for metadata
-      await new Promise((resolve) => {
-        this.audioElement!.addEventListener('loadedmetadata', resolve, { once: true });
+      // Wait for media to be ready enough to build the graph
+      await new Promise((resolve, reject) => {
+        const onReady = () => { cleanup(); resolve(null as any); };
+        const onError = () => { cleanup(); reject(new Error('Audio metadata failed to load')); };
+        const timeout = setTimeout(() => { cleanup(); resolve(null as any); }, 3000);
+        const cleanup = () => {
+          clearTimeout(timeout);
+          if (!this.audioElement) return;
+          this.audioElement.removeEventListener('loadedmetadata', onReady as any);
+          this.audioElement.removeEventListener('canplay', onReady as any);
+          this.audioElement.removeEventListener('error', onError as any);
+        };
+        this.audioElement!.addEventListener('loadedmetadata', onReady as any, { once: true } as any);
+        this.audioElement!.addEventListener('canplay', onReady as any, { once: true } as any);
+        this.audioElement!.addEventListener('error', onError as any, { once: true } as any);
       });
 
       // Create MediaElementSource BEFORE appending to DOM
