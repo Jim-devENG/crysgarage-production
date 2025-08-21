@@ -346,6 +346,7 @@ const RealTimeAudioPlayer: React.FC<RealTimeAudioPlayerProps> = ({
 
   // Apply genre effects to audio effects state
   const applyGenreEffects = useCallback(() => {
+    console.log('🎵 applyGenreEffects called with genre:', selectedGenre?.name);
     if (!selectedGenre) {
       console.log('❌ No genre selected');
       return;
@@ -442,12 +443,9 @@ const RealTimeAudioPlayer: React.FC<RealTimeAudioPlayerProps> = ({
     console.log('🔄 Genre changed to:', newGenre?.name);
     onGenreChange(newGenre);
     
-    // Apply new effects immediately
-    if (isPlaying && audioContextRef.current) {
-      console.log('⚡ Applying new genre effects while playing...');
-      applyGenreEffects();
-    }
-  }, [onGenreChange, isPlaying, applyGenreEffects]);
+    // The useEffect will handle applying the effects when selectedGenre changes
+    console.log('⚡ Genre change triggered, effects will be applied automatically');
+  }, [onGenreChange]);
 
   // Handle volume change
   const handleVolumeChange = useCallback((newVolume: number) => {
@@ -492,16 +490,23 @@ const RealTimeAudioPlayer: React.FC<RealTimeAudioPlayerProps> = ({
 
   // Apply effects when genre changes
   useEffect(() => {
+    console.log('🎵 Genre effect useEffect triggered:', selectedGenre?.name);
     if (selectedGenre) {
       console.log('🎵 Genre effect triggered for:', selectedGenre.name);
       applyGenreEffects();
+    } else {
+      console.log('❌ No genre selected in useEffect');
     }
   }, [selectedGenre, applyGenreEffects]);
 
   // Update effect parameters when audio effects change
   useEffect(() => {
+    console.log('🎛️ Audio effects changed, updating parameters:', audioEffects);
     if (audioContextRef.current && eqNodesRef.current) {
+      console.log('🎛️ Calling updateEffectParameters...');
       updateEffectParameters();
+    } else {
+      console.log('❌ Cannot update effect parameters - missing context or nodes');
     }
   }, [audioEffects, updateEffectParameters]);
 

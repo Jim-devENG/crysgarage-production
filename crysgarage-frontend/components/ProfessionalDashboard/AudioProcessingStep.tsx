@@ -109,7 +109,7 @@ const AudioProcessingStep: React.FC<AudioProcessingStepProps> = ({
       <div className="max-w-4xl mx-auto">
         <RealTimeAudioPlayer
           audioFile={selectedFile}
-          selectedGenre={currentGenre}
+          selectedGenre={selectedGenre}
           onGenreChange={handleGenreChange}
           className="w-full"
         />
