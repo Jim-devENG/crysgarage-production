@@ -66,16 +66,21 @@ Write-Host "Copying built files to VPS temp directory..." -ForegroundColor Yello
 # Copy the built frontend files to temp directory first (excluding audio files)
 ssh -i $SSH_KEY_PATH -o StrictHostKeyChecking=no ${VPS_USER}@${VPS_HOST} "rm -rf /tmp/frontend && mkdir -p /tmp/frontend"
 
-# Copy files individually to exclude audio files
-$distFiles = Get-ChildItem "crysgarage-frontend/dist/" -File | Where-Object { $_.Extension -notmatch '\.(wav|mp3|flac|aac|ogg|aiff|m4a|wma)$' }
-foreach ($file in $distFiles) {
-    scp -i $SSH_KEY_PATH -o StrictHostKeyChecking=no "crysgarage-frontend/dist/$($file.Name)" "${VPS_USER}@${VPS_HOST}:/tmp/frontend/"
-}
+# Copy only essential files - exclude large images and audio files
+Write-Host "Copying essential files only..." -ForegroundColor Yellow
 
-# Copy directories (assets, etc.)
-$distDirs = Get-ChildItem "crysgarage-frontend/dist/" -Directory
-foreach ($dir in $distDirs) {
-    scp -i $SSH_KEY_PATH -o StrictHostKeyChecking=no -r "crysgarage-frontend/dist/$($dir.Name)" "${VPS_USER}@${VPS_HOST}:/tmp/frontend/"
+# Copy index.html first
+scp -i $SSH_KEY_PATH -o StrictHostKeyChecking=no "crysgarage-frontend/dist/index.html" "${VPS_USER}@${VPS_HOST}:/tmp/frontend/"
+
+# Copy assets directory (contains JS and CSS)
+scp -i $SSH_KEY_PATH -o StrictHostKeyChecking=no -r "crysgarage-frontend/dist/assets" "${VPS_USER}@${VPS_HOST}:/tmp/frontend/"
+
+# Copy only small essential images, exclude large ones
+$smallImages = @("CRG_Logo_svg.svg")
+foreach ($img in $smallImages) {
+    if (Test-Path "crysgarage-frontend/dist/$img") {
+        scp -i $SSH_KEY_PATH -o StrictHostKeyChecking=no "crysgarage-frontend/dist/$img" "${VPS_USER}@${VPS_HOST}:/tmp/frontend/"
+    }
 }
 
 Write-Host "Running remote deployment script..." -ForegroundColor Yellow
