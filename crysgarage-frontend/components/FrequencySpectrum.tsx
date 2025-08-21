@@ -248,10 +248,10 @@ const FrequencySpectrum: React.FC<FrequencySpectrumProps> = ({
         {isAnalyzing && (
           <div className="absolute top-3 left-3 text-xs space-y-1 backdrop-blur-sm bg-black/20 rounded-lg p-2 border border-white/10">
             <div className="text-yellow-300 font-mono">
-              LUFS: {lufsValue.toFixed(1)} dB
+              LUFS: {Math.round(lufsValue)} LUFS
             </div>
             <div className="text-red-300 font-mono">
-              Peak: {peakValue.toFixed(1)} dB
+              Peak: {Math.round(peakValue)} LUFS
             </div>
           </div>
         )}

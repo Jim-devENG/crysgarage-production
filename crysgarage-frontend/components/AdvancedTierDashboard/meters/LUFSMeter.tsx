@@ -26,7 +26,7 @@ const LUFSMeter: React.FC<LUFSMeterProps> = ({
     <div className="space-y-3">
       <div className="text-center">
         <span className="text-sm font-medium text-gray-300">{label}</span>
-        <div className="text-xs text-gray-500">Target: {target} dB</div>
+        <div className="text-xs text-gray-500">Target: {target} LUFS</div>
       </div>
       
       <div className="bg-gray-800 rounded-lg h-32 relative overflow-hidden">
@@ -36,7 +36,7 @@ const LUFSMeter: React.FC<LUFSMeterProps> = ({
         />
         <div className="absolute inset-0 flex items-end justify-center pb-2">
           <span className="text-lg font-bold text-white drop-shadow-lg">
-            {value.toFixed(1)} dB
+            {Math.round(value)} LUFS
           </span>
         </div>
         
@@ -56,15 +56,15 @@ const LUFSMeter: React.FC<LUFSMeterProps> = ({
       {detailed && (
         <div className="grid grid-cols-3 gap-2 text-xs text-gray-400">
           <div className="text-center">
-            <div className="text-green-400">-30 dB</div>
+            <div className="text-green-400">-30 LUFS</div>
             <div>Quiet</div>
           </div>
           <div className="text-center">
-            <div className="text-yellow-400">-16 dB</div>
+            <div className="text-yellow-400">-16 LUFS</div>
             <div>Target</div>
           </div>
           <div className="text-center">
-            <div className="text-red-400">-10 dB</div>
+            <div className="text-red-400">-10 LUFS</div>
             <div>Loud</div>
           </div>
         </div>

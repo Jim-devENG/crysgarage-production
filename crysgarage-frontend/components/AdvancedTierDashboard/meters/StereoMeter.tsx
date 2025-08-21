@@ -47,7 +47,7 @@ const StereoMeter: React.FC<StereoMeterProps> = ({
           />
           <div className="absolute inset-0 flex items-end justify-center pb-2">
             <span className="text-lg font-bold text-white drop-shadow-lg">
-              {balance.toFixed(1)} dB
+              {Math.round(balance)} dB
             </span>
           </div>
           
@@ -80,7 +80,7 @@ const StereoMeter: React.FC<StereoMeterProps> = ({
           <Volume2 className="w-4 h-4 mr-2" />
           Stereo Levels
         </span>
-        <div className="text-xs text-gray-500">Peak: {peak.toFixed(1)}dB | RMS: {rms.toFixed(1)}dB</div>
+        <div className="text-xs text-gray-500">Peak: {Math.round(peak)} LUFS | RMS: {Math.round(rms)} LUFS</div>
       </div>
       
       <div className="grid grid-cols-2 gap-4">
@@ -94,7 +94,7 @@ const StereoMeter: React.FC<StereoMeterProps> = ({
             />
             <div className="absolute inset-0 flex items-end justify-center pb-1">
               <span className="text-sm font-bold text-white drop-shadow-lg">
-                {leftLevel.toFixed(1)}
+                {Math.round(leftLevel)}
               </span>
             </div>
           </div>
@@ -110,7 +110,7 @@ const StereoMeter: React.FC<StereoMeterProps> = ({
             />
             <div className="absolute inset-0 flex items-end justify-center pb-1">
               <span className="text-sm font-bold text-white drop-shadow-lg">
-                {rightLevel.toFixed(1)}
+                {Math.round(rightLevel)}
               </span>
             </div>
           </div>
@@ -129,7 +129,7 @@ const StereoMeter: React.FC<StereoMeterProps> = ({
               />
               <div className="absolute inset-0 flex items-end justify-center pb-1">
                 <span className="text-xs font-bold text-white drop-shadow-lg">
-                  {peak.toFixed(1)}
+                  {Math.round(peak)}
                 </span>
               </div>
             </div>
@@ -145,7 +145,7 @@ const StereoMeter: React.FC<StereoMeterProps> = ({
               />
               <div className="absolute inset-0 flex items-end justify-center pb-1">
                 <span className="text-xs font-bold text-white drop-shadow-lg">
-                  {rms.toFixed(1)}
+                  {Math.round(rms)}
                 </span>
               </div>
             </div>

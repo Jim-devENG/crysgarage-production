@@ -485,7 +485,7 @@ const RealTimeMeters: React.FC<RealTimeMetersProps> = ({
                 onChange={(e) => updateMeterSetting('lufsTarget', parseFloat(e.target.value))}
               className="w-full"
               />
-            <span className="text-xs text-white">{meterSettings.lufsTarget} dB</span>
+            <span className="text-xs text-white">{meterSettings.lufsTarget} LUFS</span>
             </div>
             <div>
             <label className="block text-xs text-gray-400 mb-1">Peak Target</label>
