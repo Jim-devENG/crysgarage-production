@@ -27,48 +27,22 @@ const FrequencySpectrum: React.FC<FrequencySpectrumProps> = ({
   const [peakValue, setPeakValue] = useState<number>(0);
 
   useEffect(() => {
-    if (!audioElement || !canvasRef.current) return;
+    if (!canvasRef.current) return;
 
-    // If we have a shared analyser node, use it
+    // Use only the provided shared analyserNode to avoid MediaElementSource conflicts
     if (analyserNode) {
       analyserRef.current = analyserNode;
-      return;
+    } else {
+      analyserRef.current = null;
     }
 
-    // Otherwise, create our own audio context and analyser
-    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-    const analyser = audioContext.createAnalyser();
-    
-    // Configure analyzer
-    analyser.fftSize = 256;
-    analyser.smoothingTimeConstant = 0.8;
-    
-    // Only create MediaElementSource if we don't have a shared analyser
-    try {
-      const source = audioContext.createMediaElementSource(audioElement);
-      source.connect(analyser);
-      analyser.connect(audioContext.destination);
-      sourceRef.current = source;
-    } catch (error) {
-      console.warn('Audio element already connected, using existing connection');
-      // If already connected, just connect analyzer to destination for visualization
-      analyser.connect(audioContext.destination);
-    }
-
-    // Store references
-    audioContextRef.current = audioContext;
-    analyserRef.current = analyser;
-
+    // Cleanup animation on dependency change
     return () => {
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current);
       }
-      // Only close context if we created it (not using shared analyser)
-      if (audioContextRef.current && !analyserNode) {
-        audioContextRef.current.close();
-      }
     };
-  }, [audioElement, analyserNode]);
+  }, [analyserNode]);
 
   useEffect(() => {
     if (!isPlaying || !analyserRef.current || !canvasRef.current) {
