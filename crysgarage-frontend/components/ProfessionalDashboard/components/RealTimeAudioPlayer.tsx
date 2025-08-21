@@ -118,13 +118,26 @@ const RealTimeAudioPlayer: React.FC<RealTimeAudioPlayerProps> = ({
     setTestMode(true);
   }, []);
 
-    // Initialize Web Audio API
+    // Initialize Web Audio API - COMPLETELY ISOLATED VERSION
   const initializeAudioContext = useCallback(async () => {
     if (!audioFile) return;
 
     try {
       setIsLoading(true);
       console.log('=== INITIALIZING AUDIO CONTEXT ===');
+
+      // COMPLETE CLEANUP: Remove ALL existing audio elements from DOM
+      const existingAudioElements = document.querySelectorAll('audio[id^="audio-"]');
+      existingAudioElements.forEach(element => {
+        try {
+          element.pause();
+          element.src = '';
+          element.remove();
+          console.log('🧹 Cleaned up existing audio element:', element.id);
+        } catch (error) {
+          console.log('Error cleaning up audio element:', error);
+        }
+      });
 
       // Create fresh audio context
       if (audioContextRef.current) {
@@ -144,17 +157,28 @@ const RealTimeAudioPlayer: React.FC<RealTimeAudioPlayerProps> = ({
         await audioContextRef.current.resume();
       }
 
-      // Create fresh audio element with unique ID to avoid conflicts
+      // Create COMPLETELY FRESH audio element with unique ID
       const audioUrl = URL.createObjectURL(audioFile);
       const newAudioElement = document.createElement('audio');
-      newAudioElement.id = `audio-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      const uniqueId = `audio-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      newAudioElement.id = uniqueId;
       newAudioElement.src = audioUrl;
       newAudioElement.preload = 'metadata';
       newAudioElement.style.display = 'none';
-      document.body.appendChild(newAudioElement);
+      newAudioElement.crossOrigin = 'anonymous';
+      
+      // Append to a dedicated container to avoid conflicts
+      let audioContainer = document.getElementById('audio-container');
+      if (!audioContainer) {
+        audioContainer = document.createElement('div');
+        audioContainer.id = 'audio-container';
+        audioContainer.style.display = 'none';
+        document.body.appendChild(audioContainer);
+      }
+      audioContainer.appendChild(newAudioElement);
       audioElementRef.current = newAudioElement;
       
-      console.log('✅ New audio element created with ID:', newAudioElement.id);
+      console.log('✅ New audio element created with ID:', uniqueId);
 
       // Wait for audio to be loaded
       await new Promise((resolve) => {
@@ -475,6 +499,19 @@ const RealTimeAudioPlayer: React.FC<RealTimeAudioPlayerProps> = ({
       setIsInitialized(false);
       setIsLoading(true);
       
+      // COMPLETE CLEANUP: Remove ALL existing audio elements from DOM
+      const existingAudioElements = document.querySelectorAll('audio[id^="audio-"]');
+      existingAudioElements.forEach(element => {
+        try {
+          element.pause();
+          element.src = '';
+          element.remove();
+          console.log('🧹 Cleaned up existing audio element:', element.id);
+        } catch (error) {
+          console.log('Error cleaning up audio element:', error);
+        }
+      });
+      
       // Clean up previous audio context
       if (audioContextRef.current) {
         try {
@@ -511,17 +548,17 @@ const RealTimeAudioPlayer: React.FC<RealTimeAudioPlayerProps> = ({
     }
     
     return () => {
-      if (audioElementRef.current) {
+      // Clean up on unmount
+      const existingAudioElements = document.querySelectorAll('audio[id^="audio-"]');
+      existingAudioElements.forEach(element => {
         try {
-          audioElementRef.current.pause();
-          audioElementRef.current.src = '';
-          if (audioElementRef.current.parentNode) {
-            audioElementRef.current.parentNode.removeChild(audioElementRef.current);
-          }
+          element.pause();
+          element.src = '';
+          element.remove();
         } catch (error) {
-          console.log('Error cleaning up audio element:', error);
+          console.log('Error cleaning up audio element on unmount:', error);
         }
-      }
+      });
     };
   }, [audioFile, initializeAudioContext]);
 

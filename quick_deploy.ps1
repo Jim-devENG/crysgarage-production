@@ -76,7 +76,7 @@ scp -i $SSH_KEY_PATH -o StrictHostKeyChecking=no "crysgarage-frontend/dist/index
 scp -i $SSH_KEY_PATH -o StrictHostKeyChecking=no -r "crysgarage-frontend/dist/assets" "${VPS_USER}@${VPS_HOST}:/tmp/frontend/"
 
 # Copy only small essential images, exclude large ones
-$smallImages = @("CRG_Logo_svg.svg")
+$smallImages = @("CRG_Logo_svg.svg", "crys-garage-icon.svg")
 foreach ($img in $smallImages) {
     if (Test-Path "crysgarage-frontend/dist/$img") {
         scp -i $SSH_KEY_PATH -o StrictHostKeyChecking=no "crysgarage-frontend/dist/$img" "${VPS_USER}@${VPS_HOST}:/tmp/frontend/"
