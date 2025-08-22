@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import FrequencyMeter from './meters/FrequencyMeter';
+import CompactFrequencyAnalyzer from './CompactFrequencyAnalyzer';
 import AutoAdjustmentPanel from './AutoAdjustmentPanel';
 
 interface MeterData {
@@ -71,12 +72,19 @@ const RealTimeMeters: React.FC<RealTimeMetersProps> = ({
         </button>
       </div>
 
-      {/* Frequency Spectrum */}
-      <FrequencyMeter
-        frequencyData={meterData.frequencyData}
-        title="Frequency Spectrum"
-        detailed={activeTab === 'detailed'}
-        compact={false}
+      {/* Professional Frequency Spectrum Analyzer */}
+      <CompactFrequencyAnalyzer 
+        meterData={{
+          lufs: meterData.lufs,
+          peak: meterData.peak,
+          rms: meterData.rms,
+          correlation: meterData.correlation,
+          leftLevel: meterData.leftLevel,
+          rightLevel: meterData.rightLevel,
+          frequencyData: meterData.frequencyData,
+          goniometerData: []
+        }}
+        isAnalyzing={false}
       />
 
       {/* Auto-Adjustment Panel */}

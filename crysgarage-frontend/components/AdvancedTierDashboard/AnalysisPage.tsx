@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ArrowLeft, Play, Pause, Volume2, BarChart3, TrendingUp, CheckCircle, Zap, Loader2 } from 'lucide-react';
 import AudioAnalyzer, { AudioAnalysisResult, ProfessionalLoudnessAnalysis } from './AudioAnalyzer';
-import ProfessionalAnalysisMeter from './ProfessionalAnalysisMeter';
 
 interface AnalysisPageProps {
   originalFile: File | null;
@@ -894,26 +893,7 @@ const AnalysisPage: React.FC<AnalysisPageProps> = ({
             </div>
           )}
 
-          {/* Professional Analysis Meter */}
-          <div className="mb-6">
-            <h4 className="text-sm font-semibold text-white mb-4 flex items-center">
-              <BarChart3 className="w-4 h-4 mr-2" />
-              Professional Analysis Meter
-            </h4>
-            <ProfessionalAnalysisMeter 
-              meterData={meterData || {
-                lufs: -32.0,
-                peak: -17.6,
-                rms: -27.5,
-                correlation: 0.85,
-                leftLevel: 0.5,
-                rightLevel: 0.5,
-                frequencyData: new Array(256).fill(0),
-                goniometerData: []
-              }}
-              isAnalyzing={isAnalyzing}
-            />
-          </div>
+
 
           {/* Effects Applied */}
           <div className="bg-purple-900 bg-opacity-20 rounded-lg p-4 border border-purple-500 border-opacity-30">
