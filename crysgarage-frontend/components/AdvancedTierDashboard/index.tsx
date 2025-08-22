@@ -15,6 +15,7 @@ import FileUpload from './FileUpload';
 import RealTimeMeters from './RealTimeMeters';
 import AudioEffects from './AudioEffects';
 import ExportGate from './ExportGate/index';
+import AnalysisPage from './AnalysisPage';
 import RealTimeMasteringPlayer, { RealTimeMasteringPlayerRef } from './RealTimeMasteringPlayer';
 import StudioDashboard from './StudioDashboard';
 import GenrePresets from './GenrePresets';
@@ -65,7 +66,19 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
   // Audio effects state - structured for real-time processing
   const [audioEffects, setAudioEffects] = useState({
     // Free effects - enabled by default
-    eq: { low: 0, mid: 0, high: 0, enabled: true },
+    eq: { 
+      bands: [
+        { frequency: 60, gain: 0, q: 1, type: 'lowshelf' as const },
+        { frequency: 150, gain: 0, q: 1, type: 'peaking' as const },
+        { frequency: 400, gain: 0, q: 1, type: 'peaking' as const },
+        { frequency: 1000, gain: 0, q: 1, type: 'peaking' as const },
+        { frequency: 2500, gain: 0, q: 1, type: 'peaking' as const },
+        { frequency: 6000, gain: 0, q: 1, type: 'peaking' as const },
+        { frequency: 10000, gain: 0, q: 1, type: 'peaking' as const },
+        { frequency: 16000, gain: 0, q: 1, type: 'highshelf' as const }
+      ], 
+      enabled: true 
+    },
     compressor: { threshold: -20, ratio: 4, attack: 10, release: 100, enabled: true },
     stereoWidener: { width: 0, enabled: true },
     loudness: { volume: 1, enabled: true },
@@ -120,6 +133,23 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
   const [lockedGenrePreset, setLockedGenrePreset] = useState<any>(null);
   const [lockedEffectValues, setLockedEffectValues] = useState<Record<string, any>>({});
 
+  // Meter settings and auto-adjustment
+  const [meterSettings, setMeterSettings] = useState({
+    lufsTarget: -14,
+    peakTarget: -1,
+    rmsTarget: -12,
+    correlationTarget: 0.8
+  });
+
+  const [autoAdjust, setAutoAdjust] = useState({
+    lufs: false,
+    peak: false,
+    rms: false,
+    correlation: false
+  });
+
+
+
   // Refs for real-time analysis
   const realTimeMasteringPlayerRef = useRef<RealTimeMasteringPlayerRef>(null);
 
@@ -164,6 +194,53 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
     }
   };
 
+  // Handle meter data updates
+  const handleMeterUpdate = (newMeterData: MeterData) => {
+    setMeterData(newMeterData);
+  };
+
+  // Handle effect changes and track manual adjustments
+  const handleEffectChange = (effects: any) => {
+    // Track manual adjustments when effects are changed
+    if (selectedGenre) {
+      const newManualAdjustments = new Set(manualAdjustments);
+      
+      // Check if effects have been manually adjusted from the genre preset
+      if (lockedEffectValues.eq && (
+        effects.eq.low !== lockedEffectValues.eq.low ||
+        effects.eq.mid !== lockedEffectValues.eq.mid ||
+        effects.eq.high !== lockedEffectValues.eq.high
+      )) {
+        newManualAdjustments.add('eq');
+      }
+      
+      if (lockedEffectValues.compressor && (
+        effects.compressor.threshold !== lockedEffectValues.compressor.threshold ||
+        effects.compressor.ratio !== lockedEffectValues.compressor.ratio ||
+        effects.compressor.attack !== lockedEffectValues.compressor.attack ||
+        effects.compressor.release !== lockedEffectValues.compressor.release
+      )) {
+        newManualAdjustments.add('compressor');
+      }
+      
+      if (lockedEffectValues.loudness && (
+        effects.loudness.volume !== lockedEffectValues.loudness.volume
+      )) {
+        newManualAdjustments.add('loudness');
+      }
+      
+      if (lockedEffectValues.limiter && (
+        effects.limiter.ceiling !== lockedEffectValues.limiter.ceiling
+      )) {
+        newManualAdjustments.add('limiter');
+      }
+      
+      setManualAdjustments(newManualAdjustments);
+    }
+    
+    setAudioEffects(effects);
+  };
+
   // Continue to mastering
   const handleContinueToMastering = () => {
     if (selectedFile) {
@@ -171,20 +248,77 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
     }
   };
 
+  // Continue to analysis
+  const handleContinueToAnalysis = async () => {
+    if (selectedFile) {
+      setIsProcessing(true);
+      try {
+        // Add a timeout to prevent hanging
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('Timeout')), 3000); // 3 second timeout
+        });
+
+        let processedUrl: string | null = null;
+
+        // Try to get processed audio if mastering player is available
+        if (realTimeMasteringPlayerRef.current) {
+          try {
+            processedUrl = await Promise.race([
+              realTimeMasteringPlayerRef.current.getProcessedAudioUrl(),
+              timeoutPromise
+            ]) as string | null;
+          } catch (error) {
+            console.error('Error getting processed audio:', error);
+          }
+        }
+
+        // Use processed URL if available, otherwise fallback to original
+        if (processedUrl) {
+          setProcessedAudioUrl(processedUrl);
+        } else {
+          // Fallback to original file
+          const fallbackUrl = URL.createObjectURL(selectedFile);
+          setProcessedAudioUrl(fallbackUrl);
+        }
+        
+        setCurrentStep(3);
+      } catch (error) {
+        console.error('Error in analysis transition:', error);
+        // Final fallback
+        const fallbackUrl = URL.createObjectURL(selectedFile);
+        setProcessedAudioUrl(fallbackUrl);
+        setCurrentStep(3);
+      } finally {
+        setIsProcessing(false);
+      }
+    }
+  };
+
   // Continue to export
   const handleContinueToExport = () => {
-    // Generate a processed audio URL (simulate mastered audio)
-    if (selectedFile) {
-      // For now, we'll use the original file as the "processed" audio
-      // In a real implementation, this would be the actual processed audio
-      const processedUrl = URL.createObjectURL(selectedFile);
-      setProcessedAudioUrl(processedUrl);
-      setCurrentStep(3);
-    }
+    setCurrentStep(4);
   };
 
   // Effect update handlers
   const handleUpdateEffectSettings = (effectType: string, settings: any) => {
+    // Handle meter settings updates
+    if (effectType === 'meterSettings') {
+      setMeterSettings(prev => ({
+        ...prev,
+        ...settings
+      }));
+      return;
+    }
+
+    // Handle auto-adjustment updates
+    if (effectType === 'autoAdjust') {
+      setAutoAdjust(prev => ({
+        ...prev,
+        ...settings
+      }));
+      return;
+    }
+
     // Track that this effect has been manually adjusted
     setManualAdjustments(prev => new Set(prev).add(effectType));
     
@@ -290,7 +424,7 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
     });
   };
 
-  // Genre selection - preserve existing settings
+  // Genre selection - always apply genre preset and allow manual adjustments
   const handleGenreSelect = (genreId: string) => {
     setSelectedGenre(genreId);
     const preset = GENRE_PRESETS[genreId];
@@ -301,9 +435,16 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
       // Store the locked effect values for this genre
       const lockedValues = {
         eq: {
-          low: multiplierToDb(preset.eq.low),
-          mid: multiplierToDb(preset.eq.mid),
-          high: multiplierToDb(preset.eq.high)
+          bands: [
+            { frequency: 60, gain: multiplierToDb(preset.eq.low), q: 1, type: 'lowshelf' as const },
+            { frequency: 150, gain: multiplierToDb(preset.eq.mid), q: 1, type: 'peaking' as const },
+            { frequency: 400, gain: multiplierToDb(preset.eq.mid), q: 1, type: 'peaking' as const },
+            { frequency: 1000, gain: multiplierToDb(preset.eq.mid), q: 1, type: 'peaking' as const },
+            { frequency: 2500, gain: multiplierToDb(preset.eq.mid), q: 1, type: 'peaking' as const },
+            { frequency: 6000, gain: multiplierToDb(preset.eq.mid), q: 1, type: 'peaking' as const },
+            { frequency: 10000, gain: multiplierToDb(preset.eq.high), q: 1, type: 'peaking' as const },
+            { frequency: 16000, gain: multiplierToDb(preset.eq.high), q: 1, type: 'highshelf' as const }
+          ]
         },
         compressor: {
           threshold: preset.compression.threshold,
@@ -337,55 +478,47 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
         };
         setEffectStateBackup(backup);
         
-        // Check if effects have been manually adjusted using our tracking system
-        const hasManualAdjustments = 
-          manualAdjustments.has('eq') || 
-          manualAdjustments.has('compressor') || 
-          manualAdjustments.has('loudness') || 
-          manualAdjustments.has('limiter');
-        
-        if (!hasManualAdjustments) {
-          // Apply genre preset only if no manual adjustments have been made
-          return {
-            ...prev,
-            eq: { 
-              ...prev.eq, 
-              low: multiplierToDb(preset.eq.low), 
-              mid: multiplierToDb(preset.eq.mid), 
-              high: multiplierToDb(preset.eq.high), 
-              enabled: true 
-            },
-            compressor: { 
-              ...prev.compressor, 
-              threshold: preset.compression.threshold, 
-              ratio: preset.compression.ratio, 
-              attack: Math.round(preset.compression.attack * 1000), 
-              release: Math.round(preset.compression.release * 1000), 
-              enabled: true 
-            },
-            loudness: { 
-              ...prev.loudness, 
-              volume: preset.gain, 
-              enabled: true 
-            },
-            limiter: { 
-              ...prev.limiter, 
-              threshold: -1, 
-              ceiling: preset.truePeak, 
-              enabled: true 
-            }
-          };
-        } else {
-          // Keep existing settings, just enable effects if they're not already enabled
-          return {
-            ...prev,
-            eq: { ...prev.eq, enabled: true },
-            compressor: { ...prev.compressor, enabled: true },
-            loudness: { ...prev.loudness, enabled: true },
-            limiter: { ...prev.limiter, enabled: true }
-          };
-        }
+        // Always apply genre preset when a genre is selected
+        return {
+          ...prev,
+          eq: { 
+            ...prev.eq, 
+            bands: [
+              { frequency: 60, gain: multiplierToDb(preset.eq.low), q: 1, type: 'lowshelf' as const },
+              { frequency: 150, gain: multiplierToDb(preset.eq.mid), q: 1, type: 'peaking' as const },
+              { frequency: 400, gain: multiplierToDb(preset.eq.mid), q: 1, type: 'peaking' as const },
+              { frequency: 1000, gain: multiplierToDb(preset.eq.mid), q: 1, type: 'peaking' as const },
+              { frequency: 2500, gain: multiplierToDb(preset.eq.mid), q: 1, type: 'peaking' as const },
+              { frequency: 6000, gain: multiplierToDb(preset.eq.mid), q: 1, type: 'peaking' as const },
+              { frequency: 10000, gain: multiplierToDb(preset.eq.high), q: 1, type: 'peaking' as const },
+              { frequency: 16000, gain: multiplierToDb(preset.eq.high), q: 1, type: 'highshelf' as const }
+            ],
+            enabled: true 
+          },
+          compressor: { 
+            ...prev.compressor, 
+            threshold: preset.compression.threshold, 
+            ratio: preset.compression.ratio, 
+            attack: Math.round(preset.compression.attack * 1000), 
+            release: Math.round(preset.compression.release * 1000), 
+            enabled: true 
+          },
+          loudness: { 
+            ...prev.loudness, 
+            volume: preset.gain, 
+            enabled: true 
+          },
+          limiter: { 
+            ...prev.limiter, 
+            threshold: -1, 
+            ceiling: preset.truePeak, 
+            enabled: true 
+          }
+        };
       });
+      
+      // Clear manual adjustments tracking since we're applying a new genre preset
+      setManualAdjustments(new Set());
       
       // Ensure audio is initialized for immediate preview
       setTimeout(() => manualInit(), 0);
@@ -441,8 +574,21 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
       frequencyData: new Array(256).fill(0),
       goniometerData: new Array(256).fill(0)
     });
+
     setAudioEffects({
-      eq: { low: 0, mid: 0, high: 0, enabled: true },
+      eq: { 
+        bands: [
+          { frequency: 60, gain: 0, q: 1, type: 'lowshelf' as const },
+          { frequency: 150, gain: 0, q: 1, type: 'peaking' as const },
+          { frequency: 400, gain: 0, q: 1, type: 'peaking' as const },
+          { frequency: 1000, gain: 0, q: 1, type: 'peaking' as const },
+          { frequency: 2500, gain: 0, q: 1, type: 'peaking' as const },
+          { frequency: 6000, gain: 0, q: 1, type: 'peaking' as const },
+          { frequency: 10000, gain: 0, q: 1, type: 'peaking' as const },
+          { frequency: 16000, gain: 0, q: 1, type: 'highshelf' as const }
+        ], 
+        enabled: true 
+      },
       compressor: { threshold: -20, ratio: 4, attack: 10, release: 100, enabled: true },
       stereoWidener: { width: 0, enabled: true },
       loudness: { volume: 1, enabled: true },
@@ -471,6 +617,19 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
       },
       gSurround: { width: 0, depth: 0, enabled: false },
       gTuner: { enabled: false, frequency: 450 }
+    });
+    // Reset meter settings and auto-adjustment
+    setMeterSettings({
+      lufsTarget: -14,
+      peakTarget: -1,
+      rmsTarget: -12,
+      correlationTarget: 0.8
+    });
+    setAutoAdjust({
+      lufs: false,
+      peak: false,
+      rms: false,
+      correlation: false
     });
     // Reset manual adjustments tracking
     setManualAdjustments(new Set());
@@ -521,8 +680,8 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
                   audioFile={selectedFile}
                   audioEffects={audioEffects}
                   meterData={meterData}
-                  onMeterUpdate={setMeterData}
-                  onEffectChange={(effects) => setAudioEffects(effects as any)}
+                  onMeterUpdate={handleMeterUpdate}
+                  onEffectChange={handleEffectChange}
                   isProcessing={isProcessing}
                 />
                 
@@ -548,15 +707,18 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
                 )}
               </div>
 
-              {/* Right Column - Real-time Meters */}
-              <div className="lg:col-span-1">
-                <RealTimeMeters 
-                  meterData={meterData} 
-                  audioEffects={audioEffects}
-                  onUpdateEffectSettings={handleUpdateEffectSettings}
-                  onManualInit={manualInit}
-                />
-              </div>
+                             {/* Right Column - Meters Only */}
+               <div className="lg:col-span-1">
+                 {/* Real-time Meters */}
+                 <RealTimeMeters 
+                   meterData={meterData} 
+                   meterSettings={meterSettings}
+                   autoAdjust={autoAdjust}
+                   audioEffects={audioEffects}
+                   onUpdateEffectSettings={handleUpdateEffectSettings}
+                   onManualInit={manualInit}
+                 />
+               </div>
             </div>
 
             {/* Studio Dashboard - Full width below */}
@@ -570,31 +732,58 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
                 onGenreSelect={handleGenreSelect}
                 meterData={meterData}
                 onManualInit={manualInit}
+                manualAdjustments={manualAdjustments}
+                lockedEffectValues={lockedEffectValues}
               />
             </div>
 
-            {/* Continue to Export Button */}
-            <div className="text-center">
-              <button
-                onClick={handleContinueToExport}
-                className="bg-amber-500 text-black px-6 py-2 rounded-lg font-semibold hover:bg-amber-600 transition-colors"
-              >
-                Continue to Export Gate
-              </button>
-            </div>
+                         {/* Continue to Analysis Button */}
+             <div className="text-center">
+               <button
+                 onClick={handleContinueToAnalysis}
+                 disabled={isProcessing}
+                 className={`px-6 py-2 rounded-lg font-semibold transition-colors ${
+                   isProcessing 
+                     ? 'bg-gray-600 text-gray-400 cursor-not-allowed' 
+                     : 'bg-amber-500 text-black hover:bg-amber-600'
+                 }`}
+               >
+                 {isProcessing ? (
+                   <div className="flex items-center space-x-2">
+                     <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+                     <span>Processing Audio...</span>
+                   </div>
+                 ) : (
+                   'Continue to Analysis'
+                 )}
+               </button>
+             </div>
           </div>
         );
       
-      case 3:
-        return (
-          <ExportGate
-            originalFile={selectedFile}
-            processedAudioUrl={processedAudioUrl}
-            audioEffects={audioEffects}
-            onBack={() => setCurrentStep(2)}
-            onUpdateEffectSettings={handleUpdateEffectSettings}
-          />
-        );
+             case 3:
+         return (
+           <AnalysisPage
+             originalFile={selectedFile}
+             processedAudioUrl={processedAudioUrl}
+             audioEffects={audioEffects}
+             meterData={meterData}
+             onBack={() => setCurrentStep(2)}
+             onContinue={handleContinueToExport}
+           />
+         );
+       
+       case 4:
+         return (
+           <ExportGate
+             originalFile={selectedFile}
+             processedAudioUrl={processedAudioUrl}
+             audioEffects={audioEffects}
+             onBack={() => setCurrentStep(3)}
+             onUpdateEffectSettings={handleUpdateEffectSettings}
+             meterData={meterData}
+           />
+         );
       
       default:
         return null;

@@ -50,7 +50,7 @@ const HardwareKnob: React.FC<HardwareKnobProps> = ({
 
   // Update edit value when prop value changes
   useEffect(() => {
-    setEditValue(value.toString());
+    setEditValue(Number(value.toFixed(1)).toString());
   }, [value]);
 
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -81,11 +81,12 @@ const HardwareKnob: React.FC<HardwareKnobProps> = ({
     const normalizedValue = (normalizedAngle + 135) / 270; // 0 to 1
     const newValue = min + (max - min) * Math.max(0, Math.min(1, normalizedValue));
     
-    // Apply step
+    // Apply step and round to prevent floating point errors
     const steppedValue = Math.round(newValue / step) * step;
     const clampedValue = Math.max(min, Math.min(max, steppedValue));
+    const roundedValue = Number(clampedValue.toFixed(1));
     
-    onChange(clampedValue);
+    onChange(roundedValue);
   };
 
   const handleMouseUp = () => {
@@ -107,9 +108,10 @@ const HardwareKnob: React.FC<HardwareKnobProps> = ({
     const numValue = parseFloat(editValue);
     if (!isNaN(numValue) && numValue >= min && numValue <= max) {
       const steppedValue = Math.round(numValue / step) * step;
-      onChange(steppedValue);
+      const roundedValue = Number(steppedValue.toFixed(1));
+      onChange(roundedValue);
     } else {
-      setEditValue(value.toString());
+      setEditValue(Number(value.toFixed(1)).toString());
     }
     onEditingChange?.(false);
   };
@@ -118,7 +120,7 @@ const HardwareKnob: React.FC<HardwareKnobProps> = ({
     if (e.key === 'Enter') {
       handleEditSubmit();
     } else if (e.key === 'Escape') {
-      setEditValue(value.toString());
+      setEditValue(Number(value.toFixed(1)).toString());
       onEditingChange?.(false);
     }
   };
@@ -191,7 +193,7 @@ const HardwareKnob: React.FC<HardwareKnobProps> = ({
             className="text-xs font-bold text-white cursor-pointer hover:text-crys-gold transition-colors"
             onDoubleClick={() => onEditingChange?.(true)}
           >
-            {value}{unit}
+            {Number(value.toFixed(1))}{unit}
           </div>
         )}
       </div>
