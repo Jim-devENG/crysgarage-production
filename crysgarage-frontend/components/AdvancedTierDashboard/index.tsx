@@ -81,7 +81,7 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
     },
     compressor: { threshold: -20, ratio: 4, attack: 10, release: 100, enabled: true },
     stereoWidener: { width: 0, enabled: true },
-    loudness: { volume: 1, enabled: true },
+          loudness: { gain: 0, enabled: true },
     limiter: { threshold: -1, ceiling: -0.1, enabled: true },
     
     // Premium effects (optional)
@@ -229,7 +229,7 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
       }
       
       if (lockedEffectValues.loudness && (
-        effects.loudness.volume !== lockedEffectValues.loudness.volume
+        effects.loudness.gain !== lockedEffectValues.loudness.gain
       )) {
         newManualAdjustments.add('loudness');
       }
@@ -477,7 +477,7 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
           release: Math.round(preset.compression.release * 1000)
         },
         loudness: {
-          volume: preset.gain
+          gain: multiplierToDb(preset.gain)
         },
                   limiter: {
             threshold: -1,
@@ -534,11 +534,11 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
             release: Math.round(preset.compression.release * 1000), 
             enabled: true 
           },
-          loudness: { 
-            ...prev.loudness, 
-            volume: preset.gain, 
-            enabled: true 
-          },
+                  loudness: {
+          ...prev.loudness,
+          gain: multiplierToDb(preset.gain),
+          enabled: true
+        },
           limiter: { 
             ...prev.limiter, 
             threshold: -1, 
@@ -633,7 +633,7 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
       },
       compressor: { threshold: -20, ratio: 4, attack: 10, release: 100, enabled: true },
       stereoWidener: { width: 0, enabled: true },
-      loudness: { volume: 1, enabled: true },
+      loudness: { gain: 0, enabled: true },
       limiter: { threshold: -1, ceiling: -0.1, enabled: true },
       gMasteringCompressor: { threshold: -20, ratio: 4, attack: 10, release: 100, makeup: 0, reduction: 0, outputLevel: -20, enabled: false },
       gPrecisionEQ: { 

@@ -527,8 +527,8 @@ const BasicEffects: React.FC<BasicEffectsProps> = ({
               <div className="text-center">
                 <HardwareKnob
                   value={audioEffects.loudness.gain || 0}
-                  min={-20}
-                  max={20}
+                  min={-12}
+                  max={12}
                   step={0.1}
                   label="GAIN"
                   unit="dB"

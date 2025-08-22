@@ -23,7 +23,7 @@ interface AudioEffects {
     enabled: boolean;
   };
   loudness: {
-    volume: number;
+    gain: number;
     enabled: boolean;
   };
   limiter: {
@@ -436,12 +436,13 @@ const RealTimeMasteringPlayer = forwardRef<RealTimeMasteringPlayerRef, RealTimeM
 
     // Update volume - Loudness effect should be independent of player volume
     if (gainNodeRef.current && audioEffects.loudness?.enabled) {
-      // Apply loudness effect directly - this is the mastering volume control
-      const loudnessGain = audioEffects.loudness.volume;
+      // Convert dB to gain: gain = 10^(dB/20)
+      const loudnessDb = audioEffects.loudness.gain || 0;
+      const loudnessGain = Math.pow(10, loudnessDb / 20);
       // Only apply player volume if not muted, but loudness should be the primary control
       const finalGain = isMuted ? 0 : (loudnessGain * volume);
       gainNodeRef.current.gain.value = finalGain;
-      console.log(`🎚️ Loudness effect updated: ${loudnessGain} (final gain: ${finalGain})`);
+      console.log(`🎚️ Loudness effect updated: ${loudnessDb}dB (gain: ${loudnessGain.toFixed(3)}, final gain: ${finalGain.toFixed(3)})`);
     } else if (gainNodeRef.current) {
       // If loudness is disabled, just use player volume
       gainNodeRef.current.gain.value = isMuted ? 0 : volume;
@@ -578,7 +579,7 @@ const RealTimeMasteringPlayer = forwardRef<RealTimeMasteringPlayerRef, RealTimeM
       
       if (effectsActive) {
         // Boost LUFS by 8-15 dB depending on effects
-        const boost = Math.min(15, 8 + (audioEffects?.loudness?.volume || 0) * 0.7);
+        const boost = Math.min(15, 8 + (audioEffects?.loudness?.gain || 0) * 0.7);
         lufs += boost;
       }
       
