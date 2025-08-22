@@ -155,7 +155,7 @@ const ExportGate: React.FC<ExportGateProps> = ({
         source.buffer = audioBuffer;
 
         // Apply audio effects chain
-        let currentNode = source;
+        let currentNode: AudioNode = source;
 
         // EQ
         if (effects.eq?.enabled) {
