@@ -206,10 +206,15 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
       const newManualAdjustments = new Set(manualAdjustments);
       
       // Check if effects have been manually adjusted from the genre preset
-      if (lockedEffectValues.eq && (
-        effects.eq.low !== lockedEffectValues.eq.low ||
-        effects.eq.mid !== lockedEffectValues.eq.mid ||
-        effects.eq.high !== lockedEffectValues.eq.high
+      if (lockedEffectValues.eq && effects.eq.bands && (
+        effects.eq.bands[0]?.gain !== lockedEffectValues.eq.bands?.[0]?.gain ||
+        effects.eq.bands[1]?.gain !== lockedEffectValues.eq.bands?.[1]?.gain ||
+        effects.eq.bands[2]?.gain !== lockedEffectValues.eq.bands?.[2]?.gain ||
+        effects.eq.bands[3]?.gain !== lockedEffectValues.eq.bands?.[3]?.gain ||
+        effects.eq.bands[4]?.gain !== lockedEffectValues.eq.bands?.[4]?.gain ||
+        effects.eq.bands[5]?.gain !== lockedEffectValues.eq.bands?.[5]?.gain ||
+        effects.eq.bands[6]?.gain !== lockedEffectValues.eq.bands?.[6]?.gain ||
+        effects.eq.bands[7]?.gain !== lockedEffectValues.eq.bands?.[7]?.gain
       )) {
         newManualAdjustments.add('eq');
       }
@@ -335,10 +340,16 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
     // Track that this effect has been manually adjusted
     setManualAdjustments(prev => new Set(prev).add(effectType));
     
-    setAudioEffects(prev => ({
-      ...prev,
-      [effectType]: { ...prev[effectType as keyof typeof prev], ...settings }
-    }));
+    console.log(`🎛️ Updating effect: ${effectType}`, settings);
+    
+    setAudioEffects(prev => {
+      const updatedEffects = {
+        ...prev,
+        [effectType]: { ...prev[effectType as keyof typeof prev], ...settings }
+      };
+      console.log(`🎛️ New audio effects state:`, updatedEffects[effectType]);
+      return updatedEffects;
+    });
   };
 
   const handleToggleEffect = (effectType: string, enabled: boolean) => {

@@ -418,6 +418,7 @@ const RealTimeMasteringPlayer = forwardRef<RealTimeMasteringPlayerRef, RealTimeM
       compressorRef.current.ratio.value = audioEffects.compressor.ratio;
       compressorRef.current.attack.value = audioEffects.compressor.attack / 1000;
       compressorRef.current.release.value = audioEffects.compressor.release / 1000;
+      console.log(`🎛️ Compressor updated: threshold=${audioEffects.compressor.threshold}, ratio=${audioEffects.compressor.ratio}`);
     }
 
     // Update stereo widener
@@ -430,11 +431,20 @@ const RealTimeMasteringPlayer = forwardRef<RealTimeMasteringPlayerRef, RealTimeM
     if (limiterRef.current && audioEffects.limiter?.enabled) {
       limiterRef.current.threshold.value = audioEffects.limiter.threshold;
       limiterRef.current.ratio.value = 20;
+      console.log(`🎛️ Limiter updated: threshold=${audioEffects.limiter.threshold}, ceiling=${audioEffects.limiter.ceiling}`);
     }
 
-    // Update volume
+    // Update volume - Loudness effect should be independent of player volume
     if (gainNodeRef.current && audioEffects.loudness?.enabled) {
-      gainNodeRef.current.gain.value = audioEffects.loudness.volume * (isMuted ? 0 : volume);
+      // Apply loudness effect directly - this is the mastering volume control
+      const loudnessGain = audioEffects.loudness.volume;
+      // Only apply player volume if not muted, but loudness should be the primary control
+      const finalGain = isMuted ? 0 : (loudnessGain * volume);
+      gainNodeRef.current.gain.value = finalGain;
+      console.log(`🎚️ Loudness effect updated: ${loudnessGain} (final gain: ${finalGain})`);
+    } else if (gainNodeRef.current) {
+      // If loudness is disabled, just use player volume
+      gainNodeRef.current.gain.value = isMuted ? 0 : volume;
     }
 
     // Update premium effects
@@ -640,6 +650,7 @@ const RealTimeMasteringPlayer = forwardRef<RealTimeMasteringPlayerRef, RealTimeM
   // Update effect parameters when audio effects change
   useEffect(() => {
     if (audioContextRef.current && eqNodesRef.current) {
+      console.log(`🎛️ Audio effects changed:`, audioEffects);
       updateEffectParameters();
       connectProcessingChain();
     }
