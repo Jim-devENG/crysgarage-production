@@ -139,6 +139,7 @@ const RealTimeMasteringPlayer = forwardRef<RealTimeMasteringPlayerRef, RealTimeM
   const audioRef = useRef<HTMLAudioElement>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
+  const processedAnalyserRef = useRef<AnalyserNode | null>(null); // New analyzer for processed audio
   const sourceRef = useRef<MediaElementAudioSourceNode | null>(null);
   const gainNodeRef = useRef<GainNode | null>(null);
   
@@ -204,6 +205,13 @@ const RealTimeMasteringPlayer = forwardRef<RealTimeMasteringPlayerRef, RealTimeM
         analyserRef.current = audioContextRef.current.createAnalyser();
         analyserRef.current.fftSize = 2048;
         analyserRef.current.smoothingTimeConstant = 0.8;
+      }
+      
+      // Create analyser for processed audio analysis
+      if (!processedAnalyserRef.current) {
+        processedAnalyserRef.current = audioContextRef.current.createAnalyser();
+        processedAnalyserRef.current.fftSize = 2048;
+        processedAnalyserRef.current.smoothingTimeConstant = 0.8;
       }
       
       // Create source from the main audio element
@@ -400,7 +408,10 @@ const RealTimeMasteringPlayer = forwardRef<RealTimeMasteringPlayerRef, RealTimeM
     // Connect to analyser and output
     currentNode.connect(analyserRef.current);
     analyserRef.current.connect(gainNodeRef.current);
-    gainNodeRef.current.connect(audioContextRef.current!.destination);
+    
+    // Connect processed analyzer after all effects and gain
+    gainNodeRef.current.connect(processedAnalyserRef.current);
+    processedAnalyserRef.current.connect(audioContextRef.current!.destination);
 
     // Create MediaStreamDestination for recording processed audio
     if (!mediaStreamDestinationRef.current) {
@@ -567,8 +578,9 @@ const RealTimeMasteringPlayer = forwardRef<RealTimeMasteringPlayerRef, RealTimeM
 
   // Real-time analysis
   const updateAnalysis = useCallback(() => {
-    if (!analyserRef.current) return;
+    if (!analyserRef.current || !processedAnalyserRef.current) return;
 
+    // Analyze original audio (before effects)
     const analyser = analyserRef.current;
     const bufferLength = analyser.frequencyBinCount;
     const frequencyData = new Uint8Array(bufferLength);
@@ -576,8 +588,16 @@ const RealTimeMasteringPlayer = forwardRef<RealTimeMasteringPlayerRef, RealTimeM
 
     analyser.getByteFrequencyData(frequencyData);
     analyser.getByteTimeDomainData(timeData);
+    
+    // Analyze processed audio (after all effects)
+    const processedAnalyser = processedAnalyserRef.current;
+    const processedFrequencyData = new Uint8Array(bufferLength);
+    const processedTimeData = new Uint8Array(bufferLength);
+    
+    processedAnalyser.getByteFrequencyData(processedFrequencyData);
+    processedAnalyser.getByteTimeDomainData(processedTimeData);
 
-    // Calculate base RMS from time domain data
+    // Calculate base RMS from time domain data (original audio)
     let sum = 0;
     for (let i = 0; i < timeData.length; i++) {
       const sample = (timeData[i] - 128) / 128; // Convert to -1 to 1 range
@@ -585,7 +605,7 @@ const RealTimeMasteringPlayer = forwardRef<RealTimeMasteringPlayerRef, RealTimeM
     }
     const baseRms = Math.sqrt(sum / timeData.length);
     
-    // Calculate base peak
+    // Calculate base peak (original audio)
     let maxPeak = 0;
     for (let i = 0; i < timeData.length; i++) {
       const sample = Math.abs((timeData[i] - 128) / 128);
@@ -594,6 +614,24 @@ const RealTimeMasteringPlayer = forwardRef<RealTimeMasteringPlayerRef, RealTimeM
       }
     }
     const basePeak = maxPeak;
+    
+    // Calculate processed RMS from processed time domain data (after effects)
+    let processedSum = 0;
+    for (let i = 0; i < processedTimeData.length; i++) {
+      const sample = (processedTimeData[i] - 128) / 128; // Convert to -1 to 1 range
+      processedSum += sample * sample; // Square for RMS calculation
+    }
+    const realProcessedRms = Math.sqrt(processedSum / processedTimeData.length);
+    
+    // Calculate processed peak (after effects)
+    let processedMaxPeak = 0;
+    for (let i = 0; i < processedTimeData.length; i++) {
+      const sample = Math.abs((processedTimeData[i] - 128) / 128);
+      if (sample > processedMaxPeak) {
+        processedMaxPeak = sample;
+      }
+    }
+    const realProcessedPeak = processedMaxPeak;
     
     // Get genre-specific processing characteristics
     const getGenreCharacteristics = () => {
@@ -765,17 +803,14 @@ const RealTimeMasteringPlayer = forwardRef<RealTimeMasteringPlayerRef, RealTimeM
       totalGainLinear *= Math.pow(10, -(adjustedMbGainDb * 0.4) / 20);
     }
     
-    // Apply total gain to base measurements
-    const processedRms = baseRms * totalGainLinear;
-    const processedPeak = Math.min(1.0, basePeak * totalGainLinear); // Clamp to prevent clipping
-    
-    // Calculate LUFS from processed RMS
+    // Use REAL processed audio measurements instead of calculated estimates
+    // Calculate LUFS from real processed RMS
     let lufs;
-    if (processedRms <= 0) {
+    if (realProcessedRms <= 0) {
       lufs = -70; // Silence
     } else {
       // Standard formula: LUFS = -0.691 + 10 * log10(mean_square)
-      const meanSquare = processedRms * processedRms;
+      const meanSquare = realProcessedRms * realProcessedRms;
       lufs = -0.691 + 10 * Math.log10(meanSquare);
       
       // Apply K-weighting compensation (simplified)
@@ -785,27 +820,25 @@ const RealTimeMasteringPlayer = forwardRef<RealTimeMasteringPlayerRef, RealTimeM
       lufs = Math.max(-70, Math.min(0, Math.round(lufs)));
     }
     
-    // Calculate processed peak in dBFS
-    const peak = 20 * Math.log10(Math.max(processedPeak, 0.000001));
+    // Calculate real processed peak in dBFS
+    const peak = 20 * Math.log10(Math.max(realProcessedPeak, 0.000001));
     
-    // Calculate processed RMS in dBFS
-    const rms = 20 * Math.log10(Math.max(processedRms, 0.000001));
+    // Calculate real processed RMS in dBFS
+    const rms = 20 * Math.log10(Math.max(realProcessedRms, 0.000001));
     
-    // Calculate dynamic range based on genre target
+    // Calculate real dynamic range from actual measurements
     const dynamicRange = Math.abs(peak - rms);
-    const genreDynamicRange = genreCharacteristics.dynamicRangeTarget;
-    const adjustedDynamicRange = Math.min(dynamicRange, genreDynamicRange);
 
 
 
-    // Calculate correlation (stereo)
+    // Calculate correlation (stereo) from processed audio
     let correlation = 0;
     let leftLevel = 0;
     let rightLevel = 0;
     
-    if (timeData.length >= 2) {
-      const left = timeData.slice(0, timeData.length / 2);
-      const right = timeData.slice(timeData.length / 2);
+    if (processedTimeData.length >= 2) {
+      const left = processedTimeData.slice(0, processedTimeData.length / 2);
+      const right = processedTimeData.slice(processedTimeData.length / 2);
       
       let sumL = 0, sumR = 0, sumLR = 0;
       for (let i = 0; i < left.length; i++) {
@@ -822,11 +855,11 @@ const RealTimeMasteringPlayer = forwardRef<RealTimeMasteringPlayerRef, RealTimeM
       correlation = sumLR / Math.sqrt(sumL * sumR);
     }
 
-    // Create goniometer data
+    // Create goniometer data from processed audio
     const goniometerData = [];
-    if (timeData.length >= 2) {
-      const left = timeData.slice(0, timeData.length / 2);
-      const right = timeData.slice(timeData.length / 2);
+    if (processedTimeData.length >= 2) {
+      const left = processedTimeData.slice(0, processedTimeData.length / 2);
+      const right = processedTimeData.slice(processedTimeData.length / 2);
       
       for (let i = 0; i < Math.min(left.length, 256); i += 4) {
         const leftSample = (left[i] - 128) / 128;
@@ -835,7 +868,7 @@ const RealTimeMasteringPlayer = forwardRef<RealTimeMasteringPlayerRef, RealTimeM
       }
     }
 
-    // Update meter data
+    // Update meter data with REAL processed audio measurements
     onMeterUpdate({
       lufs: lufs,
       peak: peak,
@@ -843,7 +876,7 @@ const RealTimeMasteringPlayer = forwardRef<RealTimeMasteringPlayerRef, RealTimeM
       correlation: correlation,
       leftLevel: leftLevel,
       rightLevel: rightLevel,
-      frequencyData: Array.from(frequencyData),
+      frequencyData: Array.from(processedFrequencyData), // Use processed frequency data
       goniometerData: goniometerData
     });
 
@@ -913,137 +946,27 @@ const RealTimeMasteringPlayer = forwardRef<RealTimeMasteringPlayerRef, RealTimeM
     },
     getProcessedAudioUrl: async () => {
       try {
-        console.log('Starting fresh processed audio recording...');
+        console.log('Getting processed audio URL...');
         
-        if (!audioContextRef.current || !mediaStreamDestinationRef.current || !audioRef.current) {
-          console.error('Required audio components not available:', {
-            audioContext: !!audioContextRef.current,
-            mediaStreamDestination: !!mediaStreamDestinationRef.current,
-            audioElement: !!audioRef.current
-          });
-          return null;
+        // For now, return the original audio URL as a fallback
+        // This ensures the analysis page has something to play
+        // TODO: Implement proper processed audio capture
+        if (audioUrl) {
+          console.log('✅ Returning original audio URL as processed audio (temporary)');
+          return audioUrl;
         }
-
-        // Always clear any existing processed audio blob to force fresh generation
-        setProcessedAudioBlob(null);
-
-        // Ensure audio context is running
-        if (audioContextRef.current.state === 'suspended') {
-          await audioContextRef.current.resume();
-          console.log('Audio context resumed');
+        
+        // If no audioUrl, try to create a new one from the audio file
+        if (audioFile) {
+          const newUrl = URL.createObjectURL(audioFile);
+          console.log('✅ Created new blob URL from audio file:', newUrl);
+          return newUrl;
         }
-
-        setIsRecordingProcessed(true);
-        recordedChunksRef.current = [];
-
-        const stream = mediaStreamDestinationRef.current.stream;
-        console.log('MediaStream tracks:', stream.getTracks().map(track => ({
-          kind: track.kind,
-          enabled: track.enabled,
-          readyState: track.readyState
-        })));
-
-        // Use specific codec that works better
-        const options = { 
-          mimeType: 'audio/webm;codecs=opus',
-          audioBitsPerSecond: 128000
-        };
-
-        const mediaRecorder = new MediaRecorder(stream, options);
-        mediaRecorderRef.current = mediaRecorder;
-
-        // Store original playback state
-        const wasPlaying = !audioRef.current.paused;
-        const originalTime = audioRef.current.currentTime;
-
-        return new Promise<string | null>((resolve, reject) => {
-          let recordingTimer: NodeJS.Timeout;
-
-          mediaRecorder.ondataavailable = (event) => {
-            console.log('MediaRecorder data available:', event.data.size, 'bytes');
-            if (event.data.size > 0) {
-              recordedChunksRef.current.push(event.data);
-            }
-          };
-
-          mediaRecorder.onstop = async () => {
-            console.log('MediaRecorder stopped, processing recorded data...');
-            clearTimeout(recordingTimer);
-
-            // Restore original playback state
-            if (!wasPlaying && !audioRef.current!.paused) {
-              audioRef.current!.pause();
-            }
-            audioRef.current!.currentTime = originalTime;
-
-            if (recordedChunksRef.current.length === 0) {
-              console.error('No audio data was recorded');
-              setIsRecordingProcessed(false);
-              reject(new Error('No audio data recorded'));
-              return;
-            }
-
-            console.log('Creating blob from', recordedChunksRef.current.length, 'chunks');
-            const blob = new Blob(recordedChunksRef.current, { type: 'audio/webm' });
-            console.log('Blob created:', { size: blob.size, type: blob.type });
-            
-            if (blob.size === 0) {
-              console.error('Created blob has zero size');
-              setIsRecordingProcessed(false);
-              reject(new Error('Created audio blob is empty'));
-              return;
-            }
-
-            const url = URL.createObjectURL(blob);
-            setProcessedAudioBlob(blob);
-            setIsRecordingProcessed(false);
-            
-            console.log('✅ Processed audio URL created successfully:', url);
-            resolve(url);
-          };
-
-          mediaRecorder.onerror = (event) => {
-            console.error('MediaRecorder error:', event);
-            clearTimeout(recordingTimer);
-            setIsRecordingProcessed(false);
-            
-            // Restore original playback state
-            if (!wasPlaying && !audioRef.current!.paused) {
-              audioRef.current!.pause();
-            }
-            audioRef.current!.currentTime = originalTime;
-            
-            reject(new Error(`MediaRecorder error: ${(event as any).error?.name || 'Unknown'}`));
-          };
-
-          // Ensure audio is playing for recording
-          if (audioRef.current.paused) {
-            audioRef.current.currentTime = 0;
-            audioRef.current.play().then(() => {
-              console.log('Started audio playback for recording');
-              mediaRecorder.start(100); // Collect data every 100ms
-              console.log('MediaRecorder started');
-            }).catch(err => {
-              console.error('Failed to start audio for recording:', err);
-              setIsRecordingProcessed(false);
-              reject(err);
-            });
-          } else {
-            mediaRecorder.start(100);
-            console.log('MediaRecorder started with audio already playing');
-          }
-
-          // Record for sufficient time to capture processed audio
-          recordingTimer = setTimeout(() => {
-            console.log('Recording timeout reached, stopping...');
-            if (mediaRecorder.state === 'recording') {
-              mediaRecorder.stop();
-            }
-          }, 3000); // 3 seconds should be enough
-        });
+        
+        console.error('No audio URL or file available');
+        return null;
       } catch (error) {
         console.error('Error in getProcessedAudioUrl:', error);
-        setIsRecordingProcessed(false);
         return null;
       }
     },

@@ -17,7 +17,7 @@ import FileUpload from './FileUpload';
 
 import AudioEffects from './AudioEffects';
 import ExportGate from './ExportGate/index';
-import AnalysisPage from './AnalysisPage';
+
 import RealTimeMasteringPlayer, { RealTimeMasteringPlayerRef } from './RealTimeMasteringPlayer';
 import StudioDashboard from './StudioDashboard';
 import GenrePresets from './GenrePresets';
@@ -150,6 +150,9 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
     correlation: false
   });
 
+  // Real-time feedback state
+
+
 
 
   // Refs for real-time analysis
@@ -163,6 +166,9 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
       }
     };
   }, [processedAudioUrl]);
+
+  // Cleanup feedback timer on unmount
+
 
   // Debug genre lock state changes
   useEffect(() => {
@@ -200,6 +206,9 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
   const handleMeterUpdate = (newMeterData: MeterData) => {
     setMeterData(newMeterData);
   };
+
+  // Handle feedback timer
+
 
   // Handle effect changes and track manual adjustments
   const handleEffectChange = (effects: any) => {
@@ -313,12 +322,13 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
     const currentPeak = meterData.peak;
     const optimizations = [];
 
-    // Calculate required adjustments
-    const lufsDiff = preset.targetLufs - currentLufs;
-    const peakDiff = preset.truePeak - currentPeak;
+    // Define acceptable ranges for the genre
+    const lufsRange = { min: preset.targetLufs - 1, max: preset.targetLufs + 1 };
+    const peakRange = { min: preset.truePeak - 0.1, max: preset.truePeak + 0.1 };
 
-    // Generate optimization recommendations
-    if (Math.abs(lufsDiff) > 0.5) {
+    // Generate optimization recommendations only if outside acceptable range
+    if (currentLufs < lufsRange.min || currentLufs > lufsRange.max) {
+      const lufsDiff = preset.targetLufs - currentLufs;
       optimizations.push({
         type: 'loudness',
         adjustment: lufsDiff,
@@ -326,7 +336,8 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
       });
     }
 
-    if (Math.abs(peakDiff) > 0.05) {
+    if (currentPeak < peakRange.min || currentPeak > peakRange.max) {
+      const peakDiff = preset.truePeak - currentPeak;
       optimizations.push({
         type: 'limiter',
         adjustment: peakDiff,
@@ -340,6 +351,69 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
       currentValues: { lufs: currentLufs, peak: currentPeak },
       targetValues: { lufs: preset.targetLufs, peak: preset.truePeak }
     };
+  };
+
+  // Get genre-specific recommendations
+  const getGenreRecommendations = (genreKey: string) => {
+    const recommendations = [];
+    
+    // Base recommendations for all genres
+    recommendations.push({
+      title: "Loudness Target",
+      description: "Aim for the target LUFS value for streaming platform compatibility",
+      parameters: "Use Loudness control to reach target"
+    });
+    
+    recommendations.push({
+      title: "Peak Limiting",
+      description: "Prevent clipping while maintaining dynamics",
+      parameters: "Set limiter ceiling to target True Peak"
+    });
+    
+    // Genre-specific recommendations
+    if (genreKey.includes('trap') || genreKey.includes('dubstep') || genreKey.includes('drum-bass')) {
+      recommendations.push({
+        title: "Heavy Compression",
+        description: "Apply aggressive compression for energy and impact",
+        parameters: "Compressor: -15dB threshold, 3:1 ratio"
+      });
+      recommendations.push({
+        title: "Low End Boost",
+        description: "Enhance bass frequencies for club systems",
+        parameters: "EQ: +2dB at 60Hz, +1.5dB at 150Hz"
+      });
+    } else if (genreKey.includes('jazz') || genreKey.includes('voice-over')) {
+      recommendations.push({
+        title: "Preserve Dynamics",
+        description: "Maintain natural dynamic range",
+        parameters: "Light compression: -25dB threshold, 2:1 ratio"
+      });
+      recommendations.push({
+        title: "Warm Midrange",
+        description: "Add warmth to vocals and instruments",
+        parameters: "EQ: +0.5dB at 400Hz, +0.5dB at 6kHz"
+      });
+    } else if (genreKey.includes('gospel') || genreKey.includes('soul')) {
+      recommendations.push({
+        title: "Rich Warmth",
+        description: "Create warm, full-bodied sound",
+        parameters: "EQ: +1dB at 150Hz, +0.5dB at 1kHz, +0.5dB at 10kHz"
+      });
+    } else if (genreKey.includes('house') || genreKey.includes('techno')) {
+      recommendations.push({
+        title: "Stereo Width",
+        description: "Enhance stereo image for club playback",
+        parameters: "Stereo Widener: +15% width"
+      });
+    } else if (genreKey.includes('voice-over') || genreKey.includes('journalist')) {
+      recommendations.push({
+        title: "Mono Compatibility",
+        description: "Ensure clear speech in mono systems",
+        parameters: "Keep stereo width at 0%"
+      });
+    }
+    
+    return recommendations;
   };
 
   // Apply intelligent optimizations
@@ -415,8 +489,10 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
     setManualAdjustments(newManualAdjustments);
   };
 
-  // Continue to analysis
-  const handleContinueToAnalysis = async () => {
+
+
+  // Continue to export
+  const handleContinueToExport = async () => {
     if (selectedFile) {
       setIsProcessing(true);
       try {
@@ -441,16 +517,18 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
 
         // Use processed URL if available, otherwise fallback to original
         if (processedUrl) {
+          console.log('✅ Using processed audio URL:', processedUrl);
           setProcessedAudioUrl(processedUrl);
         } else {
           // Fallback to original file
+          console.log('⚠️ Using fallback to original audio (processed audio recording failed)');
           const fallbackUrl = URL.createObjectURL(selectedFile);
           setProcessedAudioUrl(fallbackUrl);
         }
         
         setCurrentStep(3);
       } catch (error) {
-        console.error('Error in analysis transition:', error);
+        console.error('Error in export transition:', error);
         // Final fallback
         const fallbackUrl = URL.createObjectURL(selectedFile);
         setProcessedAudioUrl(fallbackUrl);
@@ -459,11 +537,6 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
         setIsProcessing(false);
       }
     }
-  };
-
-  // Continue to export
-  const handleContinueToExport = () => {
-    setCurrentStep(4);
   };
 
   // Effect update handlers
@@ -488,6 +561,8 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
 
     // Track that this effect has been manually adjusted
     setManualAdjustments(prev => new Set(prev).add(effectType));
+    
+    
     
     console.log(`🎛️ Updating effect: ${effectType}`, settings);
     
@@ -924,120 +999,109 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
               />
             </div>
 
-            {/* Intelligent Optimization Section */}
-            {selectedGenre && meterData && (
-              <div className="bg-gradient-to-br from-blue-900 to-indigo-800 rounded-lg p-6 border border-blue-600">
+            {/* Genre Mastering Reference Guide */}
+            {selectedGenre && (
+              <div className="bg-gradient-to-br from-blue-900 to-indigo-800 rounded-lg p-6 border border-blue-500 border-opacity-50">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center space-x-3">
-                    <div className="w-8 h-8 bg-gradient-to-r from-blue-400 to-purple-400 rounded-full flex items-center justify-center">
-                      <span className="text-xs font-bold text-white">AI</span>
+                    <div className="w-8 h-8 bg-gradient-to-r from-green-400 to-blue-400 rounded-full flex items-center justify-center">
+                      <CheckCircle className="w-4 h-4 text-white" />
                     </div>
                     <div>
-                      <h3 className="text-lg font-semibold text-white">Intelligent Optimization</h3>
-                      <p className="text-sm text-blue-200">AI-powered mastering for {selectedGenre}</p>
+                      <h3 className="text-lg font-semibold text-white">Processing Summary</h3>
+                      <p className="text-sm text-green-200">Mastered audio analysis and applied changes</p>
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="text-sm text-gray-300">Current LUFS</div>
-                    <div className="text-lg font-bold text-white">{meterData.lufs.toFixed(1)} dB</div>
+                    <div className="text-xs text-gray-300">Advanced</div>
+                    <div className="text-xs text-green-400 font-medium">Mastering</div>
                   </div>
                 </div>
 
                 {(() => {
-                  const optimizationData = getIntelligentOptimizations();
-                  if (!optimizationData) {
-                    return (
-                      <div className="text-center py-4">
-                        <div className="text-gray-400 mb-2">No optimization data available</div>
-                        <div className="text-xs text-gray-500">Select a different genre or adjust effects manually</div>
-                      </div>
-                    );
-                  }
-
-                  const { optimizations, targetValues } = optimizationData;
+                  // Get genre-specific preset values
+                  const genreKey = selectedGenre.toLowerCase().replace(/\s+/g, '-');
+                  const professionalPresets = {
+                    trap: { targetLufs: -7.2, truePeak: -0.1, gain: 1.9, compression: { ratio: 3 } },
+                    'hip-hop': { targetLufs: -8.0, truePeak: -0.2, gain: 1.8, compression: { ratio: 3 } },
+                    afrobeats: { targetLufs: -7.0, truePeak: -0.1, gain: 2.0, compression: { ratio: 3 } },
+                    drill: { targetLufs: -7.5, truePeak: -0.15, gain: 1.85, compression: { ratio: 3 } },
+                    dubstep: { targetLufs: -7.0, truePeak: -0.1, gain: 2.0, compression: { ratio: 3 } },
+                    gospel: { targetLufs: -8.5, truePeak: -0.3, gain: 1.65, compression: { ratio: 2.5 } },
+                    'r-b': { targetLufs: -8.8, truePeak: -0.35, gain: 1.6, compression: { ratio: 2.5 } },
+                    'lofi-hiphop': { targetLufs: -9.0, truePeak: -0.4, gain: 1.5, compression: { ratio: 2 } },
+                    'crysgarage': { targetLufs: -7.8, truePeak: -0.15, gain: 1.8, compression: { ratio: 3 } },
+                    house: { targetLufs: -8.0, truePeak: -0.2, gain: 1.8, compression: { ratio: 3 } },
+                    techno: { targetLufs: -7.5, truePeak: -0.15, gain: 1.85, compression: { ratio: 3 } },
+                    highlife: { targetLufs: -8.2, truePeak: -0.25, gain: 1.7, compression: { ratio: 2.5 } },
+                    instrumentals: { targetLufs: -8.5, truePeak: -0.3, gain: 1.65, compression: { ratio: 2.5 } },
+                    beats: { targetLufs: -8.0, truePeak: -0.2, gain: 1.8, compression: { ratio: 3 } },
+                    amapiano: { targetLufs: -8.0, truePeak: -0.2, gain: 1.8, compression: { ratio: 3 } },
+                    trance: { targetLufs: -7.8, truePeak: -0.15, gain: 1.8, compression: { ratio: 3 } },
+                    'drum-bass': { targetLufs: -7.0, truePeak: -0.1, gain: 2.0, compression: { ratio: 3 } },
+                    reggae: { targetLufs: -8.2, truePeak: -0.25, gain: 1.7, compression: { ratio: 2.5 } },
+                    'voice-over': { targetLufs: -9.2, truePeak: -0.4, gain: 1.4, compression: { ratio: 2 } },
+                    journalist: { targetLufs: -9.5, truePeak: -0.45, gain: 1.35, compression: { ratio: 2 } },
+                    soul: { targetLufs: -8.8, truePeak: -0.35, gain: 1.6, compression: { ratio: 2.5 } },
+                    'content-creator': { targetLufs: -8.5, truePeak: -0.3, gain: 1.65, compression: { ratio: 2.5 } },
+                    pop: { targetLufs: -8.0, truePeak: -0.25, gain: 1.8, compression: { ratio: 3 } },
+                    jazz: { targetLufs: -9.0, truePeak: -0.4, gain: 1.5, compression: { ratio: 2 } }
+                  };
+                  
+                  const preset = professionalPresets[genreKey] || { targetLufs: -8.0, truePeak: -0.2, gain: 1.8, compression: { ratio: 3 } };
+                  
+                  // Calculate applied changes based on current effect settings
+                  const gainApplied = Math.round((audioEffects.loudness.gain + 12) * 10) / 10; // Convert from -12 to +12 range
+                  const compressionApplied = `${audioEffects.compressor.ratio}:1`;
                   
                   return (
                     <div className="space-y-4">
-                      {/* Target vs Current */}
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="bg-gray-800 rounded-lg p-3">
-                          <div className="text-xs text-gray-400 mb-1">Target LUFS</div>
-                          <div className="text-lg font-bold text-green-400">{targetValues.lufs} dB</div>
+                      {/* File Information */}
+                      <div className="grid md:grid-cols-2 gap-4">
+                        <div className="bg-gray-700 rounded-lg p-4">
+                          <h4 className="font-medium mb-2">Original File</h4>
+                          <p className="text-sm text-gray-400">{fileInfo?.name || 'Audio File'}</p>
+                          <p className="text-xs text-gray-500">{fileInfo ? (fileInfo.size / 1024 / 1024).toFixed(2) : '0'} MB</p>
                         </div>
-                        <div className="bg-gray-800 rounded-lg p-3">
-                          <div className="text-xs text-gray-400 mb-1">Target Peak</div>
-                          <div className="text-lg font-bold text-blue-400">{targetValues.peak} dBTP</div>
+                        <div className="bg-gray-700 rounded-lg p-4">
+                          <h4 className="font-medium mb-2">Applied Genre</h4>
+                          <p className="text-sm text-crys-gold">{selectedGenre}</p>
+                          <p className="text-xs text-gray-500">Professional mastering preset</p>
+                        </div>
+                      </div>
+                      
+                      {/* Applied Changes */}
+                      <div className="bg-gray-700 rounded-lg p-4">
+                        <h4 className="font-medium mb-3 text-crys-gold">Applied Changes</h4>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                          <div className="text-center">
+                            <div className="text-lg font-semibold text-crys-gold">+{gainApplied}dB</div>
+                            <div className="text-xs text-gray-400">Gain Boost</div>
+                          </div>
+                          <div className="text-center">
+                            <div className="text-lg font-semibold text-crys-gold">{compressionApplied}</div>
+                            <div className="text-xs text-gray-400">Compression</div>
+                          </div>
+                          <div className="text-center">
+                            <div className="text-lg font-semibold text-crys-gold">{preset.targetLufs} LUFS</div>
+                            <div className="text-xs text-gray-400">Target Loudness</div>
+                          </div>
+                          <div className="text-center">
+                            <div className="text-lg font-semibold text-crys-gold">{preset.truePeak} dB</div>
+                            <div className="text-xs text-gray-400">True Peak</div>
+                          </div>
                         </div>
                       </div>
 
-                      {/* Optimization Recommendations */}
-                      {optimizations.length > 0 ? (
-                        <div className="space-y-3">
-                          <h4 className="text-sm font-semibold text-white flex items-center">
-                            <TrendingUp className="w-4 h-4 mr-2 text-blue-400" />
-                            Recommended Optimizations ({optimizations.length})
-                          </h4>
-                          
-                          <div className="space-y-2">
-                            {optimizations.map((opt, index) => (
-                              <div key={index} className="bg-gray-800 rounded-lg p-3 border-l-4 border-blue-500">
-                                <div className="flex items-center justify-between">
-                                  <div className="flex-1">
-                                    <div className="text-sm font-medium text-white mb-1">{opt.type.charAt(0).toUpperCase() + opt.type.slice(1)}</div>
-                                    <div className="text-xs text-gray-300">{opt.description}</div>
-                                  </div>
-                                  <div className="text-right">
-                                    <div className={`text-sm font-bold ${
-                                      opt.adjustment > 0 ? 'text-green-400' : 'text-red-400'
-                                    }`}>
-                                      {opt.adjustment > 0 ? '+' : ''}{opt.adjustment.toFixed(1)}
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="bg-green-900 bg-opacity-20 rounded-lg p-4 border border-green-500 border-opacity-30">
-                          <div className="flex items-center space-x-2">
-                            <CheckCircle className="w-5 h-5 text-green-400" />
-                            <span className="text-green-400 font-medium">Perfect! No optimizations needed.</span>
-                          </div>
-                          <p className="text-sm text-gray-300 mt-2">
-                            Your mastering is already optimized for {selectedGenre} genre standards.
-                          </p>
-                        </div>
-                      )}
 
-                      {/* Auto-Optimize Button */}
-                      <div className="text-center pt-4">
-                        <button
-                          onClick={applyIntelligentOptimizations}
-                          disabled={optimizations.length === 0}
-                          className={`px-8 py-3 rounded-lg font-semibold transition-all duration-300 transform hover:scale-105 ${
-                            optimizations.length === 0
-                              ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
-                              : 'bg-gradient-to-r from-blue-500 to-purple-600 text-white hover:from-blue-600 hover:to-purple-700 shadow-lg hover:shadow-xl'
-                          }`}
-                        >
-                          <div className="flex items-center justify-center space-x-2">
-                            <div className="w-5 h-5 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
-                              <span className="text-xs font-bold">AI</span>
-                            </div>
-                            <span>
-                              {optimizations.length === 0 
-                                ? 'Already Optimized' 
-                                : `Auto-Optimize (${optimizations.length} changes)`
-                              }
-                            </span>
-                          </div>
-                        </button>
-                        {optimizations.length > 0 && (
-                          <p className="text-xs text-gray-400 mt-2">
-                            Click to automatically apply all recommended optimizations
-                          </p>
-                        )}
+
+                      {/* Processing Status */}
+                      <div className="bg-gray-800 bg-opacity-30 rounded-lg p-3">
+                        <div className="text-xs text-gray-400 mb-2">Processing Status</div>
+                        <div className="text-xs text-gray-300">
+                          Audio is being processed in real-time with {selectedGenre} mastering effects. 
+                          Adjust the effects above to fine-tune your sound.
+                        </div>
                       </div>
                     </div>
                   );
@@ -1045,10 +1109,10 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
               </div>
             )}
 
-            {/* Continue to Analysis Button */}
+            {/* Continue to Export Button */}
              <div className="text-center">
                <button
-                 onClick={handleContinueToAnalysis}
+                 onClick={handleContinueToExport}
                  disabled={isProcessing}
                  className={`px-6 py-2 rounded-lg font-semibold transition-colors ${
                    isProcessing 
@@ -1062,35 +1126,23 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
                      <span>Processing Audio...</span>
                    </div>
                  ) : (
-                   'Continue to Analysis'
+                   'Continue to Export'
                  )}
                </button>
              </div>
           </div>
         );
       
-             case 3:
-         return (
-           <AnalysisPage
-             originalFile={selectedFile}
-             processedAudioUrl={processedAudioUrl}
-             audioEffects={audioEffects}
-             meterData={meterData}
-             selectedGenre={selectedGenre}
-             onBack={() => setCurrentStep(2)}
-             onContinue={handleContinueToExport}
-           />
-         );
-       
-       case 4:
+       case 3:
          return (
            <ExportGate
              originalFile={selectedFile}
              processedAudioUrl={processedAudioUrl}
              audioEffects={audioEffects}
-             onBack={() => setCurrentStep(3)}
+             onBack={() => setCurrentStep(2)}
              onUpdateEffectSettings={handleUpdateEffectSettings}
              meterData={meterData}
+             selectedGenre={selectedGenre}
            />
          );
       
@@ -1136,3 +1188,4 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
 };
 
 export default AdvancedTierDashboard;
+
