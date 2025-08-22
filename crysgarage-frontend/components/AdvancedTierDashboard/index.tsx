@@ -8,7 +8,9 @@ import {
   Settings,
   Play,
   Pause,
-  Volume2
+  Volume2,
+  TrendingUp,
+  CheckCircle
 } from 'lucide-react';
 import StudioHeader from './StudioHeader';
 import FileUpload from './FileUpload';
@@ -268,6 +270,149 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
     if (selectedFile) {
       setCurrentStep(2);
     }
+  };
+
+  // Intelligent Optimization Engine
+  const getIntelligentOptimizations = () => {
+    if (!selectedGenre || !meterData) return null;
+
+    // Professional Dashboard genre presets (real industry standards)
+    const professionalPresets = {
+      trap: { targetLufs: -7.2, truePeak: -0.1, gain: 2.8 },
+      'hip-hop': { targetLufs: -8.0, truePeak: -0.2, gain: 2.0 },
+      afrobeats: { targetLufs: -7.0, truePeak: -0.1, gain: 2.2 },
+      drill: { targetLufs: -7.5, truePeak: -0.15, gain: 2.5 },
+      dubstep: { targetLufs: -7.0, truePeak: -0.1, gain: 3.2 },
+      gospel: { targetLufs: -8.5, truePeak: -0.3, gain: 1.8 },
+      'r-b': { targetLufs: -8.8, truePeak: -0.35, gain: 1.6 },
+      'lofi-hiphop': { targetLufs: -9.0, truePeak: -0.4, gain: 1.2 },
+      'crysgarage': { targetLufs: -7.8, truePeak: -0.15, gain: 2.4 },
+      house: { targetLufs: -8.0, truePeak: -0.2, gain: 2.2 },
+      techno: { targetLufs: -7.5, truePeak: -0.15, gain: 2.8 },
+      highlife: { targetLufs: -8.2, truePeak: -0.25, gain: 1.9 },
+      instrumentals: { targetLufs: -8.5, truePeak: -0.3, gain: 1.6 },
+      beats: { targetLufs: -8.0, truePeak: -0.2, gain: 2.0 },
+      amapiano: { targetLufs: -8.0, truePeak: -0.2, gain: 2.0 },
+      trance: { targetLufs: -7.8, truePeak: -0.15, gain: 2.2 },
+      'drum-bass': { targetLufs: -7.0, truePeak: -0.1, gain: 3.0 },
+      reggae: { targetLufs: -8.2, truePeak: -0.25, gain: 1.8 },
+      'voice-over': { targetLufs: -9.2, truePeak: -0.4, gain: 1.4 },
+      journalist: { targetLufs: -9.5, truePeak: -0.45, gain: 1.2 },
+      soul: { targetLufs: -8.8, truePeak: -0.35, gain: 1.6 },
+      'content-creator': { targetLufs: -8.5, truePeak: -0.3, gain: 1.9 },
+      pop: { targetLufs: -8.0, truePeak: -0.25, gain: 1.8 },
+      jazz: { targetLufs: -9.0, truePeak: -0.4, gain: 1.4 }
+    };
+
+    const genreKey = selectedGenre.toLowerCase().replace(/\s+/g, '-');
+    const preset = professionalPresets[genreKey];
+    
+    if (!preset) return null;
+
+    const currentLufs = meterData.lufs;
+    const currentPeak = meterData.peak;
+    const optimizations = [];
+
+    // Calculate required adjustments
+    const lufsDiff = preset.targetLufs - currentLufs;
+    const peakDiff = preset.truePeak - currentPeak;
+
+    // Generate optimization recommendations
+    if (Math.abs(lufsDiff) > 0.5) {
+      optimizations.push({
+        type: 'loudness',
+        adjustment: lufsDiff,
+        description: `Adjust loudness by ${lufsDiff > 0 ? '+' : ''}${lufsDiff.toFixed(1)} dB to reach ${preset.targetLufs} dB target`
+      });
+    }
+
+    if (Math.abs(peakDiff) > 0.05) {
+      optimizations.push({
+        type: 'limiter',
+        adjustment: peakDiff,
+        description: `Adjust limiter threshold to ${preset.truePeak} dBTP for optimal dynamics`
+      });
+    }
+
+    return {
+      optimizations,
+      preset,
+      currentValues: { lufs: currentLufs, peak: currentPeak },
+      targetValues: { lufs: preset.targetLufs, peak: preset.truePeak }
+    };
+  };
+
+  // Apply intelligent optimizations
+  const applyIntelligentOptimizations = () => {
+    const optimizationData = getIntelligentOptimizations();
+    if (!optimizationData) {
+      showToastNotification('No optimization data available for selected genre', 'error');
+      return;
+    }
+
+    const { optimizations, preset } = optimizationData;
+    const newEffects = { ...audioEffects };
+
+    // Apply optimizations
+    optimizations.forEach(opt => {
+      switch (opt.type) {
+        case 'loudness':
+          newEffects.loudness.gain = Math.max(-12, Math.min(12, opt.adjustment));
+          break;
+        case 'limiter':
+          newEffects.limiter.ceiling = Math.max(-1, Math.min(-0.1, preset.truePeak));
+          break;
+      }
+    });
+
+    // Apply genre-specific optimizations
+    const genreKey = selectedGenre.toLowerCase().replace(/\s+/g, '-');
+    
+    // EQ adjustments based on genre
+    if (genreKey.includes('trap') || genreKey.includes('dubstep') || genreKey.includes('drum-bass')) {
+      // Boost low end for energy
+      newEffects.eq.bands[0].gain = 2; // 60Hz
+      newEffects.eq.bands[1].gain = 1.5; // 150Hz
+      newEffects.eq.bands[6].gain = 1; // 10kHz for air
+    } else if (genreKey.includes('jazz') || genreKey.includes('voice-over')) {
+      // Preserve dynamics, gentle EQ
+      newEffects.eq.bands[2].gain = 0.5; // 400Hz warmth
+      newEffects.eq.bands[5].gain = 0.5; // 6kHz presence
+    } else if (genreKey.includes('gospel') || genreKey.includes('soul')) {
+      // Warm, rich sound
+      newEffects.eq.bands[1].gain = 1; // 150Hz warmth
+      newEffects.eq.bands[3].gain = 0.5; // 1kHz presence
+      newEffects.eq.bands[6].gain = 0.5; // 10kHz air
+    }
+
+    // Compression adjustments
+    if (genreKey.includes('trap') || genreKey.includes('dubstep')) {
+      newEffects.compressor.threshold = -15;
+      newEffects.compressor.ratio = 3;
+    } else if (genreKey.includes('jazz') || genreKey.includes('voice-over')) {
+      newEffects.compressor.threshold = -25;
+      newEffects.compressor.ratio = 2;
+    }
+
+    // Stereo width adjustments
+    if (genreKey.includes('house') || genreKey.includes('techno')) {
+      newEffects.stereoWidener.width = 15;
+    } else if (genreKey.includes('voice-over') || genreKey.includes('journalist')) {
+      newEffects.stereoWidener.width = 0; // Keep mono
+    }
+
+    // Update effects
+    setAudioEffects(newEffects);
+    
+    // Show success message
+    showToastNotification(`Applied ${optimizations.length} optimizations for ${selectedGenre} genre`, 'success');
+
+    // Track that these are AI optimizations
+    const newManualAdjustments = new Set(manualAdjustments);
+    optimizations.forEach(opt => {
+      newManualAdjustments.add(opt.type);
+    });
+    setManualAdjustments(newManualAdjustments);
   };
 
   // Continue to analysis
@@ -779,7 +924,128 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
               />
             </div>
 
-                         {/* Continue to Analysis Button */}
+            {/* Intelligent Optimization Section */}
+            {selectedGenre && meterData && (
+              <div className="bg-gradient-to-br from-blue-900 to-indigo-800 rounded-lg p-6 border border-blue-600">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-8 h-8 bg-gradient-to-r from-blue-400 to-purple-400 rounded-full flex items-center justify-center">
+                      <span className="text-xs font-bold text-white">AI</span>
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-white">Intelligent Optimization</h3>
+                      <p className="text-sm text-blue-200">AI-powered mastering for {selectedGenre}</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-sm text-gray-300">Current LUFS</div>
+                    <div className="text-lg font-bold text-white">{meterData.lufs.toFixed(1)} dB</div>
+                  </div>
+                </div>
+
+                {(() => {
+                  const optimizationData = getIntelligentOptimizations();
+                  if (!optimizationData) {
+                    return (
+                      <div className="text-center py-4">
+                        <div className="text-gray-400 mb-2">No optimization data available</div>
+                        <div className="text-xs text-gray-500">Select a different genre or adjust effects manually</div>
+                      </div>
+                    );
+                  }
+
+                  const { optimizations, targetValues } = optimizationData;
+                  
+                  return (
+                    <div className="space-y-4">
+                      {/* Target vs Current */}
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="bg-gray-800 rounded-lg p-3">
+                          <div className="text-xs text-gray-400 mb-1">Target LUFS</div>
+                          <div className="text-lg font-bold text-green-400">{targetValues.lufs} dB</div>
+                        </div>
+                        <div className="bg-gray-800 rounded-lg p-3">
+                          <div className="text-xs text-gray-400 mb-1">Target Peak</div>
+                          <div className="text-lg font-bold text-blue-400">{targetValues.peak} dBTP</div>
+                        </div>
+                      </div>
+
+                      {/* Optimization Recommendations */}
+                      {optimizations.length > 0 ? (
+                        <div className="space-y-3">
+                          <h4 className="text-sm font-semibold text-white flex items-center">
+                            <TrendingUp className="w-4 h-4 mr-2 text-blue-400" />
+                            Recommended Optimizations ({optimizations.length})
+                          </h4>
+                          
+                          <div className="space-y-2">
+                            {optimizations.map((opt, index) => (
+                              <div key={index} className="bg-gray-800 rounded-lg p-3 border-l-4 border-blue-500">
+                                <div className="flex items-center justify-between">
+                                  <div className="flex-1">
+                                    <div className="text-sm font-medium text-white mb-1">{opt.type.charAt(0).toUpperCase() + opt.type.slice(1)}</div>
+                                    <div className="text-xs text-gray-300">{opt.description}</div>
+                                  </div>
+                                  <div className="text-right">
+                                    <div className={`text-sm font-bold ${
+                                      opt.adjustment > 0 ? 'text-green-400' : 'text-red-400'
+                                    }`}>
+                                      {opt.adjustment > 0 ? '+' : ''}{opt.adjustment.toFixed(1)}
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="bg-green-900 bg-opacity-20 rounded-lg p-4 border border-green-500 border-opacity-30">
+                          <div className="flex items-center space-x-2">
+                            <CheckCircle className="w-5 h-5 text-green-400" />
+                            <span className="text-green-400 font-medium">Perfect! No optimizations needed.</span>
+                          </div>
+                          <p className="text-sm text-gray-300 mt-2">
+                            Your mastering is already optimized for {selectedGenre} genre standards.
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Auto-Optimize Button */}
+                      <div className="text-center pt-4">
+                        <button
+                          onClick={applyIntelligentOptimizations}
+                          disabled={optimizations.length === 0}
+                          className={`px-8 py-3 rounded-lg font-semibold transition-all duration-300 transform hover:scale-105 ${
+                            optimizations.length === 0
+                              ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                              : 'bg-gradient-to-r from-blue-500 to-purple-600 text-white hover:from-blue-600 hover:to-purple-700 shadow-lg hover:shadow-xl'
+                          }`}
+                        >
+                          <div className="flex items-center justify-center space-x-2">
+                            <div className="w-5 h-5 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
+                              <span className="text-xs font-bold">AI</span>
+                            </div>
+                            <span>
+                              {optimizations.length === 0 
+                                ? 'Already Optimized' 
+                                : `Auto-Optimize (${optimizations.length} changes)`
+                              }
+                            </span>
+                          </div>
+                        </button>
+                        {optimizations.length > 0 && (
+                          <p className="text-xs text-gray-400 mt-2">
+                            Click to automatically apply all recommended optimizations
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
+
+            {/* Continue to Analysis Button */}
              <div className="text-center">
                <button
                  onClick={handleContinueToAnalysis}
