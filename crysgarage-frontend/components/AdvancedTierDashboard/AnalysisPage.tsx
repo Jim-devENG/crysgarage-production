@@ -47,14 +47,6 @@ const AnalysisPage: React.FC<AnalysisPageProps> = ({
   // Create URLs for audio playback
   const originalAudioUrl = originalFile ? URL.createObjectURL(originalFile) : null;
   const masteredAudioUrl = processedAudioUrl;
-  
-  // Debug logging
-  console.log('AnalysisPage audio URLs:', {
-    originalFile: originalFile?.name,
-    originalAudioUrl: originalAudioUrl ? 'Set' : 'Not set',
-    processedAudioUrl: processedAudioUrl ? 'Set' : 'Not set',
-    masteredAudioUrl: masteredAudioUrl ? 'Set' : 'Not set'
-  });
 
   // Cleanup object URLs on unmount
   useEffect(() => {
@@ -67,24 +59,13 @@ const AnalysisPage: React.FC<AnalysisPageProps> = ({
 
   // Audio playback handlers
   const handleOriginalPlayPause = async () => {
-    console.log('Original play/pause clicked:', {
-      hasRef: !!originalAudioRef.current,
-      isPlaying: isPlayingOriginal,
-      hasUrl: !!originalAudioUrl
-    });
-    
-    if (!originalAudioRef.current) {
-      console.error('Original audio ref is null');
-      return;
-    }
+    if (!originalAudioRef.current) return;
 
     try {
       if (isPlayingOriginal) {
-        console.log('Pausing original audio');
         originalAudioRef.current.pause();
         setIsPlayingOriginal(false);
       } else {
-        console.log('Playing original audio');
         // Stop mastered audio if playing
         if (isPlayingMastered && masteredAudioRef.current) {
           masteredAudioRef.current.pause();
@@ -99,24 +80,13 @@ const AnalysisPage: React.FC<AnalysisPageProps> = ({
   };
 
   const handleMasteredPlayPause = async () => {
-    console.log('Mastered play/pause clicked:', {
-      hasRef: !!masteredAudioRef.current,
-      isPlaying: isPlayingMastered,
-      hasUrl: !!masteredAudioUrl
-    });
-    
-    if (!masteredAudioRef.current) {
-      console.error('Mastered audio ref is null');
-      return;
-    }
+    if (!masteredAudioRef.current) return;
 
     try {
       if (isPlayingMastered) {
-        console.log('Pausing mastered audio');
         masteredAudioRef.current.pause();
         setIsPlayingMastered(false);
       } else {
-        console.log('Playing mastered audio');
         // Stop original audio if playing
         if (isPlayingOriginal && originalAudioRef.current) {
           originalAudioRef.current.pause();
@@ -138,11 +108,9 @@ const AnalysisPage: React.FC<AnalysisPageProps> = ({
   };
 
   const handleOriginalLoadedMetadata = () => {
-    console.log('Original audio metadata loaded');
     if (originalAudioRef.current) {
       setOriginalDuration(originalAudioRef.current.duration);
       setOriginalReady(true);
-      console.log('Original audio duration:', originalAudioRef.current.duration);
     }
   };
 
@@ -159,11 +127,9 @@ const AnalysisPage: React.FC<AnalysisPageProps> = ({
   };
 
   const handleMasteredLoadedMetadata = () => {
-    console.log('Mastered audio metadata loaded');
     if (masteredAudioRef.current) {
       setMasteredDuration(masteredAudioRef.current.duration);
       setMasteredReady(true);
-      console.log('Mastered audio duration:', masteredAudioRef.current.duration);
     }
   };
 
@@ -474,6 +440,187 @@ const AnalysisPage: React.FC<AnalysisPageProps> = ({
     return targets;
   };
 
+  // Intelligent Optimization Engine
+  const getIntelligentOptimizations = () => {
+    if (!masteredAnalysis || !selectedGenre) return null;
+
+    const targets = getGenreTargets();
+    const current = masteredAnalysis;
+    const optimizations = [];
+
+    // LUFS Optimization
+    const lufsDiff = targets.lufs.ideal - current.loudness;
+    if (Math.abs(lufsDiff) > 0.5) {
+      if (lufsDiff > 0) {
+        optimizations.push({
+          type: 'lufs',
+          action: 'increase',
+          value: Math.abs(lufsDiff).toFixed(1),
+          priority: 'high',
+          description: `Increase loudness by ${Math.abs(lufsDiff).toFixed(1)} dB to reach ${targets.lufs.ideal} dB target`,
+          effect: 'Loudness Enhancement',
+          adjustment: `+${Math.abs(lufsDiff).toFixed(1)} dB`
+        });
+      } else {
+        optimizations.push({
+          type: 'lufs',
+          action: 'decrease',
+          value: Math.abs(lufsDiff).toFixed(1),
+          priority: 'high',
+          description: `Decrease loudness by ${Math.abs(lufsDiff).toFixed(1)} dB to reach ${targets.lufs.ideal} dB target`,
+          effect: 'Loudness Reduction',
+          adjustment: `-${Math.abs(lufsDiff).toFixed(1)} dB`
+        });
+      }
+    }
+
+    // Peak Optimization
+    const peakDiff = targets.peak.ideal - current.truePeak;
+    if (Math.abs(peakDiff) > 0.05) {
+      if (peakDiff > 0) {
+        optimizations.push({
+          type: 'peak',
+          action: 'increase',
+          value: Math.abs(peakDiff).toFixed(2),
+          priority: 'medium',
+          description: `Allow peaks to reach ${targets.peak.ideal} dBTP for better dynamics`,
+          effect: 'Limiter Adjustment',
+          adjustment: `Threshold: ${targets.peak.ideal} dBTP`
+        });
+      } else {
+        optimizations.push({
+          type: 'peak',
+          action: 'decrease',
+          value: Math.abs(peakDiff).toFixed(2),
+          priority: 'high',
+          description: `Reduce peaks by ${Math.abs(peakDiff).toFixed(2)} dBTP to prevent clipping`,
+          effect: 'Limiter Tightening',
+          adjustment: `Threshold: ${targets.peak.ideal} dBTP`
+        });
+      }
+    }
+
+    // Dynamic Range Optimization
+    const drDiff = targets.dynamicRange.ideal - current.dynamicRange;
+    if (Math.abs(drDiff) > 1.0) {
+      if (drDiff > 0) {
+        optimizations.push({
+          type: 'dynamicRange',
+          action: 'increase',
+          value: Math.abs(drDiff).toFixed(1),
+          priority: 'medium',
+          description: `Increase dynamic range by ${Math.abs(drDiff).toFixed(1)} dB for better musical expression`,
+          effect: 'Compression Reduction',
+          adjustment: `Reduce compression ratio by ${Math.abs(drDiff / 2).toFixed(1)}`
+        });
+      } else {
+        optimizations.push({
+          type: 'dynamicRange',
+          action: 'decrease',
+          value: Math.abs(drDiff).toFixed(1),
+          priority: 'medium',
+          description: `Reduce dynamic range by ${Math.abs(drDiff).toFixed(1)} dB for tighter control`,
+          effect: 'Compression Increase',
+          adjustment: `Increase compression ratio by ${Math.abs(drDiff / 2).toFixed(1)}`
+        });
+      }
+    }
+
+    // Genre-Specific Intelligence
+    const genreKey = selectedGenre.toLowerCase().replace(/\s+/g, '-');
+    if (genreKey.includes('trap') || genreKey.includes('dubstep') || genreKey.includes('drum-bass')) {
+      if (current.dynamicRange > 6) {
+        optimizations.push({
+          type: 'genre',
+          action: 'compress',
+          value: 'heavy',
+          priority: 'high',
+          description: 'Apply heavier compression for Trap/Dubstep energy',
+          effect: 'Multi-Band Compression',
+          adjustment: 'Increase compression across all bands'
+        });
+      }
+    } else if (genreKey.includes('jazz') || genreKey.includes('voice-over')) {
+      if (current.dynamicRange < 8) {
+        optimizations.push({
+          type: 'genre',
+          action: 'preserve',
+          value: 'dynamics',
+          priority: 'high',
+          description: 'Preserve more dynamics for natural sound',
+          effect: 'Light Compression',
+          adjustment: 'Reduce compression ratio and increase threshold'
+        });
+      }
+    }
+
+    // Overall Quality Score
+    const qualityScore = calculateQualityScore(current, targets);
+    
+    return {
+      optimizations,
+      qualityScore,
+      overallAssessment: getOverallAssessment(qualityScore, optimizations)
+    };
+  };
+
+  const calculateQualityScore = (current: any, targets: any) => {
+    let score = 100;
+    
+    // LUFS scoring (40% weight)
+    const lufsDiff = Math.abs(targets.lufs.ideal - current.loudness);
+    score -= lufsDiff * 10;
+    
+    // Peak scoring (30% weight)
+    const peakDiff = Math.abs(targets.peak.ideal - current.truePeak);
+    score -= peakDiff * 50;
+    
+    // Dynamic range scoring (30% weight)
+    const drDiff = Math.abs(targets.dynamicRange.ideal - current.dynamicRange);
+    score -= drDiff * 5;
+    
+    return Math.max(0, Math.min(100, score));
+  };
+
+  const getOverallAssessment = (qualityScore: number, optimizations: any[]) => {
+    if (qualityScore >= 90) {
+      return {
+        grade: 'A+',
+        status: 'Excellent',
+        color: 'text-green-400',
+        message: 'Professional-grade mastering achieved!'
+      };
+    } else if (qualityScore >= 80) {
+      return {
+        grade: 'A',
+        status: 'Very Good',
+        color: 'text-green-300',
+        message: 'High-quality mastering with minor optimizations needed.'
+      };
+    } else if (qualityScore >= 70) {
+      return {
+        grade: 'B',
+        status: 'Good',
+        color: 'text-yellow-400',
+        message: 'Good mastering with some improvements recommended.'
+      };
+    } else if (qualityScore >= 60) {
+      return {
+        grade: 'C',
+        status: 'Fair',
+        color: 'text-orange-400',
+        message: 'Acceptable mastering with significant optimizations needed.'
+      };
+    } else {
+      return {
+        grade: 'D',
+        status: 'Needs Work',
+        color: 'text-red-400',
+        message: 'Major improvements required for professional quality.'
+      };
+    }
+  };
+
   // Calculate changes using real analysis data
   // Only show analysis data if we have real analysis results
    const originalData = originalAnalysis ? {
@@ -517,39 +664,27 @@ const AnalysisPage: React.FC<AnalysisPageProps> = ({
   return (
     <div className="max-w-6xl mx-auto space-y-6">
       {/* Audio elements */}
-      <audio
-        ref={originalAudioRef}
-        src={originalAudioUrl || ''}
-        onTimeUpdate={handleOriginalTimeUpdate}
-        onLoadedMetadata={handleOriginalLoadedMetadata}
-        onEnded={handleOriginalEnded}
-        onError={(e) => console.error('Original audio error:', e)}
-        onLoadStart={() => console.log('Original audio load started')}
-        onCanPlay={() => console.log('Original audio can play')}
-        preload="metadata"
-        style={{ display: 'none' }}
-      />
-      
-      <audio
-        ref={masteredAudioRef}
-        src={masteredAudioUrl || ''}
-        onTimeUpdate={handleMasteredTimeUpdate}
-        onLoadedMetadata={handleMasteredLoadedMetadata}
-        onEnded={handleMasteredEnded}
-        onError={(e) => console.error('Mastered audio error:', e)}
-        onLoadStart={() => console.log('Mastered audio load started')}
-        onCanPlay={() => console.log('Mastered audio can play')}
-        preload="metadata"
-        style={{ display: 'none' }}
-      />
-      
-      {/* Debug info */}
-      <div className="text-xs text-gray-500 mb-2">
-        Debug: Original URL: {originalAudioUrl ? 'Set' : 'Not set'}, 
-        Mastered URL: {masteredAudioUrl ? 'Set' : 'Not set'},
-        Original Ready: {originalReady ? 'Yes' : 'No'},
-        Mastered Ready: {masteredReady ? 'Yes' : 'No'}
-      </div>
+             <audio
+         ref={originalAudioRef}
+         src={originalAudioUrl || ''}
+         onTimeUpdate={handleOriginalTimeUpdate}
+         onLoadedMetadata={handleOriginalLoadedMetadata}
+         onEnded={handleOriginalEnded}
+         onError={(e) => console.error('Original audio error:', e)}
+         preload="metadata"
+         style={{ display: 'none' }}
+       />
+       
+       <audio
+         ref={masteredAudioRef}
+         src={masteredAudioUrl || ''}
+         onTimeUpdate={handleMasteredTimeUpdate}
+         onLoadedMetadata={handleMasteredLoadedMetadata}
+         onEnded={handleMasteredEnded}
+         onError={(e) => console.error('Mastered audio error:', e)}
+         preload="metadata"
+         style={{ display: 'none' }}
+       />
       
       
 
@@ -835,6 +970,122 @@ const AnalysisPage: React.FC<AnalysisPageProps> = ({
           </div>
         </div>
       )}
+
+      {/* Intelligent Optimization Engine */}
+      {masteredAnalysis && selectedGenre && (() => {
+        const optimizationData = getIntelligentOptimizations();
+        if (!optimizationData) return null;
+
+        return (
+          <div className="bg-gradient-to-br from-blue-900 to-indigo-800 rounded-lg p-6 border border-blue-600">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-lg font-semibold text-white flex items-center">
+                <div className="w-6 h-6 bg-gradient-to-r from-blue-400 to-purple-400 rounded-full flex items-center justify-center mr-3">
+                  <span className="text-xs font-bold text-white">AI</span>
+                </div>
+                Intelligent Optimization Engine
+              </h3>
+              <div className="text-right">
+                <div className={`text-2xl font-bold ${optimizationData.overallAssessment.color}`}>
+                  {optimizationData.overallAssessment.grade}
+                </div>
+                <div className="text-xs text-gray-400">Quality Score</div>
+              </div>
+            </div>
+
+            {/* Quality Score */}
+            <div className="bg-gray-800 rounded-lg p-4 mb-6">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-sm font-medium text-white">Overall Quality Score</span>
+                <span className={`text-lg font-bold ${optimizationData.overallAssessment.color}`}>
+                  {optimizationData.qualityScore.toFixed(1)}/100
+                </span>
+              </div>
+              <div className="w-full bg-gray-700 rounded-full h-2">
+                <div 
+                  className={`h-2 rounded-full transition-all duration-500 ${
+                    optimizationData.qualityScore >= 90 ? 'bg-green-500' :
+                    optimizationData.qualityScore >= 80 ? 'bg-green-400' :
+                    optimizationData.qualityScore >= 70 ? 'bg-yellow-400' :
+                    optimizationData.qualityScore >= 60 ? 'bg-orange-400' : 'bg-red-400'
+                  }`}
+                  style={{ width: `${optimizationData.qualityScore}%` }}
+                ></div>
+              </div>
+              <div className={`text-sm mt-2 ${optimizationData.overallAssessment.color}`}>
+                {optimizationData.overallAssessment.message}
+              </div>
+            </div>
+
+            {/* Optimizations */}
+            {optimizationData.optimizations.length > 0 ? (
+              <div className="space-y-4">
+                <h4 className="text-md font-semibold text-white mb-4 flex items-center">
+                  <TrendingUp className="w-4 h-4 mr-2 text-blue-400" />
+                  Recommended Optimizations ({optimizationData.optimizations.length})
+                </h4>
+                
+                <div className="grid gap-3">
+                  {optimizationData.optimizations.map((opt, index) => (
+                    <div key={index} className={`bg-gray-800 rounded-lg p-4 border-l-4 ${
+                      opt.priority === 'high' ? 'border-red-500' : 
+                      opt.priority === 'medium' ? 'border-yellow-500' : 'border-blue-500'
+                    }`}>
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-2 mb-2">
+                            <span className={`px-2 py-1 rounded text-xs font-medium ${
+                              opt.priority === 'high' ? 'bg-red-500 text-white' :
+                              opt.priority === 'medium' ? 'bg-yellow-500 text-black' : 'bg-blue-500 text-white'
+                            }`}>
+                              {opt.priority.toUpperCase()}
+                            </span>
+                            <span className="text-sm font-medium text-white">{opt.effect}</span>
+                          </div>
+                          <p className="text-sm text-gray-300 mb-2">{opt.description}</p>
+                          <div className="flex items-center space-x-2">
+                            <span className="text-xs text-gray-400">Suggested Adjustment:</span>
+                            <span className="text-xs font-medium text-blue-400">{opt.adjustment}</span>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className={`w-3 h-3 rounded-full ${
+                            opt.type === 'lufs' ? 'bg-green-500' :
+                            opt.type === 'peak' ? 'bg-blue-500' :
+                            opt.type === 'dynamicRange' ? 'bg-purple-500' : 'bg-orange-500'
+                          }`}></div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="bg-green-900 bg-opacity-20 rounded-lg p-4 border border-green-500 border-opacity-30">
+                <div className="flex items-center space-x-2">
+                  <CheckCircle className="w-5 h-5 text-green-400" />
+                  <span className="text-green-400 font-medium">Perfect! No optimizations needed.</span>
+                </div>
+                <p className="text-sm text-gray-300 mt-2">
+                  Your mastering is already optimized for {selectedGenre} genre standards.
+                </p>
+              </div>
+            )}
+
+            {/* Genre Intelligence */}
+            <div className="mt-6 bg-gray-800 rounded-lg p-4">
+              <h4 className="text-sm font-semibold text-white mb-3 flex items-center">
+                <div className="w-4 h-4 bg-gradient-to-r from-purple-400 to-pink-400 rounded-full mr-2"></div>
+                Genre-Specific Intelligence
+              </h4>
+              <div className="text-sm text-gray-300">
+                <p>Analysis based on {selectedGenre} industry standards and best practices.</p>
+                <p className="mt-1">Targets: {getGenreTargets().lufs.ideal} dB LUFS, {getGenreTargets().peak.ideal} dBTP Peak</p>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Continue to Export Button */}
       <div className="text-center">
