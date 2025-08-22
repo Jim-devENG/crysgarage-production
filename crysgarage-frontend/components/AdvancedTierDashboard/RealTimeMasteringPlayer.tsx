@@ -424,7 +424,10 @@ const RealTimeMasteringPlayer = forwardRef<RealTimeMasteringPlayerRef, RealTimeM
     // Update stereo widener
     if (stereoWidenerRef.current && audioEffects.stereoWidener?.enabled) {
       const width = audioEffects.stereoWidener.width;
+      // Convert -100 to +100 range to gain multiplier
+      // -100 = narrow (0.7), 0 = normal (1.0), +100 = wide (1.3)
       stereoWidenerRef.current.gain.value = 1 + (width / 100) * 0.3;
+      console.log(`🎛️ Stereo widener updated: width=${width}% (gain: ${stereoWidenerRef.current.gain.value.toFixed(3)})`);
     }
 
     // Update limiter
@@ -474,9 +477,12 @@ const RealTimeMasteringPlayer = forwardRef<RealTimeMasteringPlayerRef, RealTimeM
       const curve = new Float32Array(44100);
       for (let i = 0; i < 44100; i++) {
         const x = (i * 2) / 44100 - 1;
+        // Convert -50 to +50 range to saturation effect
+        // Negative values reduce saturation, positive values increase it
         curve[i] = x + (saturation / 100) * Math.sin(x * Math.PI);
       }
       gDigitalTapeRef.current.curve = curve;
+      console.log(`🎛️ G-Digital Tape updated: saturation=${saturation}%`);
     }
 
     if (gLimiterRef.current && audioEffects.gLimiter?.enabled) {

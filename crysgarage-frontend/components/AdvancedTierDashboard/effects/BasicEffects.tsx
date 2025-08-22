@@ -43,36 +43,36 @@ const BasicEffects: React.FC<BasicEffectsProps> = ({
       {/* Effects Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
                  {/* 8-Band EQ - Enhanced with HardwareKnob */}
-         <div className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 rounded-lg border border-gray-700 shadow-lg overflow-hidden">
-           {/* Header - Gold Style */}
-           <div className="bg-gradient-to-r from-yellow-900 to-yellow-800 p-3 border-b border-yellow-600">
-             <div className="flex items-center justify-between">
-               <div className="flex items-center space-x-2">
-                 <div className="w-3 h-3 bg-green-500 rounded-full shadow-sm"></div>
-                 <div className="flex items-center space-x-2">
-                   <div className="bg-gradient-to-r from-yellow-400 to-yellow-300 p-1 rounded">
-                     <Radio className="w-3 h-3 text-yellow-900" />
-                   </div>
-                   <div>
+        <div className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 rounded-lg border border-gray-700 shadow-lg overflow-hidden">
+          {/* Header - Gold Style */}
+          <div className="bg-gradient-to-r from-yellow-900 to-yellow-800 p-3 border-b border-yellow-600">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <div className="w-3 h-3 bg-green-500 rounded-full shadow-sm"></div>
+                <div className="flex items-center space-x-2">
+                  <div className="bg-gradient-to-r from-yellow-400 to-yellow-300 p-1 rounded">
+                    <Radio className="w-3 h-3 text-yellow-900" />
+                  </div>
+                  <div>
                      <h3 className="text-sm font-bold text-white">8-BAND EQ</h3>
                      <p className="text-[9px] text-yellow-200">Surgical Frequency Control</p>
-                   </div>
-                 </div>
-               </div>
-               
-               <div className="flex space-x-1">
-                 <div className="w-1.5 h-1.5 bg-yellow-400 rounded-full border border-yellow-300"></div>
-                 <div className="w-1.5 h-1.5 bg-yellow-400 rounded-full border border-yellow-300"></div>
-                 <div className="w-1.5 h-1.5 bg-yellow-400 rounded-full border border-yellow-300"></div>
-                 <div className="w-1.5 h-1.5 bg-yellow-400 rounded-full border border-yellow-300"></div>
-               </div>
-             </div>
-           </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex space-x-1">
+                <div className="w-1.5 h-1.5 bg-yellow-400 rounded-full border border-yellow-300"></div>
+                <div className="w-1.5 h-1.5 bg-yellow-400 rounded-full border border-yellow-300"></div>
+                <div className="w-1.5 h-1.5 bg-yellow-400 rounded-full border border-yellow-300"></div>
+                <div className="w-1.5 h-1.5 bg-yellow-400 rounded-full border border-yellow-300"></div>
+              </div>
+            </div>
+          </div>
 
-           {/* Main Content */}
-           <div className="p-4">
-             {/* Enable/Disable Toggle */}
-             <div className="flex items-center justify-between mb-4">
+          {/* Main Content */}
+          <div className="p-4">
+            {/* Enable/Disable Toggle */}
+            <div className="flex items-center justify-between mb-4">
                <div className="flex items-center space-x-2">
                  <h4 className="text-white font-semibold text-sm">8-Band EQ</h4>
                  {manualAdjustments.has('eq') && (
@@ -82,18 +82,18 @@ const BasicEffects: React.FC<BasicEffectsProps> = ({
                    </div>
                  )}
                </div>
-               <label className="flex items-center">
-                 <input
-                   type="checkbox"
-                   checked={audioEffects.eq?.enabled || false}
-                   onChange={(e) => onToggleEffect('eq', e.target.checked)}
-                   className="mr-2"
-                 />
-                 <span className="text-gray-300 text-xs">Enable</span>
-               </label>
-             </div>
+              <label className="flex items-center">
+                <input
+                  type="checkbox"
+                  checked={audioEffects.eq?.enabled || false}
+                  onChange={(e) => onToggleEffect('eq', e.target.checked)}
+                  className="mr-2"
+                />
+                <span className="text-gray-300 text-xs">Enable</span>
+              </label>
+            </div>
 
-             {audioEffects.eq?.enabled && (
+            {audioEffects.eq?.enabled && (
                <div className="grid grid-cols-4 gap-2">
                  {/* Band 1 - Low Shelf */}
                  <div className="text-center">
@@ -201,88 +201,88 @@ const BasicEffects: React.FC<BasicEffectsProps> = ({
                  </div>
 
                  {/* Band 6 */}
-                 <div className="text-center">
-                   <HardwareKnob
+                <div className="text-center">
+                  <HardwareKnob
                      value={audioEffects.eq.bands?.[5]?.gain || 0}
-                     min={-12}
-                     max={12}
-                     step={0.1}
+                    min={-12}
+                    max={12}
+                    step={0.1}
                      label="6kHz"
-                     unit="dB"
-                     size="small"
+                    unit="dB"
+                    size="small"
                      onChange={(value) => {
                        const bands = [...(audioEffects.eq.bands || [])];
                        if (bands[5]) bands[5].gain = value;
                        onUpdateEffectSettings('eq', { ...audioEffects.eq, bands });
                      }}
-                     onKnobClick={handleKnobClick}
+                    onKnobClick={handleKnobClick}
                      isEditing={editingKnob === 'eq.band6'}
                      onEditingChange={(editing) => setEditingKnob(editing ? 'eq.band6' : null)}
-                   />
-                 </div>
+                  />
+                </div>
 
                  {/* Band 7 */}
-                 <div className="text-center">
-                   <HardwareKnob
+                <div className="text-center">
+                  <HardwareKnob
                      value={audioEffects.eq.bands?.[6]?.gain || 0}
-                     min={-12}
-                     max={12}
-                     step={0.1}
+                    min={-12}
+                    max={12}
+                    step={0.1}
                      label="10kHz"
-                     unit="dB"
-                     size="small"
+                    unit="dB"
+                    size="small"
                      onChange={(value) => {
                        const bands = [...(audioEffects.eq.bands || [])];
                        if (bands[6]) bands[6].gain = value;
                        onUpdateEffectSettings('eq', { ...audioEffects.eq, bands });
                      }}
-                     onKnobClick={handleKnobClick}
+                    onKnobClick={handleKnobClick}
                      isEditing={editingKnob === 'eq.band7'}
                      onEditingChange={(editing) => setEditingKnob(editing ? 'eq.band7' : null)}
-                   />
-                 </div>
+                  />
+                </div>
 
                  {/* Band 8 - High Shelf */}
-                 <div className="text-center">
-                   <HardwareKnob
+                <div className="text-center">
+                  <HardwareKnob
                      value={audioEffects.eq.bands?.[7]?.gain || 0}
-                     min={-12}
-                     max={12}
-                     step={0.1}
+                    min={-12}
+                    max={12}
+                    step={0.1}
                      label="16kHz"
-                     unit="dB"
-                     size="small"
+                    unit="dB"
+                    size="small"
                      onChange={(value) => {
                        const bands = [...(audioEffects.eq.bands || [])];
                        if (bands[7]) bands[7].gain = value;
                        onUpdateEffectSettings('eq', { ...audioEffects.eq, bands });
                      }}
-                     onKnobClick={handleKnobClick}
+                    onKnobClick={handleKnobClick}
                      isEditing={editingKnob === 'eq.band8'}
                      onEditingChange={(editing) => setEditingKnob(editing ? 'eq.band8' : null)}
-                   />
-                 </div>
-               </div>
-             )}
-           </div>
+                  />
+                </div>
+              </div>
+            )}
+          </div>
 
-           {/* Footer - Gold Style */}
-           <div className="bg-gradient-to-r from-yellow-800 to-yellow-900 p-2 border-t border-yellow-600">
-             <div className="flex justify-between items-center">
-               <div className="flex space-x-1">
-                 <div className="w-1 h-1 bg-yellow-400 rounded-full"></div>
-                 <div className="w-1 h-1 bg-yellow-400 rounded-full"></div>
-                 <div className="w-1 h-1 bg-yellow-400 rounded-full"></div>
-               </div>
+          {/* Footer - Gold Style */}
+          <div className="bg-gradient-to-r from-yellow-800 to-yellow-900 p-2 border-t border-yellow-600">
+            <div className="flex justify-between items-center">
+              <div className="flex space-x-1">
+                <div className="w-1 h-1 bg-yellow-400 rounded-full"></div>
+                <div className="w-1 h-1 bg-yellow-400 rounded-full"></div>
+                <div className="w-1 h-1 bg-yellow-400 rounded-full"></div>
+              </div>
                <div className="text-[8px] text-yellow-200">8-Band EQ v1.0</div>
-               <div className="flex space-x-1">
-                 <div className="w-1 h-1 bg-yellow-400 rounded-full"></div>
-                 <div className="w-1 h-1 bg-yellow-400 rounded-full"></div>
-                 <div className="w-1 h-1 bg-yellow-400 rounded-full"></div>
-               </div>
-             </div>
-           </div>
-         </div>
+              <div className="flex space-x-1">
+                <div className="w-1 h-1 bg-yellow-400 rounded-full"></div>
+                <div className="w-1 h-1 bg-yellow-400 rounded-full"></div>
+                <div className="w-1 h-1 bg-yellow-400 rounded-full"></div>
+              </div>
+            </div>
+          </div>
+        </div>
 
         {/* Compressor */}
         <div className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 rounded-lg border border-gray-700 shadow-lg overflow-hidden">
@@ -316,7 +316,7 @@ const BasicEffects: React.FC<BasicEffectsProps> = ({
             {/* Enable/Disable Toggle */}
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center space-x-2">
-                <h4 className="text-white font-semibold text-sm">Compressor</h4>
+              <h4 className="text-white font-semibold text-sm">Compressor</h4>
                 {manualAdjustments.has('compressor') && (
                   <div className="flex items-center space-x-1">
                     <div className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse"></div>
@@ -439,7 +439,7 @@ const BasicEffects: React.FC<BasicEffectsProps> = ({
               <div className="text-center">
                 <HardwareKnob
                   value={audioEffects.stereoWidener.width || 0}
-                  min={0}
+                  min={-100}
                   max={100}
                   step={1}
                   label="WIDTH"
@@ -504,7 +504,7 @@ const BasicEffects: React.FC<BasicEffectsProps> = ({
             {/* Enable/Disable Toggle */}
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center space-x-2">
-                <h4 className="text-white font-semibold text-sm">Loudness</h4>
+              <h4 className="text-white font-semibold text-sm">Loudness</h4>
                 {manualAdjustments.has('loudness') && (
                   <div className="flex items-center space-x-1">
                     <div className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse"></div>
@@ -592,7 +592,7 @@ const BasicEffects: React.FC<BasicEffectsProps> = ({
             {/* Enable/Disable Toggle */}
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center space-x-2">
-                <h4 className="text-white font-semibold text-sm">Limiter</h4>
+              <h4 className="text-white font-semibold text-sm">Limiter</h4>
                 {manualAdjustments.has('limiter') && (
                   <div className="flex items-center space-x-1">
                     <div className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse"></div>
@@ -917,8 +917,8 @@ const BasicEffects: React.FC<BasicEffectsProps> = ({
                <div className="text-center">
                  <HardwareKnob
                    value={audioEffects.gDigitalTape.saturation || 0}
-                   min={0}
-                   max={100}
+                   min={-50}
+                   max={50}
                    step={1}
                    label="SAT"
                    unit="%"
@@ -941,17 +941,17 @@ const BasicEffects: React.FC<BasicEffectsProps> = ({
                  <div className="w-1 h-1 bg-yellow-400 rounded-full"></div>
                </div>
                <div className="text-[8px] text-yellow-200">G-Digital Tape v1.0</div>
-               <div className="flex space-x-1">
-                 <div className="w-1 h-1 bg-yellow-400 rounded-full"></div>
-                 <div className="w-1 h-1 bg-yellow-400 rounded-full"></div>
-                 <div className="w-1 h-1 bg-yellow-400 rounded-full"></div>
-               </div>
-             </div>
-           </div>
-         </div>
-       </div>
-     </div>
-   );
- };
+              <div className="flex space-x-1">
+                <div className="w-1 h-1 bg-yellow-400 rounded-full"></div>
+                <div className="w-1 h-1 bg-yellow-400 rounded-full"></div>
+                <div className="w-1 h-1 bg-yellow-400 rounded-full"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 export default BasicEffects;
