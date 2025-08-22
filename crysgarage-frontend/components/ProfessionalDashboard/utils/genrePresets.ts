@@ -173,7 +173,7 @@ export const GENRE_PRESETS: Record<string, GenrePreset> = {
     compression: { threshold: -20, ratio: 3, attack: 0.003, release: 0.25 },
     eq: { low: 1.2, mid: 1.0, high: 1.2 },
     truePeak: -0.25,
-    targetLufs: -8.0
+    targetLufs: -9.0
   },
   
   // INDIGO - Sophisticated, Complex (Refined & Detailed)
