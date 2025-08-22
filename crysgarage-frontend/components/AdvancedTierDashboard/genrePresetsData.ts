@@ -6,14 +6,26 @@ export const GENRE_PRESETS: Record<string, any> = {
     compression: { threshold: -18, ratio: 4, attack: 0.002, release: 0.2 },
     eq: { low: 2.0, mid: 1.0, high: 0.5 },
     truePeak: -0.1,
-    targetLufs: -7.0
+    targetLufs: -7.0,
+    gDigitalTape: { saturation: 15, enabled: true },
+    gMultiBand: { 
+      thresholds: [-20, -18, -16], 
+      ratios: [3, 4, 5], 
+      enabled: true 
+    }
   },
   trap: {
     gain: 2.2,
     compression: { threshold: -14, ratio: 6, attack: 0.001, release: 0.08 },
     eq: { low: 3.5, mid: 1.2, high: 0.6 },
     truePeak: -0.1,
-    targetLufs: -7.2
+    targetLufs: -7.2,
+    gDigitalTape: { saturation: 25, enabled: true },
+    gMultiBand: { 
+      thresholds: [-18, -16, -14], 
+      ratios: [4, 6, 8], 
+      enabled: true 
+    }
   },
   drill: {
     gain: 2.0,
@@ -55,7 +67,13 @@ export const GENRE_PRESETS: Record<string, any> = {
     compression: { threshold: -16, ratio: 5, attack: 0.001, release: 0.1 },
     eq: { low: 3.0, mid: 1.5, high: 0.8 },
     truePeak: -0.15,
-    targetLufs: -7.8
+    targetLufs: -7.8,
+    gDigitalTape: { saturation: 20, enabled: true },
+    gMultiBand: { 
+      thresholds: [-20, -18, -16], 
+      ratios: [3, 5, 7], 
+      enabled: true 
+    }
   },
   house: {
     gain: 1.9,

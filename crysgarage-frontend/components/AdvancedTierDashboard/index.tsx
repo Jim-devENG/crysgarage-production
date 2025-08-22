@@ -229,11 +229,24 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
         newManualAdjustments.add('loudness');
       }
       
-      if (lockedEffectValues.limiter && (
-        effects.limiter.ceiling !== lockedEffectValues.limiter.ceiling
-      )) {
-        newManualAdjustments.add('limiter');
-      }
+                if (lockedEffectValues.limiter && (
+            effects.limiter.ceiling !== lockedEffectValues.limiter.ceiling
+          )) {
+            newManualAdjustments.add('limiter');
+          }
+          
+          if (lockedEffectValues.gDigitalTape && (
+            effects.gDigitalTape.saturation !== lockedEffectValues.gDigitalTape.saturation
+          )) {
+            newManualAdjustments.add('gDigitalTape');
+          }
+          
+          if (lockedEffectValues.gMultiBand && (
+            effects.gMultiBand.thresholds?.[0] !== lockedEffectValues.gMultiBand.thresholds?.[0] ||
+            effects.gMultiBand.ratios?.[0] !== lockedEffectValues.gMultiBand.ratios?.[0]
+          )) {
+            newManualAdjustments.add('gMultiBand');
+          }
       
       setManualAdjustments(newManualAdjustments);
     }
@@ -455,11 +468,18 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
         loudness: {
           volume: preset.gain
         },
-        limiter: {
-          threshold: -1,
-          ceiling: preset.truePeak
-        }
-      };
+                  limiter: {
+            threshold: -1,
+            ceiling: preset.truePeak
+          },
+          gDigitalTape: {
+            saturation: preset.gDigitalTape?.saturation || 0
+          },
+          gMultiBand: {
+            thresholds: preset.gMultiBand?.thresholds || [-20, -18, -16],
+            ratios: preset.gMultiBand?.ratios || [3, 4, 5]
+          }
+        };
       setLockedEffectValues(lockedValues);
       
       console.log(`Genre selected: ${genreId}`, {
@@ -513,6 +533,17 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
             threshold: -1, 
             ceiling: preset.truePeak, 
             enabled: true 
+          },
+          gDigitalTape: {
+            ...prev.gDigitalTape,
+            saturation: preset.gDigitalTape?.saturation || 0,
+            enabled: preset.gDigitalTape?.enabled || false
+          },
+          gMultiBand: {
+            ...prev.gMultiBand,
+            thresholds: preset.gMultiBand?.thresholds || [-20, -18, -16],
+            ratios: preset.gMultiBand?.ratios || [3, 4, 5],
+            enabled: preset.gMultiBand?.enabled || false
           }
         };
       });
@@ -799,7 +830,16 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
       
       {/* Studio Header */}
       <div className="relative z-10">
-        <StudioHeader currentStep={currentStep} credits={credits} onNewSession={handleNewSession} />
+        <StudioHeader 
+          currentStep={currentStep} 
+          credits={credits} 
+          onNewSession={handleNewSession}
+          selectedGenre={selectedGenre}
+          onGenreSelect={handleGenreSelect}
+          genreLocked={genreLocked}
+          onToggleGenreLock={handleToggleGenreLock}
+          manualAdjustments={manualAdjustments}
+        />
       </div>
       
       {/* Main Content */}
