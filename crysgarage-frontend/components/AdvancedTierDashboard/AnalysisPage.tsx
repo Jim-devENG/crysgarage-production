@@ -217,9 +217,9 @@ const AnalysisPage: React.FC<AnalysisPageProps> = ({
       };
       
       const fallbackLoudnessResult: ProfessionalLoudnessAnalysis = {
-        momentary: { value: estimatedLoudness, unit: "dB" },
-        shortTerm: { value: estimatedLoudness + 0.2, unit: "dB" },
-        integrated: { value: estimatedLoudness, unit: "dB" },
+        momentary: { value: estimatedLufs, unit: "dB" },
+        shortTerm: { value: estimatedLufs + 0.2, unit: "dB" },
+        integrated: { value: estimatedLufs, unit: "dB" },
         truePeak: { value: peakDb, unit: "dBTP" },
         loudnessRange: { value: 8.0, unit: "dB" },
         compliance: {
