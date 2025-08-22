@@ -54,9 +54,9 @@ const CompactFrequencyAnalyzer: React.FC<CompactFrequencyAnalyzerProps> = ({
     ctx.fillStyle = '#1a1a1a';
     ctx.fillRect(0, 0, width, height);
 
-    // Draw grid lines
-    ctx.strokeStyle = '#333333';
-    ctx.lineWidth = 1;
+         // Draw grid lines
+     ctx.strokeStyle = '#404040';
+     ctx.lineWidth = 0.5;
 
     // Horizontal grid lines (dB scale from 0 to -55)
     const dbRange = 55; // 0 to -55 = 55dB range
@@ -79,11 +79,11 @@ const CompactFrequencyAnalyzer: React.FC<CompactFrequencyAnalyzerProps> = ({
       ctx.stroke();
     });
 
-    // Calculate and draw frequency response using DAW algorithm
-    if (meterData.frequencyData && meterData.frequencyData.length > 0) {
-      ctx.strokeStyle = '#00ff41';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
+         // Calculate and draw frequency response using DAW algorithm
+     if (meterData.frequencyData && meterData.frequencyData.length > 0) {
+       ctx.strokeStyle = '#00ff41';
+       ctx.lineWidth = 0.8;
+       ctx.beginPath();
 
       const bandWidth = width / frequencyBands.length;
       
@@ -116,10 +116,10 @@ const CompactFrequencyAnalyzer: React.FC<CompactFrequencyAnalyzerProps> = ({
       ctx.stroke();
     }
 
-    // Draw labels
-    ctx.fillStyle = '#cccccc';
-    ctx.font = '9px monospace';
-    ctx.textAlign = 'right';
+         // Draw labels
+     ctx.fillStyle = '#888888';
+     ctx.font = '8px monospace';
+     ctx.textAlign = 'right';
 
     // dB labels on left (0 to -55)
     dbScale.forEach(db => {
@@ -127,13 +127,13 @@ const CompactFrequencyAnalyzer: React.FC<CompactFrequencyAnalyzerProps> = ({
       ctx.fillText(db.toString(), 25, y + 3);
     });
 
-    // Frequency labels on bottom (simplified for compact view)
-    ctx.textAlign = 'center';
-    [125, 1000, 8000].forEach((freq, index) => {
-      const positions = [width * 0.2, width * 0.5, width * 0.8];
-      const label = freq >= 1000 ? `${freq / 1000}k` : freq.toString();
-      ctx.fillText(label, positions[index], height - 5);
-    });
+         // Frequency labels on bottom (simplified for compact view)
+     ctx.textAlign = 'center';
+     [125, 1000, 8000].forEach((freq, index) => {
+       const positions = [width * 0.2, width * 0.5, width * 0.8];
+       const label = freq >= 1000 ? `${freq / 1000}k` : freq.toString();
+       ctx.fillText(label, positions[index], height - 3);
+     });
   };
 
   const getCorrelationColor = (correlation: number) => {
