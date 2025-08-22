@@ -18,6 +18,11 @@ const ProfessionalAnalysisMeter: React.FC<ProfessionalAnalysisMeterProps> = ({
   meterData,
   isAnalyzing = false
 }) => {
+  // DAW Algorithm Implementation for Frequency Analysis:
+  // 1. Frequency data is normalized from 0-255 range to linear amplitude (0-1)
+  // 2. Convert to dB using standard formula: dB = 20 * log10(amplitude)
+  // 3. Display range is 0 dB (top) to -55 dB (bottom) for professional metering
+  // 4. This matches industry-standard DAW frequency analyzers
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [detectionMode, setDetectionMode] = useState<'LRmax'>('LRmax');
   const [analyzerMode, setAnalyzerMode] = useState<'Peak'>('Peak');
@@ -59,12 +64,15 @@ const ProfessionalAnalysisMeter: React.FC<ProfessionalAnalysisMeterProps> = ({
     ctx.strokeStyle = '#404040';
     ctx.lineWidth = 1;
 
-    // Horizontal grid lines (dB scale)
-    const dbRange = 60; // 5 to -55 = 60dB range
+    // Horizontal grid lines (dB scale from 0 to -55)
+    const dbRange = 55; // 0 to -55 = 55dB range
     const pixelsPerDb = height / dbRange;
     
+    // Create dB scale from 0 to -55 in 5dB increments
+    const dbScale = [0, -5, -10, -15, -20, -25, -30, -35, -40, -45, -50, -55];
+    
     dbScale.forEach(db => {
-      const y = ((5 - db) / dbRange) * height;
+      const y = (Math.abs(db) / dbRange) * height;
       ctx.beginPath();
       ctx.moveTo(0, y);
       ctx.lineTo(width, y);
@@ -81,18 +89,33 @@ const ProfessionalAnalysisMeter: React.FC<ProfessionalAnalysisMeterProps> = ({
       ctx.stroke();
     });
 
-    // Draw frequency response
+    // Calculate and draw frequency response using DAW algorithm
     if (meterData.frequencyData && meterData.frequencyData.length > 0) {
       ctx.strokeStyle = '#00ff00';
       ctx.lineWidth = 2;
       ctx.beginPath();
 
       const bandWidth = width / frequencyBands.length;
+      
+      // Process frequency data using DAW algorithm
       meterData.frequencyData.slice(0, frequencyBands.length).forEach((value, index) => {
         const x = index * bandWidth + bandWidth / 2;
-        // Convert 0-255 range to dB scale (5 to -55)
-        const db = 5 - (value / 255) * 60;
-        const y = ((5 - db) / dbRange) * height;
+        
+        // DAW Algorithm: Convert frequency data to dB scale
+        // Normalize the frequency data (0-255) to linear amplitude (0-1)
+        const normalizedAmplitude = value / 255;
+        
+        // Convert to dB using DAW standard: dB = 20 * log10(amplitude)
+        // Clamp to prevent -Infinity when amplitude is 0
+        const amplitude = Math.max(normalizedAmplitude, 0.000001);
+        const db = 20 * Math.log10(amplitude);
+        
+        // Map dB to display range (0 to -55)
+        // Clamp dB to our display range
+        const clampedDb = Math.max(-55, Math.min(0, db));
+        
+        // Convert dB to y position (0 dB at top, -55 dB at bottom)
+        const y = (Math.abs(clampedDb) / dbRange) * height;
         
         if (index === 0) {
           ctx.moveTo(x, y);
@@ -108,9 +131,9 @@ const ProfessionalAnalysisMeter: React.FC<ProfessionalAnalysisMeterProps> = ({
     ctx.font = '10px monospace';
     ctx.textAlign = 'right';
 
-    // dB labels on left
+    // dB labels on left (0 to -55)
     dbScale.forEach(db => {
-      const y = ((5 - db) / dbRange) * height;
+      const y = (Math.abs(db) / dbRange) * height;
       ctx.fillText(db.toString(), 30, y + 3);
     });
 
@@ -132,19 +155,20 @@ const ProfessionalAnalysisMeter: React.FC<ProfessionalAnalysisMeterProps> = ({
   const getLevelColor = (level: number) => {
     if (level > -6) return '#ff0000'; // Red for clipping
     if (level > -12) return '#ffff00'; // Yellow for warning
-    return '#00ff00'; // Green for safe
+    if (level > -20) return '#00ff00'; // Green for safe
+    return '#666666'; // Gray for very low levels
   };
 
   return (
     <div className="bg-gray-900 rounded-lg p-4 border border-gray-700">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center space-x-4">
-          <span className="text-white font-bold">dB</span>
-          <span className="text-gray-400">Top: +5 dB</span>
-          <span className="text-gray-400">Range: 60 dB</span>
-        </div>
-      </div>
+             {/* Header */}
+       <div className="flex items-center justify-between mb-4">
+         <div className="flex items-center space-x-4">
+           <span className="text-white font-bold">dB</span>
+           <span className="text-gray-400">Top: 0 dB</span>
+           <span className="text-gray-400">Range: 55 dB</span>
+         </div>
+       </div>
 
       <div className="grid grid-cols-4 gap-4">
         {/* Main Frequency Analyzer */}
@@ -202,16 +226,16 @@ const ProfessionalAnalysisMeter: React.FC<ProfessionalAnalysisMeterProps> = ({
               </div>
             </div>
 
-            {/* dB Scale */}
-            <div className="mt-2 text-right">
-              <div className="text-gray-400 text-xs space-y-0.5">
-                {[6, 3, 0, -3, -6, -9, -12, -16, -20, -24, -30, -40, -50, -60].map(db => (
-                  <div key={db} className="h-3 flex items-center justify-end">
-                    <span className="text-xs">{db}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
+                         {/* dB Scale */}
+             <div className="mt-2 text-right">
+               <div className="text-gray-400 text-xs space-y-0.5">
+                 {[0, -5, -10, -15, -20, -25, -30, -35, -40, -45, -50, -55].map(db => (
+                   <div key={db} className="h-3 flex items-center justify-end">
+                     <span className="text-xs">{db}</span>
+                   </div>
+                 ))}
+               </div>
+             </div>
           </div>
 
           {/* Correlation Meter */}
