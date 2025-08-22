@@ -719,27 +719,129 @@ const BasicEffects: React.FC<BasicEffectsProps> = ({
                </label>
              </div>
 
-             {audioEffects.gMultiBand?.enabled && (
-               <div className="text-center">
-                 <HardwareKnob
-                   value={audioEffects.gMultiBand.thresholds?.[0] || -20}
-                   min={-60}
-                   max={0}
-                   step={0.1}
-                   label="THRESH 1"
-                   unit="dB"
-                   size="medium"
-                   onChange={(value) => {
-                     const thresholds = [...(audioEffects.gMultiBand.thresholds || [])];
-                     if (thresholds[0] !== undefined) thresholds[0] = value;
-                     onUpdateEffectSettings('gMultiBand', { ...audioEffects.gMultiBand, thresholds });
-                   }}
-                   onKnobClick={handleKnobClick}
-                   isEditing={editingKnob === 'gMultiBand.threshold1'}
-                   onEditingChange={(editing) => setEditingKnob(editing ? 'gMultiBand.threshold1' : null)}
-                 />
-               </div>
-             )}
+                           {audioEffects.gMultiBand?.enabled && (
+                <div className="grid grid-cols-2 gap-3">
+                  {/* Low Band */}
+                  <div className="text-center">
+                    <HardwareKnob
+                      value={audioEffects.gMultiBand.low?.threshold || -20}
+                      min={-60}
+                      max={0}
+                      step={0.1}
+                      label="LOW THRESH"
+                      unit="dB"
+                      size="small"
+                      onChange={(value) => handleKnobChange('gMultiBand', 'low', { 
+                        ...audioEffects.gMultiBand.low, 
+                        threshold: value 
+                      })}
+                      onKnobClick={handleKnobClick}
+                      isEditing={editingKnob === 'gMultiBand.low.threshold'}
+                      onEditingChange={(editing) => setEditingKnob(editing ? 'gMultiBand.low.threshold' : null)}
+                    />
+                  </div>
+                  
+                  {/* Low Ratio */}
+                  <div className="text-center">
+                    <HardwareKnob
+                      value={audioEffects.gMultiBand.low?.ratio || 4}
+                      min={1}
+                      max={20}
+                      step={0.1}
+                      label="LOW RATIO"
+                      unit=":1"
+                      size="small"
+                      onChange={(value) => handleKnobChange('gMultiBand', 'low', { 
+                        ...audioEffects.gMultiBand.low, 
+                        ratio: value 
+                      })}
+                      onKnobClick={handleKnobClick}
+                      isEditing={editingKnob === 'gMultiBand.low.ratio'}
+                      onEditingChange={(editing) => setEditingKnob(editing ? 'gMultiBand.low.ratio' : null)}
+                    />
+                  </div>
+                  
+                  {/* Mid Band */}
+                  <div className="text-center">
+                    <HardwareKnob
+                      value={audioEffects.gMultiBand.mid?.threshold || -18}
+                      min={-60}
+                      max={0}
+                      step={0.1}
+                      label="MID THRESH"
+                      unit="dB"
+                      size="small"
+                      onChange={(value) => handleKnobChange('gMultiBand', 'mid', { 
+                        ...audioEffects.gMultiBand.mid, 
+                        threshold: value 
+                      })}
+                      onKnobClick={handleKnobClick}
+                      isEditing={editingKnob === 'gMultiBand.mid.threshold'}
+                      onEditingChange={(editing) => setEditingKnob(editing ? 'gMultiBand.mid.threshold' : null)}
+                    />
+                  </div>
+                  
+                  {/* Mid Ratio */}
+                  <div className="text-center">
+                    <HardwareKnob
+                      value={audioEffects.gMultiBand.mid?.ratio || 4}
+                      min={1}
+                      max={20}
+                      step={0.1}
+                      label="MID RATIO"
+                      unit=":1"
+                      size="small"
+                      onChange={(value) => handleKnobChange('gMultiBand', 'mid', { 
+                        ...audioEffects.gMultiBand.mid, 
+                        ratio: value 
+                      })}
+                      onKnobClick={handleKnobClick}
+                      isEditing={editingKnob === 'gMultiBand.mid.ratio'}
+                      onEditingChange={(editing) => setEditingKnob(editing ? 'gMultiBand.mid.ratio' : null)}
+                    />
+                  </div>
+                  
+                  {/* High Band */}
+                  <div className="text-center">
+                    <HardwareKnob
+                      value={audioEffects.gMultiBand.high?.threshold || -16}
+                      min={-60}
+                      max={0}
+                      step={0.1}
+                      label="HIGH THRESH"
+                      unit="dB"
+                      size="small"
+                      onChange={(value) => handleKnobChange('gMultiBand', 'high', { 
+                        ...audioEffects.gMultiBand.high, 
+                        threshold: value 
+                      })}
+                      onKnobClick={handleKnobClick}
+                      isEditing={editingKnob === 'gMultiBand.high.threshold'}
+                      onEditingChange={(editing) => setEditingKnob(editing ? 'gMultiBand.high.threshold' : null)}
+                    />
+                  </div>
+                  
+                  {/* High Ratio */}
+                  <div className="text-center">
+                    <HardwareKnob
+                      value={audioEffects.gMultiBand.high?.ratio || 4}
+                      min={1}
+                      max={20}
+                      step={0.1}
+                      label="HIGH RATIO"
+                      unit=":1"
+                      size="small"
+                      onChange={(value) => handleKnobChange('gMultiBand', 'high', { 
+                        ...audioEffects.gMultiBand.high, 
+                        ratio: value 
+                      })}
+                      onKnobClick={handleKnobClick}
+                      isEditing={editingKnob === 'gMultiBand.high.ratio'}
+                      onEditingChange={(editing) => setEditingKnob(editing ? 'gMultiBand.high.ratio' : null)}
+                    />
+                  </div>
+                </div>
+              )}
            </div>
 
            {/* Footer - Gold Style */}

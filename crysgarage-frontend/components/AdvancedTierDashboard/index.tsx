@@ -246,12 +246,16 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
             newManualAdjustments.add('gDigitalTape');
           }
           
-          if (lockedEffectValues.gMultiBand && (
-            effects.gMultiBand.thresholds?.[0] !== lockedEffectValues.gMultiBand.thresholds?.[0] ||
-            effects.gMultiBand.ratios?.[0] !== lockedEffectValues.gMultiBand.ratios?.[0]
-          )) {
-            newManualAdjustments.add('gMultiBand');
-          }
+                if (lockedEffectValues.gMultiBand && (
+        effects.gMultiBand.low?.threshold !== lockedEffectValues.gMultiBand.low?.threshold ||
+        effects.gMultiBand.low?.ratio !== lockedEffectValues.gMultiBand.low?.ratio ||
+        effects.gMultiBand.mid?.threshold !== lockedEffectValues.gMultiBand.mid?.threshold ||
+        effects.gMultiBand.mid?.ratio !== lockedEffectValues.gMultiBand.mid?.ratio ||
+        effects.gMultiBand.high?.threshold !== lockedEffectValues.gMultiBand.high?.threshold ||
+        effects.gMultiBand.high?.ratio !== lockedEffectValues.gMultiBand.high?.ratio
+      )) {
+        newManualAdjustments.add('gMultiBand');
+      }
       
       setManualAdjustments(newManualAdjustments);
     }
@@ -487,8 +491,18 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
             saturation: preset.gDigitalTape?.saturation || 0
           },
           gMultiBand: {
-            thresholds: preset.gMultiBand?.thresholds || [-20, -18, -16],
-            ratios: preset.gMultiBand?.ratios || [3, 4, 5]
+            low: { 
+              threshold: preset.gMultiBand?.thresholds?.[0] || -20, 
+              ratio: preset.gMultiBand?.ratios?.[0] || 3 
+            },
+            mid: { 
+              threshold: preset.gMultiBand?.thresholds?.[1] || -18, 
+              ratio: preset.gMultiBand?.ratios?.[1] || 4 
+            },
+            high: { 
+              threshold: preset.gMultiBand?.thresholds?.[2] || -16, 
+              ratio: preset.gMultiBand?.ratios?.[2] || 5 
+            }
           }
         };
       setLockedEffectValues(lockedValues);
@@ -552,8 +566,18 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
           },
           gMultiBand: {
             ...prev.gMultiBand,
-            thresholds: preset.gMultiBand?.thresholds || [-20, -18, -16],
-            ratios: preset.gMultiBand?.ratios || [3, 4, 5],
+            low: { 
+              threshold: preset.gMultiBand?.thresholds?.[0] || -20, 
+              ratio: preset.gMultiBand?.ratios?.[0] || 3 
+            },
+            mid: { 
+              threshold: preset.gMultiBand?.thresholds?.[1] || -18, 
+              ratio: preset.gMultiBand?.ratios?.[1] || 4 
+            },
+            high: { 
+              threshold: preset.gMultiBand?.thresholds?.[2] || -16, 
+              ratio: preset.gMultiBand?.ratios?.[2] || 5 
+            },
             enabled: preset.gMultiBand?.enabled || false
           }
         };
@@ -653,8 +677,8 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
       gLimiter: { threshold: -1, inputGain: 0, outputGain: 0, reduction: 0, outputPeak: -20, enabled: false },
       gMultiBand: { 
         low: { threshold: -20, ratio: 4 }, 
-        mid: { threshold: -20, ratio: 4 }, 
-        high: { threshold: -20, ratio: 4 }, 
+        mid: { threshold: -18, ratio: 4 }, 
+        high: { threshold: -16, ratio: 4 }, 
         enabled: false 
       },
       gSurround: { width: 0, depth: 0, enabled: false },
