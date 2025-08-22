@@ -7,6 +7,7 @@ interface AnalysisPageProps {
   processedAudioUrl: string | null;
   audioEffects: any;
   meterData: any;
+  selectedGenre?: string;
   onBack: () => void;
   onContinue: () => void;
 }
@@ -16,9 +17,11 @@ const AnalysisPage: React.FC<AnalysisPageProps> = ({
   processedAudioUrl,
   audioEffects,
   meterData,
+  selectedGenre,
   onBack,
   onContinue
 }) => {
+
   const [isPlayingOriginal, setIsPlayingOriginal] = useState(false);
   const [isPlayingMastered, setIsPlayingMastered] = useState(false);
   const [originalCurrentTime, setOriginalCurrentTime] = useState(0);
@@ -44,6 +47,14 @@ const AnalysisPage: React.FC<AnalysisPageProps> = ({
   // Create URLs for audio playback
   const originalAudioUrl = originalFile ? URL.createObjectURL(originalFile) : null;
   const masteredAudioUrl = processedAudioUrl;
+  
+  // Debug logging
+  console.log('AnalysisPage audio URLs:', {
+    originalFile: originalFile?.name,
+    originalAudioUrl: originalAudioUrl ? 'Set' : 'Not set',
+    processedAudioUrl: processedAudioUrl ? 'Set' : 'Not set',
+    masteredAudioUrl: masteredAudioUrl ? 'Set' : 'Not set'
+  });
 
   // Cleanup object URLs on unmount
   useEffect(() => {
@@ -56,13 +67,24 @@ const AnalysisPage: React.FC<AnalysisPageProps> = ({
 
   // Audio playback handlers
   const handleOriginalPlayPause = async () => {
-    if (!originalAudioRef.current) return;
+    console.log('Original play/pause clicked:', {
+      hasRef: !!originalAudioRef.current,
+      isPlaying: isPlayingOriginal,
+      hasUrl: !!originalAudioUrl
+    });
+    
+    if (!originalAudioRef.current) {
+      console.error('Original audio ref is null');
+      return;
+    }
 
     try {
       if (isPlayingOriginal) {
+        console.log('Pausing original audio');
         originalAudioRef.current.pause();
         setIsPlayingOriginal(false);
       } else {
+        console.log('Playing original audio');
         // Stop mastered audio if playing
         if (isPlayingMastered && masteredAudioRef.current) {
           masteredAudioRef.current.pause();
@@ -77,13 +99,24 @@ const AnalysisPage: React.FC<AnalysisPageProps> = ({
   };
 
   const handleMasteredPlayPause = async () => {
-    if (!masteredAudioRef.current) return;
+    console.log('Mastered play/pause clicked:', {
+      hasRef: !!masteredAudioRef.current,
+      isPlaying: isPlayingMastered,
+      hasUrl: !!masteredAudioUrl
+    });
+    
+    if (!masteredAudioRef.current) {
+      console.error('Mastered audio ref is null');
+      return;
+    }
 
     try {
       if (isPlayingMastered) {
+        console.log('Pausing mastered audio');
         masteredAudioRef.current.pause();
         setIsPlayingMastered(false);
       } else {
+        console.log('Playing mastered audio');
         // Stop original audio if playing
         if (isPlayingOriginal && originalAudioRef.current) {
           originalAudioRef.current.pause();
@@ -105,9 +138,11 @@ const AnalysisPage: React.FC<AnalysisPageProps> = ({
   };
 
   const handleOriginalLoadedMetadata = () => {
+    console.log('Original audio metadata loaded');
     if (originalAudioRef.current) {
       setOriginalDuration(originalAudioRef.current.duration);
       setOriginalReady(true);
+      console.log('Original audio duration:', originalAudioRef.current.duration);
     }
   };
 
@@ -124,9 +159,11 @@ const AnalysisPage: React.FC<AnalysisPageProps> = ({
   };
 
   const handleMasteredLoadedMetadata = () => {
+    console.log('Mastered audio metadata loaded');
     if (masteredAudioRef.current) {
       setMasteredDuration(masteredAudioRef.current.duration);
       setMasteredReady(true);
+      console.log('Mastered audio duration:', masteredAudioRef.current.duration);
     }
   };
 
@@ -345,8 +382,100 @@ const AnalysisPage: React.FC<AnalysisPageProps> = ({
     return effects;
   };
 
+  // Get genre-specific target values (Professional Dashboard Pattern)
+  const getGenreTargets = () => {
+    // Professional Dashboard genre presets (real industry standards)
+    const professionalPresets = {
+      trap: { targetLufs: -7.2, truePeak: -0.1 },
+      'hip-hop': { targetLufs: -8.0, truePeak: -0.2 },
+      afrobeats: { targetLufs: -7.0, truePeak: -0.1 },
+      drill: { targetLufs: -7.5, truePeak: -0.15 },
+      dubstep: { targetLufs: -7.0, truePeak: -0.1 },
+      gospel: { targetLufs: -8.5, truePeak: -0.3 },
+      'r-b': { targetLufs: -8.8, truePeak: -0.35 },
+      'lofi-hiphop': { targetLufs: -9.0, truePeak: -0.4 },
+      'crysgarage': { targetLufs: -7.8, truePeak: -0.15 },
+      house: { targetLufs: -8.0, truePeak: -0.2 },
+      techno: { targetLufs: -7.5, truePeak: -0.15 },
+      highlife: { targetLufs: -8.2, truePeak: -0.25 },
+      instrumentals: { targetLufs: -8.5, truePeak: -0.3 },
+      beats: { targetLufs: -8.0, truePeak: -0.2 },
+      amapiano: { targetLufs: -8.0, truePeak: -0.2 },
+      trance: { targetLufs: -7.8, truePeak: -0.15 },
+      'drum-bass': { targetLufs: -7.0, truePeak: -0.1 },
+      reggae: { targetLufs: -8.2, truePeak: -0.25 },
+      'voice-over': { targetLufs: -9.2, truePeak: -0.4 },
+      journalist: { targetLufs: -9.5, truePeak: -0.45 },
+      soul: { targetLufs: -8.8, truePeak: -0.35 },
+      'content-creator': { targetLufs: -8.5, truePeak: -0.3 },
+      pop: { targetLufs: -8.0, truePeak: -0.25 },
+      jazz: { targetLufs: -9.0, truePeak: -0.4 }
+    };
+
+    const targets = {
+      lufs: { min: -14, max: -7, ideal: -10 },
+      peak: { min: -1.0, max: -0.1, ideal: -0.5 },
+      dynamicRange: { min: 6, max: 12, ideal: 8 }
+    };
+    
+    // Use Professional Dashboard presets for exact genre matching
+    if (selectedGenre) {
+      const genreKey = selectedGenre.toLowerCase().replace(/\s+/g, '-');
+      const preset = professionalPresets[genreKey];
+      
+      if (preset) {
+        // Use the exact Professional Dashboard values
+        targets.lufs = { 
+          min: preset.targetLufs - 1, 
+          max: preset.targetLufs + 1, 
+          ideal: preset.targetLufs 
+        };
+        targets.peak = { 
+          min: preset.truePeak - 0.1, 
+          max: preset.truePeak + 0.1, 
+          ideal: preset.truePeak 
+        };
+        // Dynamic range based on genre characteristics
+        if (genreKey.includes('trap') || genreKey.includes('dubstep') || genreKey.includes('drum-bass')) {
+          targets.dynamicRange = { min: 3, max: 6, ideal: 4.5 }; // Heavy compression genres
+        } else if (genreKey.includes('jazz') || genreKey.includes('voice-over') || genreKey.includes('journalist')) {
+          targets.dynamicRange = { min: 8, max: 12, ideal: 10.0 }; // Preserved dynamics
+        } else {
+          targets.dynamicRange = { min: 4, max: 8, ideal: 6.0 }; // Standard range
+        }
+      } else {
+        // Fallback for unmatched genres
+        switch (selectedGenre.toLowerCase()) {
+          case 'edm':
+          case 'electronic':
+          case 'dance':
+            targets.lufs = { min: -7, max: -5, ideal: -6 };
+            targets.peak = { min: -1.0, max: -0.1, ideal: -0.1 };
+            targets.dynamicRange = { min: 3, max: 6, ideal: 4.5 };
+            break;
+          case 'rock':
+          case 'metal':
+            targets.lufs = { min: -9, max: -7, ideal: -8 };
+            targets.peak = { min: -1.0, max: -0.1, ideal: -0.3 };
+            targets.dynamicRange = { min: 5, max: 8, ideal: 6.5 };
+            break;
+          case 'classical':
+            targets.lufs = { min: -14, max: -10, ideal: -12 };
+            targets.peak = { min: -1.0, max: -0.1, ideal: -0.5 };
+            targets.dynamicRange = { min: 8, max: 12, ideal: 10.0 };
+            break;
+          default:
+            // Use default targets
+            break;
+        }
+      }
+    }
+    
+    return targets;
+  };
+
   // Calculate changes using real analysis data
-     // Only show analysis data if we have real analysis results
+  // Only show analysis data if we have real analysis results
    const originalData = originalAnalysis ? {
      loudness: originalAnalysis.loudness,
      peak: originalAnalysis.truePeak,
@@ -387,27 +516,42 @@ const AnalysisPage: React.FC<AnalysisPageProps> = ({
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
-      {/* Hidden audio elements */}
-      {originalAudioUrl && (
-        <audio
-          ref={originalAudioRef}
-          src={originalAudioUrl}
-          onTimeUpdate={handleOriginalTimeUpdate}
-          onLoadedMetadata={handleOriginalLoadedMetadata}
-          onEnded={handleOriginalEnded}
-          preload="metadata"
-        />
-      )}
-      {masteredAudioUrl && (
-        <audio
-          ref={masteredAudioRef}
-          src={masteredAudioUrl}
-          onTimeUpdate={handleMasteredTimeUpdate}
-          onLoadedMetadata={handleMasteredLoadedMetadata}
-          onEnded={handleMasteredEnded}
-          preload="metadata"
-        />
-      )}
+      {/* Audio elements */}
+      <audio
+        ref={originalAudioRef}
+        src={originalAudioUrl || ''}
+        onTimeUpdate={handleOriginalTimeUpdate}
+        onLoadedMetadata={handleOriginalLoadedMetadata}
+        onEnded={handleOriginalEnded}
+        onError={(e) => console.error('Original audio error:', e)}
+        onLoadStart={() => console.log('Original audio load started')}
+        onCanPlay={() => console.log('Original audio can play')}
+        preload="metadata"
+        style={{ display: 'none' }}
+      />
+      
+      <audio
+        ref={masteredAudioRef}
+        src={masteredAudioUrl || ''}
+        onTimeUpdate={handleMasteredTimeUpdate}
+        onLoadedMetadata={handleMasteredLoadedMetadata}
+        onEnded={handleMasteredEnded}
+        onError={(e) => console.error('Mastered audio error:', e)}
+        onLoadStart={() => console.log('Mastered audio load started')}
+        onCanPlay={() => console.log('Mastered audio can play')}
+        preload="metadata"
+        style={{ display: 'none' }}
+      />
+      
+      {/* Debug info */}
+      <div className="text-xs text-gray-500 mb-2">
+        Debug: Original URL: {originalAudioUrl ? 'Set' : 'Not set'}, 
+        Mastered URL: {masteredAudioUrl ? 'Set' : 'Not set'},
+        Original Ready: {originalReady ? 'Yes' : 'No'},
+        Mastered Ready: {masteredReady ? 'Yes' : 'No'}
+      </div>
+      
+      
 
       {/* Header */}
       <div className="flex items-center justify-between">
@@ -419,42 +563,45 @@ const AnalysisPage: React.FC<AnalysisPageProps> = ({
             <ArrowLeft className="w-4 h-4 text-white" />
           </button>
           <div className="flex items-center space-x-2">
-            <div className="bg-gradient-to-r from-blue-500 to-purple-500 p-1.5 rounded-lg">
+            <div className="bg-gradient-to-r from-green-500 to-blue-500 p-1.5 rounded-lg">
               <BarChart3 className="w-4 h-4 text-white" />
             </div>
-            <h2 className="text-xl font-bold text-white">Analysis & Comparison</h2>
+            <h2 className="text-xl font-bold text-white">Audio Analysis & Comparison</h2>
           </div>
         </div>
         
         <div className="text-right">
           <div className="text-xs text-gray-400">Effects Applied</div>
-          <div className="text-lg font-bold text-blue-400">
+          <div className="text-lg font-bold text-green-400">
             {getEffectsApplied().length}
           </div>
         </div>
       </div>
 
-      {/* Before & After Comparison */}
+      {/* Audio Players Side by Side */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Original Audio */}
+        {/* Original Audio Player */}
         <div className="bg-gradient-to-br from-gray-800 to-gray-700 rounded-lg p-4 border border-gray-600">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-md font-semibold text-white flex items-center">
               <Volume2 className="w-4 h-4 mr-2" />
               Original Audio
             </h3>
-            <div className="text-xs text-gray-400">Before Mastering</div>
+            <div className="flex items-center space-x-2">
+              <div className="text-xs text-gray-400 font-medium">Raw Input</div>
+              <div className="text-xs text-gray-400">Before Processing</div>
+            </div>
           </div>
           
           <div className="bg-gray-900 rounded-lg p-3">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs text-gray-400">File: {originalFile?.name}</span>
+              <span className="text-xs text-gray-400">Original Audio</span>
               <button
                 onClick={handleOriginalPlayPause}
                 disabled={!originalReady}
                 className={`p-1.5 rounded transition-colors ${
                   originalReady 
-                    ? 'bg-blue-500 hover:bg-blue-400' 
+                    ? 'bg-gray-500 hover:bg-gray-400' 
                     : 'bg-gray-600 cursor-not-allowed'
                 }`}
               >
@@ -466,7 +613,7 @@ const AnalysisPage: React.FC<AnalysisPageProps> = ({
               </button>
             </div>
             <div className="w-full bg-gray-800 rounded h-1.5">
-              <div className="bg-blue-500 h-1.5 rounded" style={{ width: `${getProgressPercentage(originalCurrentTime, originalDuration)}%` }}></div>
+              <div className="bg-gray-500 h-1.5 rounded" style={{ width: `${getProgressPercentage(originalCurrentTime, originalDuration)}%` }}></div>
             </div>
             <div className="flex justify-between text-xs text-gray-400 mt-1">
               <span>{formatTime(originalCurrentTime)}</span>
@@ -475,7 +622,7 @@ const AnalysisPage: React.FC<AnalysisPageProps> = ({
           </div>
         </div>
 
-        {/* Mastered Audio */}
+        {/* Mastered Audio Player */}
         <div className="bg-gradient-to-br from-green-800 to-green-700 rounded-lg p-4 border border-green-600">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-md font-semibold text-white flex items-center">
@@ -484,13 +631,13 @@ const AnalysisPage: React.FC<AnalysisPageProps> = ({
             </h3>
             <div className="flex items-center space-x-2">
               <div className="text-xs text-green-400 font-medium">✓ Processed</div>
-              <div className="text-xs text-gray-400">After Mastering</div>
+              <div className="text-xs text-gray-400">Final Output</div>
             </div>
           </div>
           
           <div className="bg-gray-900 rounded-lg p-3">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs text-gray-400">File: {originalFile?.name} (Mastered)</span>
+              <span className="text-xs text-gray-400">Mastered Audio</span>
               <button
                 onClick={handleMasteredPlayPause}
                 disabled={!masteredReady}
@@ -518,382 +665,158 @@ const AnalysisPage: React.FC<AnalysisPageProps> = ({
         </div>
       </div>
 
-      {/* Analysis Summary */}
-      <div className="bg-gradient-to-br from-gray-800 to-gray-700 rounded-lg p-6 border border-gray-600">
-                 <div className="flex items-center justify-between mb-6">
-           <h3 className="text-lg font-semibold text-white flex items-center">
-             <BarChart3 className="w-5 h-5 mr-2 text-blue-400" />
-             Analysis Summary
-           </h3>
-           <div className="flex items-center space-x-2">
-             {isAnalyzing && (
-               <div className="flex items-center space-x-2 text-yellow-400">
-                 <Loader2 className="w-4 h-4 animate-spin" />
-                 <span className="text-sm">Analyzing...</span>
-               </div>
-             )}
-             {analysisError && (
-               <div className="text-sm text-red-400 font-medium">
-                 ⚠️ {analysisError}
-               </div>
-             )}
-             {!isAnalyzing && !analysisError && (
-               <div className="text-right">
-                 <span className="text-sm text-green-400 font-medium">✓ Analysis Complete</span>
-                 <div className="text-xs text-blue-400">Real-time meter data</div>
-                 {usingFallbackAnalysis && (
-                   <div className="text-xs text-yellow-400">Basic analysis mode</div>
-                 )}
-               </div>
-             )}
-           </div>
-         </div>
-
-        {/* Comparison Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-                     {/* Original Analysis */}
-           <div className="bg-gray-800 bg-opacity-50 rounded-lg p-4">
-             <h4 className="text-sm font-semibold text-gray-300 mb-4 flex items-center">
-               <BarChart3 className="w-4 h-4 mr-2" />
-               Original Audio Analysis
-               {!originalAnalysis && isAnalyzing && (
-                 <Loader2 className="w-3 h-3 ml-2 animate-spin text-yellow-400" />
-               )}
-             </h4>
-             <div className="space-y-3">
-               {originalAnalysis ? (
-                 <>
-                   <div className="flex justify-between items-center">
-                     <span className="text-xs text-gray-400">Loudness:</span>
-                     <span className="text-sm font-bold text-gray-300">
-                       {originalData.loudness.toFixed(1)} dB
-                     </span>
-                   </div>
-                   <div className="flex justify-between items-center">
-                     <span className="text-xs text-gray-400">True Peak:</span>
-                     <span className="text-sm font-bold text-gray-300">
-                       {originalData.peak.toFixed(1)} dB
-                     </span>
-                   </div>
-                   <div className="flex justify-between items-center">
-                     <span className="text-xs text-gray-400">RMS:</span>
-                     <span className="text-sm font-bold text-gray-300">
-                       {originalData.rms.toFixed(1)} dB
-                     </span>
-                   </div>
-                   <div className="flex justify-between items-center">
-                     <span className="text-xs text-gray-400">Dynamic Range:</span>
-                     <span className="text-sm font-bold text-gray-300">
-                       {originalData.dynamicRange.toFixed(1)} dB
-                     </span>
-                   </div>
-                 </>
-               ) : (
-                 <div className="text-center py-4">
-                   <div className="text-xs text-gray-400">
-                     {isAnalyzing ? 'Analyzing original audio...' : 'Original analysis not available'}
-                   </div>
-                 </div>
-               )}
-             </div>
-           </div>
-
-                     {/* Mastered Analysis */}
-           <div className="bg-green-900 bg-opacity-30 rounded-lg p-4 border border-green-500 border-opacity-30">
-             <h4 className="text-sm font-semibold text-green-400 mb-4 flex items-center">
-               <CheckCircle className="w-4 h-4 mr-2" />
-               Mastered Audio Analysis
-               {!masteredAnalysis && isAnalyzing && (
-                 <Loader2 className="w-3 h-3 ml-2 animate-spin text-yellow-400" />
-               )}
-             </h4>
-             <div className="space-y-3">
-               {masteredAnalysis ? (
-                 <>
-                   <div className="flex justify-between items-center">
-                     <span className="text-xs text-gray-400">Loudness:</span>
-                     <span className="text-sm font-bold text-green-400">
-                       {masteredData.loudness.toFixed(1)} dB
-                     </span>
-                   </div>
-                   <div className="flex justify-between items-center">
-                     <span className="text-xs text-gray-400">True Peak:</span>
-                     <span className="text-sm font-bold text-green-400">
-                       {masteredData.peak.toFixed(1)} dB
-                     </span>
-                   </div>
-                   <div className="flex justify-between items-center">
-                     <span className="text-xs text-gray-400">RMS:</span>
-                     <span className="text-sm font-bold text-green-400">
-                       {masteredData.rms.toFixed(1)} dB
-                     </span>
-                   </div>
-                   <div className="flex justify-between items-center">
-                     <span className="text-xs text-gray-400">Dynamic Range:</span>
-                     <span className="text-sm font-bold text-green-400">
-                       {masteredData.dynamicRange.toFixed(1)} dB
-                     </span>
-                   </div>
-                 </>
-               ) : (
-                 <div className="text-center py-4">
-                   <div className="text-xs text-gray-400">
-                     {isAnalyzing ? 'Analyzing mastered audio...' : 'Mastered analysis not available'}
-                   </div>
-                 </div>
-               )}
-             </div>
-           </div>
-        </div>
-
-        {/* Improvements Section */}
-        <div className="bg-blue-900 bg-opacity-20 rounded-lg p-4 border border-blue-500 border-opacity-30 mb-6">
-          <h4 className="text-sm font-semibold text-blue-400 mb-4 flex items-center">
-            <TrendingUp className="w-4 h-4 mr-2" />
-            Improvements Made
-          </h4>
-          {isAnalyzing ? (
-            <div className="text-center py-8">
-              <div className="w-8 h-8 border-2 border-blue-400 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-              <p className="text-blue-400">Analyzing audio to calculate improvements...</p>
+      {/* Mastered Audio Analysis */}
+      {masteredAnalysis && (
+        <div className="bg-gradient-to-br from-gray-800 to-gray-700 rounded-lg p-6 border border-gray-600">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-lg font-semibold text-white flex items-center">
+              <BarChart3 className="w-5 h-5 mr-2 text-green-400" />
+              Final Output Analysis
+            </h3>
+            <div className="text-right">
+              <span className="text-sm text-green-400 font-medium">✓ Analysis Complete</span>
+              <div className="text-xs text-blue-400">Real-time meter data</div>
             </div>
-          ) : changes ? (
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="text-center">
-                <div className="flex justify-center mb-1">
-                  {getImprovementIcon(changes.loudnessChange)}
-                </div>
-                <div className={`text-lg font-bold ${getImprovementColor(changes.loudnessChange)}`}>
-                  {changes.loudnessChange > 0 ? '+' : ''}{changes.loudnessChange.toFixed(1)}
-                </div>
-                <div className="text-xs text-gray-400">Loudness</div>
-              </div>
-              <div className="text-center">
-                <div className="flex justify-center mb-1">
-                  {getImprovementIcon(changes.peakChange)}
-                </div>
-                <div className={`text-lg font-bold ${getImprovementColor(changes.peakChange)}`}>
-                  {changes.peakChange > 0 ? '+' : ''}{changes.peakChange.toFixed(1)}
-                </div>
-                <div className="text-xs text-gray-400">Peak</div>
-              </div>
-              <div className="text-center">
-                <div className="flex justify-center mb-1">
-                  {getImprovementIcon(changes.rmsChange)}
-                </div>
-                <div className={`text-lg font-bold ${getImprovementColor(changes.rmsChange)}`}>
-                  {changes.rmsChange > 0 ? '+' : ''}{changes.rmsChange.toFixed(1)}
-                </div>
-                <div className="text-xs text-gray-400">RMS</div>
-              </div>
-              <div className="text-center">
-                <div className="flex justify-center mb-1">
-                  {getImprovementIcon(changes.dynamicRangeChange)}
-                </div>
-                <div className={`text-lg font-bold ${getImprovementColor(changes.dynamicRangeChange)}`}>
-                  {changes.dynamicRangeChange > 0 ? '+' : ''}{changes.dynamicRangeChange.toFixed(1)}
-                </div>
-                <div className="text-xs text-gray-400">Dynamic</div>
-              </div>
-            </div>
-          ) : (
-            <div className="text-center py-4">
-              <p className="text-gray-400">Analysis data not available yet</p>
-            </div>
-          )}
-        </div>
+          </div>
 
-                 {/* Additional Analysis Metrics */}
-         {(originalAnalysis || masteredAnalysis) && (
-           <div className="bg-indigo-900 bg-opacity-20 rounded-lg p-4 border border-indigo-500 border-opacity-30 mb-6">
-             <h4 className="text-sm font-semibold text-indigo-400 mb-4 flex items-center">
-               <BarChart3 className="w-4 h-4 mr-2" />
-               Additional Analysis Metrics
-             </h4>
-             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-               {/* Original Additional Metrics */}
-               <div>
-                 <h5 className="text-xs font-semibold text-gray-300 mb-3">Original Audio</h5>
-                 <div className="space-y-2">
-                   {originalAnalysis ? (
-                     <>
-                       <div className="flex justify-between items-center">
-                         <span className="text-xs text-gray-400">Stereo Width:</span>
-                         <span className="text-sm font-bold text-gray-300">
-                           {(originalAnalysis.stereoWidth * 100).toFixed(1)}%
-                         </span>
-                       </div>
-                       <div className="flex justify-between items-center">
-                         <span className="text-xs text-gray-400">Correlation:</span>
-                         <span className="text-sm font-bold text-gray-300">
-                           {originalAnalysis.correlation.toFixed(3)}
-                         </span>
-                       </div>
-                       <div className="flex justify-between items-center">
-                         <span className="text-xs text-gray-400">Crest Factor:</span>
-                         <span className="text-sm font-bold text-gray-300">
-                           {originalAnalysis.crestFactor.toFixed(2)}
-                         </span>
-                       </div>
-                       <div className="flex justify-between items-center">
-                         <span className="text-xs text-gray-400">Loudness Range:</span>
-                         <span className="text-sm font-bold text-gray-300">
-                           {originalAnalysis.loudnessRange.toFixed(1)} LU
-                         </span>
-                       </div>
-                     </>
-                   ) : (
-                     <div className="text-xs text-gray-400">Not available</div>
-                   )}
-                 </div>
-               </div>
-               
-               {/* Mastered Additional Metrics */}
-               <div>
-                 <h5 className="text-xs font-semibold text-green-400 mb-3">Mastered Audio</h5>
-                 <div className="space-y-2">
-                   {masteredAnalysis ? (
-                     <>
-                       <div className="flex justify-between items-center">
-                         <span className="text-xs text-gray-400">Stereo Width:</span>
-                         <span className="text-sm font-bold text-green-400">
-                           {(masteredAnalysis.stereoWidth * 100).toFixed(1)}%
-                         </span>
-                       </div>
-                       <div className="flex justify-between items-center">
-                         <span className="text-xs text-gray-400">Correlation:</span>
-                         <span className="text-sm font-bold text-green-400">
-                           {masteredAnalysis.correlation.toFixed(3)}
-                         </span>
-                       </div>
-                       <div className="flex justify-between items-center">
-                         <span className="text-xs text-gray-400">Crest Factor:</span>
-                         <span className="text-sm font-bold text-green-400">
-                           {masteredAnalysis.crestFactor.toFixed(2)}
-                         </span>
-                       </div>
-                       <div className="flex justify-between items-center">
-                         <span className="text-xs text-gray-400">Loudness Range:</span>
-                         <span className="text-sm font-bold text-green-400">
-                           {masteredAnalysis.loudnessRange.toFixed(1)} LU
-                         </span>
-                       </div>
-                     </>
-                   ) : (
-                     <div className="text-xs text-gray-400">Not available</div>
-                   )}
-                 </div>
-               </div>
-             </div>
-           </div>
-         )}
+          {/* Key Metrics */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            {/* LUFS */}
+            <div className="bg-gray-800 rounded-lg p-4">
+              <div className="text-xs text-gray-400 mb-1">LUFS (Loudness)</div>
+              <div className="text-2xl font-bold text-green-400">
+                {masteredAnalysis.loudness.toFixed(1)}
+              </div>
+              <div className="text-xs text-gray-500">dB</div>
+            </div>
 
-                   {/* Professional Loudness Analysis */}
-          {(originalLoudnessAnalysis || masteredLoudnessAnalysis) && (
-            <div className="bg-amber-900 bg-opacity-20 rounded-lg p-4 border border-amber-500 border-opacity-30 mb-6">
-              <h4 className="text-sm font-semibold text-amber-400 mb-4 flex items-center">
-                <BarChart3 className="w-4 h-4 mr-2" />
-                Professional Loudness Analysis (ITU-R BS.1770-4)
+            {/* True Peak */}
+            <div className="bg-gray-800 rounded-lg p-4">
+              <div className="text-xs text-gray-400 mb-1">True Peak</div>
+              <div className="text-2xl font-bold text-blue-400">
+                {masteredAnalysis.truePeak.toFixed(1)}
+              </div>
+              <div className="text-xs text-gray-500">dBTP</div>
+            </div>
+
+            {/* RMS */}
+            <div className="bg-gray-800 rounded-lg p-4">
+              <div className="text-xs text-gray-400 mb-1">RMS</div>
+              <div className="text-2xl font-bold text-purple-400">
+                {masteredAnalysis.rms.toFixed(1)}
+              </div>
+              <div className="text-xs text-gray-500">dB</div>
+            </div>
+
+            {/* Dynamic Range */}
+            <div className="bg-gray-800 rounded-lg p-4">
+              <div className="text-xs text-gray-400 mb-1">Dynamic Range</div>
+              <div className="text-2xl font-bold text-yellow-400">
+                {masteredAnalysis.dynamicRange.toFixed(1)}
+              </div>
+              <div className="text-xs text-gray-500">dB</div>
+            </div>
+          </div>
+
+          {/* Genre-Specific Analysis */}
+          {selectedGenre && (
+            <div className="bg-blue-900 bg-opacity-20 rounded-lg p-4 border border-blue-500 border-opacity-30 mb-6">
+              <h4 className="text-sm font-semibold text-blue-400 mb-4 flex items-center">
+                <TrendingUp className="w-4 h-4 mr-2" />
+                Genre-Specific Analysis ({selectedGenre.charAt(0).toUpperCase() + selectedGenre.slice(1)})
               </h4>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Original Professional Analysis */}
-                <div>
-                  <h5 className="text-xs font-semibold text-gray-300 mb-3">Original Audio</h5>
-                  {originalLoudnessAnalysis ? (
-                    <div className="space-y-2">
-                      <div className="flex justify-between items-center">
-                        <span className="text-xs text-gray-400">Momentary:</span>
-                        <span className="text-sm font-bold text-gray-300">
-                          {originalLoudnessAnalysis.momentary.value === -Infinity ? "-∞" : originalLoudnessAnalysis.momentary.value.toFixed(1)} {originalLoudnessAnalysis.momentary.unit}
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-xs text-gray-400">Short-term:</span>
-                        <span className="text-sm font-bold text-gray-300">
-                          {originalLoudnessAnalysis.shortTerm.value === -Infinity ? "-∞" : originalLoudnessAnalysis.shortTerm.value.toFixed(1)} {originalLoudnessAnalysis.shortTerm.unit}
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-xs text-gray-400">Integrated:</span>
-                        <span className="text-sm font-bold text-gray-300">
-                          {originalLoudnessAnalysis.integrated.value === -Infinity ? "-∞" : originalLoudnessAnalysis.integrated.value.toFixed(1)} {originalLoudnessAnalysis.integrated.unit}
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-xs text-gray-400">True Peak:</span>
-                        <span className="text-sm font-bold text-gray-300">
-                          {originalLoudnessAnalysis.truePeak.value === -Infinity ? "-∞" : originalLoudnessAnalysis.truePeak.value.toFixed(1)} {originalLoudnessAnalysis.truePeak.unit}
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-xs text-gray-400">Loudness Range:</span>
-                        <span className="text-sm font-bold text-gray-300">
-                          {originalLoudnessAnalysis.loudnessRange.value.toFixed(1)} {originalLoudnessAnalysis.loudnessRange.unit}
-                        </span>
-                      </div>
-                      <div className="mt-2 p-2 bg-gray-800 rounded text-xs">
-                        <span className="text-gray-400">Compliance: </span>
-                        <span className={originalLoudnessAnalysis.compliance.withinGrammyStandard ? "text-green-400" : "text-red-400"}>
-                          {originalLoudnessAnalysis.compliance.withinGrammyStandard ? "✓ Grammy Standard" : "✗ Needs Adjustment"}
-                        </span>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="text-xs text-gray-400">Not available</div>
-                  )}
-                </div>
+              
+              {(() => {
+                const targets = getGenreTargets();
+                const mastered = masteredAnalysis;
                 
-                {/* Mastered Professional Analysis */}
-                <div>
-                  <h5 className="text-xs font-semibold text-green-400 mb-3">Mastered Audio</h5>
-                  {masteredLoudnessAnalysis ? (
-                    <div className="space-y-2">
-                      <div className="flex justify-between items-center">
-                        <span className="text-xs text-gray-400">Momentary:</span>
-                        <span className="text-sm font-bold text-green-400">
-                          {masteredLoudnessAnalysis.momentary.value === -Infinity ? "-∞" : masteredLoudnessAnalysis.momentary.value.toFixed(1)} {masteredLoudnessAnalysis.momentary.unit}
-                        </span>
+                // Calculate compliance scores
+                const lufsCompliance = mastered.loudness >= targets.lufs.min && mastered.loudness <= targets.lufs.max;
+                const peakCompliance = mastered.truePeak >= targets.peak.min && mastered.truePeak <= targets.peak.max;
+                const dynamicRangeCompliance = mastered.dynamicRange >= targets.dynamicRange.min && mastered.dynamicRange <= targets.dynamicRange.max;
+                
+                const overallCompliance = lufsCompliance && peakCompliance && dynamicRangeCompliance;
+                
+                return (
+                  <div className="space-y-4">
+                    {/* Target vs Actual Comparison */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      {/* LUFS */}
+                      <div className="bg-gray-800 rounded p-3">
+                        <div className="text-xs text-gray-400 mb-2">LUFS (Loudness)</div>
+                        <div className="text-lg font-bold text-white mb-1">
+                          {mastered.loudness.toFixed(1)} dB
+                        </div>
+                        <div className="text-xs text-gray-400">
+                          Target: {targets.lufs.ideal.toFixed(1)} dB ({targets.lufs.min.toFixed(1)} to {targets.lufs.max.toFixed(1)})
+                        </div>
+                        <div className={`text-xs mt-1 ${lufsCompliance ? 'text-green-400' : 'text-red-400'}`}>
+                          {lufsCompliance ? '✓ Within Range' : '✗ Outside Range'}
+                        </div>
                       </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-xs text-gray-400">Short-term:</span>
-                        <span className="text-sm font-bold text-green-400">
-                          {masteredLoudnessAnalysis.shortTerm.value === -Infinity ? "-∞" : masteredLoudnessAnalysis.shortTerm.value.toFixed(1)} {masteredLoudnessAnalysis.shortTerm.unit}
-                        </span>
+                      
+                      {/* True Peak */}
+                      <div className="bg-gray-800 rounded p-3">
+                        <div className="text-xs text-gray-400 mb-2">True Peak</div>
+                        <div className="text-lg font-bold text-white mb-1">
+                          {mastered.truePeak.toFixed(1)} dBTP
+                        </div>
+                        <div className="text-xs text-gray-400">
+                          Target: {targets.peak.ideal.toFixed(1)} dBTP ({targets.peak.min.toFixed(1)} to {targets.peak.max.toFixed(1)})
+                        </div>
+                        <div className={`text-xs mt-1 ${peakCompliance ? 'text-green-400' : 'text-red-400'}`}>
+                          {peakCompliance ? '✓ Within Range' : '✗ Outside Range'}
+                        </div>
                       </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-xs text-gray-400">Integrated:</span>
-                        <span className="text-sm font-bold text-green-400">
-                          {masteredLoudnessAnalysis.integrated.value === -Infinity ? "-∞" : masteredLoudnessAnalysis.integrated.value.toFixed(1)} {masteredLoudnessAnalysis.integrated.unit}
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-xs text-gray-400">True Peak:</span>
-                        <span className="text-sm font-bold text-green-400">
-                          {masteredLoudnessAnalysis.truePeak.value === -Infinity ? "-∞" : masteredLoudnessAnalysis.truePeak.value.toFixed(1)} {masteredLoudnessAnalysis.truePeak.unit}
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-xs text-gray-400">Loudness Range:</span>
-                        <span className="text-sm font-bold text-green-400">
-                          {masteredLoudnessAnalysis.loudnessRange.value.toFixed(1)} {masteredLoudnessAnalysis.loudnessRange.unit}
-                        </span>
-                      </div>
-                      <div className="mt-2 p-2 bg-gray-800 rounded text-xs">
-                        <span className="text-gray-400">Compliance: </span>
-                        <span className={masteredLoudnessAnalysis.compliance.withinGrammyStandard ? "text-green-400" : "text-red-400"}>
-                          {masteredLoudnessAnalysis.compliance.withinGrammyStandard ? "✓ Grammy Standard" : "✗ Needs Adjustment"}
-                        </span>
+                      
+                      {/* Dynamic Range */}
+                      <div className="bg-gray-800 rounded p-3">
+                        <div className="text-xs text-gray-400 mb-2">Dynamic Range</div>
+                        <div className="text-lg font-bold text-white mb-1">
+                          {mastered.dynamicRange.toFixed(1)} dB
+                        </div>
+                        <div className="text-xs text-gray-400">
+                          Target: {targets.dynamicRange.ideal.toFixed(1)} dB ({targets.dynamicRange.min.toFixed(1)} to {targets.dynamicRange.max.toFixed(1)})
+                        </div>
+                        <div className={`text-xs mt-1 ${dynamicRangeCompliance ? 'text-green-400' : 'text-red-400'}`}>
+                          {dynamicRangeCompliance ? '✓ Within Range' : '✗ Outside Range'}
+                        </div>
                       </div>
                     </div>
-                  ) : (
-                    <div className="text-xs text-gray-400">Not available</div>
-                  )}
-                </div>
-              </div>
+                    
+                    {/* Overall Assessment */}
+                    <div className="bg-gray-800 rounded p-3">
+                      <div className="text-sm font-semibold text-white mb-2">Overall Assessment</div>
+                      <div className={`text-sm ${overallCompliance ? 'text-green-400' : 'text-yellow-400'}`}>
+                        {overallCompliance 
+                          ? `✓ Excellent mastering for ${selectedGenre} genre. All parameters within target ranges.`
+                          : `⚠ Good mastering, but some parameters need adjustment for optimal ${selectedGenre} sound.`
+                        }
+                      </div>
+                      
+                      {/* Recommendations */}
+                      {!overallCompliance && (
+                        <div className="mt-3 text-xs text-gray-300">
+                          <div className="font-semibold mb-1">Recommendations:</div>
+                          <ul className="space-y-1">
+                            {!lufsCompliance && (
+                              <li>• Adjust loudness to target {targets.lufs.ideal.toFixed(1)} dB ({targets.lufs.min.toFixed(1)} to {targets.lufs.max.toFixed(1)} range)</li>
+                            )}
+                            {!peakCompliance && (
+                              <li>• Control peak levels to target {targets.peak.ideal.toFixed(1)} dBTP ({targets.peak.min.toFixed(1)} to {targets.peak.max.toFixed(1)} range)</li>
+                            )}
+                            {!dynamicRangeCompliance && (
+                              <li>• Adjust compression to achieve {targets.dynamicRange.ideal.toFixed(1)} dB dynamic range ({targets.dynamicRange.min.toFixed(1)} to {targets.dynamicRange.max.toFixed(1)} range)</li>
+                            )}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           )}
-
-
 
           {/* Effects Applied */}
           <div className="bg-purple-900 bg-opacity-20 rounded-lg p-4 border border-purple-500 border-opacity-30">
@@ -910,7 +833,8 @@ const AnalysisPage: React.FC<AnalysisPageProps> = ({
               ))}
             </div>
           </div>
-      </div>
+        </div>
+      )}
 
       {/* Continue to Export Button */}
       <div className="text-center">

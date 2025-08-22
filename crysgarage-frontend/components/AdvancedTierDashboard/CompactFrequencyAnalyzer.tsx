@@ -29,7 +29,7 @@ const CompactFrequencyAnalyzer: React.FC<CompactFrequencyAnalyzerProps> = ({
   const frequencyBands = [16, 31, 62, 125, 250, 500, 1000, 2000, 4000, 8000, 16000];
   
   // dB scale from 0 to -55 (matching professional meters)
-  const dbScale = [0, -10, -20, -30, -40, -50];
+  const dbScale = [0, -5, -10, -15, -20, -25, -30, -35, -40, -45, -50, -55];
 
   useEffect(() => {
     if (!canvasRef.current) return;
@@ -38,9 +38,9 @@ const CompactFrequencyAnalyzer: React.FC<CompactFrequencyAnalyzerProps> = ({
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // Set canvas size for compact display
-    canvas.width = 300;
-    canvas.height = 200;
+         // Set canvas size for compact display
+     canvas.width = canvas.offsetWidth || 300;
+     canvas.height = 200;
 
     // Clear canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -121,18 +121,18 @@ const CompactFrequencyAnalyzer: React.FC<CompactFrequencyAnalyzerProps> = ({
      ctx.font = '8px monospace';
      ctx.textAlign = 'right';
 
-    // dB labels on left (0 to -55)
-    dbScale.forEach(db => {
-      const y = (Math.abs(db) / dbRange) * height;
-      ctx.fillText(db.toString(), 25, y + 3);
-    });
+         // dB labels on left (0 to -55)
+     dbScale.forEach(db => {
+       const y = (Math.abs(db) / dbRange) * height;
+       ctx.fillText(db.toString(), 30, y + 3);
+     });
 
          // Frequency labels on bottom (simplified for compact view)
      ctx.textAlign = 'center';
      [125, 1000, 8000].forEach((freq, index) => {
        const positions = [width * 0.2, width * 0.5, width * 0.8];
        const label = freq >= 1000 ? `${freq / 1000}k` : freq.toString();
-       ctx.fillText(label, positions[index], height - 3);
+       ctx.fillText(label, positions[index], height - 5);
      });
   };
 
@@ -157,13 +157,14 @@ const CompactFrequencyAnalyzer: React.FC<CompactFrequencyAnalyzerProps> = ({
         <div className="text-gray-400 text-xs">0 to -55 dB</div>
       </div>
 
-      {/* Main Frequency Analyzer */}
-      <div className="mb-4">
-        <canvas
-          ref={canvasRef}
-          className="w-full bg-gray-800 rounded border border-gray-600"
-        />
-      </div>
+             {/* Main Frequency Analyzer */}
+       <div className="mb-4">
+         <canvas
+           ref={canvasRef}
+           className="w-full bg-gray-800 rounded border border-gray-600"
+           style={{ height: '200px' }}
+         />
+       </div>
 
       {/* Compact Meter Readings */}
       <div className="grid grid-cols-2 gap-3 text-xs">

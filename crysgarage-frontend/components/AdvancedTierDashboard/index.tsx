@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import StudioHeader from './StudioHeader';
 import FileUpload from './FileUpload';
-import RealTimeMeters from './RealTimeMeters';
+
 import AudioEffects from './AudioEffects';
 import ExportGate from './ExportGate/index';
 import AnalysisPage from './AnalysisPage';
@@ -736,10 +736,10 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
               </button>
             </div>
             
-            {/* Main Layout - Player/Meters on top, Genre under player */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
-              {/* Left Column - Player and Genre */}
-              <div className="lg:col-span-2 space-y-3">
+            {/* Main Layout - Player and Genre */}
+            <div className="grid grid-cols-1 gap-3">
+              {/* Player and Genre */}
+              <div className="space-y-3">
                 {/* Real-time Mastering Player */}
                 <RealTimeMasteringPlayer
                   ref={realTimeMasteringPlayerRef}
@@ -749,6 +749,7 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
                   onMeterUpdate={handleMeterUpdate}
                   onEffectChange={handleEffectChange}
                   isProcessing={isProcessing}
+                  selectedGenre={selectedGenre}
                 />
                 
                 {/* Genre Presets - Directly under player */}
@@ -758,33 +759,8 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
                   genreLocked={genreLocked}
                   onToggleGenreLock={handleToggleGenreLock}
                 />
-                
-                {/* Debug Panel - Remove this in production */}
-                {process.env.NODE_ENV === 'development' && (
-                  <div className="mt-4 p-3 bg-gray-800 rounded-lg border border-gray-600">
-                    <h4 className="text-white font-semibold text-sm mb-2">Debug Info</h4>
-                    <div className="text-xs text-gray-300 space-y-1">
-                      <div>Genre Locked: {genreLocked ? 'Yes' : 'No'}</div>
-                      <div>Selected Genre: {selectedGenre || 'None'}</div>
-                      <div>Locked Values: {Object.keys(lockedEffectValues).join(', ') || 'None'}</div>
-                      <div>Backup Values: {Object.keys(effectStateBackup).join(', ') || 'None'}</div>
-                    </div>
-                  </div>
-                )}
-              </div>
 
-                             {/* Right Column - Meters Only */}
-               <div className="lg:col-span-1">
-                 {/* Real-time Meters */}
-                 <RealTimeMeters 
-                   meterData={meterData} 
-                   meterSettings={meterSettings}
-                   autoAdjust={autoAdjust}
-                   audioEffects={audioEffects}
-                   onUpdateEffectSettings={handleUpdateEffectSettings}
-                   onManualInit={manualInit}
-                 />
-               </div>
+              </div>
             </div>
 
             {/* Studio Dashboard - Full width below */}
@@ -834,6 +810,7 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
              processedAudioUrl={processedAudioUrl}
              audioEffects={audioEffects}
              meterData={meterData}
+             selectedGenre={selectedGenre}
              onBack={() => setCurrentStep(2)}
              onContinue={handleContinueToExport}
            />
@@ -876,7 +853,7 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
       </div>
       
       {/* Main Content */}
-      <div className="relative z-10 container mx-auto px-4 pt-48 pb-4">
+      <div className="relative z-10 container mx-auto px-8 md:px-16 lg:px-24 pt-4 pb-4">
         {renderCurrentStep()}
       </div>
 

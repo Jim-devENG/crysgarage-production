@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState, useCallback, useImperativeHandle, forwardRef } from 'react';
-import { Play, Pause, Volume2, VolumeX, SkipBack, SkipForward, RotateCcw, Settings } from 'lucide-react';
+import { Play, Pause, Volume2, VolumeX, SkipBack, SkipForward, RotateCcw, Settings, Repeat } from 'lucide-react';
 
 interface AudioEffects {
   eq: {
@@ -106,12 +106,14 @@ interface RealTimeMasteringPlayerProps {
   onEffectChange: (effects: AudioEffects) => void;
   isProcessing: boolean;
   onManualInit?: () => void;
+  selectedGenre?: string;
 }
 
 export interface RealTimeMasteringPlayerRef {
   manualInitializeAudioContext: () => void;
   audioElement: HTMLAudioElement | null;
   isPlaying: boolean;
+  isLooping: boolean;
   currentTime: number;
   duration: number;
   volume: number;
@@ -119,6 +121,7 @@ export interface RealTimeMasteringPlayerRef {
   pause: () => void;
   setVolume: (volume: number) => void;
   seek: (time: number) => void;
+  setLooping: (looping: boolean) => void;
   debugAudioState: () => void;
   getProcessedAudioUrl: () => Promise<string | null>;
 }
@@ -130,7 +133,8 @@ const RealTimeMasteringPlayer = forwardRef<RealTimeMasteringPlayerRef, RealTimeM
   onMeterUpdate,
   onEffectChange,
   isProcessing,
-  onManualInit
+  onManualInit,
+  selectedGenre
 }, ref) => {
   const audioRef = useRef<HTMLAudioElement>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -157,6 +161,9 @@ const RealTimeMasteringPlayer = forwardRef<RealTimeMasteringPlayerRef, RealTimeM
   
   // State
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isLooping, setIsLooping] = useState(false);
+  const [loopPointA, setLoopPointA] = useState<number | null>(null);
+  const [loopPointB, setLoopPointB] = useState<number | null>(null);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(1);
@@ -555,45 +562,15 @@ const RealTimeMasteringPlayer = forwardRef<RealTimeMasteringPlayerRef, RealTimeM
     analyser.getByteFrequencyData(frequencyData);
     analyser.getByteTimeDomainData(timeData);
 
-    // Calculate LUFS (proper loudness measurement)
-    // LUFS scale: -70 to 0, where higher values (closer to 0) are louder
-    // -7 LUFS = very loud, -10 LUFS = moderately loud, -14 LUFS = streaming standard
+    // Calculate base RMS from time domain data
     let sum = 0;
     for (let i = 0; i < timeData.length; i++) {
       const sample = (timeData[i] - 128) / 128; // Convert to -1 to 1 range
       sum += sample * sample; // Square for RMS calculation
     }
-    const rms = Math.sqrt(sum / timeData.length);
+    const baseRms = Math.sqrt(sum / timeData.length);
     
-    // Convert RMS to LUFS using proper ITU-R BS.1770-4 approximation
-    if (rms <= 0) {
-      var lufs = -70; // Silence
-    } else {
-      // Standard formula: LUFS = -0.691 + 10 * log10(mean_square)
-      const meanSquare = rms * rms;
-      var lufs = -0.691 + 10 * Math.log10(meanSquare);
-      
-      // Apply K-weighting compensation (simplified)
-      lufs -= 4.5;
-      
-      // Apply mastering effects boost (if effects are active)
-      // This simulates the loudness increase from mastering
-      const effectsActive = audioEffects?.eq?.enabled || 
-                           audioEffects?.compressor?.enabled || 
-                           audioEffects?.loudness?.enabled || 
-                           audioEffects?.limiter?.enabled;
-      
-      if (effectsActive) {
-        // Boost LUFS by 8-15 dB depending on effects
-        const boost = Math.min(15, 8 + (audioEffects?.loudness?.gain || 0) * 0.7);
-        lufs += boost;
-      }
-      
-      // Clamp to valid LUFS range and round to integer as per memory
-      lufs = Math.max(-70, Math.min(0, Math.round(lufs)));
-    }
-
-    // Calculate peak
+    // Calculate base peak
     let maxPeak = 0;
     for (let i = 0; i < timeData.length; i++) {
       const sample = Math.abs((timeData[i] - 128) / 128);
@@ -601,7 +578,210 @@ const RealTimeMasteringPlayer = forwardRef<RealTimeMasteringPlayerRef, RealTimeM
         maxPeak = sample;
       }
     }
-    const peak = 20 * Math.log10(Math.max(maxPeak, 0.000001)); // Convert to dBFS
+    const basePeak = maxPeak;
+    
+    // Get genre-specific processing characteristics
+    const getGenreCharacteristics = () => {
+      // Default characteristics (neutral)
+      let characteristics = {
+        loudnessBoost: 0,
+        compressionIntensity: 1.0,
+        peakControl: 1.0,
+        dynamicRangeTarget: 8.0
+      };
+      
+      // Get selected genre from props
+      const currentGenre = selectedGenre || 'default';
+      
+      // Professional Dashboard genre presets (real industry standards)
+      const professionalPresets = {
+        trap: { gain: 2.8, targetLufs: -7.2, truePeak: -0.1 },
+        'hip-hop': { gain: 2.0, targetLufs: -8.0, truePeak: -0.2 },
+        afrobeats: { gain: 2.2, targetLufs: -7.0, truePeak: -0.1 },
+        drill: { gain: 2.5, targetLufs: -7.5, truePeak: -0.15 },
+        dubstep: { gain: 3.2, targetLufs: -7.0, truePeak: -0.1 },
+        gospel: { gain: 1.8, targetLufs: -8.5, truePeak: -0.3 },
+        'r-b': { gain: 1.6, targetLufs: -8.8, truePeak: -0.35 },
+        'lofi-hiphop': { gain: 1.2, targetLufs: -9.0, truePeak: -0.4 },
+        'crysgarage': { gain: 2.4, targetLufs: -7.8, truePeak: -0.15 },
+        house: { gain: 2.2, targetLufs: -8.0, truePeak: -0.2 },
+        techno: { gain: 2.8, targetLufs: -7.5, truePeak: -0.15 },
+        highlife: { gain: 1.9, targetLufs: -8.2, truePeak: -0.25 },
+        instrumentals: { gain: 1.6, targetLufs: -8.5, truePeak: -0.3 },
+        beats: { gain: 2.0, targetLufs: -8.0, truePeak: -0.2 },
+        amapiano: { gain: 2.0, targetLufs: -8.0, truePeak: -0.2 },
+        trance: { gain: 2.2, targetLufs: -7.8, truePeak: -0.15 },
+        'drum-bass': { gain: 3.0, targetLufs: -7.0, truePeak: -0.1 },
+        reggae: { gain: 1.8, targetLufs: -8.2, truePeak: -0.25 },
+        'voice-over': { gain: 1.4, targetLufs: -9.2, truePeak: -0.4 },
+        journalist: { gain: 1.2, targetLufs: -9.5, truePeak: -0.45 },
+        soul: { gain: 1.6, targetLufs: -8.8, truePeak: -0.35 },
+        'content-creator': { gain: 1.9, targetLufs: -8.5, truePeak: -0.3 },
+        pop: { gain: 1.8, targetLufs: -8.0, truePeak: -0.25 },
+        jazz: { gain: 1.4, targetLufs: -9.0, truePeak: -0.4 }
+      };
+
+      const genreKey = currentGenre.toLowerCase().replace(/\s+/g, '-');
+      const preset = professionalPresets[genreKey];
+      
+      if (preset) {
+        // Use the exact Professional Dashboard values
+        characteristics = {
+          loudnessBoost: preset.gain * 5, // Convert gain to dB boost
+          compressionIntensity: preset.gain > 2.5 ? 2.5 : preset.gain > 2.0 ? 2.0 : 1.5, // Based on gain
+          peakControl: preset.truePeak > -0.2 ? 0.4 : preset.truePeak > -0.3 ? 0.6 : 0.8, // Based on truePeak
+          dynamicRangeTarget: preset.targetLufs < -8 ? 10.0 : preset.targetLufs < -7 ? 6.0 : 4.5 // Based on targetLufs
+        };
+      } else {
+        // Fallback for unmatched genres
+        switch (currentGenre.toLowerCase()) {
+          case 'edm':
+          case 'electronic':
+          case 'dance':
+            characteristics = {
+              loudnessBoost: 14,
+              compressionIntensity: 2.5,
+              peakControl: 0.4,
+              dynamicRangeTarget: 4.5
+            };
+            break;
+          case 'rock':
+          case 'metal':
+            characteristics = {
+              loudnessBoost: 10,
+              compressionIntensity: 1.8,
+              peakControl: 0.7,
+              dynamicRangeTarget: 6.5
+            };
+            break;
+          case 'classical':
+            characteristics = {
+              loudnessBoost: 6,
+              compressionIntensity: 1.2,
+              peakControl: 0.9,
+              dynamicRangeTarget: 10.0
+            };
+            break;
+          default:
+            // Use default characteristics
+            break;
+        }
+      }
+      
+      return characteristics;
+    };
+    
+    const genreCharacteristics = getGenreCharacteristics();
+    
+    // Calculate total gain from all active effects with genre influence
+    let totalGainDb = 0;
+    let totalGainLinear = 1;
+    
+    // Loudness effect (primary gain control) - influenced by genre
+    if (audioEffects?.loudness?.enabled) {
+      const loudnessDb = audioEffects.loudness.gain || 0;
+      // Apply genre-specific loudness boost
+      const genreLoudnessBoost = genreCharacteristics.loudnessBoost;
+      const adjustedLoudnessDb = loudnessDb + genreLoudnessBoost;
+      totalGainDb += adjustedLoudnessDb;
+      totalGainLinear *= Math.pow(10, adjustedLoudnessDb / 20);
+    } else {
+      // Apply genre loudness boost even if loudness effect is disabled
+      const genreLoudnessBoost = genreCharacteristics.loudnessBoost;
+      totalGainDb += genreLoudnessBoost;
+      totalGainLinear *= Math.pow(10, genreLoudnessBoost / 20);
+    }
+    
+    // EQ effects (approximate gain changes)
+    if (audioEffects?.eq?.enabled) {
+      let eqGainDb = 0;
+      audioEffects.eq.bands.forEach(band => {
+        eqGainDb += band.gain || 0;
+      });
+      // Average EQ gain (since bands can be positive/negative)
+      eqGainDb = eqGainDb / audioEffects.eq.bands.length;
+      totalGainDb += eqGainDb * 0.3; // EQ has less impact than loudness
+      totalGainLinear *= Math.pow(10, (eqGainDb * 0.3) / 20);
+    }
+    
+    // Compressor effects (approximate gain reduction) - influenced by genre
+    if (audioEffects?.compressor?.enabled) {
+      const comp = audioEffects.compressor;
+      // Estimate compression gain reduction based on threshold and ratio
+      const compressionDb = Math.max(0, (comp.threshold || -20) * (1 - 1/(comp.ratio || 4)));
+      // Apply genre-specific compression intensity
+      const adjustedCompressionDb = compressionDb * genreCharacteristics.compressionIntensity;
+      totalGainDb -= adjustedCompressionDb * 0.5; // Compressor reduces dynamic range
+      totalGainLinear *= Math.pow(10, -(adjustedCompressionDb * 0.5) / 20);
+    } else {
+      // Apply genre-specific compression even if compressor is disabled
+      const genreCompressionDb = genreCharacteristics.compressionIntensity * 3; // Base compression
+      totalGainDb -= genreCompressionDb * 0.5;
+      totalGainLinear *= Math.pow(10, -(genreCompressionDb * 0.5) / 20);
+    }
+    
+    // Limiter effects (peak control) - influenced by genre
+    if (audioEffects?.limiter?.enabled) {
+      const limiter = audioEffects.limiter;
+      // Limiter prevents peaks above threshold
+      const limitingDb = Math.max(0, (limiter.threshold || -1) * 0.3);
+      // Apply genre-specific peak control
+      const adjustedLimitingDb = limitingDb * genreCharacteristics.peakControl;
+      totalGainDb -= adjustedLimitingDb;
+      totalGainLinear *= Math.pow(10, -adjustedLimitingDb / 20);
+    } else {
+      // Apply genre-specific peak control even if limiter is disabled
+      const genrePeakControl = genreCharacteristics.peakControl * 2; // Base peak control
+      totalGainDb -= genrePeakControl;
+      totalGainLinear *= Math.pow(10, -genrePeakControl / 20);
+    }
+    
+    // G-Multi-Band effects
+    if (audioEffects?.gMultiBand?.enabled) {
+      const mb = audioEffects.gMultiBand;
+      let mbGainDb = 0;
+      if (mb.low) mbGainDb += (mb.low.threshold || -20) * (1 - 1/(mb.low.ratio || 4));
+      if (mb.mid) mbGainDb += (mb.mid.threshold || -18) * (1 - 1/(mb.mid.ratio || 4));
+      if (mb.high) mbGainDb += (mb.high.threshold || -16) * (1 - 1/(mb.high.ratio || 4));
+      mbGainDb = mbGainDb / 3; // Average across bands
+      // Apply genre-specific compression intensity to multi-band
+      const adjustedMbGainDb = mbGainDb * genreCharacteristics.compressionIntensity;
+      totalGainDb -= adjustedMbGainDb * 0.4;
+      totalGainLinear *= Math.pow(10, -(adjustedMbGainDb * 0.4) / 20);
+    }
+    
+    // Apply total gain to base measurements
+    const processedRms = baseRms * totalGainLinear;
+    const processedPeak = Math.min(1.0, basePeak * totalGainLinear); // Clamp to prevent clipping
+    
+    // Calculate LUFS from processed RMS
+    let lufs;
+    if (processedRms <= 0) {
+      lufs = -70; // Silence
+    } else {
+      // Standard formula: LUFS = -0.691 + 10 * log10(mean_square)
+      const meanSquare = processedRms * processedRms;
+      lufs = -0.691 + 10 * Math.log10(meanSquare);
+      
+      // Apply K-weighting compensation (simplified)
+      lufs -= 4.5;
+      
+      // Clamp to valid LUFS range and round to integer as per memory
+      lufs = Math.max(-70, Math.min(0, Math.round(lufs)));
+    }
+    
+    // Calculate processed peak in dBFS
+    const peak = 20 * Math.log10(Math.max(processedPeak, 0.000001));
+    
+    // Calculate processed RMS in dBFS
+    const rms = 20 * Math.log10(Math.max(processedRms, 0.000001));
+    
+    // Calculate dynamic range based on genre target
+    const dynamicRange = Math.abs(peak - rms);
+    const genreDynamicRange = genreCharacteristics.dynamicRangeTarget;
+    const adjustedDynamicRange = Math.min(dynamicRange, genreDynamicRange);
+
+
 
     // Calculate correlation (stereo)
     let correlation = 0;
@@ -644,7 +824,7 @@ const RealTimeMasteringPlayer = forwardRef<RealTimeMasteringPlayerRef, RealTimeM
     onMeterUpdate({
       lufs: lufs,
       peak: peak,
-      rms: 20 * Math.log10(Math.max(rms, 0.000001)), // Convert to dBFS
+      rms: rms,
       correlation: correlation,
       leftLevel: leftLevel,
       rightLevel: rightLevel,
@@ -695,6 +875,7 @@ const RealTimeMasteringPlayer = forwardRef<RealTimeMasteringPlayerRef, RealTimeM
     manualInitializeAudioContext,
     audioElement: audioRef.current,
     isPlaying,
+    isLooping,
     currentTime,
     duration,
     volume,
@@ -711,6 +892,9 @@ const RealTimeMasteringPlayer = forwardRef<RealTimeMasteringPlayerRef, RealTimeM
         audioRef.current.currentTime = time;
         setCurrentTime(time);
       }
+    },
+    setLooping: (looping: boolean) => {
+      setIsLooping(looping);
     },
     getProcessedAudioUrl: async () => {
       try {
@@ -811,7 +995,14 @@ const RealTimeMasteringPlayer = forwardRef<RealTimeMasteringPlayerRef, RealTimeM
 
   const handleTimeUpdate = () => {
     if (audioRef.current) {
-      setCurrentTime(audioRef.current.currentTime);
+      const newTime = audioRef.current.currentTime;
+      setCurrentTime(newTime);
+      
+      // Check if we've reached loop point B
+      if (isLooping && hasValidLoopPoints && newTime >= loopPointB) {
+        console.log('Reached loop point B, jumping to A...');
+        audioRef.current.currentTime = loopPointA;
+      }
     }
   };
 
@@ -833,6 +1024,27 @@ const RealTimeMasteringPlayer = forwardRef<RealTimeMasteringPlayerRef, RealTimeM
     const newVolume = parseFloat(e.target.value);
     setVolume(newVolume);
   };
+
+  // Loop point functions
+  const setLoopPointAHandler = () => {
+    setLoopPointA(currentTime);
+    console.log(`🎯 Loop Point A set at: ${formatTime(currentTime)}`);
+  };
+
+  const setLoopPointBHandler = () => {
+    setLoopPointB(currentTime);
+    console.log(`🎯 Loop Point B set at: ${formatTime(currentTime)}`);
+  };
+
+  const clearLoopPoints = () => {
+    setLoopPointA(null);
+    setLoopPointB(null);
+    console.log('🎯 Loop points cleared');
+  };
+
+  const isLoopPointASet = loopPointA !== null;
+  const isLoopPointBSet = loopPointB !== null;
+  const hasValidLoopPoints = isLoopPointASet && isLoopPointBSet && loopPointA < loopPointB;
 
   const toggleMute = () => {
     setIsMuted(!isMuted);
@@ -873,7 +1085,7 @@ const RealTimeMasteringPlayer = forwardRef<RealTimeMasteringPlayerRef, RealTimeM
   }
 
   return (
-    <div className="bg-gray-900 rounded-lg p-4 border border-gray-600 shadow-xl">
+    <div className="bg-gray-900 rounded-lg p-8 mx-4 md:mx-8 lg:mx-16 border border-gray-600 shadow-xl">
       {/* Settings Icon */}
       <div className="text-center mb-3">
         <div className="w-8 h-8 bg-crys-gold rounded-full mx-auto mb-2 flex items-center justify-center">
@@ -907,6 +1119,22 @@ const RealTimeMasteringPlayer = forwardRef<RealTimeMasteringPlayerRef, RealTimeM
         onLoadStart={() => console.log('Audio load started')}
         onCanPlay={() => console.log('Audio can play')}
         onCanPlayThrough={() => console.log('Audio can play through')}
+        onEnded={() => {
+          if (isLooping) {
+            if (hasValidLoopPoints) {
+              console.log('Audio reached loop point B, jumping to A...');
+              audioRef.current.currentTime = loopPointA;
+              audioRef.current.play();
+            } else {
+              console.log('Audio ended, looping from beginning...');
+              audioRef.current.currentTime = 0;
+              audioRef.current.play();
+            }
+          } else {
+            console.log('Audio ended');
+            setIsPlaying(false);
+          }
+        }}
       />
 
       {/* File Info */}
@@ -947,9 +1175,52 @@ const RealTimeMasteringPlayer = forwardRef<RealTimeMasteringPlayerRef, RealTimeM
                 background: `linear-gradient(to right, #fbbf24 0%, #fbbf24 ${(currentTime / (duration || 1)) * 100}%, #4b5563 ${(currentTime / (duration || 1)) * 100}%, #4b5563 100%)`
               }}
             />
+            
+            {/* Loop Point Indicators */}
+            {isLoopPointASet && (
+              <div 
+                className="absolute top-0 w-1 h-3 bg-green-500 rounded-sm pointer-events-none"
+                style={{ 
+                  left: `${(loopPointA / (duration || 1)) * 100}%`,
+                  transform: 'translateX(-50%)'
+                }}
+                title={`Loop Point A: ${formatTime(loopPointA)}`}
+              />
+            )}
+            {isLoopPointBSet && (
+              <div 
+                className="absolute top-0 w-1 h-3 bg-red-500 rounded-sm pointer-events-none"
+                style={{ 
+                  left: `${(loopPointB / (duration || 1)) * 100}%`,
+                  transform: 'translateX(-50%)'
+                }}
+                title={`Loop Point B: ${formatTime(loopPointB)}`}
+              />
+            )}
           </div>
           <span className="text-xs text-gray-400 w-6">{formatTime(duration)}</span>
         </div>
+        
+        {/* Loop Points Info */}
+        {(isLoopPointASet || isLoopPointBSet) && (
+          <div className="flex items-center justify-center space-x-4 text-xs text-gray-400 mt-1">
+            {isLoopPointASet && (
+              <span className="flex items-center space-x-1">
+                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                <span>A: {formatTime(loopPointA)}</span>
+              </span>
+            )}
+            {isLoopPointBSet && (
+              <span className="flex items-center space-x-1">
+                <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                <span>B: {formatTime(loopPointB)}</span>
+              </span>
+            )}
+            {hasValidLoopPoints && (
+              <span className="text-green-400">✓ Valid Loop</span>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Transport Controls */}
@@ -990,33 +1261,83 @@ const RealTimeMasteringPlayer = forwardRef<RealTimeMasteringPlayerRef, RealTimeM
         >
           <SkipForward className="w-3 h-3 text-gray-300" />
         </button>
-      </div>
 
-      {/* Volume Control */}
-      <div className="flex items-center justify-center space-x-2 mb-3">
+        {/* Loop Button */}
         <button
-          onClick={() => setVolume(volume === 0 ? 1 : 0)}
-          className="p-1.5 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors"
+          onClick={() => setIsLooping(!isLooping)}
+          className={`p-1.5 rounded-lg transition-colors ${
+            isLooping 
+              ? 'bg-crys-gold hover:bg-yellow-400' 
+              : 'bg-gray-700 hover:bg-gray-600'
+          }`}
+          title={isLooping ? 'Loop enabled' : 'Loop disabled'}
         >
-          {volume === 0 ? (
-            <VolumeX className="w-3 h-3 text-gray-300" />
-          ) : (
-            <Volume2 className="w-3 h-3 text-gray-300" />
-          )}
+          <Repeat className={`w-3 h-3 ${isLooping ? 'text-black' : 'text-gray-300'}`} />
         </button>
-        <div className="w-16">
-          <input
-            type="range"
-            min="0"
-            max="1"
-            step="0.01"
-            value={isMuted ? 0 : volume}
-            onChange={handleVolumeChange}
-            className="w-full h-1.5 bg-gray-700 rounded-lg appearance-none cursor-pointer slider"
-            style={{
-              background: `linear-gradient(to right, #fbbf24 0%, #fbbf24 ${(isMuted ? 0 : volume) * 100}%, #4b5563 ${(isMuted ? 0 : volume) * 100}%, #4b5563 100%)`
-            }}
-          />
+
+        {/* Loop Point A */}
+        <button
+          onClick={setLoopPointAHandler}
+          className={`p-1.5 rounded-lg transition-colors ${
+            isLoopPointASet 
+              ? 'bg-green-600 hover:bg-green-700' 
+              : 'bg-gray-700 hover:bg-gray-600'
+          }`}
+          title={`Set Loop Point A (${formatTime(currentTime)})`}
+        >
+          <span className={`text-xs font-bold ${isLoopPointASet ? 'text-white' : 'text-gray-300'}`}>A</span>
+        </button>
+
+        {/* Loop Point B */}
+        <button
+          onClick={setLoopPointBHandler}
+          className={`p-1.5 rounded-lg transition-colors ${
+            isLoopPointBSet 
+              ? 'bg-red-600 hover:bg-red-700' 
+              : 'bg-gray-700 hover:bg-gray-600'
+          }`}
+          title={`Set Loop Point B (${formatTime(currentTime)})`}
+        >
+          <span className={`text-xs font-bold ${isLoopPointBSet ? 'text-white' : 'text-gray-300'}`}>B</span>
+        </button>
+
+        {/* Clear Loop Points */}
+        {(isLoopPointASet || isLoopPointBSet) && (
+          <button
+            onClick={clearLoopPoints}
+            className="p-1.5 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors"
+            title="Clear loop points"
+          >
+            <span className="text-xs text-gray-300">×</span>
+          </button>
+        )}
+
+        {/* Volume Control */}
+        <div className="flex items-center space-x-2">
+          <button
+            onClick={() => setVolume(volume === 0 ? 1 : 0)}
+            className="p-1.5 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors"
+          >
+            {volume === 0 ? (
+              <VolumeX className="w-3 h-3 text-gray-300" />
+            ) : (
+              <Volume2 className="w-3 h-3 text-gray-300" />
+            )}
+          </button>
+          <div className="w-16">
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.01"
+              value={isMuted ? 0 : volume}
+              onChange={handleVolumeChange}
+              className="w-full h-1.5 bg-gray-700 rounded-lg appearance-none cursor-pointer slider"
+              style={{
+                background: `linear-gradient(to right, #fbbf24 0%, #fbbf24 ${(isMuted ? 0 : volume) * 100}%, #4b5563 ${(isMuted ? 0 : volume) * 100}%, #4b5563 100%)`
+              }}
+            />
+          </div>
         </div>
       </div>
 

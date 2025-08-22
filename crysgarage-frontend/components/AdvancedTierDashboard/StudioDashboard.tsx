@@ -63,13 +63,7 @@ const StudioDashboard: React.FC<StudioDashboardProps> = ({
         </div>
       </div>
 
-      {/* Tab Navigation - Removed since all effects are now in one tab */}
-      <div className="mb-3">
-        <div className="text-center">
-          <h4 className="text-sm font-medium text-gray-300">All Effects</h4>
-          <p className="text-xs text-gray-500">Complete mastering toolkit</p>
-        </div>
-      </div>
+
 
       {/* Content */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
