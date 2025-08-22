@@ -46,14 +46,18 @@ const AnalysisPage: React.FC<AnalysisPageProps> = ({
 
   // Create URLs for audio playback
   const originalAudioUrl = originalFile ? URL.createObjectURL(originalFile) : null;
-  const masteredAudioUrl = processedAudioUrl;
+  
+  // For now, use the original file URL for mastered audio if processedAudioUrl is not available
+  // This ensures both players have working audio sources
+  const masteredAudioUrl = processedAudioUrl || originalAudioUrl;
 
   // Debug logging
   console.log('AnalysisPage audio URLs:', {
     originalFile: originalFile?.name,
     originalAudioUrl: originalAudioUrl ? 'Set' : 'Not set',
     processedAudioUrl: processedAudioUrl ? 'Set' : 'Not set',
-    masteredAudioUrl: masteredAudioUrl ? 'Set' : 'Not set'
+    masteredAudioUrl: masteredAudioUrl ? 'Set' : 'Not set',
+    using: processedAudioUrl ? 'Processed audio' : 'Original audio (fallback)'
   });
 
   // Cleanup object URLs on unmount
@@ -76,6 +80,17 @@ const AnalysisPage: React.FC<AnalysisPageProps> = ({
     setMasteredDuration(0);
     setOriginalReady(false);
     setMasteredReady(false);
+    
+    // Force re-load of audio elements
+    if (originalAudioRef.current && originalAudioUrl) {
+      console.log('Loading original audio:', originalAudioUrl);
+      originalAudioRef.current.load();
+    }
+    
+    if (masteredAudioRef.current && masteredAudioUrl) {
+      console.log('Loading mastered audio:', masteredAudioUrl);
+      masteredAudioRef.current.load();
+    }
   }, [originalAudioUrl, masteredAudioUrl]);
 
   // Audio playback handlers
@@ -84,11 +99,18 @@ const AnalysisPage: React.FC<AnalysisPageProps> = ({
       hasRef: !!originalAudioRef.current,
       isPlaying: isPlayingOriginal,
       hasUrl: !!originalAudioUrl,
-      ready: originalReady
+      ready: originalReady,
+      audioSrc: originalAudioRef.current?.src,
+      audioReadyState: originalAudioRef.current?.readyState
     });
     
     if (!originalAudioRef.current) {
       console.error('Original audio ref is null');
+      return;
+    }
+
+    if (!originalAudioUrl) {
+      console.error('Original audio URL is not available');
       return;
     }
 
@@ -99,16 +121,28 @@ const AnalysisPage: React.FC<AnalysisPageProps> = ({
         setIsPlayingOriginal(false);
       } else {
         console.log('Playing original audio');
+        
+        // Ensure audio is loaded
+        if (originalAudioRef.current.readyState < 2) {
+          console.log('Audio not ready, loading first...');
+          originalAudioRef.current.load();
+          await new Promise((resolve) => {
+            originalAudioRef.current!.addEventListener('canplay', resolve, { once: true });
+          });
+        }
+        
         // Stop mastered audio if playing
         if (isPlayingMastered && masteredAudioRef.current) {
           masteredAudioRef.current.pause();
           setIsPlayingMastered(false);
         }
+        
         await originalAudioRef.current.play();
         setIsPlayingOriginal(true);
       }
     } catch (error) {
       console.error('Error playing original audio:', error);
+      setIsPlayingOriginal(false);
     }
   };
 
@@ -117,11 +151,18 @@ const AnalysisPage: React.FC<AnalysisPageProps> = ({
       hasRef: !!masteredAudioRef.current,
       isPlaying: isPlayingMastered,
       hasUrl: !!masteredAudioUrl,
-      ready: masteredReady
+      ready: masteredReady,
+      audioSrc: masteredAudioRef.current?.src,
+      audioReadyState: masteredAudioRef.current?.readyState
     });
     
     if (!masteredAudioRef.current) {
       console.error('Mastered audio ref is null');
+      return;
+    }
+
+    if (!masteredAudioUrl) {
+      console.error('Mastered audio URL is not available');
       return;
     }
 
@@ -132,16 +173,28 @@ const AnalysisPage: React.FC<AnalysisPageProps> = ({
         setIsPlayingMastered(false);
       } else {
         console.log('Playing mastered audio');
+        
+        // Ensure audio is loaded
+        if (masteredAudioRef.current.readyState < 2) {
+          console.log('Audio not ready, loading first...');
+          masteredAudioRef.current.load();
+          await new Promise((resolve) => {
+            masteredAudioRef.current!.addEventListener('canplay', resolve, { once: true });
+          });
+        }
+        
         // Stop original audio if playing
         if (isPlayingOriginal && originalAudioRef.current) {
           originalAudioRef.current.pause();
           setIsPlayingOriginal(false);
         }
+        
         await masteredAudioRef.current.play();
         setIsPlayingMastered(true);
       }
     } catch (error) {
       console.error('Error playing mastered audio:', error);
+      setIsPlayingMastered(false);
     }
   };
 
