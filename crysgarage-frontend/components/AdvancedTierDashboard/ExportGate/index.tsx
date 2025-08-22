@@ -1,5 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Download, ArrowLeft, Play, Pause, Volume2, Settings, Cpu } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Download, ArrowLeft, Settings, Cpu } from 'lucide-react';
 
 interface ExportGateProps {
   originalFile: File | null;
@@ -21,16 +21,6 @@ const ExportGate: React.FC<ExportGateProps> = ({
   const [downloadFormat, setDownloadFormat] = useState<'mp3' | 'wav16' | 'wav24' | 'wav32'>('wav16');
   const [sampleRate, setSampleRate] = useState<'44.1kHz' | '48kHz' | '88.2kHz' | '96kHz' | '192kHz'>('44.1kHz');
   const [gTunerEnabled, setGTunerEnabled] = useState(false);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(0);
-  const [audioReady, setAudioReady] = useState(false);
-
-  // Audio ref
-  const audioRef = useRef<HTMLAudioElement>(null);
-
-  // Create URL for audio playback (use processedAudioUrl as the mastered audio)
-  const audioUrl = processedAudioUrl || (originalFile ? URL.createObjectURL(originalFile) : null);
 
   // Initialize G-Tuner state from audioEffects
   useEffect(() => {
@@ -38,15 +28,6 @@ const ExportGate: React.FC<ExportGateProps> = ({
       setGTunerEnabled(audioEffects.gTuner.enabled || false);
     }
   }, [audioEffects]);
-
-  // Cleanup object URLs on unmount
-  useEffect(() => {
-    return () => {
-      if (audioUrl && !processedAudioUrl) {
-        URL.revokeObjectURL(audioUrl);
-      }
-    };
-  }, [audioUrl, processedAudioUrl]);
 
   // Calculate total cost
   const calculateTotalCost = () => {
@@ -90,47 +71,11 @@ const ExportGate: React.FC<ExportGateProps> = ({
     }
   };
 
-  // Audio playback handler
-  const handlePlayPause = async () => {
-    if (!audioRef.current || !audioUrl) return;
-
-    try {
-      if (isPlaying) {
-        audioRef.current.pause();
-        setIsPlaying(false);
-      } else {
-        await audioRef.current.play();
-        setIsPlaying(true);
-      }
-    } catch (error) {
-      console.error('Error playing mastered audio:', error);
-    }
-  };
-
-  // Audio event handlers
-  const handleTimeUpdate = () => {
-    if (audioRef.current) {
-      setCurrentTime(audioRef.current.currentTime);
-    }
-  };
-
-  const handleLoadedMetadata = () => {
-    if (audioRef.current) {
-      setDuration(audioRef.current.duration);
-      setAudioReady(true);
-    }
-  };
-
-  const handleEnded = () => {
-    setIsPlaying(false);
-    setCurrentTime(0);
-  };
-
   // Download handler
   const handleDownload = () => {
-    if (audioUrl) {
+    if (processedAudioUrl) {
       const link = document.createElement('a');
-      link.href = audioUrl;
+      link.href = processedAudioUrl;
       link.download = `mastered_audio.${downloadFormat === 'mp3' ? 'mp3' : 'wav'}`;
       document.body.appendChild(link);
       link.click();
@@ -138,31 +83,8 @@ const ExportGate: React.FC<ExportGateProps> = ({
     }
   };
 
-  // Format time helper
-  const formatTime = (time: number) => {
-    const minutes = Math.floor(time / 60);
-    const seconds = Math.floor(time % 60);
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
-  };
-
-  // Calculate progress percentage
-  const getProgressPercentage = (current: number, duration: number) => {
-    return duration > 0 ? (current / duration) * 100 : 0;
-  };
-
   return (
     <div className="max-w-4xl mx-auto space-y-4">
-      {/* Hidden audio element */}
-      {audioUrl && (
-        <audio
-          ref={audioRef}
-          src={audioUrl}
-          onTimeUpdate={handleTimeUpdate}
-          onLoadedMetadata={handleLoadedMetadata}
-          onEnded={handleEnded}
-          preload="metadata"
-        />
-      )}
 
       {/* Header */}
       <div className="flex items-center justify-between">
@@ -189,49 +111,7 @@ const ExportGate: React.FC<ExportGateProps> = ({
         </div>
       </div>
 
-             {/* Audio Player */}
-       <div className="bg-gradient-to-br from-gray-800 to-gray-700 rounded-lg p-4 border border-gray-600">
-                  <div className="flex items-center justify-between mb-3">
-           <h3 className="text-md font-semibold text-white flex items-center">
-             <Volume2 className="w-4 h-4 mr-2" />
-             Mastered Audio
-           </h3>
-          <div className="flex items-center space-x-2">
-            <div className="text-xs text-green-400 font-medium">✓ Processed</div>
-            <div className="text-xs text-gray-400">
-              {gTunerEnabled ? '6 Effects Active' : '5 Effects Active'}
-            </div>
-          </div>
-        </div>
-        
-        <div className="bg-gray-900 rounded-lg p-3">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs text-gray-400">File: {originalFile?.name}</span>
-            <button
-              onClick={handlePlayPause}
-              disabled={!audioReady}
-              className={`p-1.5 rounded transition-colors ${
-                audioReady 
-                  ? 'bg-crys-gold hover:bg-yellow-400' 
-                  : 'bg-gray-600 cursor-not-allowed'
-              }`}
-            >
-              {isPlaying ? (
-                <Pause className="w-3 h-3 text-gray-900" />
-              ) : (
-                <Play className="w-3 h-3 text-gray-900" />
-              )}
-            </button>
-          </div>
-          <div className="w-full bg-gray-800 rounded h-1.5">
-            <div className="bg-crys-gold h-1.5 rounded" style={{ width: `${getProgressPercentage(currentTime, duration)}%` }}></div>
-          </div>
-          <div className="flex justify-between text-xs text-gray-400 mt-1">
-            <span>{formatTime(currentTime)}</span>
-            <span>{formatTime(duration)}</span>
-          </div>
-        </div>
-      </div>
+       
 
       
 
