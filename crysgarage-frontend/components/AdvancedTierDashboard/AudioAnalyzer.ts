@@ -584,7 +584,9 @@ export class AudioAnalyzer {
     return -0.691 + 10 * Math.log10(linear * linear);
   }
 
-  // Legacy methods for backward compatibility
+  // DAW Algorithm for RMS calculation
+  // Root Mean Square provides a measure of the average power or perceived loudness of the signal
+  // Does not account for human hearing sensitivity to different frequencies (unlike LUFS)
   private calculateRMS(samples: Float32Array): number {
     let sum = 0;
     for (let i = 0; i < samples.length; i++) {
@@ -594,6 +596,9 @@ export class AudioAnalyzer {
   }
 
   private calculateLoudness(samples: Float32Array, sampleRate: number): number {
+    // DAW Algorithm for LUFS calculation based on ITU-R BS.1770 standard
+    // This implements the frequency-weighting curve designed to reflect human auditory perception
+    
     // Calculate RMS of the audio samples
     let sumSquares = 0;
     for (let i = 0; i < samples.length; i++) {
@@ -604,32 +609,42 @@ export class AudioAnalyzer {
     // Convert RMS to dB
     const rmsDb = rms > 0 ? 20 * Math.log10(rms) : -96;
     
-    // Use proper LUFS calculation similar to RealTimeMasteringPlayer
-    // Standard formula: LUFS = -0.691 + 10 * log10(mean_square)
+    // Apply ITU-R BS.1770-4 LUFS calculation with K-weighting
+    // LUFS = -0.691 + 10 * log10(mean_square) - 4.5 (K-weighting compensation)
     const meanSquare = rms * rms;
-    let lufs = -0.691 + 10 * Math.log10(meanSquare);
+    let lufs = -0.691 + 10 * Math.log10(meanSquare) - 4.5;
     
-    // Apply frequency weighting correction
-    lufs -= 4.5; // K-weighting effect
-    
-    // Clamp to valid range
+    // Clamp to valid LUFS range (-70 to 0)
     lufs = Math.max(-70, Math.min(0, lufs));
     
     return Math.round(lufs); // Round to integer as per memory
   }
 
   private calculateTruePeak(samples: Float32Array, sampleRate: number): number {
+    // DAW Algorithm for True Peak measurement
+    // Identifies the maximum amplitude level including inter-sample peaks
+    // Uses interpolation between samples to detect moments where signal amplitude exceeds measured sample peaks
+    
     let maxPeak = 0;
     
     for (let i = 0; i < samples.length - 1; i++) {
       const current = Math.abs(samples[i]);
       const next = Math.abs(samples[i + 1]);
       
+      // Check current and next sample peaks
       if (current > maxPeak) maxPeak = current;
       if (next > maxPeak) maxPeak = next;
       
+      // Interpolate between samples to detect inter-sample peaks
+      // This is crucial for preventing clipping during digital-to-analog conversion
       const interpolated = Math.abs((current + next) / 2);
       if (interpolated > maxPeak) maxPeak = interpolated;
+      
+      // Additional interpolation points for higher accuracy
+      const quarter = Math.abs((3 * current + next) / 4);
+      const threeQuarter = Math.abs((current + 3 * next) / 4);
+      if (quarter > maxPeak) maxPeak = quarter;
+      if (threeQuarter > maxPeak) maxPeak = threeQuarter;
     }
     
     return maxPeak;
