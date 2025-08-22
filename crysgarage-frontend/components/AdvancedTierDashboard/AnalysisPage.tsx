@@ -48,6 +48,14 @@ const AnalysisPage: React.FC<AnalysisPageProps> = ({
   const originalAudioUrl = originalFile ? URL.createObjectURL(originalFile) : null;
   const masteredAudioUrl = processedAudioUrl;
 
+  // Debug logging
+  console.log('AnalysisPage audio URLs:', {
+    originalFile: originalFile?.name,
+    originalAudioUrl: originalAudioUrl ? 'Set' : 'Not set',
+    processedAudioUrl: processedAudioUrl ? 'Set' : 'Not set',
+    masteredAudioUrl: masteredAudioUrl ? 'Set' : 'Not set'
+  });
+
   // Cleanup object URLs on unmount
   useEffect(() => {
     return () => {
@@ -57,15 +65,40 @@ const AnalysisPage: React.FC<AnalysisPageProps> = ({
     };
   }, [originalAudioUrl]);
 
+  // Reset audio states when URLs change
+  useEffect(() => {
+    console.log('Audio URLs changed, resetting states');
+    setIsPlayingOriginal(false);
+    setIsPlayingMastered(false);
+    setOriginalCurrentTime(0);
+    setMasteredCurrentTime(0);
+    setOriginalDuration(0);
+    setMasteredDuration(0);
+    setOriginalReady(false);
+    setMasteredReady(false);
+  }, [originalAudioUrl, masteredAudioUrl]);
+
   // Audio playback handlers
   const handleOriginalPlayPause = async () => {
-    if (!originalAudioRef.current) return;
+    console.log('Original play/pause clicked:', {
+      hasRef: !!originalAudioRef.current,
+      isPlaying: isPlayingOriginal,
+      hasUrl: !!originalAudioUrl,
+      ready: originalReady
+    });
+    
+    if (!originalAudioRef.current) {
+      console.error('Original audio ref is null');
+      return;
+    }
 
     try {
       if (isPlayingOriginal) {
+        console.log('Pausing original audio');
         originalAudioRef.current.pause();
         setIsPlayingOriginal(false);
       } else {
+        console.log('Playing original audio');
         // Stop mastered audio if playing
         if (isPlayingMastered && masteredAudioRef.current) {
           masteredAudioRef.current.pause();
@@ -80,13 +113,25 @@ const AnalysisPage: React.FC<AnalysisPageProps> = ({
   };
 
   const handleMasteredPlayPause = async () => {
-    if (!masteredAudioRef.current) return;
+    console.log('Mastered play/pause clicked:', {
+      hasRef: !!masteredAudioRef.current,
+      isPlaying: isPlayingMastered,
+      hasUrl: !!masteredAudioUrl,
+      ready: masteredReady
+    });
+    
+    if (!masteredAudioRef.current) {
+      console.error('Mastered audio ref is null');
+      return;
+    }
 
     try {
       if (isPlayingMastered) {
+        console.log('Pausing mastered audio');
         masteredAudioRef.current.pause();
         setIsPlayingMastered(false);
       } else {
+        console.log('Playing mastered audio');
         // Stop original audio if playing
         if (isPlayingOriginal && originalAudioRef.current) {
           originalAudioRef.current.pause();
@@ -108,9 +153,11 @@ const AnalysisPage: React.FC<AnalysisPageProps> = ({
   };
 
   const handleOriginalLoadedMetadata = () => {
+    console.log('Original audio metadata loaded');
     if (originalAudioRef.current) {
       setOriginalDuration(originalAudioRef.current.duration);
       setOriginalReady(true);
+      console.log('Original audio duration:', originalAudioRef.current.duration);
     }
   };
 
@@ -127,9 +174,11 @@ const AnalysisPage: React.FC<AnalysisPageProps> = ({
   };
 
   const handleMasteredLoadedMetadata = () => {
+    console.log('Mastered audio metadata loaded');
     if (masteredAudioRef.current) {
       setMasteredDuration(masteredAudioRef.current.duration);
       setMasteredReady(true);
+      console.log('Mastered audio duration:', masteredAudioRef.current.duration);
     }
   };
 
@@ -671,6 +720,8 @@ const AnalysisPage: React.FC<AnalysisPageProps> = ({
          onLoadedMetadata={handleOriginalLoadedMetadata}
          onEnded={handleOriginalEnded}
          onError={(e) => console.error('Original audio error:', e)}
+         onLoadStart={() => console.log('Original audio load started')}
+         onCanPlay={() => console.log('Original audio can play')}
          preload="metadata"
          style={{ display: 'none' }}
        />
@@ -682,9 +733,19 @@ const AnalysisPage: React.FC<AnalysisPageProps> = ({
          onLoadedMetadata={handleMasteredLoadedMetadata}
          onEnded={handleMasteredEnded}
          onError={(e) => console.error('Mastered audio error:', e)}
+         onLoadStart={() => console.log('Mastered audio load started')}
+         onCanPlay={() => console.log('Mastered audio can play')}
          preload="metadata"
          style={{ display: 'none' }}
        />
+       
+       {/* Debug info */}
+       <div className="text-xs text-gray-500 mb-2">
+         Debug: Original URL: {originalAudioUrl ? 'Set' : 'Not set'}, 
+         Mastered URL: {masteredAudioUrl ? 'Set' : 'Not set'},
+         Original Ready: {originalReady ? 'Yes' : 'No'},
+         Mastered Ready: {masteredReady ? 'Yes' : 'No'}
+       </div>
       
       
 
