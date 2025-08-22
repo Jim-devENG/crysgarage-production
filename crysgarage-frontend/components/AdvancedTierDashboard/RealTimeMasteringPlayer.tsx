@@ -913,58 +913,136 @@ const RealTimeMasteringPlayer = forwardRef<RealTimeMasteringPlayerRef, RealTimeM
     },
     getProcessedAudioUrl: async () => {
       try {
-        console.log('Getting processed audio URL...');
+        console.log('Starting fresh processed audio recording...');
         
-        if (!audioRef.current || !mediaStreamDestinationRef.current) {
-          console.log('Audio element or MediaStreamDestination not available');
+        if (!audioContextRef.current || !mediaStreamDestinationRef.current || !audioRef.current) {
+          console.error('Required audio components not available:', {
+            audioContext: !!audioContextRef.current,
+            mediaStreamDestination: !!mediaStreamDestinationRef.current,
+            audioElement: !!audioRef.current
+          });
           return null;
         }
 
-        // If we already have a processed audio blob, return its URL
-        if (processedAudioBlob) {
-          console.log('Returning existing processed audio blob URL');
-          return URL.createObjectURL(processedAudioBlob);
+        // Always clear any existing processed audio blob to force fresh generation
+        setProcessedAudioBlob(null);
+
+        // Ensure audio context is running
+        if (audioContextRef.current.state === 'suspended') {
+          await audioContextRef.current.resume();
+          console.log('Audio context resumed');
         }
 
-        // Start recording the processed audio stream
-        console.log('Starting recording of processed audio...');
         setIsRecordingProcessed(true);
         recordedChunksRef.current = [];
 
         const stream = mediaStreamDestinationRef.current.stream;
-        const mediaRecorder = new MediaRecorder(stream);
+        console.log('MediaStream tracks:', stream.getTracks().map(track => ({
+          kind: track.kind,
+          enabled: track.enabled,
+          readyState: track.readyState
+        })));
+
+        // Use specific codec that works better
+        const options = { 
+          mimeType: 'audio/webm;codecs=opus',
+          audioBitsPerSecond: 128000
+        };
+
+        const mediaRecorder = new MediaRecorder(stream, options);
         mediaRecorderRef.current = mediaRecorder;
 
-        return new Promise<string | null>((resolve) => {
+        // Store original playback state
+        const wasPlaying = !audioRef.current.paused;
+        const originalTime = audioRef.current.currentTime;
+
+        return new Promise<string | null>((resolve, reject) => {
+          let recordingTimer: NodeJS.Timeout;
+
           mediaRecorder.ondataavailable = (event) => {
+            console.log('MediaRecorder data available:', event.data.size, 'bytes');
             if (event.data.size > 0) {
               recordedChunksRef.current.push(event.data);
             }
           };
 
-          mediaRecorder.onstop = () => {
-            console.log('Recording stopped, creating blob...');
+          mediaRecorder.onstop = async () => {
+            console.log('MediaRecorder stopped, processing recorded data...');
+            clearTimeout(recordingTimer);
+
+            // Restore original playback state
+            if (!wasPlaying && !audioRef.current!.paused) {
+              audioRef.current!.pause();
+            }
+            audioRef.current!.currentTime = originalTime;
+
+            if (recordedChunksRef.current.length === 0) {
+              console.error('No audio data was recorded');
+              setIsRecordingProcessed(false);
+              reject(new Error('No audio data recorded'));
+              return;
+            }
+
+            console.log('Creating blob from', recordedChunksRef.current.length, 'chunks');
             const blob = new Blob(recordedChunksRef.current, { type: 'audio/webm' });
+            console.log('Blob created:', { size: blob.size, type: blob.type });
+            
+            if (blob.size === 0) {
+              console.error('Created blob has zero size');
+              setIsRecordingProcessed(false);
+              reject(new Error('Created audio blob is empty'));
+              return;
+            }
+
+            const url = URL.createObjectURL(blob);
             setProcessedAudioBlob(blob);
             setIsRecordingProcessed(false);
             
-            const url = URL.createObjectURL(blob);
-            console.log('Processed audio URL created:', url);
+            console.log('✅ Processed audio URL created successfully:', url);
             resolve(url);
           };
 
-          // Start recording
-          mediaRecorder.start();
-          
-          // Record for a short duration to capture the effects
-          setTimeout(() => {
+          mediaRecorder.onerror = (event) => {
+            console.error('MediaRecorder error:', event);
+            clearTimeout(recordingTimer);
+            setIsRecordingProcessed(false);
+            
+            // Restore original playback state
+            if (!wasPlaying && !audioRef.current!.paused) {
+              audioRef.current!.pause();
+            }
+            audioRef.current!.currentTime = originalTime;
+            
+            reject(new Error(`MediaRecorder error: ${(event as any).error?.name || 'Unknown'}`));
+          };
+
+          // Ensure audio is playing for recording
+          if (audioRef.current.paused) {
+            audioRef.current.currentTime = 0;
+            audioRef.current.play().then(() => {
+              console.log('Started audio playback for recording');
+              mediaRecorder.start(100); // Collect data every 100ms
+              console.log('MediaRecorder started');
+            }).catch(err => {
+              console.error('Failed to start audio for recording:', err);
+              setIsRecordingProcessed(false);
+              reject(err);
+            });
+          } else {
+            mediaRecorder.start(100);
+            console.log('MediaRecorder started with audio already playing');
+          }
+
+          // Record for sufficient time to capture processed audio
+          recordingTimer = setTimeout(() => {
+            console.log('Recording timeout reached, stopping...');
             if (mediaRecorder.state === 'recording') {
               mediaRecorder.stop();
             }
-          }, 2000); // Record for 2 seconds
+          }, 3000); // 3 seconds should be enough
         });
       } catch (error) {
-        console.error('Error getting processed audio URL:', error);
+        console.error('Error in getProcessedAudioUrl:', error);
         setIsRecordingProcessed(false);
         return null;
       }

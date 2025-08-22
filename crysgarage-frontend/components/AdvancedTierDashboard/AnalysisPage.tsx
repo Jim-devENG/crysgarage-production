@@ -57,7 +57,10 @@ const AnalysisPage: React.FC<AnalysisPageProps> = ({
     originalAudioUrl: originalAudioUrl ? 'Set' : 'Not set',
     processedAudioUrl: processedAudioUrl ? 'Set' : 'Not set',
     masteredAudioUrl: masteredAudioUrl ? 'Set' : 'Not set',
-    using: processedAudioUrl ? 'Processed audio' : 'Original audio (fallback)'
+    using: processedAudioUrl ? 'Processed audio' : 'Original audio (fallback)',
+    originalAudioUrlActual: originalAudioUrl,
+    processedAudioUrlActual: processedAudioUrl,
+    masteredAudioUrlActual: masteredAudioUrl
   });
 
   // Cleanup object URLs on unmount
