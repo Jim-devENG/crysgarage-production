@@ -33,7 +33,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
       
       {/* Main Upload Section */}
       <div className="max-w-xl mx-auto">
-        <div className="bg-gradient-to-br from-gray-800/50 via-gray-700/50 to-gray-800/50 rounded-xl p-6 border border-gray-600/30 backdrop-blur-xl shadow-xl">
+        <div className="bg-gray-900 rounded-xl p-6 border border-gray-600 shadow-xl">
           {/* Upload Area */}
           <div className={`border-2 border-dashed rounded-lg p-8 text-center transition-all duration-500 ${
             selectedFile 
@@ -156,7 +156,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
 
         {/* Features Section */}
         <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-gradient-to-br from-gray-800/50 to-gray-700/50 rounded-lg p-4 border border-gray-600/30 backdrop-blur-sm hover:border-crys-gold/30 transition-all duration-300">
+          <div className="bg-gray-800 rounded-lg p-4 border border-gray-600 hover:border-crys-gold/30 transition-all duration-300">
             <div className="w-8 h-8 bg-crys-gold/20 rounded-lg flex items-center justify-center mb-3">
               <Music className="w-4 h-4 text-crys-gold" />
             </div>
@@ -164,7 +164,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
             <p className="text-gray-400 text-xs">Industry-standard mastering tools and premium audio processing</p>
           </div>
           
-          <div className="bg-gradient-to-br from-gray-800/50 to-gray-700/50 rounded-lg p-4 border border-gray-600/30 backdrop-blur-sm hover:border-crys-gold/30 transition-all duration-300">
+          <div className="bg-gray-800 rounded-lg p-4 border border-gray-600 hover:border-crys-gold/30 transition-all duration-300">
             <div className="w-8 h-8 bg-crys-gold/20 rounded-lg flex items-center justify-center mb-3">
               <Headphones className="w-4 h-4 text-crys-gold" />
             </div>
@@ -172,7 +172,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
             <p className="text-gray-400 text-xs">Live audio analysis and instant feedback on your mastering</p>
           </div>
           
-          <div className="bg-gradient-to-br from-gray-800/50 to-gray-700/50 rounded-lg p-4 border border-gray-600/30 backdrop-blur-sm hover:border-crys-gold/30 transition-all duration-300">
+          <div className="bg-gray-800 rounded-lg p-4 border border-gray-600 hover:border-crys-gold/30 transition-all duration-300">
             <div className="w-8 h-8 bg-crys-gold/20 rounded-lg flex items-center justify-center mb-3">
               <Settings className="w-4 h-4 text-crys-gold" />
             </div>

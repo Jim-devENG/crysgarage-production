@@ -860,7 +860,7 @@ const RealTimeMasteringPlayer = forwardRef<RealTimeMasteringPlayerRef, RealTimeM
 
   if (!audioFile) {
     return (
-      <div className="backdrop-blur-md bg-black bg-opacity-30 rounded-lg p-4 text-center border border-gray-500 border-opacity-50 shadow-xl">
+      <div className="bg-gray-900 rounded-lg p-4 text-center border border-gray-600 shadow-xl">
         <div className="text-gray-400 mb-3">
           {/* Settings Icon */}
           <div className="w-8 h-8 bg-crys-gold rounded-full mx-auto mb-2 flex items-center justify-center">
@@ -873,7 +873,7 @@ const RealTimeMasteringPlayer = forwardRef<RealTimeMasteringPlayerRef, RealTimeM
   }
 
   return (
-    <div className="backdrop-blur-md bg-black bg-opacity-30 rounded-lg p-4 border border-gray-500 border-opacity-50 shadow-xl">
+    <div className="bg-gray-900 rounded-lg p-4 border border-gray-600 shadow-xl">
       {/* Settings Icon */}
       <div className="text-center mb-3">
         <div className="w-8 h-8 bg-crys-gold rounded-full mx-auto mb-2 flex items-center justify-center">

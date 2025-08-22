@@ -858,10 +858,8 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
 
   return (
     <div 
-      className="min-h-screen relative bg-gradient-to-br from-black via-gray-900 to-black"
+      className="min-h-screen relative bg-black"
     >
-      {/* Overlay for better readability */}
-      <div className="absolute inset-0 bg-black bg-opacity-20"></div>
       
       {/* Studio Header */}
       <div className="relative z-10">
@@ -878,7 +876,7 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
       </div>
       
       {/* Main Content */}
-      <div className="relative z-10 container mx-auto px-4 py-4">
+      <div className="relative z-10 container mx-auto px-4 pt-48 pb-4">
         {renderCurrentStep()}
       </div>
 

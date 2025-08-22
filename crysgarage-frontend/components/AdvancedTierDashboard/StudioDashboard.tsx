@@ -33,7 +33,7 @@ const StudioDashboard: React.FC<StudioDashboardProps> = ({
 }) => {
 
   return (
-    <div className="backdrop-blur-md bg-black bg-opacity-30 rounded-lg p-3 border border-gray-500 border-opacity-50 shadow-xl">
+    <div className="bg-gray-900 rounded-lg p-3 border border-gray-600 shadow-xl">
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center space-x-2">
