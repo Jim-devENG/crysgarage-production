@@ -178,10 +178,7 @@ class MockGoogleAuthService extends GoogleAuthService {
 }
 
 // Export the appropriate service based on environment
-const googleAuthService = (import.meta?.env?.MODE === 'development' || 
-                          (window as any).__ENV__?.NODE_ENV === 'development')
-  ? new MockGoogleAuthService()
-  : new GoogleAuthService();
+const googleAuthService = new MockGoogleAuthService(); // Always use mock for now
 
 export default googleAuthService;
 

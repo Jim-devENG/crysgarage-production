@@ -21,10 +21,7 @@ import { CommunityPage } from './components/CommunityPage';
 import AboutUs from './components/AboutUs';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { Footer } from './components/Footer';
-import { NewAuthFlow } from './components/Auth/NewAuthFlow';
-import { DownloadAuth } from './components/Auth/DownloadAuth';
-import { LoginPage } from './components/Auth/LoginPage';
-import { SignupPage } from './components/Auth/SignupPage';
+import { AuthPage } from './components/Auth/AuthPage';
 import { BillingPage } from './components/Billing/BillingPage';
 import googleAuthService from './services/googleAuth';
 
@@ -49,8 +46,7 @@ function AppContent() {
   const [selectedTier, setSelectedTier] = useState<string>('free');
 
   // New authentication modals
-  const [showNewAuthFlow, setShowNewAuthFlow] = useState(false);
-  const [showDownloadAuth, setShowDownloadAuth] = useState(false);
+
   const [pendingTierAccess, setPendingTierAccess] = useState<string | null>(null);
 
   // URL-based routing
@@ -158,7 +154,7 @@ function AppContent() {
       case 'advanced':
         // Other tiers - require authentication first
         setPendingTierAccess(tierId);
-        setShowNewAuthFlow(true);
+        setCurrentPage('signup');
         break;
       default:
         setCurrentPage('dashboard');
@@ -168,13 +164,17 @@ function AppContent() {
 
   // Handle free tier download (requires authentication)
   const handleFreeTierDownload = () => {
-    setShowDownloadAuth(true);
+    setCurrentPage('login');
   };
 
   // Handle authentication success for paid tiers
   const handleAuthSuccess = (userData: any) => {
     console.log('Authentication successful:', userData);
-    // The NewAuthFlow will handle the payment flow
+    // For free tier, redirect to dashboard immediately
+    if (selectedTier === 'free' || !pendingTierAccess) {
+      setCurrentPage('dashboard');
+    }
+    // For paid tiers, the AuthPage will handle the payment flow
   };
 
   // Handle payment success
@@ -190,6 +190,8 @@ function AppContent() {
         window.history.pushState({}, '', '/advanced');
       }
       setPendingTierAccess(null);
+    } else {
+      setCurrentPage('dashboard');
     }
   };
 
@@ -198,6 +200,7 @@ function AppContent() {
     console.log('Download authentication successful');
     // Proceed with download
     console.log('Proceeding with free tier download');
+    setCurrentPage('dashboard');
   };
 
   // Handle Google authentication
@@ -308,7 +311,7 @@ function AppContent() {
                 <button
                   onClick={() => {
                     setPendingTierAccess('professional');
-                    setShowNewAuthFlow(true);
+                    setCurrentPage('signup');
                   }}
                   className="bg-crys-gold hover:bg-crys-gold/90 text-crys-black px-6 py-2 rounded-lg font-semibold"
                 >
@@ -337,7 +340,7 @@ function AppContent() {
                 <button
                   onClick={() => {
                     setPendingTierAccess('advanced');
-                    setShowNewAuthFlow(true);
+                    setCurrentPage('signup');
                   }}
                   className="bg-crys-gold hover:bg-crys-gold/90 text-crys-black px-6 py-2 rounded-lg font-semibold"
                 >
@@ -408,22 +411,22 @@ function AppContent() {
         
         {/* Authentication Pages */}
         {currentPage === 'login' && (
-          <LoginPage
-            onLogin={signIn}
-            onGoogleLogin={handleGoogleLogin}
-            onNavigate={handleNavigation}
-            isLoading={isLoading}
-            error={error}
+          <AuthPage
+            mode="login"
+            selectedTier={pendingTierAccess || "free"}
+            onAuthSuccess={handleAuthSuccess}
+            onPaymentSuccess={() => setCurrentPage('dashboard')}
+            onBack={() => setCurrentPage('landing')}
           />
         )}
         
         {currentPage === 'signup' && (
-          <SignupPage
-            onSignup={signUp}
-            onGoogleSignup={handleGoogleSignup}
-            onNavigate={handleNavigation}
-            isLoading={isLoading}
-            error={error}
+          <AuthPage
+            mode="signup"
+            selectedTier={pendingTierAccess || "free"}
+            onAuthSuccess={handleAuthSuccess}
+            onPaymentSuccess={() => setCurrentPage('dashboard')}
+            onBack={() => setCurrentPage('landing')}
           />
         )}
         
@@ -501,28 +504,7 @@ function AppContent() {
          />
        )}
 
-      {/* New Authentication Flow for Paid Tiers */}
-      {showNewAuthFlow && (
-        <NewAuthFlow 
-          isOpen={showNewAuthFlow}
-          onClose={() => {
-            setShowNewAuthFlow(false);
-            setPendingTierAccess(null);
-          }}
-          selectedTier={pendingTierAccess || selectedTier}
-          onAuthSuccess={handleAuthSuccess}
-          onPaymentSuccess={handlePaymentSuccess}
-        />
-      )}
 
-      {/* Download Authentication for Free Tier */}
-      {showDownloadAuth && (
-        <DownloadAuth 
-          isOpen={showDownloadAuth}
-          onClose={() => setShowDownloadAuth(false)}
-          onAuthSuccess={handleDownloadAuthSuccess}
-        />
-      )}
     </div>
   );
 }

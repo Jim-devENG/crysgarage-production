@@ -490,57 +490,50 @@ const FreeTierDashboard: React.FC = () => {
       console.log('🎵 Free Tier download starting - capturing processed audio...');
       
       // Get processed audio using MediaRecorder
-      let processedAudioUrl: string | null = null;
+      let processedAudioBlob: Blob | null = null;
       
-      if (audioContext && mediaStreamDestinationRef.current && selectedGenre) {
+      if (audioContext && mediaStreamDestinationRef.current && selectedGenre && originalAudioElement) {
         try {
           console.log('🎵 Getting processed audio with effects applied...');
           
-          // Create a new audio element for processing
-          const audio = new Audio();
-          audio.src = uploadedFile.url;
+          // Use the existing audio element that's already connected to the processing chain
+          const audio = originalAudioElement;
           
-          // Wait for audio to be loaded
-          await new Promise((resolve, reject) => {
-            audio.addEventListener('canplaythrough', resolve);
-            audio.addEventListener('error', reject);
-            audio.load();
-          });
-
-                     // Create audio source and connect to processing chain
-           const source = audioContext.createMediaElementSource(audio);
-           // Connect to the start of the processing chain
-           if (eqLowNode) {
-             source.connect(eqLowNode);
-           } else if (compressorNode) {
-             source.connect(compressorNode);
-           } else if (gainNode) {
-             source.connect(gainNode);
-           }
+          // Ensure the audio is loaded and ready
+          if (audio.readyState < 2) { // HAVE_CURRENT_DATA
+            await new Promise((resolve, reject) => {
+              audio.addEventListener('canplaythrough', resolve);
+              audio.addEventListener('error', reject);
+              audio.load();
+            });
+          }
           
-          // Apply the current genre preset
+          // Apply the current genre preset to ensure it's active
           applyGenrePreset(selectedGenre);
           
-                     // Capture processed audio using MediaRecorder
-           processedAudioUrl = await captureProcessedAudio(audio);
-           
-           if (!processedAudioUrl) {
-             console.warn('MediaRecorder capture failed, using original file');
-             processedAudioUrl = URL.createObjectURL(uploadedFile.file);
-           }
+          // Capture processed audio using MediaRecorder
+          processedAudioBlob = await captureProcessedAudio(audio);
+          
+          if (!processedAudioBlob || processedAudioBlob.size === 0) {
+            console.warn('MediaRecorder capture failed, using original file');
+            processedAudioBlob = uploadedFile.file;
+          }
           
         } catch (error) {
           console.warn('Failed to get processed audio, using original:', error);
-          processedAudioUrl = URL.createObjectURL(uploadedFile.file);
+          processedAudioBlob = uploadedFile.file;
         }
       } else {
         console.log('Audio processing not ready, using original file');
-        processedAudioUrl = URL.createObjectURL(uploadedFile.file);
+        processedAudioBlob = uploadedFile.file;
       }
+      
+      // Convert to proper WAV format
+      const wavBlob = await convertToWav(processedAudioBlob, uploadedFile.file.name);
       
       // Create download link with processed audio
       const link = document.createElement('a');
-      link.href = processedAudioUrl;
+      link.href = URL.createObjectURL(wavBlob);
       
       // Generate filename with format info
       const originalName = uploadedFile.file.name;
@@ -553,7 +546,7 @@ const FreeTierDashboard: React.FC = () => {
       document.body.removeChild(link);
       
       // Clean up
-      URL.revokeObjectURL(processedAudioUrl);
+      URL.revokeObjectURL(link.href);
       
       console.log(`✅ Successfully downloaded mastered audio: ${filename}`);
       console.log(`📊 Genre: ${selectedGenre.name}, Format: WAV 24-bit, Sample Rate: 44.1 kHz`);
@@ -565,7 +558,7 @@ const FreeTierDashboard: React.FC = () => {
   };
 
   // Capture processed audio using MediaRecorder (copied from Advanced Tier)
-  const captureProcessedAudio = async (audioElement: HTMLAudioElement): Promise<string> => {
+  const captureProcessedAudio = async (audioElement: HTMLAudioElement): Promise<Blob> => {
     return new Promise((resolve, reject) => {
       try {
         console.log('🎵 DEBUG: Starting audio capture...');
@@ -584,21 +577,28 @@ const FreeTierDashboard: React.FC = () => {
         console.log('🎵 DEBUG: Creating MediaRecorder...');
         
         // Create MediaRecorder to capture the processed audio stream
-        let mimeType = 'audio/webm;codecs=opus';
+        // Try to use the highest quality format available
+        let mimeType = 'audio/webm;codecs=pcm';
         if (!MediaRecorder.isTypeSupported(mimeType)) {
-          mimeType = 'audio/webm';
+          mimeType = 'audio/webm;codecs=opus';
           if (!MediaRecorder.isTypeSupported(mimeType)) {
-            mimeType = 'audio/mp4';
+            mimeType = 'audio/webm';
+            if (!MediaRecorder.isTypeSupported(mimeType)) {
+              mimeType = 'audio/mp4';
+            }
           }
         }
         
+        console.log('🎵 DEBUG: Using MIME type:', mimeType);
+        console.log('🎵 DEBUG: MIME type supported:', MediaRecorder.isTypeSupported(mimeType));
+        
         const mediaRecorder = new MediaRecorder(mediaStreamDestinationRef.current.stream, {
-          mimeType: mimeType
+          mimeType: mimeType,
+          audioBitsPerSecond: 192000 // 192 kbps for better quality
         });
         
         console.log('✅ DEBUG: MediaRecorder created');
         console.log('🎵 DEBUG: MediaRecorder state:', mediaRecorder.state);
-        console.log('🎵 DEBUG: Supported MIME types:', MediaRecorder.isTypeSupported('audio/webm;codecs=opus'));
         
         const chunks: Blob[] = [];
         let totalChunksSize = 0;
@@ -624,20 +624,18 @@ const FreeTierDashboard: React.FC = () => {
           
           if (chunks.length === 0) {
             console.warn('⚠️ DEBUG: No audio chunks captured');
-            resolve(null);
+            resolve(new Blob()); // Return an empty blob if no chunks
             return;
           }
           
-          const audioBlob = new Blob(chunks, { type: 'audio/webm' });
-          const processedAudioUrl = URL.createObjectURL(audioBlob);
-          
-          console.log('✅ DEBUG: Processed audio captured successfully:', processedAudioUrl);
+          const audioBlob = new Blob(chunks, { type: mimeType });
+          console.log('✅ DEBUG: Processed audio captured successfully');
           console.log('🎵 DEBUG: Final blob size:', audioBlob.size, 'bytes');
           console.log('🎵 DEBUG: Original file size:', uploadedFile?.file.size, 'bytes');
           console.log('🎵 DEBUG: Size difference:', audioBlob.size - (uploadedFile?.file.size || 0), 'bytes');
           console.log('🎵 DEBUG: Is processed audio larger?', audioBlob.size > (uploadedFile?.file.size || 0));
           
-          resolve(processedAudioUrl);
+          resolve(audioBlob);
         };
         
         mediaRecorder.onerror = (error) => {
@@ -698,6 +696,132 @@ const FreeTierDashboard: React.FC = () => {
         reject(error);
       }
     });
+  };
+
+  // Convert audio blob to WAV format
+  const convertToWav = async (audioBlob: Blob, originalFileName: string): Promise<Blob> => {
+    return new Promise((resolve, reject) => {
+      try {
+        console.log('🎵 Converting audio to WAV format...');
+        
+        // Create audio context for conversion
+        const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)({
+          sampleRate: 44100 // 44.1 kHz
+        });
+        
+        // Read the audio blob
+        const fileReader = new FileReader();
+        fileReader.onload = async (event) => {
+          try {
+            const arrayBuffer = event.target?.result as ArrayBuffer;
+            
+            // Decode the audio
+            const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+            console.log('🎵 Audio decoded, duration:', audioBuffer.duration, 'seconds');
+            console.log('🎵 Sample rate:', audioBuffer.sampleRate, 'Hz');
+            console.log('🎵 Number of channels:', audioBuffer.numberOfChannels);
+            
+            // Convert to WAV format
+            const wavBuffer = audioBufferToWav(audioBuffer, {
+              sampleRate: 44100,
+              bitDepth: 24
+            });
+            
+            const wavBlob = new Blob([wavBuffer], { type: 'audio/wav' });
+            console.log('✅ WAV conversion complete, size:', wavBlob.size, 'bytes');
+            
+            resolve(wavBlob);
+            
+          } catch (error) {
+            console.error('❌ Error converting to WAV:', error);
+            reject(error);
+          }
+        };
+        
+        fileReader.onerror = () => {
+          reject(new Error('Failed to read audio file'));
+        };
+        
+        fileReader.readAsArrayBuffer(audioBlob);
+        
+      } catch (error) {
+        console.error('❌ Error in WAV conversion:', error);
+        reject(error);
+      }
+    });
+  };
+
+  // AudioBuffer to WAV conversion function
+  const audioBufferToWav = (buffer: AudioBuffer, options: { sampleRate: number; bitDepth: number }): ArrayBuffer => {
+    const { sampleRate, bitDepth } = options;
+    const channels = buffer.numberOfChannels;
+    const length = buffer.length;
+    
+    // Calculate buffer size for WAV header + audio data
+    const bytesPerSample = bitDepth / 8;
+    const blockAlign = channels * bytesPerSample;
+    const dataSize = length * blockAlign;
+    const bufferSize = 44 + dataSize; // 44 bytes for WAV header
+    
+    const arrayBuffer = new ArrayBuffer(bufferSize);
+    const view = new DataView(arrayBuffer);
+    
+    // Write WAV header
+    let offset = 0;
+    
+    // RIFF chunk descriptor
+    writeString(view, offset, 'RIFF'); offset += 4;
+    view.setUint32(offset, 36 + dataSize, true); offset += 4; // File size - 8
+    writeString(view, offset, 'WAVE'); offset += 4;
+    
+    // fmt sub-chunk
+    writeString(view, offset, 'fmt '); offset += 4;
+    view.setUint32(offset, 16, true); offset += 4; // Subchunk1Size (16 for PCM)
+    view.setUint16(offset, 1, true); offset += 2; // AudioFormat (1 for PCM)
+    view.setUint16(offset, channels, true); offset += 2; // NumChannels
+    view.setUint32(offset, sampleRate, true); offset += 4; // SampleRate
+    view.setUint32(offset, sampleRate * blockAlign, true); offset += 4; // ByteRate
+    view.setUint16(offset, blockAlign, true); offset += 2; // BlockAlign
+    view.setUint16(offset, bitDepth, true); offset += 2; // BitsPerSample
+    
+    // data sub-chunk
+    writeString(view, offset, 'data'); offset += 4;
+    view.setUint32(offset, dataSize, true); offset += 4; // Subchunk2Size
+    
+    // Write audio data
+    const channelData = [];
+    for (let i = 0; i < channels; i++) {
+      channelData.push(buffer.getChannelData(i));
+    }
+    
+    for (let i = 0; i < length; i++) {
+      for (let channel = 0; channel < channels; channel++) {
+        const sample = Math.max(-1, Math.min(1, channelData[channel][i]));
+        const value = sample * (Math.pow(2, bitDepth - 1) - 1);
+        
+        if (bitDepth === 16) {
+          view.setInt16(offset, value, true);
+          offset += 2;
+        } else if (bitDepth === 24) {
+          const intValue = Math.round(value);
+          view.setInt8(offset, intValue & 0xFF);
+          view.setInt8(offset + 1, (intValue >> 8) & 0xFF);
+          view.setInt8(offset + 2, (intValue >> 16) & 0xFF);
+          offset += 3;
+        } else if (bitDepth === 32) {
+          view.setInt32(offset, value, true);
+          offset += 4;
+        }
+      }
+    }
+    
+    return arrayBuffer;
+  };
+  
+  const writeString = (view: DataView, offset: number, string: string) => {
+    for (let i = 0; i < string.length; i++) {
+      view.setUint8(offset + i, string.charCodeAt(i));
+    }
   };
 
   const formatFileSize = (bytes: number) => {

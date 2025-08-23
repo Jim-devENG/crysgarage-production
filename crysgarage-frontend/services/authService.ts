@@ -109,12 +109,12 @@ const apiRequest = async (endpoint: string, options: RequestInit = {}): Promise<
   }
 };
 
-// Authentication service - Updated to work with your live server
+// Authentication service - Updated to use Laravel endpoints
 export const authService = {
-  // Login user - Updated to use your existing auth.php endpoint
+  // Login user - Updated to use Laravel AuthController
   login: async (credentials: LoginCredentials): Promise<AuthResponse> => {
     try {
-      const response = await apiRequest('/auth.php/signin', {
+      const response = await apiRequest('/auth/signin', {
         method: 'POST',
         body: JSON.stringify(credentials),
       });
@@ -132,10 +132,10 @@ export const authService = {
     }
   },
 
-  // Signup user - Updated to use your existing auth.php endpoint
+  // Signup user - Updated to use Laravel AuthController
   signup: async (credentials: SignupCredentials): Promise<AuthResponse> => {
     try {
-      const response = await apiRequest('/auth.php/signup', {
+      const response = await apiRequest('/auth/signup', {
         method: 'POST',
         body: JSON.stringify(credentials),
       });
@@ -153,11 +153,11 @@ export const authService = {
     }
   },
 
-  // Logout user - Updated to use your existing auth.php endpoint
+  // Logout user - Updated to use Laravel AuthController
   logout: async (): Promise<void> => {
     try {
       // Call logout endpoint if available
-      await apiRequest('/auth.php/signout', { method: 'POST' });
+      await apiRequest('/auth/signout', { method: 'POST' });
     } catch (error) {
       console.error('Logout request failed:', error);
     } finally {
@@ -166,84 +166,29 @@ export const authService = {
     }
   },
 
-  // Get current user - Updated to use your existing auth.php endpoint
+  // Get current user - Updated to use Laravel AuthController
   getCurrentUser: (): User | null => {
     return tokenService.getUser();
   },
 
   // Check if user is authenticated
   isAuthenticated: (): boolean => {
-    const token = tokenService.getToken();
-    const user = tokenService.getUser();
-    return !!(token && user);
+    return tokenService.getToken() !== null;
   },
 
-  // Refresh user data - Updated to use your existing auth.php endpoint
+  // Refresh user data from server
   refreshUser: async (): Promise<User | null> => {
     try {
-      const response = await apiRequest('/auth.php/user');
+      const response = await apiRequest('/auth/user', {
+        method: 'GET',
+      });
+      
       const user = response.user;
       tokenService.setUser(user);
       return user;
     } catch (error) {
       console.error('Failed to refresh user data:', error);
       return null;
-    }
-  },
-
-  // Update user profile - Updated to use your existing auth.php endpoint
-  updateProfile: async (updates: Partial<User>): Promise<User> => {
-    try {
-      const response = await apiRequest('/auth.php/profile', {
-        method: 'PUT',
-        body: JSON.stringify(updates),
-      });
-
-      const user = response.user;
-      tokenService.setUser(user);
-      return user;
-    } catch (error) {
-      console.error('Failed to update profile:', error);
-      throw new Error('Failed to update profile');
-    }
-  },
-
-  // Change password - Updated to use your existing auth.php endpoint
-  changePassword: async (currentPassword: string, newPassword: string): Promise<void> => {
-    try {
-      await apiRequest('/auth.php/change-password', {
-        method: 'POST',
-        body: JSON.stringify({ currentPassword, newPassword }),
-      });
-    } catch (error) {
-      console.error('Failed to change password:', error);
-      throw new Error('Failed to change password');
-    }
-  },
-
-  // Request password reset - Updated to use your existing auth.php endpoint
-  requestPasswordReset: async (email: string): Promise<void> => {
-    try {
-      await apiRequest('/auth.php/forgot-password', {
-        method: 'POST',
-        body: JSON.stringify({ email }),
-      });
-    } catch (error) {
-      console.error('Failed to request password reset:', error);
-      throw new Error('Failed to send reset email');
-    }
-  },
-
-  // Reset password - Updated to use your existing auth.php endpoint
-  resetPassword: async (token: string, newPassword: string): Promise<void> => {
-    try {
-      await apiRequest('/auth.php/reset-password', {
-        method: 'POST',
-        body: JSON.stringify({ token, newPassword }),
-      });
-    } catch (error) {
-      console.error('Failed to reset password:', error);
-      throw new Error('Failed to reset password');
     }
   }
 };

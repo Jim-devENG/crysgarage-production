@@ -124,4 +124,31 @@ class AuthController extends Controller
             'message' => 'Successfully signed out'
         ]);
     }
+
+    /**
+     * Get current user
+     */
+    public function getCurrentUser(Request $request)
+    {
+        $user = $request->user();
+        
+        if (!$user) {
+            return response()->json([
+                'message' => 'Not authenticated'
+            ], 401);
+        }
+
+        return response()->json([
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'tier' => $user->tier ?? 'free',
+                'credits' => $user->credits ?? 5,
+                'join_date' => $user->created_at->toISOString(),
+                'total_tracks' => $user->total_tracks ?? 0,
+                'total_spent' => $user->total_spent ?? 0,
+            ]
+        ]);
+    }
 } 
