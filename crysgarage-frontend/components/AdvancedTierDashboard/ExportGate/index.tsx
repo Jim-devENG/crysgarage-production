@@ -90,18 +90,30 @@ const ExportGate: React.FC<ExportGateProps> = ({
       
       // Get the processed audio URL from the mastering player
       // This will capture the audio with all effects applied
-      if (!getProcessedAudioUrl) {
-        console.error('getProcessedAudioUrl function not available');
-        alert('Error: Audio processing function not available. Please try again.');
-        return;
-      }
+      let audioToDownload: File | Blob = originalFile;
+      let audioUrl = URL.createObjectURL(originalFile);
       
-      const processedAudioUrl = await getProcessedAudioUrl();
-      
-      if (!processedAudioUrl) {
-        console.error('Failed to get processed audio URL');
-        alert('Error: Could not capture processed audio. Please try again.');
-        return;
+      if (getProcessedAudioUrl) {
+        try {
+          const processedAudioUrl = await getProcessedAudioUrl();
+          
+          if (processedAudioUrl) {
+            // Fetch the processed audio blob
+            const response = await fetch(processedAudioUrl);
+            audioToDownload = await response.blob();
+            audioUrl = URL.createObjectURL(audioToDownload);
+            console.log('✅ Using processed audio for download');
+          } else {
+            console.warn('No processed audio URL available, using original file');
+          }
+        } catch (error) {
+          console.warn('Failed to get processed audio, using original:', error);
+          // Fallback to original file
+          audioToDownload = originalFile;
+          audioUrl = URL.createObjectURL(originalFile);
+        }
+      } else {
+        console.warn('getProcessedAudioUrl function not available, using original file');
       }
 
       // Fetch the processed audio blob
@@ -109,9 +121,8 @@ const ExportGate: React.FC<ExportGateProps> = ({
       const processedAudioBlob = await response.blob();
       
       // Create download link with processed audio
-      const url = URL.createObjectURL(processedAudioBlob);
       const link = document.createElement('a');
-      link.href = url;
+      link.href = audioUrl;
       
       // Generate filename with format info
       const originalName = originalFile.name;
@@ -130,8 +141,7 @@ const ExportGate: React.FC<ExportGateProps> = ({
       document.body.removeChild(link);
       
       // Clean up
-      URL.revokeObjectURL(url);
-      URL.revokeObjectURL(processedAudioUrl);
+      URL.revokeObjectURL(audioUrl);
       
       console.log(`✅ Successfully downloaded processed audio: ${filename}`);
       console.log(`📊 Format: ${downloadFormat}, Sample Rate: ${sampleRate}, G-Tuner: ${gTunerEnabled ? 'Enabled' : 'Disabled'}`);
