@@ -3,6 +3,7 @@ import { ProfessionalTierDashboardProps } from './types';
 import FileUploadStep from './FileUploadStep';
 import AudioProcessingStep from './AudioProcessingStep';
 import ExportStep from './ExportStep';
+import RealTimeAudioPlayer, { RealTimeAudioPlayerRef } from './components/RealTimeAudioPlayer';
 import { loadStateFromStorage, saveStateToStorage, idbLoad, idbSave, idbDelete } from './utils/storageUtils';
 
 const ProfessionalDashboard: React.FC<ProfessionalTierDashboardProps> = ({ onFileUpload, credits = 0 }) => {
@@ -13,6 +14,7 @@ const ProfessionalDashboard: React.FC<ProfessionalTierDashboardProps> = ({ onFil
   const [processedAudioUrl, setProcessedAudioUrl] = useState<string | null>(null);
   const [isRestoring, setIsRestoring] = useState(false);
   const hasRestored = useRef(false);
+  const realTimeAudioPlayerRef = useRef<RealTimeAudioPlayerRef>(null);
 
   // Load state from session storage + IndexedDB on mount (only once)
   useEffect(() => {
@@ -79,6 +81,17 @@ const ProfessionalDashboard: React.FC<ProfessionalTierDashboardProps> = ({ onFil
     
     init();
   }, []);
+
+  // Initialize audio context when reaching step 3 for export
+  useEffect(() => {
+    if (currentStep === 3 && selectedFile && realTimeAudioPlayerRef.current) {
+      console.log('🎵 Initializing audio context for professional export processing...');
+      // Small delay to ensure component is mounted
+      setTimeout(() => {
+        realTimeAudioPlayerRef.current?.manualInitializeAudioContext();
+      }, 100);
+    }
+  }, [currentStep, selectedFile]);
 
   // Handle browser navigation events
   useEffect(() => {
@@ -238,6 +251,7 @@ const ProfessionalDashboard: React.FC<ProfessionalTierDashboardProps> = ({ onFil
             processedAudioUrl={processedAudioUrl}
             onBack={prevStep}
             onRestart={clearState}
+            realTimeAudioPlayerRef={realTimeAudioPlayerRef}
           />
         );
       default:
@@ -295,6 +309,18 @@ const ProfessionalDashboard: React.FC<ProfessionalTierDashboardProps> = ({ onFil
         <div className="max-w-6xl mx-auto">
           {renderCurrentStep()}
         </div>
+        
+        {/* Hidden RealTimeAudioPlayer for export processing */}
+        {selectedFile && (
+          <div style={{ display: 'none' }}>
+            <RealTimeAudioPlayer
+              ref={realTimeAudioPlayerRef}
+              audioFile={selectedFile}
+              selectedGenre={selectedGenre}
+              onGenreChange={() => {}}
+            />
+          </div>
+        )}
       </div>
     </div>
   );

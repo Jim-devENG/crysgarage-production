@@ -64,33 +64,9 @@ export function Header({
     return `${baseClasses} ${inactiveClasses}`;
   };
 
-  const getDashboardLabel = () => {
-    if (!user) return 'Dashboard';
-    switch (user.tier) {
-      case 'free': return 'Free Dashboard';
-      case 'professional': return 'Professional Dashboard';
-      case 'advanced': return 'Advanced Dashboard';
-      default: return 'Dashboard';
-    }
-  };
-
-  const getCreditsBadgeColor = () => {
-    if (!user) return 'bg-crys-gold/20 text-crys-gold';
-    switch (user.tier) {
-      case 'free': return user.credits > 2 ? 'bg-green-500/20 text-green-400' : 
-                         user.credits > 0 ? 'bg-yellow-500/20 text-yellow-400' : 
-                         'bg-red-500/20 text-red-400';
-      case 'professional': return 'bg-blue-500/20 text-blue-400';
-      case 'advanced': return 'bg-purple-500/20 text-purple-400';
-      default: return 'bg-crys-gold/20 text-crys-gold';
-    }
-  };
-
   const navigationItems = [
     { id: 'home', label: 'Home', icon: <Home className="w-4 h-4" />, show: true },
-    { id: 'dashboard', label: getDashboardLabel(), icon: <Zap className="w-4 h-4" />, show: !!user },
-    { id: 'upload', label: 'Upload Audio', icon: <Music className="w-4 h-4" />, show: !!user },
-    { id: 'studio', label: 'Studio', icon: <CreditCard className="w-4 h-4" />, show: true },
+    { id: 'studio', label: 'Pricing', icon: <CreditCard className="w-4 h-4" />, show: true },
     { id: 'about', label: 'About Us', icon: <Users className="w-4 h-4" />, show: true },
     { 
       id: 'help', 
@@ -98,115 +74,68 @@ export function Header({
       icon: <LifeBuoy className="w-4 h-4" />, 
       show: true,
       dropdown: [
-        { id: 'help', label: 'Help Center', icon: <LifeBuoy className="w-4 h-4" /> },
-        { id: 'courses', label: 'Courses', icon: <BookOpen className="w-4 h-4" /> },
+        { id: 'help-center', label: 'Help Center', icon: <HelpCircle className="w-4 h-4" /> },
+        { id: 'courses', label: 'Tutorials', icon: <BookOpen className="w-4 h-4" /> },
         { id: 'community', label: 'Community', icon: <Users className="w-4 h-4" /> }
       ]
-    },
+    }
   ];
 
   return (
-    <header className="border-b border-crys-graphite bg-crys-black/95 backdrop-blur supports-[backdrop-filter]:bg-crys-black/60 sticky top-0 z-50">
-              <div className="container mx-auto py-3 relative">
-        <div className="flex items-center justify-between">
-          {/* Logo and Brand */}
-          <div className="flex items-center gap-3">
-            <div className="relative">
-              <CrysGarageLogo 
-                size={60} 
-                onClick={() => handleNavigation('home')}
-                className="hover:scale-105 transition-transform duration-200 cursor-pointer"
-              />
-            </div>
-            <div className="hidden sm:block">
-              <button 
-                onClick={() => handleNavigation('home')}
-                className="text-crys-white text-xl font-bold tracking-tight hover:text-crys-gold transition-colors text-left"
-              >
-                Crys Garage
-              </button>
-              <p className="text-crys-gold text-xs opacity-90">Professional Audio Mastering</p>
-            </div>
+    <header className="fixed top-0 left-0 right-0 z-50 bg-audio-panel-bg/95 backdrop-blur-md border-b border-crys-graphite">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between h-16">
+          {/* Logo */}
+          <div className="flex items-center">
+            <CrysGarageLogo className="h-8 w-auto" />
           </div>
 
           {/* Desktop Navigation */}
-          <nav className="hidden lg:flex items-center gap-2">
+          <nav className="hidden md:flex items-center space-x-1">
             {navigationItems.map((item) => (
-              item.show && (
-                <div key={item.id} className="relative">
-                  {item.dropdown ? (
-                    <div
-                      onMouseEnter={() => setActiveDropdown(item.id)}
-                      onMouseLeave={() => setActiveDropdown(null)}
-                    >
-                      <button
-                        onClick={() => handleNavigation(item.id)}
-                        className={`${getNavItemClasses(item.id)} flex items-center gap-1`}
-                      >
-                        {item.icon}
-                        {item.label}
-                        <ChevronDown className="w-3 h-3" />
-                      </button>
-                      
-                      {/* Dropdown Menu */}
-                      {activeDropdown === item.id && (
-                        <div className="absolute top-full left-0 mt-1 w-48 bg-crys-black/95 border border-crys-graphite rounded-lg shadow-lg backdrop-blur-sm z-50">
-                          {item.dropdown.map((dropdownItem) => (
-                            <button
-                              key={dropdownItem.id}
-                              onClick={() => {
-                                handleNavigation(dropdownItem.id);
-                                setActiveDropdown(null);
-                              }}
-                              className="w-full flex items-center gap-3 px-4 py-3 text-left text-crys-white hover:text-crys-gold hover:bg-crys-gold/10 transition-colors first:rounded-t-lg last:rounded-b-lg"
-                            >
-                              {dropdownItem.icon}
-                              {dropdownItem.label}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => handleNavigation(item.id)}
-                      className={getNavItemClasses(item.id)}
-                    >
+              <div key={item.id} className="relative">
+                {item.dropdown ? (
+                  <div
+                    className="relative group"
+                    onMouseEnter={() => setActiveDropdown(item.id)}
+                    onMouseLeave={() => setActiveDropdown(null)}
+                  >
+                    <button className={getNavItemClasses(item.id)}>
                       {item.icon}
-                      {item.label}
+                      <span>{item.label}</span>
+                      <ChevronDown className="w-4 h-4" />
                     </button>
-                  )}
-                </div>
-              )
+                    
+                    {activeDropdown === item.id && (
+                      <div className="absolute top-full left-0 mt-2 w-48 bg-audio-panel-bg border border-crys-graphite rounded-lg shadow-lg py-2 z-50">
+                        {item.dropdown.map((dropdownItem) => (
+                          <button
+                            key={dropdownItem.id}
+                            onClick={() => handleNavigation(dropdownItem.id)}
+                            className="w-full flex items-center gap-3 px-4 py-2 text-crys-white hover:bg-crys-gold/10 transition-colors text-left"
+                          >
+                            {dropdownItem.icon}
+                            <span className="text-sm">{dropdownItem.label}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => handleNavigation(item.id)}
+                    className={getNavItemClasses(item.id)}
+                  >
+                    {item.icon}
+                    <span>{item.label}</span>
+                  </button>
+                )}
+              </div>
             ))}
           </nav>
 
           {/* User Actions */}
           <div className="flex items-center gap-3">
-            {/* Credits Badge */}
-            {user && (
-              <Badge 
-                variant="secondary" 
-                className={`${getCreditsBadgeColor()} border-opacity-30 hidden sm:flex`}
-              >
-                {user.tier === 'advanced' ? (
-                  <>∞ Credits</>
-                ) : (
-                  <>{user.credits || 0} Credits</>
-                )}
-              </Badge>
-            )}
-            
-            {/* Tier Badge */}
-            {user && (
-              <Badge 
-                variant="secondary" 
-                className="bg-crys-gold/10 text-crys-gold border-crys-gold/30 capitalize hidden sm:flex"
-              >
-                {user.tier === 'free' ? 'Trial' : user.tier}
-              </Badge>
-            )}
-            
             {user ? (
               <div className="flex items-center gap-3">
                 {/* User Menu */}
@@ -239,7 +168,7 @@ export function Header({
                         <span className="text-sm">Profile & Wallet</span>
                       </button>
                       <button 
-                        onClick={() => onShowBilling?.()}
+                        onClick={() => handleNavigation('billing')}
                         className="w-full flex items-center gap-2 px-3 py-2 text-crys-white hover:bg-crys-gold/10 rounded-lg transition-colors text-left"
                       >
                         <CreditCard className="w-4 h-4" />
@@ -269,122 +198,65 @@ export function Header({
               <div className="flex items-center gap-3">
                 {/* Authentication buttons */}
                 <Button
-                  onClick={() => onNavigate?.('signin')}
+                  onClick={() => handleNavigation('login')}
                   variant="ghost"
                   className="text-crys-white hover:text-crys-gold hover:bg-crys-gold/10"
                 >
                   Sign In
                 </Button>
                 <Button
-                  onClick={() => onNavigate?.('signup')}
-                  className="bg-crys-gold hover:bg-crys-gold/80 text-black font-medium"
+                  onClick={() => handleNavigation('signup')}
+                  className="bg-crys-gold hover:bg-crys-gold/90 text-crys-black px-4 py-2 rounded-lg font-semibold"
                 >
                   Get Started
                 </Button>
               </div>
             )}
 
-            {/* Mobile Menu Button */}
+            {/* Mobile menu button */}
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="lg:hidden p-2 text-crys-white hover:text-crys-gold hover:bg-crys-gold/10 rounded-lg transition-colors"
+              className="md:hidden p-2 rounded-lg text-crys-white hover:bg-crys-gold/10 transition-colors"
             >
-              {isMobileMenuOpen ? (
-                <X className="w-5 h-5" />
-              ) : (
-                <Menu className="w-5 h-5" />
-              )}
+              {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </button>
           </div>
         </div>
-
-        {/* Mobile Navigation Menu */}
-        {isMobileMenuOpen && (
-          <div className="lg:hidden absolute top-full left-0 right-0 bg-audio-panel-bg border-t border-crys-graphite shadow-lg">
-            <nav className="p-4 space-y-2">
-              {navigationItems.map((item) => (
-                item.show && (
-                  <div key={item.id}>
-                    {item.dropdown ? (
-                      <div>
-                        <button
-                          onClick={() => setActiveDropdown(activeDropdown === item.id ? null : item.id)}
-                          className="w-full flex items-center justify-between px-4 py-3 text-crys-white hover:text-crys-gold hover:bg-crys-gold/10 rounded-lg transition-colors text-left"
-                        >
-                          <div className="flex items-center gap-3">
-                            {item.icon}
-                            {item.label}
-                          </div>
-                          <ChevronDown className={`w-4 h-4 transition-transform ${activeDropdown === item.id ? 'rotate-180' : ''}`} />
-                        </button>
-                        
-                        {activeDropdown === item.id && (
-                          <div className="ml-4 mt-2 space-y-1">
-                            {item.dropdown.map((dropdownItem) => (
-                              <button
-                                key={dropdownItem.id}
-                                onClick={() => {
-                                  handleNavigation(dropdownItem.id);
-                                  setActiveDropdown(null);
-                                  setIsMobileMenuOpen(false);
-                                }}
-                                className="w-full flex items-center gap-3 px-4 py-2 text-crys-light-grey hover:text-crys-gold hover:bg-crys-gold/10 rounded-lg transition-colors text-left text-sm"
-                              >
-                                {dropdownItem.icon}
-                                {dropdownItem.label}
-                              </button>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    ) : (
-                      <button
-                        onClick={() => handleNavigation(item.id)}
-                        className="w-full flex items-center gap-3 px-4 py-3 text-crys-white hover:text-crys-gold hover:bg-crys-gold/10 rounded-lg transition-colors text-left"
-                      >
-                        {item.icon}
-                        {item.label}
-                      </button>
-                    )}
-                  </div>
-                )
-              ))}
-              
-              {user && (
-                <>
-                  <div className="border-t border-crys-graphite my-3"></div>
-                </>
-              )}
-              {!user && (
-                <>
-                  <div className="border-t border-crys-graphite my-3"></div>
-                  {/* Authentication buttons */}
-                  <button
-                    onClick={() => {
-                      onNavigate?.('signin');
-                      setIsMobileMenuOpen(false);
-                    }}
-                    className="w-full flex items-center gap-3 px-4 py-3 text-crys-white hover:text-crys-gold hover:bg-crys-gold/10 rounded-lg transition-colors text-left"
-                  >
-                    <User className="w-4 h-4" />
-                    Sign In
-                  </button>
-                  <button
-                    onClick={() => {
-                      onNavigate?.('signup');
-                      setIsMobileMenuOpen(false);
-                    }}
-                    className="w-full flex items-center gap-3 px-4 py-3 bg-crys-gold hover:bg-crys-gold/80 text-black font-medium rounded-lg transition-colors text-left"
-                  >
-                    <Zap className="w-4 h-4" />
-                    Get Started
-                  </button>
-                </>
-              )}
-            </nav>
-          </div>
-        )}
       </div>
+
+      {/* Mobile Navigation */}
+      {isMobileMenuOpen && (
+        <div className="md:hidden bg-audio-panel-bg border-t border-crys-graphite">
+          <div className="px-4 py-2 space-y-1">
+            {navigationItems.map((item) => (
+              <div key={item.id}>
+                <button
+                  onClick={() => handleNavigation(item.id)}
+                  className="w-full flex items-center gap-3 px-4 py-3 text-crys-white hover:bg-crys-gold/10 rounded-lg transition-colors text-left"
+                >
+                  {item.icon}
+                  <span>{item.label}</span>
+                </button>
+                
+                {item.dropdown && (
+                  <div className="ml-4 space-y-1">
+                    {item.dropdown.map((dropdownItem) => (
+                      <button
+                        key={dropdownItem.id}
+                        onClick={() => handleNavigation(dropdownItem.id)}
+                        className="w-full flex items-center gap-3 px-4 py-2 text-crys-light-grey hover:text-crys-white hover:bg-crys-gold/5 rounded-lg transition-colors text-left"
+                      >
+                        {dropdownItem.icon}
+                        <span className="text-sm">{dropdownItem.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </header>
   );
 }

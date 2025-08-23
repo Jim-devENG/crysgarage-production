@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Download, ArrowLeft, Settings, Cpu } from 'lucide-react';
+import { Download, ArrowLeft, Settings, Cpu, Loader2 } from 'lucide-react';
+import RealTimeProcessingVisualizer from '../RealTimeProcessingVisualizer';
 
 interface ExportGateProps {
   originalFile: File | null;
@@ -9,7 +10,7 @@ interface ExportGateProps {
   onUpdateEffectSettings?: (effectType: string, settings: any) => void;
   meterData?: any;
   selectedGenre?: string;
-  getProcessedAudioUrl?: () => Promise<string | null>;
+  getProcessedAudioUrl?: (onProgress?: (progress: number, stage: string, chunks?: number, size?: number) => void) => Promise<string | null>;
 }
 
 const ExportGate: React.FC<ExportGateProps> = ({ 
@@ -26,6 +27,12 @@ const ExportGate: React.FC<ExportGateProps> = ({
   const [sampleRate, setSampleRate] = useState<'44.1kHz' | '48kHz' | '88.2kHz' | '96kHz' | '192kHz'>('44.1kHz');
   const [gTunerEnabled, setGTunerEnabled] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [downloadProgress, setDownloadProgress] = useState(0);
+  const [downloadStage, setDownloadStage] = useState('');
+  const [timeRemaining, setTimeRemaining] = useState('');
+  const [startTime, setStartTime] = useState<number | null>(null);
+  const [chunkCount, setChunkCount] = useState(0);
+  const [totalSize, setTotalSize] = useState(0);
 
   // Initialize G-Tuner state from audioEffects
   useEffect(() => {
@@ -53,6 +60,47 @@ const ExportGate: React.FC<ExportGateProps> = ({
   };
 
   const totalCost = calculateTotalCost();
+
+  // Progress tracking function
+  const updateProgress = (progress: number, stage: string) => {
+    setDownloadProgress(progress);
+    setDownloadStage(stage);
+    
+    // Calculate time remaining
+    if (startTime) {
+      const elapsed = Date.now() - startTime;
+      const estimatedTotal = elapsed / (progress / 100);
+      const remaining = estimatedTotal - elapsed;
+      
+      if (remaining > 0) {
+        const minutes = Math.floor(remaining / 60000);
+        const seconds = Math.floor((remaining % 60000) / 1000);
+        setTimeRemaining(`${minutes}m ${seconds}s`);
+      }
+    }
+  };
+
+  // Enhanced progress tracking for real-time processing
+  const updateRealTimeProgress = (progress: number, stage: string, chunks?: number, size?: number) => {
+    setDownloadProgress(progress);
+    setDownloadStage(stage);
+    
+    if (chunks !== undefined) setChunkCount(chunks);
+    if (size !== undefined) setTotalSize(size);
+    
+    // Calculate time remaining
+    if (startTime) {
+      const elapsed = Date.now() - startTime;
+      const estimatedTotal = elapsed / (progress / 100);
+      const remaining = estimatedTotal - elapsed;
+      
+      if (remaining > 0) {
+        const minutes = Math.floor(remaining / 60000);
+        const seconds = Math.floor((remaining % 60000) / 1000);
+        setTimeRemaining(`${minutes}m ${seconds}s`);
+      }
+    }
+  };
 
   // G-Tuner toggle handler - actually applies the effect
   const handleGTunerToggle = (enabled: boolean) => {
@@ -84,9 +132,16 @@ const ExportGate: React.FC<ExportGateProps> = ({
     }
 
     setIsDownloading(true);
+    setStartTime(Date.now());
+    setDownloadProgress(0);
+    setDownloadStage('Initializing...');
+    setTimeRemaining('');
+    setChunkCount(0);
+    setTotalSize(0);
     
     try {
       console.log('🎵 Advanced download starting - capturing processed audio...');
+      updateProgress(5, 'Initializing audio processing...');
       
       // Get the processed audio URL from the mastering player
       let audioToDownload: File | Blob = originalFile;
@@ -94,15 +149,25 @@ const ExportGate: React.FC<ExportGateProps> = ({
       
       if (getProcessedAudioUrl) {
         try {
+          updateProgress(15, 'Applying audio effects...');
           console.log('🎵 Getting processed audio with effects applied...');
-          const processedAudioUrl = await getProcessedAudioUrl();
+          
+          // Use enhanced real-time progress tracking
+          const processedAudioUrl = await getProcessedAudioUrl((progress, stage, chunks, size) => {
+            updateRealTimeProgress(progress, stage, chunks, size);
+          });
           
           if (processedAudioUrl) {
+            updateProgress(60, 'Converting to WAV format...');
+            console.log('🎵 Got processed audio URL:', processedAudioUrl);
+            
             // Fetch the processed audio blob
             const response = await fetch(processedAudioUrl);
             audioToDownload = await response.blob();
             audioUrl = URL.createObjectURL(audioToDownload);
             console.log('✅ Using processed audio with effects for download');
+            console.log('Processed blob size:', audioToDownload.size, 'bytes');
+            console.log('Original file size:', originalFile.size, 'bytes');
           } else {
             console.warn('No processed audio URL available, using original file');
           }
@@ -115,6 +180,8 @@ const ExportGate: React.FC<ExportGateProps> = ({
       } else {
         console.warn('getProcessedAudioUrl function not available, using original file');
       }
+      
+      updateProgress(80, 'Preparing download...');
       
       // Create download link with processed audio
       const link = document.createElement('a');
@@ -139,22 +206,44 @@ const ExportGate: React.FC<ExportGateProps> = ({
       // Clean up
       URL.revokeObjectURL(audioUrl);
       
+      updateProgress(100, 'Download complete!');
+      
       console.log(`✅ Successfully downloaded mastered audio: ${filename}`);
       console.log(`📊 Format: ${downloadFormat}, Sample Rate: ${sampleRate}, G-Tuner: ${gTunerEnabled ? 'Enabled' : 'Disabled'}`);
       
-      // Show success message
-      alert(`Successfully downloaded mastered audio: ${filename}`);
+      // Success - no alert needed, user can see the download in their browser
       
     } catch (error) {
       console.error('❌ Error downloading file:', error);
       alert('Error downloading file. Please try again.');
     } finally {
       setIsDownloading(false);
+      setChunkCount(0);
+      setTotalSize(0);
     }
   };
 
+  // Real-Time Processing Visualizer Component
+  const RealTimeVisualizer = () => {
+    if (!isDownloading) return null;
+
+    return (
+      <RealTimeProcessingVisualizer
+        isProcessing={isDownloading}
+        progress={downloadProgress}
+        stage={downloadStage}
+        timeRemaining={timeRemaining}
+        audioEffects={audioEffects}
+        chunkCount={chunkCount}
+        totalSize={totalSize}
+      />
+    );
+  };
+
   return (
-    <div className="max-w-4xl mx-auto space-y-4">
+    <>
+      <RealTimeVisualizer />
+      <div className="max-w-4xl mx-auto space-y-4">
 
       {/* Header */}
       <div className="flex items-center justify-between">
@@ -509,6 +598,7 @@ const ExportGate: React.FC<ExportGateProps> = ({
         )}
       </div>
     </div>
+    </>
   );
 };
 

@@ -182,6 +182,17 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
     });
   }, [genreLocked, selectedGenre, lockedGenrePreset, lockedEffectValues, effectStateBackup]);
 
+  // Initialize audio context when reaching step 3 for export
+  useEffect(() => {
+    if (currentStep === 3 && selectedFile && realTimeMasteringPlayerRef.current) {
+      console.log('🎵 Initializing audio context for export processing...');
+      // Small delay to ensure component is mounted
+      setTimeout(() => {
+        realTimeMasteringPlayerRef.current?.manualInitializeAudioContext();
+      }, 100);
+    }
+  }, [currentStep, selectedFile]);
+
   const manualInit = useCallback(() => {
     try {
       realTimeMasteringPlayerRef.current?.manualInitializeAudioContext();
@@ -1118,7 +1129,24 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
              onUpdateEffectSettings={handleUpdateEffectSettings}
              meterData={meterData}
              selectedGenre={selectedGenre}
-             getProcessedAudioUrl={() => realTimeMasteringPlayerRef.current?.getProcessedAudioUrl() || Promise.resolve(null)}
+             getProcessedAudioUrl={async (onProgress?: (progress: number, stage: string) => void) => {
+               console.log('🔍 getProcessedAudioUrl called from ExportGate');
+               console.log('realTimeMasteringPlayerRef.current:', realTimeMasteringPlayerRef.current);
+               if (realTimeMasteringPlayerRef.current?.getProcessedAudioUrl) {
+                 console.log('✅ getProcessedAudioUrl function exists, calling it...');
+                 try {
+                   const result = await realTimeMasteringPlayerRef.current.getProcessedAudioUrl(onProgress);
+                   console.log('✅ getProcessedAudioUrl result:', result);
+                   return result;
+                 } catch (error) {
+                   console.error('❌ Error calling getProcessedAudioUrl:', error);
+                   return null;
+                 }
+               } else {
+                 console.log('❌ getProcessedAudioUrl function not found');
+                 return null;
+               }
+             }}
            />
          );
       
@@ -1150,6 +1178,22 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
       <div className="relative z-10 container mx-auto px-8 md:px-16 lg:px-24 pt-4 pb-4">
         {renderCurrentStep()}
       </div>
+
+      {/* Hidden RealTimeMasteringPlayer for export processing */}
+      {currentStep === 3 && (
+        <div style={{ display: 'none' }}>
+          <RealTimeMasteringPlayer
+            ref={realTimeMasteringPlayerRef}
+            audioFile={selectedFile}
+            audioEffects={audioEffects}
+            meterData={meterData}
+            onMeterUpdate={handleMeterUpdate}
+            onEffectChange={handleEffectChange}
+            isProcessing={isProcessing}
+            selectedGenre={selectedGenre}
+          />
+        </div>
+      )}
 
       {/* Toast Notification */}
       {showToast && (

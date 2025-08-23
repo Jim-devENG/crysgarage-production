@@ -123,8 +123,72 @@ export interface RealTimeMasteringPlayerRef {
   seek: (time: number) => void;
   setLooping: (looping: boolean) => void;
   debugAudioState: () => void;
-  getProcessedAudioUrl: () => Promise<string | null>;
+      getProcessedAudioUrl: (onProgress?: (progress: number, stage: string) => void) => Promise<string | null>;
 }
+
+// Fast WAV conversion function - bakes effects into downloadable file
+const convertAudioBufferToWavFast = (audioBuffer: AudioBuffer, onProgress?: (progress: number, stage: string) => void): Blob => {
+  const numberOfChannels = audioBuffer.numberOfChannels;
+  const sampleRate = audioBuffer.sampleRate;
+  const length = audioBuffer.length; // Use the full processed buffer
+  
+  console.log(`Creating mastered audio file: ${length / sampleRate}s with all effects baked in`);
+  
+  // Use 16-bit for speed
+  const bitDepth = 16;
+  const bytesPerSample = bitDepth / 8;
+  const blockAlign = numberOfChannels * bytesPerSample;
+  
+  // Create buffer
+  const buffer = new ArrayBuffer(44 + length * numberOfChannels * bytesPerSample);
+  const view = new DataView(buffer);
+  
+  // WAV header
+  const writeString = (offset: number, string: string) => {
+    for (let i = 0; i < string.length; i++) {
+      view.setUint8(offset + i, string.charCodeAt(i));
+    }
+  };
+  
+  writeString(0, 'RIFF');
+  view.setUint32(4, 36 + length * numberOfChannels * bytesPerSample, true);
+  writeString(8, 'WAVE');
+  writeString(12, 'fmt ');
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
+  view.setUint16(22, numberOfChannels, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * blockAlign, true);
+  view.setUint16(32, blockAlign, true);
+  view.setUint16(34, bitDepth, true);
+  writeString(36, 'data');
+  view.setUint32(40, length * numberOfChannels * bytesPerSample, true);
+  
+  // Write audio data - baking effects into the file
+  let offset = 44;
+  
+  console.log('Baking effects into WAV file...');
+  console.log('This may take a while for full songs...');
+  
+  // Process all channels at once for better performance
+  for (let i = 0; i < length; i++) {
+    for (let channel = 0; channel < numberOfChannels; channel++) {
+      const sample = Math.max(-1, Math.min(1, audioBuffer.getChannelData(channel)[i]));
+      view.setInt16(offset, sample * 0x7FFF, true);
+      offset += 2;
+    }
+    
+    // Log progress every 5% for large files
+    if (length > 1000000 && i % Math.floor(length / 20) === 0) {
+      const progress = Math.round((i / length) * 100);
+      console.log(`Baking progress: ${progress}%`);
+    }
+  }
+  
+  console.log('✅ Effects baked into WAV file successfully');
+  
+  return new Blob([buffer], { type: 'audio/wav' });
+};
 
 const RealTimeMasteringPlayer = forwardRef<RealTimeMasteringPlayerRef, RealTimeMasteringPlayerProps>(({
   audioFile,
@@ -944,163 +1008,178 @@ const RealTimeMasteringPlayer = forwardRef<RealTimeMasteringPlayerRef, RealTimeM
     setLooping: (looping: boolean) => {
       setIsLooping(looping);
     },
-    getProcessedAudioUrl: async () => {
+        getProcessedAudioUrl: async (onProgress?: (progress: number, stage: string) => void) => {
       try {
-        console.log('🎵 Rendering processed audio with all effects...');
+        console.log('🎵 Capturing processed audio directly from mastering player...');
+        console.log('Current audio effects:', audioEffects);
         
-        if (!audioFile) {
-          console.error('No audio file available');
+        onProgress?.(10, 'Initializing audio capture...');
+        
+        if (!audioFile || !audioContextRef.current) {
+          console.error('No audio file or context available');
           return null;
         }
 
-        // Create a new audio context for offline rendering
-        const offlineContext = new OfflineAudioContext(2, 44100 * 300, 44100); // 2 channels, 5 minutes max
+        // Check if any effects are enabled
+        const hasEnabledEffects = (
+          (audioEffects.eq?.enabled && audioEffects.eq.bands.length > 0) ||
+          audioEffects.compressor?.enabled ||
+          audioEffects.loudness?.enabled ||
+          audioEffects.limiter?.enabled ||
+          audioEffects.gTuner?.enabled
+        );
+
+        if (!hasEnabledEffects) {
+          console.log('No effects enabled, returning original audio');
+          return audioUrl; // Return the original audio URL from state
+        }
+
+        console.log('🎵 === DEBUG: STARTING AUDIO CAPTURE ===');
+        console.log('🎵 Effects enabled:', audioEffects);
+        console.log('🎵 Audio file:', audioFile?.name, 'Size:', audioFile?.size);
+        console.log('🎵 Audio context state:', audioContextRef.current?.state);
+        console.log('🎵 MediaStreamDestination exists:', !!mediaStreamDestinationRef.current);
+        console.log('🎵 Source ref exists:', !!sourceRef.current);
+        console.log('🎵 Audio ref exists:', !!audioRef.current);
         
-        // Decode the audio file
-        const arrayBuffer = await audioFile.arrayBuffer();
-        const audioBuffer = await offlineContext.decodeAudioData(arrayBuffer);
+        onProgress?.(20, 'Capturing from mastering processing chain...');
         
-        // Create audio source
-        const source = offlineContext.createBufferSource();
-        source.buffer = audioBuffer;
-        
-        // Apply the same effects chain as the real-time player
-        let currentNode: AudioNode = source;
-        
-        // EQ
-        if (audioEffects.eq?.enabled) {
-          audioEffects.eq.bands.forEach((band: any, index: number) => {
-            const eqNode = offlineContext.createBiquadFilter();
-            eqNode.type = band.type;
-            eqNode.frequency.value = band.frequency;
-            eqNode.gain.value = band.gain;
-            eqNode.Q.value = band.q;
+        // Capture the processed audio from the existing processing chain
+        return new Promise((resolve, reject) => {
+          try {
+            // Ensure the processing chain is connected
+            if (!mediaStreamDestinationRef.current) {
+              console.error('❌ DEBUG: MediaStreamDestination not available');
+              reject(new Error('Processing chain not ready'));
+              return;
+            }
             
-            currentNode.connect(eqNode);
-            currentNode = eqNode;
-          });
-        }
-        
-        // Compressor
-        if (audioEffects.compressor?.enabled) {
-          const compressorNode = offlineContext.createDynamicsCompressor();
-          compressorNode.threshold.value = audioEffects.compressor.threshold;
-          compressorNode.ratio.value = audioEffects.compressor.ratio;
-          compressorNode.attack.value = audioEffects.compressor.attack;
-          compressorNode.release.value = audioEffects.compressor.release;
-          currentNode.connect(compressorNode);
-          currentNode = compressorNode;
-        }
-        
-        // Loudness
-        if (audioEffects.loudness?.enabled) {
-          const gainNode = offlineContext.createGain();
-          gainNode.gain.value = Math.pow(10, audioEffects.loudness.gain / 20);
-          currentNode.connect(gainNode);
-          currentNode = gainNode;
-        }
-        
-        // Limiter
-        if (audioEffects.limiter?.enabled) {
-          const limiterNode = offlineContext.createDynamicsCompressor();
-          limiterNode.threshold.value = audioEffects.limiter.threshold;
-          limiterNode.ratio.value = 20;
-          limiterNode.attack.value = 0.001;
-          limiterNode.release.value = 0.1;
-          currentNode.connect(limiterNode);
-          currentNode = limiterNode;
-        }
-        
-        // G-Tuner (444Hz pitch correction)
-        if (audioEffects.gTuner?.enabled) {
-          const gTunerNode = offlineContext.createBiquadFilter();
-          gTunerNode.type = 'peaking';
-          gTunerNode.frequency.value = 444;
-          gTunerNode.gain.value = 3;
-          gTunerNode.Q.value = 10;
-          currentNode.connect(gTunerNode);
-          currentNode = gTunerNode;
-        }
-        
-        // Connect to destination
-        currentNode.connect(offlineContext.destination);
-        
-        // Start rendering
-        source.start(0);
-        const renderedBuffer = await offlineContext.startRendering();
-        
-        // Convert to WAV using inline function
-        const wavBlob = await (async (audioBuffer: AudioBuffer, bitDepth: number = 24): Promise<Blob> => {
-          const numberOfChannels = audioBuffer.numberOfChannels;
-          const length = audioBuffer.length;
-          const sampleRate = audioBuffer.sampleRate;
-          
-          // Calculate bytes per sample
-          const bytesPerSample = bitDepth / 8;
-          const blockAlign = numberOfChannels * bytesPerSample;
-          
-          // Create WAV file
-          const wavBuffer = new ArrayBuffer(44 + length * numberOfChannels * bytesPerSample);
-          const view = new DataView(wavBuffer);
-          
-          // WAV header
-          const writeString = (offset: number, string: string) => {
-            for (let i = 0; i < string.length; i++) {
-              view.setUint8(offset + i, string.charCodeAt(i));
-            }
-          };
-          
-          writeString(0, 'RIFF');
-          view.setUint32(4, 36 + length * numberOfChannels * bytesPerSample, true);
-          writeString(8, 'WAVE');
-          writeString(12, 'fmt ');
-          view.setUint32(16, 16, true);
-          view.setUint16(20, 1, true);
-          view.setUint16(22, numberOfChannels, true);
-          view.setUint32(24, sampleRate, true);
-          view.setUint32(28, sampleRate * blockAlign, true);
-          view.setUint16(32, blockAlign, true);
-          view.setUint16(34, bitDepth, true);
-          writeString(36, 'data');
-          view.setUint32(40, length * numberOfChannels * bytesPerSample, true);
-          
-          // Write audio data
-          let offset = 44;
-          
-          for (let i = 0; i < length; i++) {
-            for (let channel = 0; channel < numberOfChannels; channel++) {
-              const sample = Math.max(-1, Math.min(1, audioBuffer.getChannelData(channel)[i]));
-              
-              if (bitDepth === 16) {
-                view.setInt16(offset, sample * 0x7FFF, true);
-                offset += 2;
-              } else if (bitDepth === 24) {
-                const intSample = Math.round(sample * 0x7FFFFF);
-                view.setUint8(offset, intSample & 0xFF);
-                view.setUint8(offset + 1, (intSample >> 8) & 0xFF);
-                view.setUint8(offset + 2, (intSample >> 16) & 0xFF);
-                offset += 3;
-              } else if (bitDepth === 32) {
-                view.setFloat32(offset, sample, true);
-                offset += 4;
+            console.log('✅ DEBUG: MediaStreamDestination found');
+            console.log('🎵 DEBUG: Stream tracks:', mediaStreamDestinationRef.current.stream.getTracks().length);
+            console.log('🎵 DEBUG: Stream active:', mediaStreamDestinationRef.current.stream.active);
+            
+            onProgress?.(30, 'Setting up audio capture...');
+            
+            console.log('🎵 DEBUG: Creating MediaRecorder...');
+            
+            // Create MediaRecorder to capture the processed audio stream
+            const mediaRecorder = new MediaRecorder(mediaStreamDestinationRef.current.stream, {
+              mimeType: 'audio/webm;codecs=opus'
+            });
+            
+            console.log('✅ DEBUG: MediaRecorder created');
+            console.log('🎵 DEBUG: MediaRecorder state:', mediaRecorder.state);
+            console.log('🎵 DEBUG: Supported MIME types:', MediaRecorder.isTypeSupported('audio/webm;codecs=opus'));
+            
+            const chunks: Blob[] = [];
+            let totalChunksSize = 0;
+            
+            let chunkCount = 0;
+            const startTime = Date.now();
+            
+            mediaRecorder.ondataavailable = (event) => {
+              if (event.data.size > 0) {
+                chunks.push(event.data);
+                totalChunksSize += event.data.size;
+                chunkCount++;
+                
+                // Calculate real-time progress
+                const elapsed = Date.now() - startTime;
+                const audioDuration = audioRef.current?.duration || 0;
+                const estimatedProgress = Math.min((elapsed / (audioDuration * 1000)) * 100, 95);
+                
+                console.log('🎵 DEBUG: Audio chunk captured:', event.data.size, 'bytes, Total:', totalChunksSize, 'bytes, Chunk:', chunkCount);
+                
+                // Update progress with real-time processing info
+                onProgress?.(estimatedProgress, `Processing audio in real-time... (${chunkCount} chunks captured)`);
+              } else {
+                console.log('⚠️ DEBUG: Empty chunk received');
               }
+            };
+            
+            mediaRecorder.onstop = () => {
+              onProgress?.(80, 'Finalizing captured audio...');
+              
+              console.log('🎵 DEBUG: MediaRecorder stopped');
+              console.log('🎵 DEBUG: Total chunks collected:', chunks.length);
+              console.log('🎵 DEBUG: Total size collected:', totalChunksSize, 'bytes');
+              
+              const audioBlob = new Blob(chunks, { type: 'audio/webm' });
+              const processedAudioUrl = URL.createObjectURL(audioBlob);
+              
+              console.log('✅ DEBUG: Processed audio captured successfully:', processedAudioUrl);
+              console.log('🎵 DEBUG: Final blob size:', audioBlob.size, 'bytes');
+              console.log('🎵 DEBUG: Original file size:', audioFile?.size, 'bytes');
+              console.log('🎵 DEBUG: Size difference:', audioBlob.size - (audioFile?.size || 0), 'bytes');
+              console.log('🎵 DEBUG: Is processed audio larger?', audioBlob.size > (audioFile?.size || 0));
+              
+              resolve(processedAudioUrl);
+            };
+            
+            mediaRecorder.onerror = (error) => {
+              console.error('❌ MediaRecorder error:', error);
+              reject(error);
+            };
+            
+            // Start recording
+            mediaRecorder.start();
+            onProgress?.(40, 'Recording processed audio...');
+            
+            // Play the audio to capture the processed stream
+            if (audioRef.current) {
+              console.log('🎵 DEBUG: Starting audio playback for capture...');
+              console.log('🎵 DEBUG: Audio duration:', audioRef.current.duration, 'seconds');
+              console.log('🎵 DEBUG: Audio current time:', audioRef.current.currentTime);
+              console.log('🎵 DEBUG: Audio paused:', audioRef.current.paused);
+              
+              audioRef.current.currentTime = 0;
+              
+              audioRef.current.play().then(() => {
+                console.log('✅ DEBUG: Audio playback started for capture');
+                console.log('🎵 DEBUG: Audio playing:', !audioRef.current!.paused);
+                console.log('🎵 DEBUG: MediaRecorder recording:', mediaRecorder.state === 'recording');
+                
+                // Stop recording when audio ends
+                audioRef.current!.onended = () => {
+                  console.log('🎵 DEBUG: Audio playback ended, stopping capture...');
+                  mediaRecorder.stop();
+                  audioRef.current!.pause();
+                  audioRef.current!.currentTime = 0;
+                };
+                
+                // Also stop after a reasonable timeout
+                const timeoutDuration = (audioRef.current!.duration || 300) * 1000 + 5000;
+                console.log('🎵 DEBUG: Setting timeout for:', timeoutDuration, 'ms');
+                
+                setTimeout(() => {
+                  if (mediaRecorder.state === 'recording') {
+                    console.log('⏰ DEBUG: Timeout reached, stopping capture...');
+                    mediaRecorder.stop();
+                    audioRef.current!.pause();
+                    audioRef.current!.currentTime = 0;
+                  }
+                }, timeoutDuration);
+                
+              }).catch((error) => {
+                console.error('❌ DEBUG: Error starting audio playback:', error);
+                mediaRecorder.stop();
+                reject(error);
+              });
+            } else {
+              console.error('❌ DEBUG: Audio element not available');
+              reject(new Error('Audio element not available'));
             }
+            
+          } catch (error) {
+            console.error('❌ Error capturing audio stream:', error);
+            reject(error);
           }
-          
-          return new Blob([wavBuffer], { type: 'audio/wav' });
-        })(renderedBuffer, 24);
-        
-        const audioUrl = URL.createObjectURL(wavBlob);
-        
-        console.log('✅ Processed audio rendered successfully:', audioUrl);
-        return audioUrl;
+        });
         
       } catch (error) {
         console.error('Error in getProcessedAudioUrl:', error);
-        // Fallback to original
-        if (audioUrl) {
-          return audioUrl;
-        }
+        console.error('Error details:', error);
+        // Return null instead of throwing to allow fallback
         return null;
       }
     },

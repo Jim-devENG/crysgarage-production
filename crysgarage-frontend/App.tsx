@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { AppProvider, useApp } from './contexts/AppContext';
 import { LandingPage } from './components/LandingPage';
-import { AuthModal } from './components/Auth/AuthModal';
-import { FreeTierDashboard } from './components/FreeTierDashboard';
+import { FreeTierDashboard } from './components/FreeTier';
 import ProfessionalTierDashboard from './components/ProfessionalTierDashboard';
 import AdvancedTierDashboard from './components/AdvancedTierDashboard/index';
 import { Header } from './components/Header';
@@ -20,9 +19,14 @@ import { AutoAuthFix } from './components/AutoAuthFix';
 import { AdminDashboard } from './components/AdminDashboard';
 import { CommunityPage } from './components/CommunityPage';
 import AboutUs from './components/AboutUs';
-import { AutomaticTierAuth } from './components/AutomaticTierAuth';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { Footer } from './components/Footer';
+import { NewAuthFlow } from './components/Auth/NewAuthFlow';
+import { DownloadAuth } from './components/Auth/DownloadAuth';
+import { LoginPage } from './components/Auth/LoginPage';
+import { SignupPage } from './components/Auth/SignupPage';
+import { BillingPage } from './components/Billing/BillingPage';
+import googleAuthService from './services/googleAuth';
 
 // Main App Component
 function AppContent() {
@@ -38,60 +42,22 @@ function AppContent() {
     clearError
   } = useApp();
 
-  const [showAuthModal, setShowAuthModal] = useState(false);
-  const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
-  const [currentPage, setCurrentPage] = useState<'landing' | 'home' | 'dashboard' | 'professional' | 'advanced' | 'processing' | 'results' | 'studio' | 'help' | 'courses' | 'marketplace' | 'profile' | 'admin' | 'community' | 'about'>('landing');
+  const [currentPage, setCurrentPage] = useState<'landing' | 'home' | 'dashboard' | 'professional' | 'advanced' | 'processing' | 'results' | 'studio' | 'help' | 'courses' | 'marketplace' | 'profile' | 'admin' | 'community' | 'about' | 'login' | 'signup' | 'billing'>('landing');
   const [showBillingModal, setShowBillingModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showProfileEditModal, setShowProfileEditModal] = useState(false);
   const [selectedTier, setSelectedTier] = useState<string>('free');
-  const [showAutomaticTierAuth, setShowAutomaticTierAuth] = useState(false); 
 
-  // Authentication wrapper functions
-  const handleLogin = async (email: string, password: string) => {
-    try {
-      await signIn(email, password);
-      setShowAuthModal(false);
-      // Redirect based on user tier
-      if (user?.tier === 'pro') {
-        setCurrentPage('professional');
-        window.history.pushState({}, '', '/professional');
-      } else if (user?.tier === 'advanced') {
-        setCurrentPage('advanced');
-        window.history.pushState({}, '', '/advanced');
-      } else {
-        setCurrentPage('dashboard');
-        window.history.pushState({}, '', '/dashboard');
-      }
-    } catch (error) {
-      console.error('Sign in error:', error);
-    }
-  };
-
-  const handleSignup = async (name: string, email: string, password: string) => {
-    try {
-      await signUp(name, email, password);
-      setShowAuthModal(false);
-      setCurrentPage('dashboard');
-      window.history.pushState({}, '', '/dashboard');
-    } catch (error) {
-      console.error('Sign up error:', error);
-    }
-  };
+  // New authentication modals
+  const [showNewAuthFlow, setShowNewAuthFlow] = useState(false);
+  const [showDownloadAuth, setShowDownloadAuth] = useState(false);
+  const [pendingTierAccess, setPendingTierAccess] = useState<string | null>(null);
 
   // URL-based routing
   useEffect(() => {
     const handleRouteChange = () => {
       const path = window.location.pathname;
       console.log('Route change:', path, 'Authenticated:', isAuthenticated);
-      
-      // Check authentication for protected routes
-      if (!isAuthenticated && path !== '/' && path !== '/studio' && path !== '/help' && path !== '/courses' && path !== '/community' && path !== '/about') {
-        console.log('Unauthorized access, redirecting to landing');
-        setCurrentPage('landing');
-        window.history.pushState({}, '', '/');
-        return;
-      }
       
       // Set page based on path
       if (path === '/admin') {
@@ -114,6 +80,14 @@ function AppContent() {
         setCurrentPage('community');
       } else if (path === '/about') {
         setCurrentPage('about');
+      } else if (path === '/login') {
+        setCurrentPage('login');
+      } else if (path === '/signup') {
+        setCurrentPage('signup');
+      } else if (path === '/billing') {
+        setCurrentPage('billing');
+      } else if (path === '/landing') {
+        setCurrentPage('landing');
       } else if (path === '/') {
         setCurrentPage('landing');
       } else {
@@ -136,24 +110,12 @@ function AppContent() {
   const handleNavigation = (section: string) => {
     console.log('Navigation to:', section);
     
-    if (section === 'signin' || section === 'login') {
-      setAuthMode('login');
-      setShowAuthModal(true);
-      return;
-    }
-    
-    if (section === 'signup') {
-      setAuthMode('signup');
-      setShowAuthModal(true);
-      return;
-    }
-    
-    if (section === 'landing' || section === 'home') {
+    if (section === 'landing') {
+      setCurrentPage('landing');
+      window.history.pushState({}, '', '/landing');
+    } else if (section === 'home') {
       setCurrentPage('landing');
       window.history.pushState({}, '', '/');
-    } else if (section === 'dashboard') {
-      setCurrentPage('dashboard');
-      window.history.pushState({}, '', '/dashboard');
     } else if (section === 'studio') {
       setCurrentPage('studio');
       window.history.pushState({}, '', '/studio');
@@ -169,29 +131,97 @@ function AppContent() {
     } else if (section === 'about') {
       setCurrentPage('about');
       window.history.pushState({}, '', '/about');
+    } else if (section === 'login') {
+      setCurrentPage('login');
+      window.history.pushState({}, '', '/login');
+    } else if (section === 'signup') {
+      setCurrentPage('signup');
+      window.history.pushState({}, '', '/signup');
+    } else if (section === 'billing') {
+      setCurrentPage('billing');
+      window.history.pushState({}, '', '/billing');
     }
   };
 
-  // Handle tier selection
+  // Handle tier selection with new logic
   const handleTierSelection = (tierId: string) => {
     console.log('Tier selection:', tierId);
     setSelectedTier(tierId);
     
     switch (tierId) {
       case 'free':
-        setShowAutomaticTierAuth(true);
+        // Free tier - direct access, no authentication needed
+        setCurrentPage('dashboard');
+        window.history.pushState({}, '', '/dashboard');
         break;
       case 'professional':
-        setCurrentPage('professional');
-        window.history.pushState({}, '', '/professional');
-        break;
       case 'advanced':
-        setCurrentPage('advanced');
-        window.history.pushState({}, '', '/advanced');
+        // Other tiers - require authentication first
+        setPendingTierAccess(tierId);
+        setShowNewAuthFlow(true);
         break;
       default:
         setCurrentPage('dashboard');
         window.history.pushState({}, '', '/dashboard');
+    }
+  };
+
+  // Handle free tier download (requires authentication)
+  const handleFreeTierDownload = () => {
+    setShowDownloadAuth(true);
+  };
+
+  // Handle authentication success for paid tiers
+  const handleAuthSuccess = (userData: any) => {
+    console.log('Authentication successful:', userData);
+    // The NewAuthFlow will handle the payment flow
+  };
+
+  // Handle payment success
+  const handlePaymentSuccess = () => {
+    console.log('Payment successful');
+    if (pendingTierAccess) {
+      // Redirect to the appropriate tier dashboard
+      if (pendingTierAccess === 'professional') {
+        setCurrentPage('professional');
+        window.history.pushState({}, '', '/professional');
+      } else if (pendingTierAccess === 'advanced') {
+        setCurrentPage('advanced');
+        window.history.pushState({}, '', '/advanced');
+      }
+      setPendingTierAccess(null);
+    }
+  };
+
+  // Handle download authentication success
+  const handleDownloadAuthSuccess = () => {
+    console.log('Download authentication successful');
+    // Proceed with download
+    console.log('Proceeding with free tier download');
+  };
+
+  // Handle Google authentication
+  const handleGoogleLogin = async () => {
+    try {
+      const response = await googleAuthService.signInWithGoogle();
+      console.log('Google login successful:', response.user);
+      // Handle successful Google login
+      // You would typically update your app state here
+    } catch (error) {
+      console.error('Google login failed:', error);
+      throw error;
+    }
+  };
+
+  const handleGoogleSignup = async () => {
+    try {
+      const response = await googleAuthService.signInWithGoogle();
+      console.log('Google signup successful:', response.user);
+      // Handle successful Google signup
+      // You would typically update your app state here
+    } catch (error) {
+      console.error('Google signup failed:', error);
+      throw error;
     }
   };
 
@@ -226,158 +256,130 @@ function AppContent() {
     );
   }
 
-  // Authenticated user
-  if (isAuthenticated && user) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black relative">
-        <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-gray-800 to-black -z-10" style={{ top: '-80px', height: 'calc(100% + 80px)' }}></div>
-        <Header 
-          user={user}
-          onSignOut={signOut}
-          onNavigate={handleNavigation}
-          onShowBilling={() => setShowBillingModal(true)}
-          onShowProfile={() => setCurrentPage('profile')}
-        />
-        
-        <main className="pt-20">
-          {currentPage === 'dashboard' && (
-            <ProtectedRoute requiredTier="free">
-              <FreeTierDashboard 
-                onFileUpload={(file) => console.log('Free tier file upload:', file)}
-                onUpgrade={() => setShowPaymentModal(true)}
-                credits={user.credits || 0}
-                isAuthenticated={true}
-              />
-            </ProtectedRoute>
-          )}
-          
-          {currentPage === 'professional' && (
-            <ProtectedRoute requiredTier="pro">
-              <ProfessionalTierDashboard 
-                onFileUpload={(file) => console.log('Professional tier file upload:', file)}
-                credits={user.credits || 0}
-              />
-            </ProtectedRoute>
-          )}
-
-          {currentPage === 'advanced' && (
-            <ProtectedRoute requiredTier="advanced">
-              <AdvancedTierDashboard 
-                onFileUpload={(file) => console.log('Advanced tier file upload:', file)}
-              />
-            </ProtectedRoute>
-          )}
-          
-          {currentPage === 'processing' && currentSession && (
-            <ProcessingPage 
-              progress={0}
-              isProcessing={true}
-            />
-          )}
-          
-          {currentPage === 'results' && currentSession && (
-            <MasteringResults 
-              originalFile={null}
-              masteredResult={null}
-              audioId={currentSession.id}
-              fileName="audio_file.wav"
-              selectedTier="professional"
-              selectedGenre="afrobeats"
-              processingConfig={{
-                target_lufs: -14,
-                true_peak: -1,
-                sample_rate: 44100,
-                bit_depth: 24
-              }}
-              onDownload={() => {}}
-              canDownload={true}
-              onStartNewMaster={() => setCurrentPage('dashboard')}
-            />
-          )}
-          
-          {currentPage === 'studio' && (
-            <PricingPage 
-              currentTier={user.tier}
-              onSelectTier={handleTierSelection}
-              onGoToDashboard={() => setCurrentPage('dashboard')}
-            />
-          )}
-          
-          {currentPage === 'help' && (
-            <HelpPage 
-              onGetStarted={() => setCurrentPage('dashboard')}
-            />
-          )}
-          
-          {currentPage === 'courses' && (
-            <CoursesPage 
-              onGetStarted={() => setCurrentPage('dashboard')}
-            />
-          )}
-          
-          {currentPage === 'marketplace' && (
-            <AddonsMarketplace 
-              onClose={() => setCurrentPage('dashboard')}
-              onPurchase={() => {}}
-              userTier={user.tier}
-            />
-          )}
-          
-          {currentPage === 'profile' && (
-            <ProtectedRoute requiredTier="free">
-              <UserProfile
-                onClose={() => setCurrentPage('dashboard')}
-                userData={{
-                  name: user.name || 'User',
-                  email: user.email || '',
-                  tier: user.tier,
-                  joinDate: user.join_date || '',
-                  totalTracks: 0,
-                  totalSpent: 0,
-                  isSignedIn: true
-                }}
-                userCredits={user.credits || 0}
-                userTier={user.tier}
-              />
-            </ProtectedRoute>
-          )}
-          
-          {currentPage === 'admin' && (
-            <AdminDashboard onBack={() => setCurrentPage('landing')} />
-          )}
-          
-          {currentPage === 'community' && (
-            <CommunityPage currentUser={user} />
-          )}
-        </main>
-
-        {/* Footer */}
-        <Footer onNavigate={handleNavigation} />
-
-        {/* Modals */}
-        {showBillingModal && (
-          <BillingModal 
-            onClose={() => setShowBillingModal(false)}
-            userTier={user.tier}
-            onUpgradePlan={() => setShowPaymentModal(true)}
-          />
-        )}
-        
-        {showPaymentModal && (
-          <PaymentModal 
-            onClose={() => setShowPaymentModal(false)}
-            isOpen={showPaymentModal}
-            selectedTier="professional"
-            onPaymentSuccess={() => {
-              setShowPaymentModal(false);
-              setCurrentPage('dashboard');
+  // Main app structure
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black relative">
+      <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-gray-800 to-black -z-10" style={{ top: '-80px', height: 'calc(100% + 80px)' }}></div>
+      <Header 
+        user={user}
+        onSignOut={signOut}
+        onNavigate={handleNavigation}
+        onShowProfile={() => setCurrentPage('profile')}
+      />
+      
+      <main className="pt-20">
+        {/* Landing Page */}
+        {(currentPage === 'landing' || currentPage === 'home') && (
+          <LandingPage 
+            onGetStarted={() => {
+              console.log('Landing: onGetStarted clicked');
+              setCurrentPage('studio');
+              window.history.pushState({}, '', '/studio');
             }}
+                         onTryMastering={() => {
+               console.log('Landing: onTryMastering clicked');
+               setCurrentPage('dashboard');
+               window.history.pushState({}, '', '/dashboard');
+             }}
           />
         )}
 
-        {showProfileEditModal && (
-          <ProfileEditModal 
-            onClose={() => setShowProfileEditModal(false)}
+                 {/* Free Tier Dashboard - No authentication required */}
+         {currentPage === 'dashboard' && (
+           <FreeTierDashboard />
+         )}
+
+        {/* Professional Tier Dashboard - Requires authentication */}
+        {currentPage === 'professional' && (
+          isAuthenticated ? (
+            <ProfessionalTierDashboard 
+              onFileUpload={(file) => console.log('Professional tier file upload:', file)}
+              credits={user?.credits || 0}
+            />
+          ) : (
+            <div className="flex items-center justify-center min-h-screen">
+              <div className="text-center max-w-md mx-auto p-6">
+                <h2 className="text-white text-xl font-semibold mb-4">
+                  Authentication Required
+                </h2>
+                <p className="text-gray-400 mb-6">
+                  Please sign in to access the Professional tier features.
+                </p>
+                <button
+                  onClick={() => {
+                    setPendingTierAccess('professional');
+                    setShowNewAuthFlow(true);
+                  }}
+                  className="bg-crys-gold hover:bg-crys-gold/90 text-crys-black px-6 py-2 rounded-lg font-semibold"
+                >
+                  Get Access
+                </button>
+              </div>
+            </div>
+          )
+        )}
+
+        {/* Advanced Tier Dashboard - Requires authentication */}
+        {currentPage === 'advanced' && (
+          isAuthenticated ? (
+            <AdvancedTierDashboard 
+              onFileUpload={(file) => console.log('Advanced tier file upload:', file)}
+            />
+          ) : (
+            <div className="flex items-center justify-center min-h-screen">
+              <div className="text-center max-w-md mx-auto p-6">
+                <h2 className="text-white text-xl font-semibold mb-4">
+                  Authentication Required
+                </h2>
+                <p className="text-gray-400 mb-6">
+                  Please sign in to access the Advanced tier features.
+                </p>
+                <button
+                  onClick={() => {
+                    setPendingTierAccess('advanced');
+                    setShowNewAuthFlow(true);
+                  }}
+                  className="bg-crys-gold hover:bg-crys-gold/90 text-crys-black px-6 py-2 rounded-lg font-semibold"
+                >
+                  Get Access
+                </button>
+              </div>
+            </div>
+          )
+        )}
+
+        {/* Other pages */}
+        {currentPage === 'studio' && (
+          <PricingPage 
+            currentTier={user?.tier || "free"}
+            onSelectTier={handleTierSelection}
+            onGoToDashboard={() => setCurrentPage('studio')}
+          />
+        )}
+        
+        {currentPage === 'help' && (
+          <HelpPage 
+            onGetStarted={() => setCurrentPage('studio')}
+          />
+        )}
+        
+        {currentPage === 'courses' && (
+          <CoursesPage 
+            onGetStarted={() => setCurrentPage('studio')}
+          />
+        )}
+        
+        {currentPage === 'marketplace' && (
+          <AddonsMarketplace 
+            onClose={() => setCurrentPage('studio')}
+            onPurchase={() => {}}
+            userTier={user?.tier || "free"}
+          />
+        )}
+        
+        {currentPage === 'profile' && user && (
+          <UserProfile
+            onClose={() => setCurrentPage('studio')}
             userData={{
               name: user.name || 'User',
               email: user.email || '',
@@ -387,126 +389,138 @@ function AppContent() {
               totalSpent: 0,
               isSignedIn: true
             }}
-            onSave={() => {
-              setShowProfileEditModal(false);
-              setCurrentPage('dashboard');
-            }}
-          />
-        )}
-      </div>
-    );
-  }
-
-  // Not authenticated - show landing page
-  console.log('Showing landing page. Current page:', currentPage, 'Path:', window.location.pathname);
-  
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black relative">
-      <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-gray-800 to-black -z-10" style={{ top: '-80px', height: 'calc(100% + 80px)' }}></div>
-      <Header 
-        user={user}
-        onNavigate={handleNavigation}
-        onShowBilling={() => setShowBillingModal(true)}
-        onShowProfile={() => setShowProfileEditModal(true)}
-        onSignOut={signOut}
-      />
-      
-      <main className="pt-20">
-        {/* Always show landing page for non-authenticated users */}
-        {(currentPage === 'landing' || currentPage === 'home' || window.location.pathname === '/') && (
-          <LandingPage 
-            onGetStarted={() => {
-              console.log('Landing: onGetStarted clicked');
-              setCurrentPage('studio');
-              window.history.pushState({}, '', '/studio');
-            }}
-            onTryMastering={() => {
-              console.log('Landing: onTryMastering clicked');
-              setCurrentPage('dashboard');
-              window.history.pushState({}, '', '/dashboard');
-            }}
+            userCredits={user.credits || 0}
+            userTier={user.tier}
           />
         )}
         
-        {currentPage === 'studio' && (
-          <PricingPage 
-            currentTier="free"
-            onSelectTier={handleTierSelection}
-            onGoToDashboard={() => setCurrentPage('dashboard')}
-          />
-        )}
-        
-        {currentPage === 'help' && (
-          <HelpPage 
-            onGetStarted={() => setCurrentPage('dashboard')}
-          />
-        )}
-        
-        {currentPage === 'courses' && (
-          <CoursesPage 
-            onGetStarted={() => setCurrentPage('dashboard')}
-          />
-        )}
-        
-        {currentPage === 'dashboard' && (
-          <ProtectedRoute requiredTier="free">
-            <FreeTierDashboard 
-              onFileUpload={(file) => console.log('Free tier file upload:', file)}
-              onUpgrade={() => setShowPaymentModal(true)}
-              credits={user?.credits || 3}
-              isAuthenticated={isAuthenticated}
-            />
-          </ProtectedRoute>
-        )}
-
-        {currentPage === 'professional' && (
-          <ProfessionalTierDashboard 
-            onFileUpload={(file) => console.log('Professional tier file upload:', file)}
-            credits={0}
-          />
-        )}
-
-        {currentPage === 'advanced' && (
-          <AdvancedTierDashboard 
-            onFileUpload={(file) => console.log('Advanced tier file upload:', file)}
-          />
-        )}
-
         {currentPage === 'admin' && (
           <AdminDashboard onBack={() => setCurrentPage('landing')} />
         )}
         
         {currentPage === 'community' && (
-          <CommunityPage currentUser={null} />
+          <CommunityPage currentUser={user} />
         )}
         
         {currentPage === 'about' && (
           <AboutUs />
+        )}
+        
+        {/* Authentication Pages */}
+        {currentPage === 'login' && (
+          <LoginPage
+            onLogin={signIn}
+            onGoogleLogin={handleGoogleLogin}
+            onNavigate={handleNavigation}
+            isLoading={isLoading}
+            error={error}
+          />
+        )}
+        
+        {currentPage === 'signup' && (
+          <SignupPage
+            onSignup={signUp}
+            onGoogleSignup={handleGoogleSignup}
+            onNavigate={handleNavigation}
+            isLoading={isLoading}
+            error={error}
+          />
+        )}
+        
+        {/* Billing Page */}
+        {currentPage === 'billing' && (
+          <BillingPage
+            userTier={user?.tier || "free"}
+            onUpgradePlan={() => setShowPaymentModal(true)}
+            onNavigate={handleNavigation}
+          />
+        )}
+
+        {currentPage === 'processing' && currentSession && (
+          <ProcessingPage 
+            progress={0}
+            isProcessing={true}
+          />
+        )}
+        
+        {currentPage === 'results' && currentSession && (
+          <MasteringResults 
+            originalFile={null}
+            masteredResult={null}
+            audioId={currentSession.id}
+            fileName="audio_file.wav"
+            selectedTier="professional"
+            selectedGenre="afrobeats"
+            processingConfig={{
+              target_lufs: -14,
+              true_peak: -1,
+              sample_rate: 44100,
+              bit_depth: 24
+            }}
+            onDownload={() => {}}
+            canDownload={true}
+            onStartNewMaster={() => setCurrentPage('studio')}
+          />
         )}
       </main>
       
       {/* Footer */}
       <Footer onNavigate={handleNavigation} />
       
-      {showAuthModal && (
-        <AuthModal 
-          isOpen={showAuthModal}
-          initialMode={authMode}
-          onLogin={handleLogin}
-          onSignup={handleSignup}
-          onClose={() => setShowAuthModal(false)}
-          isLoading={isLoading}
-          error={error}
+      {/* Modals */}
+      {/* Billing is now handled as a page, not a modal */}
+      
+             {showPaymentModal && (
+         <PaymentModal 
+           onClose={() => setShowPaymentModal(false)}
+           isOpen={showPaymentModal}
+           selectedTier="professional"
+           onPaymentSuccess={() => {
+             setShowPaymentModal(false);
+             setCurrentPage('studio');
+           }}
+         />
+       )}
+
+             {showProfileEditModal && (
+         <ProfileEditModal 
+           onClose={() => setShowProfileEditModal(false)}
+           userData={{
+             name: user?.name || 'User',
+             email: user?.email || '',
+             tier: user?.tier || 'free',
+             joinDate: user?.join_date || '',
+             totalTracks: 0,
+             totalSpent: 0,
+             isSignedIn: !!user
+           }}
+           onSave={() => {
+             setShowProfileEditModal(false);
+             setCurrentPage('studio');
+           }}
+         />
+       )}
+
+      {/* New Authentication Flow for Paid Tiers */}
+      {showNewAuthFlow && (
+        <NewAuthFlow 
+          isOpen={showNewAuthFlow}
+          onClose={() => {
+            setShowNewAuthFlow(false);
+            setPendingTierAccess(null);
+          }}
+          selectedTier={pendingTierAccess || selectedTier}
+          onAuthSuccess={handleAuthSuccess}
+          onPaymentSuccess={handlePaymentSuccess}
         />
       )}
-      
-      {showAutomaticTierAuth && (
-        <AutomaticTierAuth
-          onClose={() => setShowAutomaticTierAuth(false)}
-          onUpgrade={() => {
-            setShowAutomaticTierAuth(false);
-            setCurrentPage('studio');
-          }}
+
+      {/* Download Authentication for Free Tier */}
+      {showDownloadAuth && (
+        <DownloadAuth 
+          isOpen={showDownloadAuth}
+          onClose={() => setShowDownloadAuth(false)}
+          onAuthSuccess={handleDownloadAuthSuccess}
         />
       )}
     </div>
