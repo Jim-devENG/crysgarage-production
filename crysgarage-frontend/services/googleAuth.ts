@@ -111,7 +111,7 @@ class GoogleAuthService {
   }
 
   // Authenticate with our backend
-  private async authenticateWithBackend(googleUser: GoogleUser, accessToken: string): Promise<GoogleAuthResponse> {
+  protected async authenticateWithBackend(googleUser: GoogleUser, accessToken: string): Promise<GoogleAuthResponse> {
     const response = await fetch('/api/auth/google', {
       method: 'POST',
       headers: {
