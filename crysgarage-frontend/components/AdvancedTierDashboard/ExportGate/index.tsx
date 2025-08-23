@@ -9,6 +9,7 @@ interface ExportGateProps {
   onUpdateEffectSettings?: (effectType: string, settings: any) => void;
   meterData?: any;
   selectedGenre?: string;
+  getProcessedAudioUrl?: () => Promise<string | null>;
 }
 
 const ExportGate: React.FC<ExportGateProps> = ({ 
@@ -18,11 +19,13 @@ const ExportGate: React.FC<ExportGateProps> = ({
   onBack,
   onUpdateEffectSettings,
   meterData,
-  selectedGenre
+  selectedGenre,
+  getProcessedAudioUrl
 }) => {
   const [downloadFormat, setDownloadFormat] = useState<'mp3' | 'wav16' | 'wav24' | 'wav32'>('wav16');
   const [sampleRate, setSampleRate] = useState<'44.1kHz' | '48kHz' | '88.2kHz' | '96kHz' | '192kHz'>('44.1kHz');
   const [gTunerEnabled, setGTunerEnabled] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
 
   // Initialize G-Tuner state from audioEffects
   useEffect(() => {
@@ -73,35 +76,53 @@ const ExportGate: React.FC<ExportGateProps> = ({
     }
   };
 
-  // Download handler with proper sample rate processing
+  // Download handler that captures the actual processed audio
   const handleDownload = async () => {
     if (!originalFile) {
       console.error('No original file available for processing');
       return;
     }
 
+    setIsDownloading(true);
+    
     try {
-      console.log('🎵 Starting audio processing with sample rate:', sampleRate);
+      console.log('🎵 Advanced download starting - capturing processed audio...');
       
-      // Process audio with selected sample rate and format
-      const processedBlob = await processAudioWithSampleRate(
-        originalFile, 
-        sampleRate, 
-        downloadFormat,
-        audioEffects,
-        gTunerEnabled
-      );
+      // Get the processed audio URL from the mastering player
+      // This will capture the audio with all effects applied
+      if (!getProcessedAudioUrl) {
+        console.error('getProcessedAudioUrl function not available');
+        alert('Error: Audio processing function not available. Please try again.');
+        return;
+      }
+      
+      const processedAudioUrl = await getProcessedAudioUrl();
+      
+      if (!processedAudioUrl) {
+        console.error('Failed to get processed audio URL');
+        alert('Error: Could not capture processed audio. Please try again.');
+        return;
+      }
 
-      // Create download link
-      const url = URL.createObjectURL(processedBlob);
+      // Fetch the processed audio blob
+      const response = await fetch(processedAudioUrl);
+      const processedAudioBlob = await response.blob();
+      
+      // Create download link with processed audio
+      const url = URL.createObjectURL(processedAudioBlob);
       const link = document.createElement('a');
       link.href = url;
       
-      // Generate filename with sample rate info
-      const originalName = originalFile.name.replace(/\.[^/.]+$/, '');
-      const sampleRateLabel = sampleRate.replace('kHz', 'k');
+      // Generate filename with format info
+      const originalName = originalFile.name;
+      const nameWithoutExt = originalName.replace(/\.[^/.]+$/, '');
       const formatExt = downloadFormat === 'mp3' ? 'mp3' : 'wav';
-      const filename = `${originalName}_${sampleRateLabel}_mastered.${formatExt}`;
+      const bitDepth = downloadFormat === 'wav16' ? '16bit' : downloadFormat === 'wav24' ? '24bit' : '32bit';
+      const sampleRateLabel = sampleRate.replace('kHz', 'k');
+      
+      const filename = downloadFormat === 'mp3' 
+        ? `${nameWithoutExt}_garage_mastered_320kbps_${sampleRateLabel}.${formatExt}`
+        : `${nameWithoutExt}_garage_mastered_${bitDepth}_${sampleRateLabel}.${formatExt}`;
       
       link.download = filename;
       document.body.appendChild(link);
@@ -110,241 +131,20 @@ const ExportGate: React.FC<ExportGateProps> = ({
       
       // Clean up
       URL.revokeObjectURL(url);
+      URL.revokeObjectURL(processedAudioUrl);
       
-      console.log(`✅ Successfully processed and downloaded: ${filename}`);
-      console.log(`📊 Sample Rate: ${sampleRate}, Format: ${downloadFormat}, G-Tuner: ${gTunerEnabled ? 'Enabled' : 'Disabled'}`);
+      console.log(`✅ Successfully downloaded processed audio: ${filename}`);
+      console.log(`📊 Format: ${downloadFormat}, Sample Rate: ${sampleRate}, G-Tuner: ${gTunerEnabled ? 'Enabled' : 'Disabled'}`);
+      
+      // Show success message
+      alert(`Successfully downloaded mastered audio: ${filename}`);
       
     } catch (error) {
-      console.error('❌ Error processing audio:', error);
-      alert('Error processing audio. Please try again.');
+      console.error('❌ Error downloading processed audio:', error);
+      alert('Error downloading processed audio. Please try again.');
+    } finally {
+      setIsDownloading(false);
     }
-  };
-
-  // Audio processing function with sample rate conversion
-  const processAudioWithSampleRate = async (
-    audioFile: File, 
-    targetSampleRate: string, 
-    format: string,
-    effects: any,
-    gTunerEnabled: boolean
-  ): Promise<Blob> => {
-    return new Promise(async (resolve, reject) => {
-      try {
-        // Parse target sample rate
-        const targetRate = parseInt(targetSampleRate.replace('kHz', '000'));
-        console.log(`🎛️ Target sample rate: ${targetRate}Hz`);
-
-        // Create audio context
-        const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-        
-        // Read the audio file
-        const arrayBuffer = await audioFile.arrayBuffer();
-        const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-        
-        console.log(`📊 Original audio: ${audioBuffer.sampleRate}Hz, ${audioBuffer.numberOfChannels} channels, ${audioBuffer.length} samples`);
-
-        // Create offline context with target sample rate
-        const offlineContext = new OfflineAudioContext(
-          audioBuffer.numberOfChannels,
-          Math.ceil(audioBuffer.length * targetRate / audioBuffer.sampleRate),
-          targetRate
-        );
-
-        // Create audio source
-        const source = offlineContext.createBufferSource();
-        source.buffer = audioBuffer;
-
-        // Apply audio effects chain
-        let currentNode: AudioNode = source;
-
-        // EQ
-        if (effects.eq?.enabled) {
-          const eqNode = offlineContext.createBiquadFilter();
-          // Apply 8-band EQ settings
-          effects.eq.bands.forEach((band: any, index: number) => {
-            if (index === 0) {
-              eqNode.type = 'lowshelf';
-              eqNode.frequency.value = band.frequency;
-              eqNode.gain.value = band.gain;
-            } else if (index === effects.eq.bands.length - 1) {
-              eqNode.type = 'highshelf';
-              eqNode.frequency.value = band.frequency;
-              eqNode.gain.value = band.gain;
-            } else {
-              eqNode.type = 'peaking';
-              eqNode.frequency.value = band.frequency;
-              eqNode.gain.value = band.gain;
-              eqNode.Q.value = band.q || 1;
-            }
-          });
-          currentNode.connect(eqNode);
-          currentNode = eqNode;
-        }
-
-        // Compressor
-        if (effects.compressor?.enabled) {
-          const compressorNode = offlineContext.createDynamicsCompressor();
-          compressorNode.threshold.value = effects.compressor.threshold;
-          compressorNode.ratio.value = effects.compressor.ratio;
-          compressorNode.attack.value = effects.compressor.attack;
-          compressorNode.release.value = effects.compressor.release;
-          currentNode.connect(compressorNode);
-          currentNode = compressorNode;
-        }
-
-        // Loudness
-        if (effects.loudness?.enabled) {
-          const gainNode = offlineContext.createGain();
-          gainNode.gain.value = Math.pow(10, effects.loudness.gain / 20); // Convert dB to linear
-          currentNode.connect(gainNode);
-          currentNode = gainNode;
-        }
-
-        // Limiter
-        if (effects.limiter?.enabled) {
-          const limiterNode = offlineContext.createDynamicsCompressor();
-          limiterNode.threshold.value = effects.limiter.threshold;
-          limiterNode.ratio.value = 20; // High ratio for limiting
-          limiterNode.attack.value = 0.001; // Fast attack
-          limiterNode.release.value = 0.1; // Fast release
-          currentNode.connect(limiterNode);
-          currentNode = limiterNode;
-        }
-
-        // G-Tuner (444Hz pitch correction)
-        if (gTunerEnabled) {
-          const gTunerNode = offlineContext.createBiquadFilter();
-          gTunerNode.type = 'peaking';
-          gTunerNode.frequency.value = 444;
-          gTunerNode.gain.value = 3; // Boost 444Hz
-          gTunerNode.Q.value = 10; // Narrow Q
-          currentNode.connect(gTunerNode);
-          currentNode = gTunerNode;
-          console.log('🎵 G-Tuner (444Hz) applied to audio processing');
-        }
-
-        // Connect to destination
-        currentNode.connect(offlineContext.destination);
-
-        // Start processing
-        source.start(0);
-        
-        // Render the processed audio
-        const renderedBuffer = await offlineContext.startRendering();
-        
-        console.log(`📊 Processed audio: ${renderedBuffer.sampleRate}Hz, ${renderedBuffer.numberOfChannels} channels, ${renderedBuffer.length} samples`);
-
-        // Convert to blob based on format
-        let blob: Blob;
-        
-        if (format === 'mp3') {
-          // For MP3, we'll use a simple approach (in real implementation, you'd use a proper MP3 encoder)
-          blob = await convertToMp3(renderedBuffer);
-        } else {
-          // WAV format with specified bit depth
-          const bitDepth = format === 'wav16' ? 16 : format === 'wav24' ? 24 : 32;
-          blob = await convertToWav(renderedBuffer, bitDepth);
-        }
-
-        resolve(blob);
-
-      } catch (error) {
-        console.error('Error in audio processing:', error);
-        reject(error);
-      }
-    });
-  };
-
-  // Convert AudioBuffer to WAV with specified bit depth
-  const convertToWav = async (audioBuffer: AudioBuffer, bitDepth: number): Promise<Blob> => {
-    const numberOfChannels = audioBuffer.numberOfChannels;
-    const length = audioBuffer.length;
-    const sampleRate = audioBuffer.sampleRate;
-    
-    // Calculate bytes per sample
-    const bytesPerSample = bitDepth / 8;
-    const blockAlign = numberOfChannels * bytesPerSample;
-    
-    // Create WAV file
-    const wavBuffer = new ArrayBuffer(44 + length * numberOfChannels * bytesPerSample);
-    const view = new DataView(wavBuffer);
-    
-    // WAV header
-    const writeString = (offset: number, string: string) => {
-      for (let i = 0; i < string.length; i++) {
-        view.setUint8(offset + i, string.charCodeAt(i));
-      }
-    };
-    
-    writeString(0, 'RIFF');
-    view.setUint32(4, 36 + length * numberOfChannels * bytesPerSample, true);
-    writeString(8, 'WAVE');
-    writeString(12, 'fmt ');
-    view.setUint32(16, 16, true);
-    view.setUint16(20, 1, true);
-    view.setUint16(22, numberOfChannels, true);
-    view.setUint32(24, sampleRate, true);
-    view.setUint32(28, sampleRate * blockAlign, true);
-    view.setUint16(32, blockAlign, true);
-    view.setUint16(34, bitDepth, true);
-    writeString(36, 'data');
-    view.setUint32(40, length * numberOfChannels * bytesPerSample, true);
-    
-    // Write audio data
-    let offset = 44;
-    
-    for (let i = 0; i < length; i++) {
-      for (let channel = 0; channel < numberOfChannels; channel++) {
-        const sample = Math.max(-1, Math.min(1, audioBuffer.getChannelData(channel)[i]));
-        
-        if (bitDepth === 16) {
-          view.setInt16(offset, sample * 0x7FFF, true);
-          offset += 2;
-        } else if (bitDepth === 24) {
-          const intSample = Math.round(sample * 0x7FFFFF);
-          view.setUint8(offset, intSample & 0xFF);
-          view.setUint8(offset + 1, (intSample >> 8) & 0xFF);
-          view.setUint8(offset + 2, (intSample >> 16) & 0xFF);
-          offset += 3;
-        } else if (bitDepth === 32) {
-          view.setFloat32(offset, sample, true);
-          offset += 4;
-        }
-      }
-    }
-    
-    return new Blob([wavBuffer], { type: 'audio/wav' });
-  };
-
-  // Convert AudioBuffer to MP3 (simplified - in production you'd use a proper MP3 encoder)
-  const convertToMp3 = async (audioBuffer: AudioBuffer): Promise<Blob> => {
-    // For now, we'll convert to WAV and let the browser handle MP3 conversion
-    // In a real implementation, you'd use a library like lamejs or similar
-    const wavBlob = await convertToWav(audioBuffer, 16);
-    
-    // Create a MediaRecorder to convert to MP3
-    const stream = new MediaStream();
-    const audioContext = new AudioContext();
-    const source = audioContext.createBufferSource();
-    source.buffer = audioBuffer;
-    source.connect(audioContext.destination);
-    
-    const mediaRecorder = new MediaRecorder(stream, {
-      mimeType: 'audio/webm;codecs=opus'
-    });
-    
-    return new Promise((resolve) => {
-      const chunks: Blob[] = [];
-      mediaRecorder.ondataavailable = (e) => chunks.push(e.data);
-      mediaRecorder.onstop = () => {
-        const blob = new Blob(chunks, { type: 'audio/mp3' });
-        resolve(blob);
-      };
-      
-      mediaRecorder.start();
-      source.start(0);
-      source.onended = () => mediaRecorder.stop();
-    });
   };
 
   return (
@@ -672,14 +472,33 @@ const ExportGate: React.FC<ExportGateProps> = ({
       <div className="text-center">
         <button
           onClick={handleDownload}
-          className="bg-crys-gold text-black px-6 py-3 rounded-lg font-semibold hover:bg-yellow-400 transition-colors flex items-center justify-center space-x-2 mx-auto"
+          disabled={!originalFile || isDownloading}
+          className={`bg-crys-gold text-black px-6 py-3 rounded-lg font-semibold transition-colors flex items-center justify-center space-x-2 mx-auto ${
+            originalFile && !isDownloading
+              ? 'hover:bg-yellow-400'
+              : 'opacity-50 cursor-not-allowed'
+          }`}
         >
-          <Download className="w-5 h-5" />
-          <span>Download Mastered Audio</span>
+          {isDownloading ? (
+            <>
+              <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin"></div>
+              <span>Downloading...</span>
+            </>
+          ) : (
+            <>
+              <Download className="w-5 h-5" />
+              <span>Download Mastered Audio</span>
+            </>
+          )}
         </button>
         {gTunerEnabled && (
           <div className="mt-2 text-xs text-crys-gold">
             ✓ G-Tuner (444Hz) applied to final export
+          </div>
+        )}
+        {originalFile && (
+          <div className="mt-2 text-xs text-gray-400">
+            Format: {downloadFormat === 'mp3' ? 'MP3 320kbps' : downloadFormat === 'wav16' ? 'WAV 16-bit' : downloadFormat === 'wav24' ? 'WAV 24-bit' : 'WAV 32-bit'} • Sample Rate: {sampleRate}
           </div>
         )}
       </div>

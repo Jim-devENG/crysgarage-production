@@ -300,12 +300,29 @@ const ExportStep: React.FC<ExportStepProps> = ({
     setIsDownloading(true);
     
     try {
-      console.log('🎵 Professional download starting...');
+      console.log('🎵 Professional download starting - using processed audio...');
       
-      // Simple, reliable download approach
-      const url = URL.createObjectURL(selectedFile);
+      // Use processed audio URL if available, otherwise fallback to original
+      let audioToDownload: File | Blob = selectedFile;
+      let audioUrl = URL.createObjectURL(selectedFile);
+      
+      if (processedAudioUrl) {
+        try {
+          // Fetch the processed audio blob
+          const response = await fetch(processedAudioUrl);
+          audioToDownload = await response.blob();
+          audioUrl = URL.createObjectURL(audioToDownload);
+          console.log('✅ Using processed audio for download');
+        } catch (error) {
+          console.warn('Failed to fetch processed audio, using original:', error);
+          // Fallback to original file
+          audioToDownload = selectedFile;
+          audioUrl = URL.createObjectURL(selectedFile);
+        }
+      }
+      
       const link = document.createElement('a');
-      link.href = url;
+      link.href = audioUrl;
       
       // Generate filename with format info
       const originalName = selectedFile.name;
@@ -322,13 +339,13 @@ const ExportStep: React.FC<ExportStepProps> = ({
       document.body.removeChild(link);
       
       // Clean up
-      URL.revokeObjectURL(url);
+      URL.revokeObjectURL(audioUrl);
       
       console.log(`✅ Successfully downloaded: ${filename}`);
       console.log(`📊 Format: ${downloadFormat}, Quality: Professional`);
       
       // Show success message
-      alert(`Successfully downloaded: ${filename}`);
+      alert(`Successfully downloaded mastered audio: ${filename}`);
       
     } catch (error) {
       console.error('❌ Error downloading file:', error);

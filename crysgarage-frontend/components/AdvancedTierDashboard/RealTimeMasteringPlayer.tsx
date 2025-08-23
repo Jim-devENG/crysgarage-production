@@ -946,25 +946,82 @@ const RealTimeMasteringPlayer = forwardRef<RealTimeMasteringPlayerRef, RealTimeM
     },
     getProcessedAudioUrl: async () => {
       try {
-        console.log('Getting processed audio URL...');
+        console.log('🎵 Capturing processed audio with all effects applied...');
         
-        // For now, return the original audio URL as a fallback
-        // This ensures the analysis page has something to play
-        // TODO: Implement proper processed audio capture
-        if (audioUrl) {
-          console.log('✅ Returning original audio URL as processed audio (temporary)');
-          return audioUrl;
+        if (!audioContextRef.current || !mediaStreamDestinationRef.current || !audioFile) {
+          console.error('Audio context or media stream not available');
+          return null;
         }
+
+        // Create MediaRecorder to capture the processed audio stream
+        const mediaRecorder = new MediaRecorder(mediaStreamDestinationRef.current.stream, {
+          mimeType: 'audio/webm;codecs=opus'
+        });
+
+        const recordedChunks: Blob[] = [];
         
-        // If no audioUrl, try to create a new one from the audio file
-        if (audioFile) {
-          const newUrl = URL.createObjectURL(audioFile);
-          console.log('✅ Created new blob URL from audio file:', newUrl);
-          return newUrl;
-        }
-        
-        console.error('No audio URL or file available');
-        return null;
+        return new Promise<string>((resolve, reject) => {
+          // Set up recording handlers
+          mediaRecorder.ondataavailable = (event) => {
+            if (event.data.size > 0) {
+              recordedChunks.push(event.data);
+            }
+          };
+
+          mediaRecorder.onstop = () => {
+            try {
+              const audioBlob = new Blob(recordedChunks, { type: 'audio/webm' });
+              const audioUrl = URL.createObjectURL(audioBlob);
+              console.log('✅ Processed audio captured successfully:', audioUrl);
+              resolve(audioUrl);
+            } catch (error) {
+              console.error('Error creating processed audio URL:', error);
+              reject(error);
+            }
+          };
+
+          mediaRecorder.onerror = (error) => {
+            console.error('MediaRecorder error:', error);
+            reject(error);
+          };
+
+          // Start recording
+          mediaRecorder.start();
+          
+          // Play the audio to capture the processed output
+          if (audioRef.current) {
+            const playPromise = audioRef.current.play();
+            if (playPromise !== undefined) {
+              playPromise.then(() => {
+                console.log('🎵 Playing audio for processing capture...');
+                
+                // Stop recording when audio ends
+                audioRef.current!.onended = () => {
+                  console.log('🎵 Audio playback ended, stopping recording...');
+                  mediaRecorder.stop();
+                };
+                
+                // Also stop after a reasonable timeout (e.g., 30 seconds)
+                setTimeout(() => {
+                  if (mediaRecorder.state === 'recording') {
+                    console.log('⏰ Recording timeout reached, stopping...');
+                    mediaRecorder.stop();
+                  }
+                }, 30000);
+                
+              }).catch((error) => {
+                console.error('Error playing audio for capture:', error);
+                mediaRecorder.stop();
+                reject(error);
+              });
+            }
+          } else {
+            console.error('Audio element not available for capture');
+            mediaRecorder.stop();
+            reject(new Error('Audio element not available'));
+          }
+        });
+
       } catch (error) {
         console.error('Error in getProcessedAudioUrl:', error);
         return null;

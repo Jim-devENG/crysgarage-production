@@ -1143,6 +1143,7 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
              onUpdateEffectSettings={handleUpdateEffectSettings}
              meterData={meterData}
              selectedGenre={selectedGenre}
+             getProcessedAudioUrl={() => realTimeMasteringPlayerRef.current?.getProcessedAudioUrl() || Promise.resolve(null)}
            />
          );
       
