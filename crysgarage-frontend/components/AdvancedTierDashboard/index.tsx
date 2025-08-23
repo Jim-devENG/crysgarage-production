@@ -496,35 +496,10 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
     if (selectedFile) {
       setIsProcessing(true);
       try {
-        // Add a timeout to prevent hanging
-        const timeoutPromise = new Promise((_, reject) => {
-          setTimeout(() => reject(new Error('Timeout')), 3000); // 3 second timeout
-        });
-
-        let processedUrl: string | null = null;
-
-        // Try to get processed audio if mastering player is available
-        if (realTimeMasteringPlayerRef.current) {
-          try {
-            processedUrl = await Promise.race([
-              realTimeMasteringPlayerRef.current.getProcessedAudioUrl(),
-              timeoutPromise
-            ]) as string | null;
-          } catch (error) {
-            console.error('Error getting processed audio:', error);
-          }
-        }
-
-        // Use processed URL if available, otherwise fallback to original
-        if (processedUrl) {
-          console.log('✅ Using processed audio URL:', processedUrl);
-          setProcessedAudioUrl(processedUrl);
-        } else {
-          // Fallback to original file
-          console.log('⚠️ Using fallback to original audio (processed audio recording failed)');
-          const fallbackUrl = URL.createObjectURL(selectedFile);
-          setProcessedAudioUrl(fallbackUrl);
-        }
+        // Just set the original file URL for now
+        // Audio processing will happen when user clicks download
+        const fallbackUrl = URL.createObjectURL(selectedFile);
+        setProcessedAudioUrl(fallbackUrl);
         
         setCurrentStep(3);
       } catch (error) {
