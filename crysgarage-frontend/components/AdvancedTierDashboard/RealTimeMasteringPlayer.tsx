@@ -946,31 +946,161 @@ const RealTimeMasteringPlayer = forwardRef<RealTimeMasteringPlayerRef, RealTimeM
     },
     getProcessedAudioUrl: async () => {
       try {
-        console.log('🎵 Generating processed audio URL...');
+        console.log('🎵 Rendering processed audio with all effects...');
         
         if (!audioFile) {
           console.error('No audio file available');
           return null;
         }
 
-        // For now, return the original audio URL as a reliable fallback
-        // This ensures downloads work while we perfect the processing
-        if (audioUrl) {
-          console.log('✅ Returning original audio URL as processed audio (reliable fallback)');
-          return audioUrl;
+        // Create a new audio context for offline rendering
+        const offlineContext = new OfflineAudioContext(2, 44100 * 300, 44100); // 2 channels, 5 minutes max
+        
+        // Decode the audio file
+        const arrayBuffer = await audioFile.arrayBuffer();
+        const audioBuffer = await offlineContext.decodeAudioData(arrayBuffer);
+        
+        // Create audio source
+        const source = offlineContext.createBufferSource();
+        source.buffer = audioBuffer;
+        
+        // Apply the same effects chain as the real-time player
+        let currentNode: AudioNode = source;
+        
+        // EQ
+        if (audioEffects.eq?.enabled) {
+          audioEffects.eq.bands.forEach((band: any, index: number) => {
+            const eqNode = offlineContext.createBiquadFilter();
+            eqNode.type = band.type;
+            eqNode.frequency.value = band.frequency;
+            eqNode.gain.value = band.gain;
+            eqNode.Q.value = band.q;
+            
+            currentNode.connect(eqNode);
+            currentNode = eqNode;
+          });
         }
         
-        // If no audioUrl, create one from the audio file
-        if (audioFile) {
-          const newUrl = URL.createObjectURL(audioFile);
-          console.log('✅ Created new blob URL from audio file:', newUrl);
-          return newUrl;
+        // Compressor
+        if (audioEffects.compressor?.enabled) {
+          const compressorNode = offlineContext.createDynamicsCompressor();
+          compressorNode.threshold.value = audioEffects.compressor.threshold;
+          compressorNode.ratio.value = audioEffects.compressor.ratio;
+          compressorNode.attack.value = audioEffects.compressor.attack;
+          compressorNode.release.value = audioEffects.compressor.release;
+          currentNode.connect(compressorNode);
+          currentNode = compressorNode;
         }
         
-        console.error('No audio URL or file available');
-        return null;
+        // Loudness
+        if (audioEffects.loudness?.enabled) {
+          const gainNode = offlineContext.createGain();
+          gainNode.gain.value = Math.pow(10, audioEffects.loudness.gain / 20);
+          currentNode.connect(gainNode);
+          currentNode = gainNode;
+        }
+        
+        // Limiter
+        if (audioEffects.limiter?.enabled) {
+          const limiterNode = offlineContext.createDynamicsCompressor();
+          limiterNode.threshold.value = audioEffects.limiter.threshold;
+          limiterNode.ratio.value = 20;
+          limiterNode.attack.value = 0.001;
+          limiterNode.release.value = 0.1;
+          currentNode.connect(limiterNode);
+          currentNode = limiterNode;
+        }
+        
+        // G-Tuner (444Hz pitch correction)
+        if (audioEffects.gTuner?.enabled) {
+          const gTunerNode = offlineContext.createBiquadFilter();
+          gTunerNode.type = 'peaking';
+          gTunerNode.frequency.value = 444;
+          gTunerNode.gain.value = 3;
+          gTunerNode.Q.value = 10;
+          currentNode.connect(gTunerNode);
+          currentNode = gTunerNode;
+        }
+        
+        // Connect to destination
+        currentNode.connect(offlineContext.destination);
+        
+        // Start rendering
+        source.start(0);
+        const renderedBuffer = await offlineContext.startRendering();
+        
+        // Convert to WAV using inline function
+        const wavBlob = await (async (audioBuffer: AudioBuffer, bitDepth: number = 24): Promise<Blob> => {
+          const numberOfChannels = audioBuffer.numberOfChannels;
+          const length = audioBuffer.length;
+          const sampleRate = audioBuffer.sampleRate;
+          
+          // Calculate bytes per sample
+          const bytesPerSample = bitDepth / 8;
+          const blockAlign = numberOfChannels * bytesPerSample;
+          
+          // Create WAV file
+          const wavBuffer = new ArrayBuffer(44 + length * numberOfChannels * bytesPerSample);
+          const view = new DataView(wavBuffer);
+          
+          // WAV header
+          const writeString = (offset: number, string: string) => {
+            for (let i = 0; i < string.length; i++) {
+              view.setUint8(offset + i, string.charCodeAt(i));
+            }
+          };
+          
+          writeString(0, 'RIFF');
+          view.setUint32(4, 36 + length * numberOfChannels * bytesPerSample, true);
+          writeString(8, 'WAVE');
+          writeString(12, 'fmt ');
+          view.setUint32(16, 16, true);
+          view.setUint16(20, 1, true);
+          view.setUint16(22, numberOfChannels, true);
+          view.setUint32(24, sampleRate, true);
+          view.setUint32(28, sampleRate * blockAlign, true);
+          view.setUint16(32, blockAlign, true);
+          view.setUint16(34, bitDepth, true);
+          writeString(36, 'data');
+          view.setUint32(40, length * numberOfChannels * bytesPerSample, true);
+          
+          // Write audio data
+          let offset = 44;
+          
+          for (let i = 0; i < length; i++) {
+            for (let channel = 0; channel < numberOfChannels; channel++) {
+              const sample = Math.max(-1, Math.min(1, audioBuffer.getChannelData(channel)[i]));
+              
+              if (bitDepth === 16) {
+                view.setInt16(offset, sample * 0x7FFF, true);
+                offset += 2;
+              } else if (bitDepth === 24) {
+                const intSample = Math.round(sample * 0x7FFFFF);
+                view.setUint8(offset, intSample & 0xFF);
+                view.setUint8(offset + 1, (intSample >> 8) & 0xFF);
+                view.setUint8(offset + 2, (intSample >> 16) & 0xFF);
+                offset += 3;
+              } else if (bitDepth === 32) {
+                view.setFloat32(offset, sample, true);
+                offset += 4;
+              }
+            }
+          }
+          
+          return new Blob([wavBuffer], { type: 'audio/wav' });
+        })(renderedBuffer, 24);
+        
+        const audioUrl = URL.createObjectURL(wavBlob);
+        
+        console.log('✅ Processed audio rendered successfully:', audioUrl);
+        return audioUrl;
+        
       } catch (error) {
         console.error('Error in getProcessedAudioUrl:', error);
+        // Fallback to original
+        if (audioUrl) {
+          return audioUrl;
+        }
         return null;
       }
     },

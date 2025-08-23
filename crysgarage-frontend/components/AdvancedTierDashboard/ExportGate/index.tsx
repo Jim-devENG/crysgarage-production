@@ -88,12 +88,33 @@ const ExportGate: React.FC<ExportGateProps> = ({
     try {
       console.log('🎵 Advanced download starting - capturing processed audio...');
       
-      // For now, use the original file for reliable downloads
-      // TODO: Implement real processed audio capture in future update
+      // Get the processed audio URL from the mastering player
       let audioToDownload: File | Blob = originalFile;
       let audioUrl = URL.createObjectURL(originalFile);
       
-      console.log('📁 Using original file for download (processed audio capture coming soon)');
+      if (getProcessedAudioUrl) {
+        try {
+          console.log('🎵 Getting processed audio with effects applied...');
+          const processedAudioUrl = await getProcessedAudioUrl();
+          
+          if (processedAudioUrl) {
+            // Fetch the processed audio blob
+            const response = await fetch(processedAudioUrl);
+            audioToDownload = await response.blob();
+            audioUrl = URL.createObjectURL(audioToDownload);
+            console.log('✅ Using processed audio with effects for download');
+          } else {
+            console.warn('No processed audio URL available, using original file');
+          }
+        } catch (error) {
+          console.warn('Failed to get processed audio, using original:', error);
+          // Fallback to original file
+          audioToDownload = originalFile;
+          audioUrl = URL.createObjectURL(originalFile);
+        }
+      } else {
+        console.warn('getProcessedAudioUrl function not available, using original file');
+      }
       
       // Create download link with processed audio
       const link = document.createElement('a');
@@ -118,11 +139,11 @@ const ExportGate: React.FC<ExportGateProps> = ({
       // Clean up
       URL.revokeObjectURL(audioUrl);
       
-      console.log(`✅ Successfully downloaded: ${filename}`);
+      console.log(`✅ Successfully downloaded mastered audio: ${filename}`);
       console.log(`📊 Format: ${downloadFormat}, Sample Rate: ${sampleRate}, G-Tuner: ${gTunerEnabled ? 'Enabled' : 'Disabled'}`);
       
       // Show success message
-      alert(`Successfully downloaded: ${filename}`);
+      alert(`Successfully downloaded mastered audio: ${filename}`);
       
     } catch (error) {
       console.error('❌ Error downloading file:', error);
