@@ -28,6 +28,8 @@ Route::post('/auth/signin', [AuthController::class, 'signIn']);
 Route::post('/auth/signup', [AuthController::class, 'signUp']);
 Route::post('/auth/signout', [AuthController::class, 'signOut']);
 Route::get('/auth/user', [AuthController::class, 'getCurrentUser']);
+Route::post('/auth/google', [AuthController::class, 'googleAuth']);
+Route::post('/auth/facebook', [AuthController::class, 'facebookAuth']);
 
 // Public genre routes
 Route::get('/genres', [GenreController::class, 'getGenresForTier']);

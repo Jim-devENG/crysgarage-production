@@ -106,7 +106,143 @@ class AuthController extends Controller
                 'total_spent' => $user->total_spent,
             ],
             'token' => $user->api_token
-        ], 201);
+        ]);
+    }
+
+    /**
+     * Google OAuth authentication
+     */
+    public function googleAuth(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'google_id' => 'required|string',
+            'name' => 'required|string|max:255',
+            'email' => 'required|email',
+            'picture' => 'nullable|string',
+            'access_token' => 'required|string',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'message' => 'Validation failed',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        // Check if user already exists by email
+        $user = User::where('email', $request->email)->first();
+
+        if ($user) {
+            // User exists, update their information and generate new token
+            $user->update([
+                'name' => $request->name,
+                'api_token' => Str::random(60),
+            ]);
+
+            \Log::info('Google login successful for existing user', [
+                'user_id' => $user->id, 
+                'email' => $user->email
+            ]);
+        } else {
+            // Create new user
+            $user = User::create([
+                'name' => $request->name,
+                'email' => $request->email,
+                'password' => Hash::make(Str::random(32)), // Random password for OAuth users
+                'tier' => 'free',
+                'credits' => 5,
+                'total_tracks' => 0,
+                'total_spent' => 0,
+                'api_token' => Str::random(60),
+            ]);
+
+            \Log::info('Google signup successful for new user', [
+                'user_id' => $user->id, 
+                'email' => $user->email
+            ]);
+        }
+
+        return response()->json([
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'tier' => $user->tier,
+                'credits' => $user->credits,
+                'join_date' => $user->created_at->toISOString(),
+                'total_tracks' => $user->total_tracks,
+                'total_spent' => $user->total_spent,
+            ],
+            'token' => $user->api_token
+        ]);
+    }
+
+    /**
+     * Facebook OAuth authentication
+     */
+    public function facebookAuth(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'facebook_id' => 'required|string',
+            'name' => 'required|string|max:255',
+            'email' => 'required|email',
+            'picture' => 'nullable|string',
+            'access_token' => 'required|string',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'message' => 'Validation failed',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        // Check if user already exists by email
+        $user = User::where('email', $request->email)->first();
+
+        if ($user) {
+            // User exists, update their information and generate new token
+            $user->update([
+                'name' => $request->name,
+                'api_token' => Str::random(60),
+            ]);
+
+            \Log::info('Facebook login successful for existing user', [
+                'user_id' => $user->id, 
+                'email' => $user->email
+            ]);
+        } else {
+            // Create new user
+            $user = User::create([
+                'name' => $request->name,
+                'email' => $request->email,
+                'password' => Hash::make(Str::random(32)), // Random password for OAuth users
+                'tier' => 'free',
+                'credits' => 5,
+                'total_tracks' => 0,
+                'total_spent' => 0,
+                'api_token' => Str::random(60),
+            ]);
+
+            \Log::info('Facebook signup successful for new user', [
+                'user_id' => $user->id, 
+                'email' => $user->email
+            ]);
+        }
+
+        return response()->json([
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'tier' => $user->tier,
+                'credits' => $user->credits,
+                'join_date' => $user->created_at->toISOString(),
+                'total_tracks' => $user->total_tracks,
+                'total_spent' => $user->total_spent,
+            ],
+            'token' => $user->api_token
+        ]);
     }
 
     /**

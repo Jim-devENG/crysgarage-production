@@ -35,25 +35,59 @@ class FacebookAuthService {
   async signInWithFacebook(): Promise<FacebookAuthResponse> {
     await this.initialize();
 
-    // Simulate Facebook authentication
+    // Simulate Facebook authentication with account picker
+    console.log('🔐 Mock Facebook OAuth: Showing account picker...');
+    
     return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        // Simulate successful authentication
-        const mockUser: FacebookUser = {
-          id: `fb_${Date.now()}`,
-          name: 'Facebook User',
-          email: `facebook_${Date.now()}@example.com`,
-          picture: 'https://via.placeholder.com/150'
-        };
+      setTimeout(async () => {
+        try {
+          // Simulate successful authentication
+          const mockUser: FacebookUser = {
+            id: `fb_${Date.now()}`,
+            name: 'Facebook User',
+            email: `facebook_${Date.now()}@example.com`,
+            picture: 'https://via.placeholder.com/150'
+          };
 
-        const mockToken = `fb_token_${Date.now()}`;
+          const mockToken = `fb_token_${Date.now()}`;
 
-        resolve({
-          user: mockUser,
-          token: mockToken
-        });
+          // Authenticate with backend
+          const backendResponse = await this.authenticateWithBackend(mockUser, mockToken);
+          
+          resolve(backendResponse);
+        } catch (error) {
+          reject(error);
+        }
       }, 2000);
     });
+  }
+
+  // Authenticate with our backend
+  private async authenticateWithBackend(facebookUser: FacebookUser, accessToken: string): Promise<FacebookAuthResponse> {
+    const response = await fetch('/api/auth/facebook', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        facebook_id: facebookUser.id,
+        name: facebookUser.name,
+        email: facebookUser.email,
+        picture: facebookUser.picture,
+        access_token: accessToken
+      })
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Failed to authenticate with backend');
+    }
+
+    const data = await response.json();
+    return {
+      user: data.user,
+      token: data.token
+    };
   }
 
   async signOut(): Promise<void> {

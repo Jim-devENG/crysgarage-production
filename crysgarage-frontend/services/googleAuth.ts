@@ -18,9 +18,8 @@ class GoogleAuthService {
   private isInitialized: boolean = false;
 
   constructor() {
-    // In a real app, this would come from environment variables
-    // Use import.meta.env for Vite or window.__ENV__ for other setups
-    this.clientId = (import.meta?.env?.REACT_APP_GOOGLE_CLIENT_ID as string) || 
+    // Get client ID from environment variables
+    this.clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || 
                    (window as any).__ENV__?.REACT_APP_GOOGLE_CLIENT_ID || 
                    'your-google-client-id';
   }
@@ -49,7 +48,7 @@ class GoogleAuthService {
     });
   }
 
-  // Sign in with Google
+  // Sign in with Google - This will show the Google account picker
   async signInWithGoogle(): Promise<GoogleAuthResponse> {
     await this.initialize();
 
@@ -59,9 +58,11 @@ class GoogleAuthService {
         return;
       }
 
+      // Initialize the Google Sign-In client
       const client = window.google.accounts.oauth2.initTokenClient({
         client_id: this.clientId,
         scope: 'openid email profile',
+        prompt: 'select_account', // This forces the account picker to show
         callback: async (response: any) => {
           try {
             if (response.error) {
@@ -72,20 +73,17 @@ class GoogleAuthService {
             // Get user info using the access token
             const userInfo = await this.getUserInfo(response.access_token);
             
-            // In a real app, you would send this to your backend
-            // to create/authenticate the user
-            const authResponse: GoogleAuthResponse = {
-              user: userInfo,
-              token: response.access_token
-            };
-
-            resolve(authResponse);
+            // Send to backend to create/authenticate user
+            const backendResponse = await this.authenticateWithBackend(userInfo, response.access_token);
+            
+            resolve(backendResponse);
           } catch (error) {
             reject(error);
           }
         }
       });
 
+      // Request access token - this will show the Google account picker
       client.requestAccessToken();
     });
   }
@@ -109,6 +107,34 @@ class GoogleAuthService {
       name: data.name,
       email: data.email,
       picture: data.picture
+    };
+  }
+
+  // Authenticate with our backend
+  private async authenticateWithBackend(googleUser: GoogleUser, accessToken: string): Promise<GoogleAuthResponse> {
+    const response = await fetch('/api/auth/google', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        google_id: googleUser.id,
+        name: googleUser.name,
+        email: googleUser.email,
+        picture: googleUser.picture,
+        access_token: accessToken
+      })
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Failed to authenticate with backend');
+    }
+
+    const data = await response.json();
+    return {
+      user: data.user,
+      token: data.token
     };
   }
 
@@ -150,8 +176,11 @@ class GoogleAuthService {
 // Mock implementation for development (when Google OAuth is not configured)
 class MockGoogleAuthService extends GoogleAuthService {
   async signInWithGoogle(): Promise<GoogleAuthResponse> {
-    // Simulate Google OAuth flow
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    // Simulate Google OAuth flow with account picker
+    console.log('🔐 Mock Google OAuth: Showing account picker...');
+    
+    // Simulate the account selection process
+    await new Promise(resolve => setTimeout(resolve, 2000));
     
     const mockUser: GoogleUser = {
       id: 'mock-google-id-' + Date.now(),
@@ -162,12 +191,12 @@ class MockGoogleAuthService extends GoogleAuthService {
 
     const mockToken = 'mock-google-token-' + Date.now();
 
+    // Simulate backend authentication
+    const backendResponse = await this.authenticateWithBackend(mockUser, mockToken);
+    
     this.storeUser(mockUser, mockToken);
 
-    return {
-      user: mockUser,
-      token: mockToken
-    };
+    return backendResponse;
   }
 
   async signOut(): Promise<void> {
