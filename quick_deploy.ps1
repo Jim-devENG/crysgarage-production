@@ -1,10 +1,12 @@
 # Quick Deploy Script for Crys Garage
 # For fast deployments when you just want to update the site
+# Now includes backend deployment for major changes
 
 param(
     [string]$VPS_HOST = "209.74.80.162",
     [string]$VPS_USER = "root",
-    [string]$SSH_KEY_PATH = "$env:USERPROFILE\.ssh\id_rsa"
+    [string]$SSH_KEY_PATH = "$env:USERPROFILE\.ssh\id_rsa",
+    [switch]$IncludeBackend = $false
 )
 
 Write-Host "Quick Deploy - Crys Garage" -ForegroundColor Cyan
@@ -26,6 +28,49 @@ if ($gitStatus) {
 Write-Host "Pushing to remote repository..." -ForegroundColor Yellow
 git push
 Write-Host "Changes pushed to repository." -ForegroundColor Green
+
+# Deploy backend if requested or if there are backend changes
+$backendChanges = $false
+if ($IncludeBackend) {
+    $backendChanges = $true
+} else {
+    # Check if there are backend-related changes
+    $backendFiles = git diff --name-only HEAD~1 | Where-Object { $_ -like "crysgarage-backend/*" -or $_ -like "*.php" -or $_ -like "*.env*" }
+    if ($backendFiles) {
+        Write-Host "Backend changes detected. Including backend deployment..." -ForegroundColor Yellow
+        $backendChanges = $true
+    }
+}
+
+# Deploy backend if needed
+if ($backendChanges) {
+    Write-Host "Deploying backend changes..." -ForegroundColor Yellow
+    
+    # Pull changes on VPS
+    ssh -i $SSH_KEY_PATH -o StrictHostKeyChecking=no ${VPS_USER}@${VPS_HOST} "cd /var/www/crysgarage-deploy && git pull"
+    
+    # Copy CORS config if it exists locally
+    if (Test-Path "cors_config.php") {
+        Write-Host "Copying CORS configuration..." -ForegroundColor Yellow
+        scp -i $SSH_KEY_PATH -o StrictHostKeyChecking=no "cors_config.php" "${VPS_USER}@${VPS_HOST}:/var/www/crysgarage-deploy/crysgarage-backend/laravel/config/cors.php"
+    }
+    
+    # Copy bootstrap app config if it exists locally
+    if (Test-Path "bootstrap_app_with_cors.php") {
+        Write-Host "Copying bootstrap configuration..." -ForegroundColor Yellow
+        scp -i $SSH_KEY_PATH -o StrictHostKeyChecking=no "bootstrap_app_with_cors.php" "${VPS_USER}@${VPS_HOST}:/var/www/crysgarage-deploy/crysgarage-backend/laravel/bootstrap/app.php"
+    }
+    
+    # Run Laravel commands
+    Write-Host "Running Laravel setup commands..." -ForegroundColor Yellow
+    ssh -i $SSH_KEY_PATH -o StrictHostKeyChecking=no ${VPS_USER}@${VPS_HOST} "cd /var/www/crysgarage-deploy/crysgarage-backend/laravel && php artisan config:clear && php artisan route:clear && php artisan cache:clear"
+    
+    # Restart PHP-FPM
+    Write-Host "Restarting PHP-FPM..." -ForegroundColor Yellow
+    ssh -i $SSH_KEY_PATH -o StrictHostKeyChecking=no ${VPS_USER}@${VPS_HOST} "systemctl restart php-fpm"
+    
+    Write-Host "Backend deployment completed." -ForegroundColor Green
+}
 
 # Build frontend locally
 Write-Host "Building frontend..." -ForegroundColor Yellow
