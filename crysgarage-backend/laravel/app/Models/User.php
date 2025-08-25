@@ -21,6 +21,11 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'tier',
+        'credits',
+        'total_tracks',
+        'total_spent',
+        'api_token',
     ];
 
     /**
