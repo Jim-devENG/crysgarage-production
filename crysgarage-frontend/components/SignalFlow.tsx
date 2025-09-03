@@ -35,7 +35,7 @@ export function SignalFlow({ isProcessing = false, fileName }: SignalFlowProps) 
       id: "analyzer",
       name: "Crys Garage Engine",
       icon: <Zap className="w-5 h-5" />,
-      description: "AI analysis & processing",
+              description: "Crys Garage Engine analysis & processing",
       active: isProcessing
     },
     {
@@ -203,7 +203,7 @@ function getModuleDetails(moduleId: string): string {
   const details: Record<string, string> = {
     input: "Raw audio signal analysis and gain staging. Ensures optimal levels for processing.",
     analyzer: "Advanced analysis using the Crys Garage Engine. Detects genre, key, tempo, and audio characteristics.",
-    eq: "Intelligent frequency correction and enhancement. Adjusts bass, mids, and treble for optimal tonal balance.",
+            eq: "Crys Garage Engine frequency correction and enhancement. Adjusts bass, mids, and treble for optimal tonal balance.",
     dynamics: "Compression and limiting for consistent levels and punch. Enhances rhythm and presence.",
     harmonics: "Adds warmth and character through harmonic enhancement. Brings analog-style depth to digital audio.",
     output: "Final mastered audio with industry-standard loudness levels. Ready for streaming and distribution."

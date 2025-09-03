@@ -41,7 +41,7 @@ const AboutHero: React.FC = () => {
             About Crysgarage
           </h1>
           <p className="text-xl md:text-2xl text-gray-300 mb-8 max-w-3xl mx-auto">
-            Revolutionizing audio mastering through cutting-edge AI technology and real-time processing
+            Revolutionizing audio mastering through the Crys Garage Engine and real-time processing
           </p>
           <div className="w-24 h-1 bg-crys-gold mx-auto mb-8"></div>
         </motion.div>
@@ -54,8 +54,8 @@ const AboutHero: React.FC = () => {
         >
           <div className="bg-crys-graphite/30 rounded-xl p-6 backdrop-blur-sm border border-crys-gold/10">
             <div className="text-3xl mb-4">🎵</div>
-            <h3 className="text-xl font-semibold text-crys-gold mb-2">AI-Powered</h3>
-            <p className="text-gray-300">Advanced machine learning algorithms for professional-grade mastering</p>
+                            <h3 className="text-xl font-semibold text-crys-gold mb-2">Crys Garage Engine-Powered</h3>
+                          <p className="text-gray-300">Advanced Crys Garage Engine algorithms for professional-grade mastering</p>
           </div>
           
           <div className="bg-crys-graphite/30 rounded-xl p-6 backdrop-blur-sm border border-crys-gold/10">

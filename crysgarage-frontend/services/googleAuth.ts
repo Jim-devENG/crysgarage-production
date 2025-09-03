@@ -6,6 +6,10 @@ interface GoogleUser {
   name: string;
   email: string;
   picture?: string;
+  given_name?: string;
+  family_name?: string;
+  locale?: string;
+  verified_email?: boolean;
 }
 
 interface GoogleAuthResponse {
@@ -158,7 +162,11 @@ class GoogleAuthService {
         id: data.id,
         name: data.name,
         email: data.email,
-        picture: data.picture
+        picture: data.picture,
+        given_name: data.given_name,
+        family_name: data.family_name,
+        locale: data.locale,
+        verified_email: data.verified_email
       };
     } catch (error) {
       console.error('Error getting user info:', error);
@@ -169,7 +177,42 @@ class GoogleAuthService {
   // Authenticate with our backend
   protected async authenticateWithBackend(googleUser: GoogleUser, accessToken: string): Promise<GoogleAuthResponse> {
     try {
-      const response = await fetch('/api/auth/google', {
+      // For local development only, return a mock response to test the authentication flow
+      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        console.log('Using mock authentication for local development');
+        const mockUser = {
+          id: '1',
+          name: googleUser.name,
+          email: googleUser.email,
+          tier: 'free',
+          credits: 5,
+          join_date: new Date().toISOString(),
+          total_tracks: 0,
+          total_spent: 0,
+          phone: null,
+          company: null,
+          location: null,
+          bio: googleUser.given_name && googleUser.family_name ? 
+            `Hi, I'm ${googleUser.given_name} ${googleUser.family_name}. Welcome to Crys Garage!` : 
+            "Welcome to Crys Garage!",
+          website: null,
+          instagram: null,
+          twitter: null,
+          facebook: null,
+          youtube: null,
+          tiktok: null,
+          profile_picture: googleUser.picture,
+          kyc_verified: false,
+        };
+        
+        return {
+          user: mockUser,
+          token: 'mock_token_' + Date.now()
+        };
+      }
+
+      const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://crysgarage.studio/api';
+      const response = await fetch(`${API_BASE_URL}/auth/google`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -179,7 +222,11 @@ class GoogleAuthService {
           name: googleUser.name,
           email: googleUser.email,
           picture: googleUser.picture,
-          access_token: accessToken
+          access_token: accessToken,
+          given_name: googleUser.given_name,
+          family_name: googleUser.family_name,
+          locale: googleUser.locale,
+          verified_email: googleUser.verified_email
         })
       });
 

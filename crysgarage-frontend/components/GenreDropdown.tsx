@@ -86,8 +86,8 @@ export const availableGenres: Genre[] = [
     characteristics: ['Industrial sounds', 'Driving rhythms', 'Electronic']
   },
   {
-    id: 'crysgarage',
-    name: 'Crysgarage',
+    id: 'crys-garage',
+    name: 'Crys Garage',
     description: 'Premium blend of Hip-Hop, R&B & Amapiano with enhanced bass and clarity',
     price: 0,
     characteristics: ['Enhanced bass', 'Vocal clarity', 'Premium mastering', 'Hip-Hop energy', 'R&B smoothness', 'Amapiano groove']

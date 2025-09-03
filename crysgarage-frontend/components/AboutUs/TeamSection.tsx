@@ -8,12 +8,12 @@ const TeamSection: React.FC = () => {
           Meet Our Team
         </h2>
         <p className="text-xl text-gray-300 mb-12">
-          The passionate developers and audio engineers behind Crysgarage
+          The passionate developers and audio engineers behind Crys Garage
         </p>
         
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
           <div className="bg-crys-graphite/30 rounded-2xl p-6 border border-crys-gold/10">
-            <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop&crop=face" 
+            <img src="https://api.dicebear.com/7.x/initials/svg?seed=James%20Enietan&backgroundColor=ffd166&fontSize=40" 
                  alt="James Enietan" 
                  className="w-32 h-32 rounded-full mx-auto mb-4 object-cover border-4 border-crys-gold/20" />
             <h3 className="text-xl font-bold text-crys-gold mb-2">James Enietan</h3>
@@ -22,7 +22,7 @@ const TeamSection: React.FC = () => {
           </div>
           
           <div className="bg-crys-graphite/30 rounded-2xl p-6 border border-crys-gold/10">
-            <img src="https://images.unsplash.com/photo-1494790108755-2616b2e00f02?w=400&h=400&fit=crop&crop=face" 
+            <img src="https://api.dicebear.com/7.x/initials/svg?seed=Ishaya%20Shadrach&backgroundColor=ffd166&fontSize=40" 
                  alt="Ishaya Shadrach" 
                  className="w-32 h-32 rounded-full mx-auto mb-4 object-cover border-4 border-crys-gold/20" />
             <h3 className="text-xl font-bold text-crys-gold mb-2">Ishaya Shadrach</h3>
@@ -31,7 +31,7 @@ const TeamSection: React.FC = () => {
           </div>
           
           <div className="bg-crys-graphite/30 rounded-2xl p-6 border border-crys-gold/10">
-            <img src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&h=400&fit=crop&crop=face" 
+            <img src="https://api.dicebear.com/7.x/initials/svg?seed=Ishaya%20Jeremiah&backgroundColor=ffd166&fontSize=40" 
                  alt="Ishaya Jeremiah" 
                  className="w-32 h-32 rounded-full mx-auto mb-4 object-cover border-4 border-crys-gold/20" />
             <h3 className="text-xl font-bold text-crys-gold mb-2">Ishaya Jeremiah</h3>

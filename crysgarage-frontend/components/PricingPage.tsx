@@ -1,4 +1,8 @@
+import React, { useState } from "react";
 import { Button } from "./ui/button";
+import { useApp } from "../contexts/AppContext";
+import { initializeDirectPaystack } from "./Payments/PaystackDirect";
+import { convertUSDToNGN, formatNGN } from "../utils/currencyConverter";
 import { Card, CardContent, CardFooter, CardHeader } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { 
@@ -20,16 +24,74 @@ interface PricingPageProps {
 }
 
 export function PricingPage({ onSelectTier, onGoToDashboard }: PricingPageProps) {
-  const handleTierSelection = (tierId: string) => {
-    console.log('PricingPage: Tier selection clicked:', tierId);
-    
-    if (tierId === 'free') {
-      // For free tier, show authentication modal
-      onSelectTier(tierId);
-    } else {
-      // For other tiers, direct access (as requested)
+  const { user } = useApp();
+
+  // Modal state
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [pendingTier, setPendingTier] = useState<null | { id: string; usd: number; ngnText: string; ngnCents: number; credits: number }>(null);
+
+  const startDirectPayment = async (tierId: string) => {
+    try {
+      const priceMap: Record<string, number> = { professional: 19.99, advanced: 49.99, free: 0 };
+      const creditsMap: Record<string, number> = { professional: 12, advanced: 25, free: 2 };
+      const price = priceMap[tierId] ?? 0;
+      const credits = creditsMap[tierId] ?? 0;
+      
+      // Convert USD to NGN for Paystack
+      const currencyConversion = convertUSDToNGN(price);
+      const reference = `CRYS_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+      const tierKey = tierId === 'professional' ? 'pro' : tierId;
+      const callbackUrl = `${window.location.origin}/billing?payment=success&tier=${tierKey}&credits=${credits}`;
+
+      const authUrl = await initializeDirectPaystack({
+        amountCents: currencyConversion.ngnCents, // Use NGN cents for Paystack
+        email: user!.email,
+        reference,
+        callbackUrl,
+        metadata: { 
+          tier: tierKey, 
+          credits, 
+          user_id: user!.id,
+          original_usd: price,
+          converted_ngn: currencyConversion.ngn
+        }
+      });
+      if (authUrl !== 'inline_redirect') {
+        window.location.href = authUrl;
+      }
+    } catch (e) {
+      console.error('Direct payment init failed:', e);
+      // Fallback to previous flow
       onSelectTier(tierId);
     }
+  };
+
+  const handleTierSelection = (tierId: string) => {
+    console.log('PricingPage: Tier selection clicked:', tierId);
+    if (tierId === 'free') {
+      onSelectTier(tierId);
+      return;
+    }
+    if (!user?.email) {
+      // Require sign-in first
+      onSelectTier(tierId);
+      return;
+    }
+    
+    // Dev account bypass - skip payment for Crys Garage
+    if (user.email === 'dev@crysgarage.studio') {
+      console.log('Dev account detected, bypassing payment for:', tierId);
+      onSelectTier(tierId);
+      return;
+    }
+    
+    // Open custom confirmation modal instead of browser confirm
+    const priceMap: Record<string, number> = { professional: 19.99, advanced: 49.99 };
+    const creditsMap: Record<string, number> = { professional: 12, advanced: 25 };
+    const usd = priceMap[tierId] ?? 0;
+    const conv = convertUSDToNGN(usd);
+    setPendingTier({ id: tierId, usd, ngnText: formatNGN(conv.ngn), ngnCents: conv.ngnCents, credits: creditsMap[tierId] ?? 0 });
+    setShowConfirm(true);
   };
 
   const pricingTiers = [
@@ -61,54 +123,51 @@ export function PricingPage({ onSelectTier, onGoToDashboard }: PricingPageProps)
     {
       id: "professional",
       name: "Professional",
-      price: "$9",
-      subtitle: "100 mastering credits",
+      price: "$19.99",
+      priceNGN: formatNGN(convertUSDToNGN(19.99).ngn),
+      subtitle: "12 download credits",
       description: "Perfect for active producers and artists",
       features: [
-        "100 mastering credits",
+        "12 download credits",
         "All audio formats (up to 100MB)",
         "44.1kHz, 48kHz sample rates",
-        "Up to 192kHz (+$5)",
-        "16-bit resolution (24/32-bit +$1)",
-        "Free: Pop, Rock, Reggae genres",
-        "Premium genres ($1 each)",
-        "444Hz tuning correction",
+        "Up to 192kHz",
+        "16/24/32-bit resolution",
+        "Genre optimization",
         "Noise reduction included",
         "Download WAV/MP3/FLAC"
       ],
       limitations: [
-        "Some premium features cost extra",
-        "Limited to 100 credits"
+        "Credits required per download",
+        "Max 12 downloads per pack"
       ],
       icon: <Zap className="w-6 h-6" />,
-      buttonText: "Try Professional",
+      buttonText: "Choose Professional",
       buttonVariant: "default" as const,
       popular: true
     },
     {
       id: "advanced",
-      name: "Advanced Manual",
-      price: "$20",
-      subtitle: "Unlimited mastering",
-      description: "Complete control for professionals",
+      name: "Advanced",
+      price: "$49.99",
+      priceNGN: formatNGN(convertUSDToNGN(49.99).ngn),
+      subtitle: "25 download credits",
+      description: "More capacity and premium tools",
       features: [
-        "Unlimited mastering sessions",
+        "25 download credits",
         "All audio formats (unlimited size)",
         "All sample rates (44.1kHz - 192kHz)",
         "All bit depths (16/24/32-bit)",
         "All genres included",
-        "444Hz tuning correction",
-        "Real-time manual controls",
-        "8-band graphic EQ",
-        "Advanced compression settings",
-        "Stereo imaging controls",
-        "Limiter with custom settings",
-        "A/B comparison",
-        "Live preview & feedback"
+        "Advanced processing pipeline",
+        "Studio-grade quality",
+        "Priority processing"
       ],
-      limitations: [],
+      limitations: [
+        "Credits required per download"
+      ],
       icon: <Crown className="w-6 h-6" />,
-      buttonText: "Try Advanced",
+      buttonText: "Choose Advanced",
       buttonVariant: "default" as const,
       popular: false
     }
@@ -167,6 +226,41 @@ export function PricingPage({ onSelectTier, onGoToDashboard }: PricingPageProps)
               <span>Instant results</span>
             </div>
           </div>
+          
+          {/* Currency Conversion Notice */}
+          <div className="mt-4 p-3 bg-crys-gold/10 border border-crys-gold/20 rounded-lg max-w-md mx-auto">
+            <div className="flex items-center justify-center gap-2 text-sm">
+              <span className="text-crys-gold">💱</span>
+              <span className="text-crys-light-grey">
+                Prices shown in USD. Payments processed in NGN.
+              </span>
+            </div>
+          </div>
+
+          {/* Mastering Requirements Notice */}
+          <div className="mt-4 p-4 bg-crys-gold/5 border border-crys-gold/20 rounded-lg max-w-2xl mx-auto">
+            <div className="text-center">
+              <h4 className="text-crys-gold font-semibold mb-2 text-sm">📋 Mastering Requirements</h4>
+              <div className="flex flex-wrap justify-center gap-4 text-xs text-crys-light-grey">
+                <div className="flex items-center gap-1">
+                  <span className="w-2 h-2 bg-red-400 rounded-full"></span>
+                  <span>Min: -8 dB headroom</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <span className="w-2 h-2 bg-yellow-400 rounded-full"></span>
+                  <span>Max: -4 dB headroom</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <span className="w-2 h-2 bg-crys-gold rounded-full"></span>
+                  <span>Best: -6 dB headroom</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <span className="w-2 h-2 bg-green-400 rounded-full"></span>
+                  <span>Normalize audio</span>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Pricing Cards */}
@@ -196,10 +290,15 @@ export function PricingPage({ onSelectTier, onGoToDashboard }: PricingPageProps)
                   {tier.icon}
                 </div>
                 <h3 className="text-lg font-bold text-crys-white">{tier.name}</h3>
-                <div className="flex items-baseline justify-center gap-1 mt-1">
-                  <span className="text-2xl font-bold text-crys-gold">{tier.price}</span>
-                  {tier.id !== "free" && (
-                    <span className="text-crys-light-grey text-sm">/month</span>
+                <div className="flex flex-col items-center justify-center gap-1 mt-1">
+                  <div className="flex items-baseline justify-center gap-1">
+                    <span className="text-2xl font-bold text-crys-gold">{tier.price}</span>
+                    {tier.id !== "free" && (
+                      <span className="text-crys-light-grey text-sm">/month</span>
+                    )}
+                  </div>
+                  {tier.priceNGN && (
+                    <span className="text-lg font-semibold text-crys-gold/80">{tier.priceNGN}</span>
                   )}
                 </div>
                 <p className="text-crys-gold text-xs mt-1">{tier.subtitle}</p>
@@ -265,6 +364,45 @@ export function PricingPage({ onSelectTier, onGoToDashboard }: PricingPageProps)
           ))}
         </div>
 
+        {/* Confirm Modal */}
+        {showConfirm && pendingTier && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center">
+            <div className="absolute inset-0 bg-black/70" onClick={() => setShowConfirm(false)} />
+            <div className="relative w-full max-w-md mx-auto bg-audio-panel-bg border border-crys-gold/20 rounded-2xl shadow-xl p-6">
+              <div className="text-center">
+                <div className="mx-auto w-14 h-14 rounded-xl bg-crys-gold/15 border border-crys-gold/30 flex items-center justify-center mb-4">
+                  <Crown className="w-6 h-6 text-crys-gold" />
+                </div>
+                <h3 className="text-crys-white text-xl font-semibold mb-1">Confirm Your Plan</h3>
+                <p className="text-crys-light-grey text-sm mb-4">{pendingTier.id === 'professional' ? 'Professional' : 'Advanced'} • {pendingTier.credits} credits</p>
+                <div className="bg-crys-graphite/40 rounded-lg p-3 border border-crys-graphite/60 mb-4">
+                  <div className="text-crys-gold text-2xl font-bold">{pendingTier.ngnText}</div>
+                  <div className="text-crys-light-grey text-xs">≈ ${pendingTier.usd.toFixed(2)} USD</div>
+                </div>
+                <div className="grid grid-cols-2 gap-3 mt-2">
+                  <button
+                    className="py-2.5 rounded-lg border border-crys-graphite/60 text-crys-light-grey hover:bg-crys-graphite/40"
+                    onClick={() => setShowConfirm(false)}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    className="py-2.5 rounded-lg bg-crys-gold text-crys-black font-semibold hover:bg-crys-gold/90"
+                    onClick={() => {
+                      const tierId = pendingTier.id;
+                      setShowConfirm(false);
+                      // proceed
+                      startDirectPayment(tierId);
+                    }}
+                  >
+                    Continue to Payment
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Additional Features */}
         <div className="bg-crys-charcoal/30 rounded-3xl p-8 md:p-12 mb-16">
           <div className="text-center mb-12">
@@ -272,7 +410,7 @@ export function PricingPage({ onSelectTier, onGoToDashboard }: PricingPageProps)
               Every Plan Includes
             </h2>
             <p className="text-crys-light-grey">
-              Core features that make Crysgarage the best choice for audio mastering
+              Core features that make Crys Garage the best choice for audio mastering
             </p>
           </div>
           

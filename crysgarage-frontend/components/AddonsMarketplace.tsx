@@ -173,13 +173,13 @@ export function AddonsMarketplace({ onClose, onPurchase, userTier, onUpgrade }: 
     {
       id: 'noise-reduction-pro',
       name: 'Advanced Noise Reduction',
-      description: 'AI-powered noise reduction that preserves musical content while removing unwanted artifacts.',
+              description: 'Crys Garage Engine-powered noise reduction that preserves musical content while removing unwanted artifacts.',
       price: 5,
       category: 'processing',
       rating: 4.8,
       purchases: 892,
       tier: ['free professional', 'professional', 'advanced'],
-      features: ['AI-powered detection', 'Musical content preservation', 'Real-time processing', 'Spectral repair'],
+              features: ['Crys Garage Engine-powered detection', 'Musical content preservation', 'Real-time processing', 'Spectral repair'],
       icon: <Volume2 className="w-5 h-5" />,
       popular: true
     },
@@ -248,13 +248,13 @@ export function AddonsMarketplace({ onClose, onPurchase, userTier, onUpgrade }: 
     {
       id: 'reference-matching-tool',
       name: 'Reference Matching Tool',
-      description: 'AI-powered tool to match your master to commercial references with precision.',
+              description: 'Crys Garage Engine-powered tool to match your master to commercial references with precision.',
       price: 25,
       category: 'tools',
       rating: 4.6,
       purchases: 567,
       tier: ['professional', 'advanced'],
-      features: ['AI-powered matching', 'Commercial references', 'Precision analysis', 'Auto-adjustment'],
+              features: ['Crys Garage Engine-powered matching', 'Commercial references', 'Precision analysis', 'Auto-adjustment'],
       icon: <Target className="w-5 h-5" />,
       new: true
     }

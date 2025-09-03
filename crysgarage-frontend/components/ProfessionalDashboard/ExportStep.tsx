@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ArrowLeft, Download, RotateCcw, Settings, Loader2 } from 'lucide-react';
+import { creditsAPI } from '../../services/api';
 import { GENRE_PRESETS } from './utils/genrePresets';
 import RealTimeProcessingVisualizer from '../AdvancedTierDashboard/RealTimeProcessingVisualizer';
 
@@ -41,6 +42,25 @@ const ExportStep: React.FC<ExportStepProps> = ({
     gainApplied: number;
     compressionApplied: string;
   } | null>(null);
+
+  // Helper: update local user credits and broadcast change
+  const adjustLocalCredits = (delta: number, absolute?: number) => {
+    try {
+      const raw = localStorage.getItem('crysgarage_user');
+      if (!raw) return;
+      const user = JSON.parse(raw);
+      if (typeof absolute === 'number') {
+        user.credits = absolute;
+      } else {
+        user.credits = Math.max(0, (user.credits || 0) + delta);
+      }
+      localStorage.setItem('crysgarage_user', JSON.stringify(user));
+      window.dispatchEvent(new CustomEvent('credits:updated', { detail: { credits: user.credits } }));
+      console.log('🔄 Local credits updated (professional):', user.credits);
+    } catch (e) {
+      console.warn('Failed to adjust local credits (professional):', e);
+    }
+  };
 
   // Progress tracking function
   const updateProgress = (progress: number, stage: string) => {
@@ -171,8 +191,33 @@ const ExportStep: React.FC<ExportStepProps> = ({
     setTotalSize(0);
     
     try {
+      console.log('🎵 Professional download starting - deducting credit...');
+      updateProgress(5, 'Deducting credit...');
+
+      // Deduct credit for download
+      try {
+        const audioId = selectedFile.name + '_' + Date.now();
+        const creditResult = await creditsAPI.deductCreditForDownload(audioId);
+        console.log('✅ Credit deducted successfully:', creditResult);
+        console.log(`💰 Remaining credits: ${creditResult.remaining_credits}`);
+        if (typeof creditResult.remaining_credits === 'number') {
+          adjustLocalCredits(0, creditResult.remaining_credits);
+        } else {
+          adjustLocalCredits(-1);
+        }
+      } catch (creditError: any) {
+        console.error('❌ Credit deduction failed (professional):', creditError);
+        if (creditError.message?.includes('Insufficient credits')) {
+          alert('Insufficient credits. Please purchase more credits to download.');
+          return;
+        }
+        // Graceful fallback: deduct locally
+        adjustLocalCredits(-1);
+        console.warn('⚠️ Credit API unavailable - deducted locally for Professional Tier.');
+      }
+
       console.log('🎵 Professional download starting - capturing processed audio...');
-      updateProgress(5, 'Initializing audio processing...');
+      updateProgress(10, 'Initializing audio processing...');
       
       // Get processed audio from real-time player
       let processedAudioUrl: string | null = null;

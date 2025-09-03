@@ -52,7 +52,7 @@ const VisionMission: React.FC = () => {
               </li>
               <li className="flex items-start">
                 <span className="text-crys-gold mr-3">•</span>
-                AI-powered optimization for every genre and style
+                Crys Garage Engine-powered optimization for every genre and style
               </li>
             </ul>
           </motion.div>
@@ -79,7 +79,7 @@ const VisionMission: React.FC = () => {
             <ul className="space-y-3 text-gray-300">
               <li className="flex items-start">
                 <span className="text-crys-gold mr-3">•</span>
-                Develop industry-leading AI mastering algorithms
+                Develop industry-leading Crys Garage Engine mastering algorithms
               </li>
               <li className="flex items-start">
                 <span className="text-crys-gold mr-3">•</span>

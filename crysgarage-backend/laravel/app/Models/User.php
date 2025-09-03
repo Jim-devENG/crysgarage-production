@@ -26,6 +26,19 @@ class User extends Authenticatable
         'total_tracks',
         'total_spent',
         'api_token',
+        'phone',
+        'company',
+        'location',
+        'bio',
+        'website',
+        'instagram',
+        'twitter',
+        'facebook',
+        'youtube',
+        'tiktok',
+        'profile_picture',
+        'kyc_verified',
+        'kyc_verified_at',
     ];
 
     /**

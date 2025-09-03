@@ -48,6 +48,7 @@ export function CoursesPage({ onGetStarted }: CoursesPageProps) {
       rating: 4.8,
       students: 1960,
       price: "$29",
+      priceNGN: "₦43,500",
       image: "🥁",
       topics: ["African Rhythms", "Sub-bass Handling", "Vocal Clarity", "Traditional Instruments", "Modern Fusion"]
     },
@@ -62,6 +63,7 @@ export function CoursesPage({ onGetStarted }: CoursesPageProps) {
       rating: 4.9,
       students: 1450,
       price: "$39",
+      priceNGN: "₦58,500",
       image: "🎤",
       topics: ["Choir Recording", "Organ Processing", "Vocal Harmonies", "Dynamic Worship", "Live Recording"]
     },

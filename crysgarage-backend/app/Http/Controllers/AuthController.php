@@ -122,6 +122,10 @@ class AuthController extends Controller
             'email' => 'required|email',
             'picture' => 'nullable|string',
             'access_token' => 'required|string',
+            'given_name' => 'nullable|string|max:255',
+            'family_name' => 'nullable|string|max:255',
+            'locale' => 'nullable|string|max:10',
+            'verified_email' => 'nullable|boolean',
         ]);
 
         if ($validator->fails()) {
@@ -140,6 +144,7 @@ class AuthController extends Controller
                 // User exists, update their information and generate new token
                 $user->update([
                     'name' => $request->name,
+                    'profile_picture' => $request->picture,
                     'api_token' => Str::random(60),
                 ]);
 
@@ -148,7 +153,7 @@ class AuthController extends Controller
                     'email' => $user->email
                 ]);
             } else {
-                // Create new user
+                // Create new user with enhanced profile data
                 $user = User::create([
                     'name' => $request->name,
                     'email' => $request->email,
@@ -158,6 +163,10 @@ class AuthController extends Controller
                     'total_tracks' => 0,
                     'total_spent' => 0,
                     'api_token' => Str::random(60),
+                    'profile_picture' => $request->picture,
+                    'bio' => $request->given_name && $request->family_name ? 
+                        "Hi, I'm {$request->given_name} {$request->family_name}. Welcome to Crys Garage!" : 
+                        "Welcome to Crys Garage!",
                 ]);
 
                 \Log::info('Google signup successful for new user', [
@@ -176,6 +185,18 @@ class AuthController extends Controller
                     'join_date' => $user->created_at->toISOString(),
                     'total_tracks' => $user->total_tracks,
                     'total_spent' => $user->total_spent,
+                    'phone' => $user->phone,
+                    'company' => $user->company,
+                    'location' => $user->location,
+                    'bio' => $user->bio,
+                    'website' => $user->website,
+                    'instagram' => $user->instagram,
+                    'twitter' => $user->twitter,
+                    'facebook' => $user->facebook,
+                    'youtube' => $user->youtube,
+                    'tiktok' => $user->tiktok,
+                    'profile_picture' => $user->profile_picture,
+                    'kyc_verified' => $user->kyc_verified,
                 ],
                 'token' => $user->api_token
             ]);

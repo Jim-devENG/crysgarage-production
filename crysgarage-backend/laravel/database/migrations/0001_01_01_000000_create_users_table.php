@@ -17,6 +17,27 @@ return new class extends Migration
             $table->string('email')->unique();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
+            $table->string('tier')->default('free');
+            $table->integer('credits')->default(5);
+            $table->integer('total_tracks')->default(0);
+            $table->decimal('total_spent', 10, 2)->default(0);
+            $table->string('api_token', 80)->unique()->nullable();
+            
+            // KYC Fields
+            $table->string('phone')->nullable();
+            $table->string('company')->nullable();
+            $table->string('location')->nullable();
+            $table->text('bio')->nullable();
+            $table->string('website')->nullable();
+            $table->string('instagram')->nullable();
+            $table->string('twitter')->nullable();
+            $table->string('facebook')->nullable();
+            $table->string('youtube')->nullable();
+            $table->string('tiktok')->nullable();
+            $table->string('profile_picture')->nullable();
+            $table->boolean('kyc_verified')->default(false);
+            $table->timestamp('kyc_verified_at')->nullable();
+            
             $table->rememberToken();
             $table->timestamps();
         });

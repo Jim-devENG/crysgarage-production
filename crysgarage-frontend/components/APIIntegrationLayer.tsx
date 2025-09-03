@@ -67,7 +67,7 @@ export function APIIntegrationLayer({ isVisible, onClose }: APIIntegrationLayerP
       endpoint: '/masterings',
       method: 'POST',
       status: 'ready',
-      description: 'Initiate AI mastering process with genre and settings',
+      description: 'Initiate Crys Garage Engine mastering process with genre and settings',
       mappedComponent: 'ProcessingConfig, MasteringControls',
       implementationStatus: 'Frontend ready, needs mastering engine API',
       currentState: 'Config collection works, processing is simulated'

@@ -7,7 +7,7 @@ interface CrysGarageLogoProps {
   style?: React.CSSProperties;
 }
 
-export function CrysGarageLogo({ size = 40, className = "", onClick, style }: CrysGarageLogoProps) {
+export function CrysGarageLogo({ size = 64, className = "", onClick, style }: CrysGarageLogoProps) {
   const [imageError, setImageError] = React.useState(false);
 
   return (

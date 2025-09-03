@@ -66,7 +66,7 @@ export function Header({
 
   const navigationItems = [
     { id: 'home', label: 'Home', icon: <Home className="w-4 h-4" />, show: true },
-    { id: 'studio', label: 'Pricing', icon: <CreditCard className="w-4 h-4" />, show: true },
+    { id: 'studio', label: 'Studio', icon: <CreditCard className="w-4 h-4" />, show: true },
     { id: 'about', label: 'About Us', icon: <Users className="w-4 h-4" />, show: true },
     { 
       id: 'help', 

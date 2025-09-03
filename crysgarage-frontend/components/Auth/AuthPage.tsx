@@ -157,7 +157,8 @@ export function AuthPage({
 
       const response = await googleAuthService.signInWithGoogle();
       console.log('Google authentication successful:', response.user);
-      onAuthSuccess(response.user);
+      // Ensure token is persisted by passing it through to onAuthSuccess
+      onAuthSuccess({ ...response.user, token: response.token });
       
       // For paid tiers, proceed to billing
       if (selectedTier !== 'free') {

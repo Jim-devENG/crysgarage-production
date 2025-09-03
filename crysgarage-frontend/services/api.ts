@@ -4,7 +4,7 @@ import axios from 'axios';
 export const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://crysgarage.studio/api';
 
 // Create axios instance with default config
-const api = axios.create({
+export const api = axios.create({
   baseURL: API_BASE_URL,
   timeout: 30000,
   headers: {
@@ -75,6 +75,20 @@ export interface User {
   join_date: string;
   total_tracks: number;
   total_spent: number;
+  // KYC Fields
+  phone?: string;
+  company?: string;
+  location?: string;
+  bio?: string;
+  website?: string;
+  instagram?: string;
+  twitter?: string;
+  facebook?: string;
+  youtube?: string;
+  tiktok?: string;
+  profile_picture?: string;
+  kyc_verified?: boolean;
+  // Legacy fields
   avatar?: string;
   username?: string;
   role?: 'member' | 'moderator' | 'admin' | 'premium';
@@ -590,31 +604,205 @@ export const audioAPI = {
   },
 };
 
-// Credits and billing API
-export const creditsAPI = {
-  // Get credit balance
-  getBalance: async (): Promise<{ credits: number; tier: string }> => {
-    const response = await api.get('/credits/balance');
-    return response.data;
+// Paystack Payment Gateway
+export const paystackAPI = {
+  // Initialize Paystack payment (public endpoint - no auth required)
+  initializePayment: async (amount: number, email: string, reference: string, metadata: any = {}) => {
+    try {
+      console.log('Initializing Paystack payment:', { amount, email, reference, metadata });
+      
+      // Use the working test endpoint temporarily
+      const response = await fetch(`${API_BASE_URL}/test-paystack`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify({
+          amount: amount * 100, // Paystack expects amount in kobo (smallest currency unit)
+          email,
+          reference,
+          metadata,
+          callback_url: `${window.location.origin}/payment/callback`
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `HTTP ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log('Paystack success response:', data);
+      
+      // Extract the actual Paystack response from the test endpoint
+      if (data.paystack_response && data.paystack_response.status) {
+        return data.paystack_response;
+      }
+      
+      return data;
+    } catch (error) {
+      console.error('Paystack initialization error:', error);
+      throw error;
+    }
   },
 
-  // Purchase credits
-  purchaseCredits: async (amount: number, payment_method: string): Promise<{ success: boolean; credits_added: number }> => {
-    const response = await api.post('/credits/purchase', { amount, payment_method });
-    return response.data;
+  // Verify payment (public endpoint - no auth required)
+  verifyPayment: async (reference: string) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/paystack/verify/${reference}`, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+        }
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `HTTP ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Paystack verification error:', error);
+      throw error;
+    }
+  },
+
+  // Get payment history (requires auth)
+  getPaymentHistory: async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/paystack/history`, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('crysgarage_token')}`
+        }
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || 'Failed to fetch payment history');
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Payment history error:', error);
+      throw error;
+    }
+  }
+};
+
+// Updated Credit System
+export const creditsAPI = {
+  // Purchase credits based on tier
+  purchaseCredits: async (tier: 'free' | 'pro' | 'advanced', paymentMethod: string = 'paystack') => {
+    try {
+      const tierPricing = {
+        free: { credits: 2, price: 4.99 },
+        pro: { credits: 12, price: 19.99 },
+        advanced: { credits: 25, price: 49.99 }
+      };
+
+      const selectedTier = tierPricing[tier];
+      
+      const response = await fetch(`${API_BASE_URL}/credits/purchase`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('crysgarage_token')}`
+        },
+        body: JSON.stringify({
+          tier,
+          credits: selectedTier.credits,
+          amount: selectedTier.price,
+          payment_method: paymentMethod
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to purchase credits');
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Credit purchase error:', error);
+      throw error;
+    }
+  },
+
+  // Deduct credit for download
+  deductCreditForDownload: async (audioId: string) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/credits/deduct-download`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('crysgarage_token')}`
+        },
+        body: JSON.stringify({
+          audio_id: audioId
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to deduct credit');
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Credit deduction error:', error);
+      throw error;
+    }
+  },
+
+  // Get current balance
+  getBalance: async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/credits/balance`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('crysgarage_token')}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to get credit balance');
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Get balance error:', error);
+      throw error;
+    }
   },
 
   // Get credit history
-  getHistory: async (): Promise<Array<{
-    id: number;
-    type: 'purchase' | 'usage' | 'refund';
-    amount: number;
-    description: string;
-    created_at: string;
-  }>> => {
-    const response = await api.get('/credits/history');
-    return response.data;
-  },
+  getCreditHistory: async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/credits/history`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('crysgarage_token')}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to get credit history');
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Credit history error:', error);
+      throw error;
+    }
+  }
 };
 
 // Addon marketplace API

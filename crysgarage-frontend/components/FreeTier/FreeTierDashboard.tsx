@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Upload, Play, Pause, Download, Activity, Music, ArrowLeft } from 'lucide-react';
+import { Upload, Play, Pause, Download, Activity, Music, ArrowLeft, CreditCard, DollarSign } from 'lucide-react';
 import DownloadStep from './DownloadStep';
+import { creditsAPI } from '../../services/api';
 
 // Types
 interface AudioFile {
@@ -36,6 +37,10 @@ interface Genre {
 
 type TabType = 'upload' | 'processing' | 'download';
 
+interface FreeTierDashboardProps {
+  onDownloadAttempt?: () => boolean;
+}
+
 // Free Tier Genre Presets (copied from Professional Tier)
 const FREE_GENRE_PRESETS: Record<string, GenrePreset> = {
   'hip-hop': {
@@ -45,7 +50,7 @@ const FREE_GENRE_PRESETS: Record<string, GenrePreset> = {
     truePeak: -0.2,
     targetLufs: -8.0
   },
-  afrobeats: {
+  'afrobeats': {
     gain: 2.2,
     compression: { threshold: -18, ratio: 4, attack: 0.002, release: 0.2 },
     eq: { low: 1.8, mid: 1.0, high: 0.5 },
@@ -58,19 +63,19 @@ const FREE_GENRE_PRESETS: Record<string, GenrePreset> = {
 const availableGenres: Genre[] = [
   {
     id: 'hip-hop',
-    name: 'Hip-Hop',
+    name: 'Street Pulse',
     color: 'bg-orange-500',
-    description: 'Punchy & Clear'
+    description: 'Bass-Driven & Punchy'
   },
   {
     id: 'afrobeats',
-    name: 'Afrobeats',
+    name: 'Island Heat',
     color: 'bg-red-500',
-    description: 'High Energy, Bass Heavy'
+    description: 'Rhythmic & Energetic'
   }
 ];
 
-const FreeTierDashboard: React.FC = () => {
+const FreeTierDashboard: React.FC<FreeTierDashboardProps> = ({ onDownloadAttempt }) => {
   // States
   const [activeTab, setActiveTab] = useState<TabType>('upload');
   const [uploadedFile, setUploadedFile] = useState<AudioFile | null>(null);
@@ -342,6 +347,26 @@ const FreeTierDashboard: React.FC = () => {
     console.log('🎵 File uploaded:', audioFile.name);
   };
 
+  // Helper: update local user credits and broadcast change
+  const adjustLocalCredits = (delta: number, absolute?: number) => {
+    try {
+      const raw = localStorage.getItem('crysgarage_user');
+      if (!raw) return;
+      const user = JSON.parse(raw);
+      if (typeof absolute === 'number') {
+        user.credits = absolute;
+      } else {
+        user.credits = Math.max(0, (user.credits || 0) + delta);
+      }
+      localStorage.setItem('crysgarage_user', JSON.stringify(user));
+      // Broadcast to any listeners (dashboards/header) to refresh UI
+      window.dispatchEvent(new CustomEvent('credits:updated', { detail: { credits: user.credits } }));
+      console.log('🔄 Local credits updated:', user.credits);
+    } catch (e) {
+      console.warn('Failed to adjust local credits:', e);
+    }
+  };
+
   // Start mastering - Instant like Professional Tier genre selection
   const startProcessing = async () => {
     if (!uploadedFile) return;
@@ -486,8 +511,79 @@ const FreeTierDashboard: React.FC = () => {
       return;
     }
 
+    // Check if user can download (authentication and credits)
+    if (onDownloadAttempt) {
+      const canDownload = onDownloadAttempt();
+      if (!canDownload) {
+        console.log('Download blocked - user needs to authenticate or purchase credits');
+        return;
+      }
+    }
+
     try {
-      console.log('🎵 Free Tier download starting - capturing processed audio...');
+      console.log('🎵 Free Tier download starting - deducting credit...');
+      
+      // Deduct credit for download
+      try {
+        const creditResult = await creditsAPI.deductCreditForDownload(uploadedFile.id);
+        console.log('✅ Credit deducted successfully:', creditResult);
+        console.log(`💰 Remaining credits: ${creditResult.remaining_credits}`);
+        if (typeof creditResult.remaining_credits === 'number') {
+          adjustLocalCredits(0, creditResult.remaining_credits);
+        } else {
+          // Assume -1 deduction if backend didn't return remaining
+          adjustLocalCredits(-1);
+        }
+      } catch (creditError: any) {
+        console.error('❌ Credit deduction failed:', creditError);
+        if (creditError.message?.includes('Insufficient credits')) {
+          // Show payment modal for credits
+          // Replace with a basic non-blocking UI prompt for now
+          const proceed = true;
+          if (proceed) {
+            try {
+              const purchaseResult = await creditsAPI.purchaseCredits('free', 'paystack');
+              console.log('✅ Credits purchased successfully:', purchaseResult);
+              
+              // Retry the download with new credits
+              const retryCreditResult = await creditsAPI.deductCreditForDownload(uploadedFile.id);
+              console.log('✅ Credit deducted successfully after purchase:', retryCreditResult);
+              if (typeof retryCreditResult.remaining_credits === 'number') {
+                adjustLocalCredits(0, retryCreditResult.remaining_credits);
+              } else {
+                adjustLocalCredits(-1);
+              }
+            } catch (purchaseError) {
+              console.error('❌ Credit purchase failed:', purchaseError);
+              alert('Failed to purchase credits. Please try again.');
+              return;
+            }
+          } else {
+            return; // User cancelled
+          }
+        } else {
+          // Graceful fallback for development: allow download if credit API is unavailable
+          try {
+            const userStr = localStorage.getItem('crysgarage_user');
+            const user = userStr ? JSON.parse(userStr) : null;
+            const isDev = user?.email === 'dev@crysgarage.studio';
+            if (isDev) {
+              // Simulate local credit deduction for dev account
+              adjustLocalCredits(-1);
+              console.warn('⚠️ Credit API unavailable - proceeding with local deduction for dev account.');
+            } else {
+              // For non-dev during outages, still deduct locally so UI remains consistent
+              adjustLocalCredits(-1);
+              console.warn('⚠️ Credit API unavailable - deducted locally for Free Tier.');
+            }
+          } catch (e) {
+            console.warn('Credit fallback handling error:', e);
+          }
+          // Continue to download without blocking
+        }
+      }
+
+      console.log('🎵 Capturing processed audio...');
       
       // Get processed audio using MediaRecorder
       let processedAudioBlob: Blob | null = null;
@@ -538,7 +634,7 @@ const FreeTierDashboard: React.FC = () => {
       // Generate filename with format info
       const originalName = uploadedFile.file.name;
       const nameWithoutExt = originalName.replace(/\.[^/.]+$/, '');
-      const filename = `${nameWithoutExt}_Crysgarage_${selectedGenre.name}_24bit_44k.wav`;
+      const filename = `${nameWithoutExt}_Crys_Garage_${selectedGenre.name}_24bit_44k.wav`;
       
       link.download = filename;
       document.body.appendChild(link);
@@ -871,6 +967,89 @@ const FreeTierDashboard: React.FC = () => {
               <div className="text-center">
                 <h1 className="text-3xl font-bold text-amber-400 mb-2">Free Tier Mastering</h1>
                 <p className="text-gray-400">Upload your audio file to get started with real-time mastering</p>
+                
+                {/* Free Mastering Badge */}
+                <div className="mt-3 inline-flex items-center gap-2 bg-green-500/20 border border-green-500/30 rounded-lg px-3 py-1">
+                  <span className="text-green-400 text-sm font-medium">🎵 Mastering: FREE</span>
+                </div>
+              </div>
+
+              {/* Mastering Requirements */}
+              <div className="bg-gradient-to-r from-amber-500/10 to-amber-500/5 border border-amber-500/20 rounded-xl p-6 max-w-4xl mx-auto">
+                <h3 className="text-lg font-semibold text-amber-400 mb-4 flex items-center justify-center gap-2">
+                  <Activity className="w-5 h-5" />
+                  Mastering Requirements - FREE!
+                </h3>
+                <div className="grid md:grid-cols-2 gap-6">
+                  {/* Headroom Requirements */}
+                  <div className="space-y-3">
+                    <h4 className="text-amber-300 font-medium text-sm">Headroom Requirements</h4>
+                    <div className="space-y-2 text-xs">
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-300">Minimum:</span>
+                        <span className="px-2 py-1 bg-red-500/20 text-red-400 rounded border border-red-500/30">-8 dB</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-300">Maximum:</span>
+                        <span className="px-2 py-1 bg-yellow-500/20 text-yellow-400 rounded border border-yellow-500/30">-4 dB</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-300">Best Result:</span>
+                        <span className="px-2 py-1 bg-amber-500/20 text-amber-400 rounded border border-amber-500/30">-6 dB</span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Audio Preparation */}
+                  <div className="space-y-3">
+                    <h4 className="text-amber-300 font-medium text-sm">Audio Preparation</h4>
+                    <div className="space-y-2 text-xs">
+                      <div className="flex items-center gap-2 text-gray-300">
+                        <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+                        <span>Normalize your audio</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-gray-300">
+                        <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+                        <span>Avoid clipping</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-gray-300">
+                        <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+                        <span>Maintain dynamics</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-gray-300">
+                        <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+                        <span>WAV/MP3 format</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-4 p-3 bg-amber-500/10 rounded-lg border border-amber-500/20">
+                  <p className="text-xs text-amber-300 text-center">
+                                    <span className="font-semibold">Pro Tip:</span> -6 dB headroom is the sweet spot for mastering. 
+                This gives our Crys Garage Engine enough room to work with while maintaining your mix's dynamics.
+                  </p>
+                </div>
+                
+                {/* Pricing Notice */}
+                <div className="mt-4 p-4 bg-gradient-to-r from-green-500/10 to-green-400/10 border border-green-500/20 rounded-lg">
+                  <div className="text-center">
+                    <h4 className="text-green-400 font-semibold mb-2 text-sm">💰 Pricing Model</h4>
+                    <div className="flex flex-wrap justify-center gap-4 text-xs text-green-300">
+                      <div className="flex items-center gap-1">
+                        <span className="w-2 h-2 bg-green-400 rounded-full"></span>
+                        <span>Mastering: FREE</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <span className="w-2 h-2 bg-amber-400 rounded-full"></span>
+                        <span>Download: $4.99 for 2 credits</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <span className="w-2 h-2 bg-blue-400 rounded-full"></span>
+                        <span>1 credit = 1 download</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               {/* Upload Area */}
@@ -1072,22 +1251,22 @@ const FreeTierDashboard: React.FC = () => {
                     <div className="w-12 h-12 bg-amber-500/20 rounded-full flex items-center justify-center mx-auto">
                       <span className="text-xl">🎵</span>
                     </div>
-                    <h4 className="font-medium">1. Select Genre</h4>
-                    <p className="text-sm text-gray-400">Choose from our professional mastering presets</p>
+                    <h4 className="font-medium">1. Choose Your Style</h4>
+                    <p className="text-sm text-gray-400">Select from our premium mastering styles</p>
                   </div>
                   <div className="space-y-2">
                     <div className="w-12 h-12 bg-amber-500/20 rounded-full flex items-center justify-center mx-auto">
                       <span className="text-xl">▶️</span>
                     </div>
-                    <h4 className="font-medium">2. Start Playing</h4>
-                    <p className="text-sm text-gray-400">Click play to hear your audio with the selected effects</p>
+                    <h4 className="font-medium">2. Experience the Magic</h4>
+                    <p className="text-sm text-gray-400">Click play to hear your audio transformed instantly</p>
                   </div>
                   <div className="space-y-2">
                     <div className="w-12 h-12 bg-amber-500/20 rounded-full flex items-center justify-center mx-auto">
                       <span className="text-xl">⚡</span>
                     </div>
-                    <h4 className="font-medium">3. Switch Genres</h4>
-                    <p className="text-sm text-gray-400">Change genres while playing to hear instant differences</p>
+                    <h4 className="font-medium">3. Switch Styles Live</h4>
+                    <p className="text-sm text-gray-400">Change mastering styles while playing to hear real-time differences</p>
                   </div>
                 </div>
                 
@@ -1096,7 +1275,7 @@ const FreeTierDashboard: React.FC = () => {
                   <div className="mt-6 p-4 bg-amber-500/10 rounded-lg border border-amber-500/20">
                     <h4 className="font-medium text-amber-400 mb-2">Real-Time Switching Active</h4>
                     <p className="text-sm text-gray-300">
-                      Click on any genre above while your audio is playing to hear instant changes. 
+                      Click on any mastering style above while your audio is playing to hear instant changes. 
                       The effects will apply immediately without stopping the playback.
                     </p>
                   </div>
@@ -1118,7 +1297,7 @@ const FreeTierDashboard: React.FC = () => {
                      }}
                      className="px-8 py-4 bg-amber-500 hover:bg-amber-600 text-black font-semibold rounded-lg transition-colors flex items-center space-x-3"
                    >
-                     <span>Next: Download Your Mastered Audio</span>
+                     <span>Next: Get Your Mastered Audio</span>
                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                      </svg>

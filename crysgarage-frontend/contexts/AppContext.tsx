@@ -11,6 +11,7 @@ interface AppState {
   credits: number;
   tier: string;
   error: string | null;
+  isSyncing: boolean;
 }
 
 type AppAction =
@@ -21,7 +22,8 @@ type AppAction =
   | { type: 'SET_CREDITS'; payload: number }
   | { type: 'SET_TIER'; payload: string }
   | { type: 'SET_ERROR'; payload: string | null }
-  | { type: 'CLEAR_ERROR' };
+  | { type: 'CLEAR_ERROR' }
+  | { type: 'SET_SYNCING'; payload: boolean };
 
 // Initial state
 const initialState: AppState = {
@@ -32,6 +34,7 @@ const initialState: AppState = {
   credits: 0,
   tier: 'free',
   error: null,
+  isSyncing: false,
 };
 
 // Reducer
@@ -59,6 +62,8 @@ function appReducer(state: AppState, action: AppAction): AppState {
       return { ...state, error: action.payload };
     case 'CLEAR_ERROR':
       return { ...state, error: null };
+    case 'SET_SYNCING':
+      return { ...state, isSyncing: action.payload };
     default:
       return state;
   }
@@ -75,6 +80,7 @@ interface AppContextType extends AppState {
   getSessionStatus: (sessionId: string) => Promise<void>;
   refreshUserData: () => Promise<void>;
   clearError: () => void;
+  updateUser: (user: User) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -100,6 +106,68 @@ export function AppProvider({ children }: AppProviderProps) {
 
     return () => clearTimeout(initTimeout);
   }, []);
+
+  // Additional effect to ensure authentication state is always in sync with localStorage
+  useEffect(() => {
+    const checkAuthState = () => {
+      const token = localStorage.getItem('crysgarage_token');
+      const storedUser = localStorage.getItem('crysgarage_user');
+      
+      if (token && storedUser && !state.user) {
+        try {
+          const user = JSON.parse(storedUser);
+          console.log('Found stored user data, updating state:', user);
+          dispatch({ type: 'SET_USER', payload: user });
+        } catch (error) {
+          console.error('Failed to parse stored user data:', error);
+          localStorage.removeItem('crysgarage_token');
+          localStorage.removeItem('crysgarage_user');
+        }
+      } else if (!token && !storedUser && state.user) {
+        console.log('No stored auth data but user in state, clearing state');
+        dispatch({ type: 'SET_USER', payload: null });
+      }
+    };
+
+    // Check immediately
+    checkAuthState();
+
+    // Set up interval to check periodically (reduced frequency to avoid conflicts)
+    const interval = setInterval(checkAuthState, 5000);
+
+    return () => clearInterval(interval);
+  }, [state.user]);
+
+  // Background sync for real-time user data updates
+  useEffect(() => {
+    if (!state.user || !state.isAuthenticated) return;
+
+    const syncUserData = async () => {
+      try {
+        dispatch({ type: 'SET_SYNCING', payload: true });
+        console.log('Background sync: Fetching latest user data...');
+        const refreshedUser = await authService.refreshUser();
+        if (refreshedUser) {
+          // Only update if there are actual changes to avoid unnecessary re-renders
+          const hasChanges = JSON.stringify(refreshedUser) !== JSON.stringify(state.user);
+          if (hasChanges) {
+            console.log('Background sync: User data updated', refreshedUser);
+            dispatch({ type: 'SET_USER', payload: refreshedUser });
+          }
+        }
+      } catch (error) {
+        console.error('Background sync failed:', error);
+        // Don't show error to user for background sync failures
+      } finally {
+        dispatch({ type: 'SET_SYNCING', payload: false });
+      }
+    };
+
+    // Sync every 30 seconds when user is authenticated
+    const syncInterval = setInterval(syncUserData, 30000);
+
+    return () => clearInterval(syncInterval);
+  }, [state.user, state.isAuthenticated]);
 
   const initializeApp = async () => {
     try {
@@ -291,6 +359,10 @@ export function AppProvider({ children }: AppProviderProps) {
     dispatch({ type: 'CLEAR_ERROR' });
   };
 
+  const updateUser = (user: User) => {
+    dispatch({ type: 'SET_USER', payload: user });
+  };
+
   const value: AppContextType = {
     ...state,
     dispatch,
@@ -302,6 +374,7 @@ export function AppProvider({ children }: AppProviderProps) {
     getSessionStatus,
     refreshUserData,
     clearError,
+    updateUser,
   };
 
   return (

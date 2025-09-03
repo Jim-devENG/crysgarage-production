@@ -55,7 +55,7 @@ export function LandingPage({ onGetStarted, onTryMastering }: LandingPageProps) 
   const features = [
     {
       icon: <Zap className="w-8 h-8" />,
-      title: "Intelligent Mastering",
+              title: "Crys Garage Engine Mastering",
       description: "Our proprietary Crys Garage Engine analyzes and optimizes your audio with professional precision in minutes, not hours.",
       image: "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400&h=300&fit=crop"
     },
@@ -97,7 +97,7 @@ export function LandingPage({ onGetStarted, onTryMastering }: LandingPageProps) 
     {
       name: "Kwame Asante",
       role: "Afrobeats Producer",
-      content: "Crysgarage transformed my workflow. What used to take days now takes minutes, and the quality is incredible.",
+      content: "Crys Garage transformed my workflow. What used to take days now takes minutes, and the quality is incredible.",
       rating: 5,
       image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop&crop=face"
     },
@@ -345,7 +345,7 @@ export function LandingPage({ onGetStarted, onTryMastering }: LandingPageProps) 
                 className="text-xl md:text-2xl text-crys-light-grey mb-4 max-w-2xl leading-relaxed"
                 variants={itemVariants}
               >
-                Professional audio mastering platform designed for African artists and producers. 
+                Professional audio mastering platform designed for African by African. 
                 Get studio-quality masters in minutes, not hours.
               </motion.p>
               
@@ -487,6 +487,157 @@ export function LandingPage({ onGetStarted, onTryMastering }: LandingPageProps) 
 
 
 
+
+      {/* Mastering Requirements Section */}
+      <section className="bg-crys-charcoal/30 relative py-20">
+        <div className="container mx-auto px-6 sm:px-8 lg:px-12">
+          <motion.div 
+            className="text-center mb-16"
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+            viewport={{ once: true }}
+          >
+            <Badge variant="secondary" className="bg-crys-gold/20 text-crys-gold mb-6 px-4 py-2 text-sm">
+              <Volume2 className="w-4 h-4 mr-2" />
+              Mastering Requirements
+            </Badge>
+            <h2 className="text-4xl md:text-5xl font-bold text-crys-white mb-6">
+              Prepare Your Audio for
+              <span className="block text-crys-gold bg-gradient-to-r from-crys-gold to-yellow-400 bg-clip-text text-transparent">
+                Professional Mastering
+              </span>
+            </h2>
+            <p className="text-xl text-crys-light-grey max-w-3xl mx-auto">
+              Follow these guidelines to ensure your tracks get the best possible mastering results
+            </p>
+          </motion.div>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
+            {/* Headroom Requirements */}
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.1 }}
+              viewport={{ once: true }}
+            >
+              <Card className="bg-audio-panel-bg border border-crys-graphite hover:border-crys-gold/50 transition-all duration-300 hover:scale-105 group h-full">
+                <CardContent className="p-6 text-center">
+                  <div className="w-16 h-16 bg-crys-gold/20 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-crys-gold/30 transition-colors">
+                    <Waves className="w-8 h-8 text-crys-gold" />
+                  </div>
+                  <h3 className="text-xl font-bold text-crys-white mb-3">Headroom Requirements</h3>
+                  <div className="space-y-3 text-crys-light-grey">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm">Minimum:</span>
+                      <Badge variant="outline" className="border-red-500/30 text-red-400">-8 dB</Badge>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm">Maximum:</span>
+                      <Badge variant="outline" className="border-yellow-500/30 text-yellow-400">-4 dB</Badge>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm">Best Result:</span>
+                      <Badge variant="outline" className="border-crys-gold text-crys-gold">-6 dB</Badge>
+                    </div>
+                  </div>
+                  <p className="text-xs text-crys-light-grey mt-4">
+                    Ensure your mix has adequate headroom for optimal mastering results
+                  </p>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            {/* Normalization */}
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.2 }}
+              viewport={{ once: true }}
+            >
+              <Card className="bg-audio-panel-bg border border-crys-graphite hover:border-crys-gold/50 transition-all duration-300 hover:scale-105 group h-full">
+                <CardContent className="p-6 text-center">
+                  <div className="w-16 h-16 bg-crys-gold/20 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-crys-gold/30 transition-colors">
+                    <Cpu className="w-8 h-8 text-crys-gold" />
+                  </div>
+                  <h3 className="text-xl font-bold text-crys-white mb-3">Audio Normalization</h3>
+                  <div className="space-y-3 text-crys-light-grey">
+                    <div className="flex items-center justify-center gap-2 mb-3">
+                      <CheckCircle className="w-5 h-5 text-crys-gold" />
+                      <span className="text-sm">Normalize your audio</span>
+                    </div>
+                    <div className="flex items-center justify-center gap-2 mb-3">
+                      <CheckCircle className="w-5 h-5 text-crys-gold" />
+                      <span className="text-sm">Avoid clipping</span>
+                    </div>
+                    <div className="flex items-center justify-center gap-2">
+                      <CheckCircle className="w-5 h-5 text-crys-gold" />
+                      <span className="text-sm">Maintain dynamics</span>
+                    </div>
+                  </div>
+                  <p className="text-xs text-crys-light-grey mt-4">
+                    Proper normalization ensures consistent levels and prevents distortion
+                  </p>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            {/* Format Requirements */}
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.3 }}
+              viewport={{ once: true }}
+            >
+              <Card className="bg-audio-panel-bg border border-crys-graphite hover:border-crys-gold/50 transition-all duration-300 hover:scale-105 group h-full">
+                <CardContent className="p-6 text-center">
+                  <div className="w-16 h-16 bg-crys-gold/20 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-crys-gold/30 transition-colors">
+                    <Music2 className="w-8 h-8 text-crys-gold" />
+                  </div>
+                  <h3 className="text-xl font-bold text-crys-white mb-3">Format Requirements</h3>
+                  <div className="space-y-3 text-crys-light-grey">
+                    <div className="flex items-center justify-center gap-2 mb-3">
+                      <CheckCircle className="w-5 h-5 text-crys-gold" />
+                      <span className="text-sm">WAV or MP3 format</span>
+                    </div>
+                    <div className="flex items-center justify-center gap-2 mb-3">
+                      <CheckCircle className="w-5 h-5 text-crys-gold" />
+                      <span className="text-sm">44.1kHz or higher</span>
+                    </div>
+                    <div className="flex items-center justify-center gap-2">
+                      <CheckCircle className="w-5 h-5 text-crys-gold" />
+                      <span className="text-sm">16-bit or higher</span>
+                    </div>
+                  </div>
+                  <p className="text-xs text-crys-light-grey mt-4">
+                    High-quality source files ensure the best mastering results
+                  </p>
+                </CardContent>
+              </Card>
+            </motion.div>
+          </div>
+
+          {/* Important Notice */}
+          <motion.div 
+            className="mt-12 text-center"
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.4 }}
+            viewport={{ once: true }}
+          >
+            <div className="bg-gradient-to-r from-crys-gold/10 to-crys-gold/5 border border-crys-gold/20 rounded-2xl p-6 max-w-4xl mx-auto">
+              <div className="flex items-center justify-center gap-3 mb-3">
+                <Radio className="w-6 h-6 text-crys-gold" />
+                <h3 className="text-lg font-semibold text-crys-white">Pro Tip</h3>
+              </div>
+              <p className="text-crys-light-grey">
+                <span className="text-crys-gold font-semibold">-6 dB headroom</span> is the sweet spot for mastering. 
+                This gives our Crys Garage Engine enough room to work with while maintaining your mix's dynamics and character.
+              </p>
+            </div>
+          </motion.div>
+        </div>
+      </section>
 
       {/* Why Us Section */}
       <WhyUsSection 

@@ -62,7 +62,7 @@ export const GENRE_PRESETS: Record<string, GenrePreset> = {
     truePeak: -0.2,
     targetLufs: -8.0
   },
-  'crysgarage': {
+  'crys-garage': {
     gain: 2.4,
     compression: { threshold: -16, ratio: 4.5, attack: 0.001, release: 0.15 },
     eq: { low: 2.8, mid: 2.2, high: 1.5 },

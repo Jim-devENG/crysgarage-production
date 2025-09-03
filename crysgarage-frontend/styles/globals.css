@@ -46,7 +46,7 @@
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
 
-  /* Crysgarage Brand Colors */
+  /* Crys Garage Brand Colors */
   --crys-black: #0a0a0a;
   --crys-charcoal: #1a1a1a;
   --crys-graphite: #2a2a2a;
@@ -140,7 +140,7 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
 
-  /* Custom Crysgarage utilities */
+  /* Custom Crys Garage utilities */
   --color-crys-black: var(--crys-black);
   --color-crys-charcoal: var(--crys-charcoal);
   --color-crys-graphite: var(--crys-graphite);

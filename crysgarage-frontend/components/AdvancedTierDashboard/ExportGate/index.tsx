@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Download, ArrowLeft, Settings, Cpu, Loader2 } from 'lucide-react';
+import { Download, ArrowLeft, Settings, Cpu, Loader2, CreditCard } from 'lucide-react';
 import RealTimeProcessingVisualizer from '../RealTimeProcessingVisualizer';
+import { creditsAPI } from '../../../services/api';
 
 interface ExportGateProps {
   originalFile: File | null;
@@ -33,6 +34,25 @@ const ExportGate: React.FC<ExportGateProps> = ({
   const [startTime, setStartTime] = useState<number | null>(null);
   const [chunkCount, setChunkCount] = useState(0);
   const [totalSize, setTotalSize] = useState(0);
+
+  // Helper: update local user credits and broadcast change
+  const adjustLocalCredits = (delta: number, absolute?: number) => {
+    try {
+      const raw = localStorage.getItem('crysgarage_user');
+      if (!raw) return;
+      const user = JSON.parse(raw);
+      if (typeof absolute === 'number') {
+        user.credits = absolute;
+      } else {
+        user.credits = Math.max(0, (user.credits || 0) + delta);
+      }
+      localStorage.setItem('crysgarage_user', JSON.stringify(user));
+      window.dispatchEvent(new CustomEvent('credits:updated', { detail: { credits: user.credits } }));
+      console.log('🔄 Local credits updated (advanced):', user.credits);
+    } catch (e) {
+      console.warn('Failed to adjust local credits (advanced):', e);
+    }
+  };
 
   // Initialize G-Tuner state from audioEffects
   useEffect(() => {
@@ -140,8 +160,33 @@ const ExportGate: React.FC<ExportGateProps> = ({
     setTotalSize(0);
     
     try {
+      console.log('🎵 Advanced download starting - deducting credit...');
+      updateProgress(5, 'Deducting credit...');
+      
+      // Deduct credit for download
+      try {
+        const audioId = originalFile.name + '_' + Date.now(); // Generate unique ID
+        const creditResult = await creditsAPI.deductCreditForDownload(audioId);
+        console.log('✅ Credit deducted successfully:', creditResult);
+        console.log(`💰 Remaining credits: ${creditResult.remaining_credits}`);
+        if (typeof creditResult.remaining_credits === 'number') {
+          adjustLocalCredits(0, creditResult.remaining_credits);
+        } else {
+          adjustLocalCredits(-1);
+        }
+      } catch (creditError: any) {
+        console.error('❌ Credit deduction failed:', creditError);
+        if (creditError.message?.includes('Insufficient credits')) {
+          alert('Insufficient credits. Please purchase more credits to download.');
+          return;
+        }
+        // Graceful fallback: deduct locally so UI stays consistent
+        adjustLocalCredits(-1);
+        console.warn('⚠️ Credit API unavailable - deducted locally for Advanced Tier.');
+      }
+
       console.log('🎵 Advanced download starting - capturing processed audio...');
-      updateProgress(5, 'Initializing audio processing...');
+      updateProgress(10, 'Initializing audio processing...');
       
       // Get the processed audio URL from the mastering player
       let audioToDownload: File | Blob = originalFile;
@@ -560,6 +605,16 @@ const ExportGate: React.FC<ExportGateProps> = ({
               </div>
             )}
           </div>
+        </div>
+      </div>
+
+      {/* Credit Display */}
+      <div className="text-center mb-4">
+        <div className="inline-flex items-center gap-2 bg-crys-gold/10 border border-crys-gold/20 rounded-lg px-4 py-2">
+          <CreditCard className="w-4 h-4 text-crys-gold" />
+          <span className="text-sm text-crys-gold font-medium">
+            Download Cost: <span className="text-crys-white">1 Credit</span>
+          </span>
         </div>
       </div>
 
