@@ -40,20 +40,29 @@ jobs:
         username: ${{ secrets.VPS_USER }}
         key: ${{ secrets.SSH_PRIVATE_KEY }}
         script: |
+          # Update the deployment directory first
           cd /var/www/crysgarage-deploy
           git pull origin master
           
-          # Build frontend
+          # Build frontend in deployment directory
           cd crysgarage-frontend
           npm run build
           cd ..
           
-          # Deploy frontend
+          # Deploy frontend to live directory
           rm -rf /var/www/html/*
           cp -r crysgarage-frontend/dist/* /var/www/html/
           
-          # Deploy backend
-          cd crysgarage-backend
+          # Deploy backend to live directory
+          rm -rf /var/www/html/api/*
+          cp -r crysgarage-backend/* /var/www/html/api/
+          
+          # Set proper permissions
+          chown -R nginx:nginx /var/www/html/
+          chmod -R 755 /var/www/html/
+          
+          # Install backend dependencies and clear caches
+          cd /var/www/html/api
           composer install --no-dev --optimize-autoloader
           php artisan config:clear
           php artisan route:clear
