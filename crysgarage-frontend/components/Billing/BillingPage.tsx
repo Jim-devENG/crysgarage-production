@@ -331,10 +331,10 @@ export function BillingPage({ onNavigate }: BillingPageProps) {
               <div>
                 <h1 className="text-2xl font-bold text-crys-white flex items-center gap-2">
                   <CreditCard className="w-6 h-6 text-crys-gold" />
-                  Billing & Subscription
+                  Billing & Credits
                 </h1>
                 <p className="text-crys-light-grey text-sm mt-1">
-                  Manage your subscription, payment methods, and billing history
+                  Manage your credits, payment methods, and billing history
                 </p>
               </div>
             </div>
@@ -699,7 +699,7 @@ export function BillingPage({ onNavigate }: BillingPageProps) {
                     <CreditCard className="w-8 h-8 text-crys-light-grey" />
                   </div>
                   <h3 className="text-lg font-semibold text-crys-white mb-2">No Payment Methods</h3>
-                  <p className="text-crys-light-grey text-sm mb-6">Add a payment method to purchase credits and manage your subscription.</p>
+                  <p className="text-crys-light-grey text-sm mb-6">Add a payment method to purchase credits and manage your account.</p>
                   <Button 
                     className="bg-crys-gold hover:bg-crys-gold/90 text-crys-black font-semibold"
                     onClick={() => setShowPaymentModal(true)}

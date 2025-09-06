@@ -195,10 +195,9 @@ export function PaymentModal({
             <div className="w-12 h-12 bg-crys-gold/20 rounded-lg flex items-center justify-center mx-auto mb-4 text-crys-gold">
               {selectedTierInfo.icon}
             </div>
-            <h2 className="text-crys-white text-xl mb-2">Subscribe to {selectedTierInfo.name}</h2>
+            <h2 className="text-crys-white text-xl mb-2">Purchase {selectedTierInfo.name}</h2>
             <div className="flex items-baseline justify-center gap-1 mb-2">
               <span className="text-3xl font-bold text-crys-gold">${selectedTierInfo.price}</span>
-              <span className="text-crys-light-grey">/month</span>
             </div>
             <p className="text-crys-gold text-sm">
               {selectedTierInfo.credits === -1 ? 'Unlimited credits' : `${selectedTierInfo.credits} credits`}
@@ -264,7 +263,7 @@ export function PaymentModal({
                 ) : (
                   <div className="flex items-center gap-2">
                     <ExternalLink className="w-4 h-4" />
-                    Pay {formatNGN(convertUSDToNGN(selectedTierInfo.price).ngn)} with Paystack
+                    Purchase Credits - {formatNGN(convertUSDToNGN(selectedTierInfo.price).ngn)}
                   </div>
                 )}
               </Button>

@@ -125,10 +125,10 @@ export function BillingModal({ userTier, onClose, onUpgradePlan }: BillingModalP
             <div>
               <CardTitle className="text-crys-white flex items-center gap-2">
                 <CreditCard className="w-5 h-5 text-crys-gold" />
-                Billing & Subscription
+                Billing & Credits
               </CardTitle>
               <p className="text-crys-light-grey text-sm mt-1">
-                Manage your subscription, payment methods, and billing history
+                Manage your credits, payment methods, and billing history
               </p>
             </div>
             <Button
@@ -230,7 +230,7 @@ export function BillingModal({ userTier, onClose, onUpgradePlan }: BillingModalP
                       variant="outline"
                       className="border-red-500/30 text-red-400 hover:bg-red-500/10"
                     >
-                      Cancel Subscription
+                      Manage Credits
                     </Button>
                   )}
                 </div>

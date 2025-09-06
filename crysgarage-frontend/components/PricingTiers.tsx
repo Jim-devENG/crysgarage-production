@@ -127,9 +127,6 @@ export function PricingTiers({ onTierSelect, selectedTier }: PricingTiersProps) 
               <h3 className="text-crys-white text-xl">{tier.name}</h3>
               <div className="flex items-baseline justify-center gap-1">
                 <span className="text-3xl font-bold text-crys-gold">{tier.price}</span>
-                {tier.id !== "free" && tier.id !== "advanced" && (
-                  <span className="text-crys-light-grey">/month</span>
-                )}
               </div>
               <p className="text-crys-gold text-sm">{tier.credits}</p>
               <p className="text-crys-light-grey text-sm">{tier.description}</p>

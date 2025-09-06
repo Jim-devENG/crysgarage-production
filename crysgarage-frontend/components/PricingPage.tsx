@@ -277,9 +277,6 @@ export function PricingPage({ onSelectTier, onGoToDashboard }: PricingPageProps)
                 <div className="flex flex-col items-center justify-center gap-1 mt-1">
                   <div className="flex items-baseline justify-center gap-1">
                     <span className="text-2xl font-bold text-crys-gold">{tier.price}</span>
-                    {tier.id !== "free" && (
-                      <span className="text-crys-light-grey text-sm">/month</span>
-                    )}
                   </div>
                   {tier.priceNGN && (
                     <span className="text-lg font-semibold text-crys-gold/80">{tier.priceNGN}</span>

@@ -565,7 +565,7 @@ export function UserProfile({
                   <CardHeader>
                     <CardTitle className="text-crys-white flex items-center gap-2">
                       <CreditCard className="w-5 h-5 text-crys-gold" />
-                      Billing & Subscription
+                      Billing & Credits
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
