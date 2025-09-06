@@ -1,120 +1,45 @@
-name: Deploy to VPS
+name: Auto Deploy to VPS
 
 on:
   push:
-    branches: [master, main]
-  workflow_dispatch: # Allow manual deployment
+    branches: [ main ]
+  workflow_dispatch:
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 30  # Increase timeout for build process
-
+    
     steps:
-      - name: Check out code
-        uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-          cache: 'npm'
-          cache-dependency-path: crysgarage-frontend/package-lock.json
-
-      - name: Install dependencies
-        run: |
-          cd crysgarage-frontend
-          npm ci
-
-      - name: Build frontend
-        run: |
+    - uses: actions/checkout@v3
+    
+    - name: Deploy to VPS
+      uses: appleboy/ssh-action@v0.1.5
+      with:
+        host: ${{ secrets.VPS_HOST }}
+        username: ${{ secrets.VPS_USER }}
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        script: |
+          cd /var/www/crysgarage-deploy
+          git pull origin main
+          
+          # Build frontend
           cd crysgarage-frontend
           npm run build
-
-      - name: Set up SSH key
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
-          echo "SSH key setup completed"
-          echo "SSH key length: $(wc -l < ~/.ssh/id_rsa) lines"
-          echo "SSH key permissions: $(ls -la ~/.ssh/id_rsa)"
-          echo "SSH key first line: $(head -1 ~/.ssh/id_rsa)"
-          echo "SSH key last line: $(tail -1 ~/.ssh/id_rsa)"
-          echo "SSH key size: $(wc -c < ~/.ssh/id_rsa) bytes"
-      
-      - name: Debug SSH configuration
-        run: |
-          echo "=== SSH Debug Information ==="
-          echo "Host: ${{ secrets.VPS_HOST }}"
-          echo "Username: ${{ secrets.VPS_USERNAME }}"
-          echo "SSH key exists: $(test -f ~/.ssh/id_rsa && echo 'YES' || echo 'NO')"
-          echo "SSH key size: $(wc -c < ~/.ssh/id_rsa) bytes"
-          echo "Known hosts: $(cat ~/.ssh/known_hosts)"
-          echo "SSH key format check:"
-          head -1 ~/.ssh/id_rsa | grep -q "BEGIN" && echo "Key starts with BEGIN" || echo "Key doesn't start with BEGIN"
-          tail -1 ~/.ssh/id_rsa | grep -q "END" && echo "Key ends with END" || echo "Key doesn't end with END"
-      
-      - name: Test SSH connection with verbose output
-        run: |
-          echo "Testing SSH connection to ${{ secrets.VPS_HOST }}..."
-          ssh -vvv -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa ${{ secrets.VPS_USERNAME }}@${{ secrets.VPS_HOST }} "echo 'SSH connection successful!' && whoami && pwd"
-      
-      - name: Deploy to VPS
-        run: |
-          echo "Starting deployment to VPS..."
+          cd ..
           
-          # Copy built files to VPS
-          echo "📁 Copying frontend files..."
-          scp -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no -r crysgarage-frontend/dist/* ${{ secrets.VPS_USERNAME }}@${{ secrets.VPS_HOST }}:/tmp/frontend/
+          # Deploy frontend
+          rm -rf /var/www/html/*
+          cp -r crysgarage-frontend/dist/* /var/www/html/
           
-          # Run deployment script on VPS
-          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ${{ secrets.VPS_USERNAME }}@${{ secrets.VPS_HOST }} << 'EOF'
-            set -e
-            echo "🚀 Starting GitHub Actions deployment..."
-            
-            # Backup current version
-            echo "📦 Creating backup..."
-            if [ -d "/var/www/html" ]; then
-              cp -r /var/www/html /var/www/html.backup.$(date +%Y%m%d_%H%M%S) 2>/dev/null || echo "No backup needed"
-            fi
-            
-            # Clear web root
-            echo "🧹 Clearing web root..."
-            rm -rf /var/www/html/*
-            mkdir -p /var/www/html
-            
-            # Copy new files
-            echo "📁 Copying new files..."
-            cp -r /tmp/frontend/* /var/www/html/
-            
-            # Fix permissions
-            echo "🔐 Setting permissions..."
-            chown -R nginx:nginx /var/www/html/
-            chmod -R 755 /var/www/html/
-            
-            # Test nginx config
-            echo "🌐 Testing nginx configuration..."
-            nginx -t
-            
-            # Reload nginx
-            echo "🔄 Reloading nginx..."
-            systemctl reload nginx
-            
-            # Cleanup
-            echo "🧹 Cleaning up..."
-            rm -rf /tmp/frontend
-            
-            # Health check
-            echo "🏥 Running health check..."
-            sleep 5
-            if curl -f -s https://crysgarage.studio > /dev/null; then
-              echo "✅ GitHub Actions deployment successful!"
-              echo "🌐 Site is live at: https://crysgarage.studio"
-            else
-              echo "⚠️ Health check failed, but deployment may have succeeded"
-            fi
-            
-            echo "🎉 Deployment completed!"
-          EOF
+          # Deploy backend
+          cd crysgarage-backend
+          composer install --no-dev --optimize-autoloader
+          php artisan config:clear
+          php artisan route:clear
+          php artisan cache:clear
+          
+          # Restart services
+          systemctl restart php8.2-fpm
+          systemctl reload nginx
+          
+          echo "Deployment completed at $(date)"

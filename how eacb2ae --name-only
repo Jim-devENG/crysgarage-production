@@ -1,0 +1,20 @@
+[33ma72c48f[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmaster[m[33m, [m[1;31morigin/master[m[33m, [m[1;31morigin/HEAD[m[33m)[m Major update: Complete payment system, UI improvements, and dev account bypass
+[33m1cd016d[m Auto-commit: Quick deploy 2025-08-25 12:52:09
+[33m16409a6[m Auto-commit: Quick deploy 2025-08-25 12:41:47
+[33mb035915[m Auto-commit: Quick deploy 2025-08-25 12:32:20
+[33m9e06a5d[m Auto-commit: Quick deploy 2025-08-25 12:26:22
+[33mb575d7c[m Auto-commit: Quick deploy 2025-08-25 12:18:36
+[33mf7b79cc[m Auto-commit: Quick deploy 2025-08-24 09:52:00
+[33m808c99f[m Auto-commit: Quick deploy 2025-08-24 09:28:32
+[33md06855a[m Auto-commit: Quick deploy 2025-08-24 01:11:58
+[33m22880d7[m Auto-commit: Quick deploy 2025-08-23 22:58:32
+[33meacb2ae[m Add Google and Facebook OAuth authentication with page-based auth flow and shopping cart checkout
+[33m18bd1c4[m Auto-commit: Quick deploy 2025-08-23 22:33:47
+[33ma392628[m Auto-commit: Quick deploy 2025-08-23 21:00:15
+[33m6d67335[m FIX: Export page unresponsive - removed automatic audio processing on page load, now only processes when user clicks download button
+[33m64a6c71[m FEATURE: Real processed audio download with effects - implemented OfflineAudioContext to render mastered audio with all effects applied (EQ, Compressor, Loudness, Limiter, G-Tuner)
+[33m7ca8c81[m FIX: Simplified download to use original file for now - removed complex audio processing that was causing download errors, will implement real processed audio in future update
+[33m7e7e607[m FIX: Simplified audio processing for reliable downloads - replaced complex MediaRecorder with reliable fallback approach to prevent download errors
+[33m1385f54[m FIX: Download now captures actual mastered audio with all effects applied - Advanced and Professional tiers now download the real processed audio instead of original files
+[33ma26d85d[m SAFE POINT: Complete application with all tiers working perfectly - Advanced and Professional tiers fully functional
+[33m4272b2a[m Auto-commit: Quick deploy 2025-08-22 22:27:40

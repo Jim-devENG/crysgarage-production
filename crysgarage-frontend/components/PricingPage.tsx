@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Button } from "./ui/button";
-import { useApp } from "../contexts/AppContext";
+import { useAuth } from "../contexts/AuthenticationContext";
 import { initializeDirectPaystack } from "./Payments/PaystackDirect";
 import { convertUSDToNGN, formatNGN } from "../utils/currencyConverter";
 import { Card, CardContent, CardFooter, CardHeader } from "./ui/card";
@@ -24,7 +24,7 @@ interface PricingPageProps {
 }
 
 export function PricingPage({ onSelectTier, onGoToDashboard }: PricingPageProps) {
-  const { user } = useApp();
+  const { user } = useAuth();
 
   // Modal state
   const [showConfirm, setShowConfirm] = useState(false);
@@ -68,30 +68,8 @@ export function PricingPage({ onSelectTier, onGoToDashboard }: PricingPageProps)
 
   const handleTierSelection = (tierId: string) => {
     console.log('PricingPage: Tier selection clicked:', tierId);
-    if (tierId === 'free') {
-      onSelectTier(tierId);
-      return;
-    }
-    if (!user?.email) {
-      // Require sign-in first
-      onSelectTier(tierId);
-      return;
-    }
-    
-    // Dev account bypass - skip payment for Crys Garage
-    if (user.email === 'dev@crysgarage.studio') {
-      console.log('Dev account detected, bypassing payment for:', tierId);
-      onSelectTier(tierId);
-      return;
-    }
-    
-    // Open custom confirmation modal instead of browser confirm
-    const priceMap: Record<string, number> = { professional: 19.99, advanced: 49.99 };
-    const creditsMap: Record<string, number> = { professional: 12, advanced: 25 };
-    const usd = priceMap[tierId] ?? 0;
-    const conv = convertUSDToNGN(usd);
-    setPendingTier({ id: tierId, usd, ngnText: formatNGN(conv.ngn), ngnCents: conv.ngnCents, credits: creditsMap[tierId] ?? 0 });
-    setShowConfirm(true);
+    // Always delegate to parent component for consistent flow
+    onSelectTier(tierId);
   };
 
   const pricingTiers = [

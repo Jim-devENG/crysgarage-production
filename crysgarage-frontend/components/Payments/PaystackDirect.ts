@@ -9,7 +9,7 @@ export interface PaystackInitParams {
 export async function initializeDirectPaystack(params: PaystackInitParams): Promise<string> {
   const API_BASE_URL =
     (typeof window !== 'undefined' && window.location.hostname === 'localhost')
-      ? 'https://crysgarage.studio/api'
+      ? 'http://127.0.0.1:8000/api'
       : ((import.meta as any).env?.VITE_API_URL || 'https://crysgarage.studio/api');
 
   const response = await fetch(`${API_BASE_URL}/payments/initialize?t=${Date.now()}`, {

@@ -2,8 +2,6 @@ import { useState } from 'react';
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
 import { CardContent, CardHeader } from "./ui/card";
-import { Input } from "./ui/input";
-import { Label } from "./ui/label";
 import { 
   CreditCard, 
   Lock, 
@@ -11,15 +9,18 @@ import {
   CheckCircle, 
   X,
   Zap,
-
-  Crown
+  Crown,
+  ExternalLink
 } from "lucide-react";
+import { convertUSDToNGN, formatNGN } from "../utils/currencyConverter";
+import { initializeDirectPaystack } from "../components/Payments/PaystackDirect";
+import { useAuth } from "../contexts/AuthenticationContext";
 
 interface PaymentModalProps {
   isOpen: boolean;
   onClose: () => void;
   selectedTier: string;
-  onPaymentSuccess: (tier: string, credits: number) => void;
+  onPaymentSuccess: (credits: number) => void;
 }
 
 interface TierInfo {
@@ -39,18 +40,30 @@ export function PaymentModal({
   onPaymentSuccess 
 }: PaymentModalProps) {
   const [isProcessing, setIsProcessing] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<'card' | 'paypal'>('card');
-  const [formData, setFormData] = useState({
-    cardNumber: '',
-    expiryDate: '',
-    cvv: '',
-    cardholderName: '',
-    email: ''
-  });
+  const { user } = useAuth();
 
   const tiers: Record<string, TierInfo> = {
     professional: {
       id: 'professional',
+      name: 'Professional',
+      price: 9,
+      credits: 100,
+      description: 'Perfect for active producers',
+      features: [
+        '100 mastering credits',
+        'All audio formats',
+        'Up to 192kHz sample rate',
+        '24-bit/32-bit resolution',
+        'Free: Pop, Rock, Reggae',
+        'Premium genres ($1 each)',
+        '444 tuning correction',
+        'Noise reduction',
+        'Download in WAV/MP3/FLAC'
+      ],
+      icon: <Zap className="w-6 h-6" />
+    },
+    pro: {
+      id: 'pro',
       name: 'Professional',
       price: 9,
       credits: 100,
@@ -88,44 +101,76 @@ export function PaymentModal({
         'Live preview & feedback'
       ],
       icon: <Crown className="w-6 h-6" />
+    },
+    free: {
+      id: 'free',
+      name: 'Download Credits',
+      price: 5,
+      credits: 1,
+      description: 'Download your mastered track',
+      features: [
+        '1 download credit',
+        'High-quality mastered track',
+        'Download in WAV/MP3/FLAC',
+        'Professional mastering',
+        'Instant download'
+      ],
+      icon: <Shield className="w-6 h-6" />
     }
   };
 
-  const selectedTierInfo = tiers[selectedTier];
+  const selectedTierInfo = tiers[selectedTier] || tiers['free'];
 
-  const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
-  };
+  const handlePaystackPayment = async () => {
+    if (!user?.email) {
+      alert('Please sign in to make a payment');
+      return;
+    }
 
-  const handleCardNumberChange = (value: string) => {
-    // Format card number with spaces
-    const formatted = value.replace(/\s/g, '').replace(/(\d{4})/g, '$1 ').trim();
-    handleInputChange('cardNumber', formatted);
-  };
-
-  const handleExpiryChange = (value: string) => {
-    // Format expiry date
-    const formatted = value.replace(/\D/g, '').replace(/(\d{2})(\d)/, '$1/$2');
-    handleInputChange('expiryDate', formatted);
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
     setIsProcessing(true);
 
     try {
-      // Simulate payment processing
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Convert USD to NGN for Paystack
+      const currencyConversion = convertUSDToNGN(selectedTierInfo.price);
+      const reference = `CRYS_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const callbackUrl = `${window.location.origin}/billing?payment=success&tier=${selectedTier}&credits=${selectedTierInfo.credits}`;
+
+      console.log('Starting Paystack payment:', {
+        tier: selectedTier,
+        price: selectedTierInfo.price,
+        ngnAmount: currencyConversion.ngn,
+        ngnCents: currencyConversion.ngnCents,
+        credits: selectedTierInfo.credits
+      });
+
+      // Use direct Paystack integration
+      const authUrl = await initializeDirectPaystack({
+        amountCents: currencyConversion.ngnCents,
+        email: user.email,
+        reference,
+        callbackUrl,
+        metadata: { 
+          tier: selectedTier, 
+          credits: selectedTierInfo.credits, 
+          user_id: user.id,
+          original_usd: selectedTierInfo.price,
+          converted_ngn: currencyConversion.ngn
+        }
+      });
+
+      if (authUrl === 'inline_redirect') {
+        // Paystack modal is already opened inline
+        console.log('Paystack modal opened inline');
+      } else if (authUrl) {
+        // Redirect to Paystack payment page
+        window.location.href = authUrl;
+      } else {
+        throw new Error('Failed to initialize payment');
+      }
       
-      // Simulate successful payment
-      onPaymentSuccess(selectedTier, selectedTierInfo.credits);
-      onClose();
     } catch (error) {
-      console.error('Payment failed:', error);
-      alert('Payment failed. Please try again.');
+      console.error('Paystack payment failed:', error);
+      alert('Payment initialization failed. Please try again.');
     } finally {
       setIsProcessing(false);
     }
@@ -135,13 +180,13 @@ export function PaymentModal({
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-audio-panel-bg border border-crys-graphite rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
+      <div className="bg-crys-black border border-crys-graphite rounded-xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
         <CardHeader className="relative">
           <Button
             variant="ghost"
             size="sm"
             onClick={onClose}
-            className="absolute right-2 top-2 text-crys-light-grey hover:text-crys-white"
+            className="absolute right-4 top-4 text-crys-light-grey hover:text-crys-white hover:bg-crys-graphite/20"
           >
             <X className="w-4 h-4" />
           </Button>
@@ -175,145 +220,56 @@ export function PaymentModal({
             </div>
           </div>
 
-          {/* Payment Method Selection */}
+          {/* Payment Information */}
           <div className="space-y-3">
-            <h3 className="text-crys-white font-medium">Payment Method</h3>
-            <div className="flex gap-2">
-              <Button
-                variant={paymentMethod === 'card' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setPaymentMethod('card')}
-                className={paymentMethod === 'card' 
-                  ? 'bg-crys-gold hover:bg-crys-gold-muted text-crys-black' 
-                  : 'border-crys-gold/30 text-crys-gold hover:bg-crys-gold/10'
-                }
-              >
-                <CreditCard className="w-4 h-4 mr-2" />
-                Credit Card
-              </Button>
-              <Button
-                variant={paymentMethod === 'paypal' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setPaymentMethod('paypal')}
-                className={paymentMethod === 'paypal' 
-                  ? 'bg-crys-gold hover:bg-crys-gold-muted text-crys-black' 
-                  : 'border-crys-gold/30 text-crys-gold hover:bg-crys-gold/10'
-                }
-              >
-                PayPal
-              </Button>
+            <h3 className="text-crys-white font-medium">Payment Details</h3>
+            <div className="bg-crys-graphite/30 rounded-lg p-4 space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-crys-light-grey">Amount (USD):</span>
+                <span className="text-crys-white font-medium">${selectedTierInfo.price}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-crys-light-grey">Amount (NGN):</span>
+                <span className="text-crys-white font-medium">{formatNGN(convertUSDToNGN(selectedTierInfo.price).ngn)}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-crys-light-grey">Credits:</span>
+                <span className="text-crys-white font-medium">
+                  {selectedTierInfo.credits === -1 ? 'Unlimited' : selectedTierInfo.credits}
+                </span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-crys-light-grey">Payment Method:</span>
+                <span className="text-crys-gold font-medium">Paystack Gateway</span>
+              </div>
             </div>
           </div>
 
-          {/* Credit Card Form */}
-          {paymentMethod === 'card' && (
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="cardNumber" className="text-crys-white">Card Number</Label>
-                <Input
-                  id="cardNumber"
-                  type="text"
-                  placeholder="1234 5678 9012 3456"
-                  value={formData.cardNumber}
-                  onChange={(e) => handleCardNumberChange(e.target.value)}
-                  maxLength={19}
-                  required
-                  className="bg-crys-graphite border-crys-graphite text-crys-white placeholder:text-crys-light-grey"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="expiryDate" className="text-crys-white">Expiry Date</Label>
-                  <Input
-                    id="expiryDate"
-                    type="text"
-                    placeholder="MM/YY"
-                    value={formData.expiryDate}
-                    onChange={(e) => handleExpiryChange(e.target.value)}
-                    maxLength={5}
-                    required
-                    className="bg-crys-graphite border-crys-graphite text-crys-white placeholder:text-crys-light-grey"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="cvv" className="text-crys-white">CVV</Label>
-                  <Input
-                    id="cvv"
-                    type="text"
-                    placeholder="123"
-                    value={formData.cvv}
-                    onChange={(e) => handleInputChange('cvv', e.target.value)}
-                    maxLength={4}
-                    required
-                    className="bg-crys-graphite border-crys-graphite text-crys-white placeholder:text-crys-light-grey"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="cardholderName" className="text-crys-white">Cardholder Name</Label>
-                <Input
-                  id="cardholderName"
-                  type="text"
-                  placeholder="John Doe"
-                  value={formData.cardholderName}
-                  onChange={(e) => handleInputChange('cardholderName', e.target.value)}
-                  required
-                  className="bg-crys-graphite border-crys-graphite text-crys-white placeholder:text-crys-light-grey"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="email" className="text-crys-white">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="john@example.com"
-                  value={formData.email}
-                  onChange={(e) => handleInputChange('email', e.target.value)}
-                  required
-                  className="bg-crys-graphite border-crys-graphite text-crys-white placeholder:text-crys-light-grey"
-                />
-              </div>
-
+          {/* Paystack Payment Button */}
+          <div className="space-y-4">
+            <div className="bg-crys-graphite/20 border border-crys-graphite rounded-lg p-4 text-center">
+              <p className="text-crys-light-grey text-sm mb-4">
+                You'll be redirected to Paystack to complete your payment securely.
+              </p>
               <Button
-                type="submit"
+                onClick={handlePaystackPayment}
                 disabled={isProcessing}
                 className="w-full bg-crys-gold hover:bg-crys-gold-muted text-crys-black"
               >
                 {isProcessing ? (
                   <div className="flex items-center gap-2">
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-crys-black"></div>
-                    Processing Payment...
+                    Initializing Payment...
                   </div>
                 ) : (
                   <div className="flex items-center gap-2">
-                    <Lock className="w-4 h-4" />
-                    Pay ${selectedTierInfo.price}/month
+                    <ExternalLink className="w-4 h-4" />
+                    Pay {formatNGN(convertUSDToNGN(selectedTierInfo.price).ngn)} with Paystack
                   </div>
                 )}
               </Button>
-            </form>
-          )}
-
-          {/* PayPal Option */}
-          {paymentMethod === 'paypal' && (
-            <div className="space-y-4">
-              <div className="bg-crys-graphite/20 border border-crys-graphite rounded-lg p-4 text-center">
-                <p className="text-crys-light-grey text-sm mb-4">
-                  You'll be redirected to PayPal to complete your payment securely.
-                </p>
-                <Button
-                  onClick={handleSubmit}
-                  disabled={isProcessing}
-                  className="bg-blue-600 hover:bg-blue-700 text-white"
-                >
-                  {isProcessing ? 'Processing...' : 'Pay with PayPal'}
-                </Button>
-              </div>
             </div>
-          )}
+          </div>
 
           {/* Security Notice */}
           <div className="flex items-center gap-2 text-crys-light-grey text-xs">

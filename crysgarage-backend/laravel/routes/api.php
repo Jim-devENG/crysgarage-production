@@ -29,8 +29,8 @@ Route::get('/auth/user', [AuthController::class, 'getCurrentUser']);
 
 // Deprecated legacy Paystack routes removed. Use /payments/initialize only.
 
-// Protected routes (require authentication) - temporarily public
-Route::put('/auth/profile', [AuthController::class, 'updateProfile']);
+// Protected routes (require authentication)
+Route::put('/auth/profile', [AuthController::class, 'updateProfile'])->middleware('auth:sanctum');
 
 // Legacy credits routes removed as part of direct Paystack integration simplification
 

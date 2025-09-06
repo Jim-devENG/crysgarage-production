@@ -3,7 +3,7 @@ import { Button } from "../ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Badge } from "../ui/badge";
 import { Loader2, CreditCard, CheckCircle, X, ShoppingCart } from "lucide-react";
-import { useApp } from "../../contexts/AppContext";
+import { useAuth } from "../../contexts/AuthenticationContext";
 import { convertUSDToNGN, formatNGN } from "../../utils/currencyConverter";
 
 interface SimpleCheckoutProps {
@@ -13,7 +13,7 @@ interface SimpleCheckoutProps {
 }
 
 export function SimpleCheckout({ tier, onSuccess, onCancel }: SimpleCheckoutProps) {
-  const { user } = useApp();
+  const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string>('');
 

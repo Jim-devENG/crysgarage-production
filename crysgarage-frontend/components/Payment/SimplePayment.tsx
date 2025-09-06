@@ -3,7 +3,7 @@ import { Button } from "../ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Badge } from "../ui/badge";
 import { Loader2, CreditCard, CheckCircle, AlertCircle, X } from "lucide-react";
-import { useApp } from "../../contexts/AppContext";
+import { useAuth } from "../../contexts/AuthenticationContext";
 import { convertUSDToNGN, formatNGN } from "../../utils/currencyConverter";
 
 // Declare Paystack types
@@ -33,7 +33,7 @@ interface SimplePaymentProps {
 }
 
 export function SimplePayment({ tier, onSuccess, onCancel }: SimplePaymentProps) {
-  const { user } = useApp();
+  const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string>('');
 

@@ -23,7 +23,7 @@ import {
   Wallet
 } from "lucide-react";
 import { creditsAPI } from "../../services/api";
-import { useApp } from "../../contexts/AppContext";
+import { useAuth } from "../../contexts/AuthenticationContext";
 import { CardManagementModal } from "./CardManagementModal";
 import { initializeDirectPaystack } from "../Payments/PaystackDirect";
 import { convertUSDToNGN, formatNGN } from "../../utils/currencyConverter";
@@ -45,7 +45,7 @@ export function BillingPage({ onNavigate }: BillingPageProps) {
   const [isLoadingData, setIsLoadingData] = useState(false);
   const [editingCard, setEditingCard] = useState<any>(null);
   const [showAddCardModal, setShowAddCardModal] = useState(false);
-  const { user, dispatch, updateUser } = useApp();
+  const { user, updateProfile } = useAuth();
 
   // Debug logging
   React.useEffect(() => {
@@ -64,7 +64,7 @@ export function BillingPage({ onNavigate }: BillingPageProps) {
         // Update user credits
         if (user) {
           const updatedUser = { ...user, credits: (user.credits || 0) + parseInt(credits) };
-          updateUser(updatedUser);
+          updateProfile(updatedUser);
           localStorage.setItem('crysgarage_user', JSON.stringify(updatedUser));
         }
         
@@ -75,7 +75,7 @@ export function BillingPage({ onNavigate }: BillingPageProps) {
         setTimeout(() => setMessage(null), 5000);
       }
     }
-  }, [user, updateUser]);
+  }, [user, updateProfile]);
 
   const tierPricing = {
     free: { credits: 2, price: 4.99, name: 'Free Tier Credits' },
@@ -505,7 +505,7 @@ export function BillingPage({ onNavigate }: BillingPageProps) {
                         // Manually add credits for testing
                         if (user) {
                           const updatedUser = { ...user, credits: (user.credits || 0) + 2 };
-                          updateUser(updatedUser);
+                          updateProfile(updatedUser);
                           localStorage.setItem('crysgarage_user', JSON.stringify(updatedUser));
                           setMessage('Credits added manually. Please check your balance.');
                           setTimeout(() => setMessage(null), 5000);

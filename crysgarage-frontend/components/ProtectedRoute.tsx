@@ -1,5 +1,5 @@
 import React from 'react';
-import { useApp } from '../contexts/AppContext';
+import { useAuth } from '../contexts/AuthenticationContext';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -8,7 +8,7 @@ interface ProtectedRouteProps {
 }
 
 export function ProtectedRoute({ children, fallback, requiredTier }: ProtectedRouteProps) {
-  const { user, isAuthenticated, isLoading } = useApp();
+  const { user, isAuthenticated, isLoading } = useAuth();
 
   // Show loading state while checking authentication
   if (isLoading) {

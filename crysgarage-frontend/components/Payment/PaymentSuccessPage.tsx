@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useApp } from '../../contexts/AppContext';
+import { useAuth } from '../../contexts/AuthenticationContext';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { CheckCircle, Loader2, AlertCircle, ArrowRight } from 'lucide-react';
@@ -12,7 +12,7 @@ export function PaymentSuccessPage({ onNavigate }: PaymentSuccessPageProps) {
   const [status, setStatus] = useState<'verifying' | 'success' | 'error'>('verifying');
   const [message, setMessage] = useState('');
   const [credits, setCredits] = useState(0);
-  const { user, updateUser } = useApp();
+  const { user, updateProfile } = useAuth();
 
   useEffect(() => {
     const verifyPayment = async () => {
@@ -52,7 +52,7 @@ export function PaymentSuccessPage({ onNavigate }: PaymentSuccessPageProps) {
             // Update user credits
             if (user) {
               const updatedUser = { ...user, credits: (user.credits || 0) + parseInt(creditsParam) };
-              updateUser(updatedUser);
+              updateProfile(updatedUser);
               localStorage.setItem('crysgarage_user', JSON.stringify(updatedUser));
             }
 
@@ -74,7 +74,7 @@ export function PaymentSuccessPage({ onNavigate }: PaymentSuccessPageProps) {
     };
 
     verifyPayment();
-  }, [user, updateUser]);
+  }, [user, updateProfile]);
 
   const handleContinue = () => {
     onNavigate('billing');

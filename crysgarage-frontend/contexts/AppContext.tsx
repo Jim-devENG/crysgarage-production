@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
 import { authAPI, audioAPI, creditsAPI, User, MasteringSession, ProcessingConfiguration } from '../services/api';
-import authService, { LoginCredentials, SignupCredentials, tokenService } from '../services/authService';
+import authService, { LoginCredentials, SignupCredentials, tokenManager } from '../services/authentication';
 
 // Types
 interface AppState {
@@ -113,6 +113,13 @@ export function AppProvider({ children }: AppProviderProps) {
       const token = localStorage.getItem('crysgarage_token');
       const storedUser = localStorage.getItem('crysgarage_user');
       
+      // Check for invalid stored data (like "undefined" string)
+      if (storedUser === 'undefined' || storedUser === 'null' || storedUser === null) {
+        localStorage.removeItem('crysgarage_user');
+        localStorage.removeItem('crysgarage_token');
+        return;
+      }
+      
       if (token && storedUser && !state.user) {
         try {
           const user = JSON.parse(storedUser);
@@ -200,15 +207,19 @@ export function AppProvider({ children }: AppProviderProps) {
         const token = localStorage.getItem('crysgarage_token');
         const storedUser = localStorage.getItem('crysgarage_user');
         
-        if (token && storedUser) {
+        // Check for invalid stored data (like "undefined" string)
+        if (storedUser === 'undefined' || storedUser === 'null' || storedUser === null) {
+          localStorage.removeItem('crysgarage_user');
+          localStorage.removeItem('crysgarage_token');
+        } else if (token && storedUser) {
           try {
             const user = JSON.parse(storedUser);
             console.log('Legacy user found:', user);
             dispatch({ type: 'SET_USER', payload: user });
             
             // Migrate to new auth service
-            tokenService.setToken(token);
-            tokenService.setUser(user);
+                  tokenManager.setToken(token);
+      tokenManager.setUser(user);
           } catch (error) {
             console.error('Failed to parse legacy user data:', error);
             // Clear invalid data

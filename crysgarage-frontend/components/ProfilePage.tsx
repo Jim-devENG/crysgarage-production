@@ -25,15 +25,15 @@ import {
   X,
   Lock
 } from 'lucide-react';
-import { useApp } from '../contexts/AppContext';
-import authService from '../services/authService';
+import { useAuth } from '../contexts/AuthenticationContext';
+import authService from '../services/authentication';
 
 interface ProfilePageProps {
   onNavigate: (page: string) => void;
 }
 
 export function ProfilePage({ onNavigate }: ProfilePageProps) {
-  const { user, dispatch, refreshUserData } = useApp();
+  const { user, updateProfile } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState('');
@@ -56,8 +56,6 @@ export function ProfilePage({ onNavigate }: ProfilePageProps) {
   const isRestricted = isPaidTier(user?.tier) && ((user?.credits ?? 0) <= 0);
 
   useEffect(() => {
-    refreshUserData().catch(() => {});
-
     if (user) {
       setFormData({
         name: user.name || '',
@@ -78,27 +76,16 @@ export function ProfilePage({ onNavigate }: ProfilePageProps) {
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
-    if (user && isEditing) {
-      const updatedUser = { ...user, [field]: value } as any;
-      dispatch({ type: 'SET_USER', payload: updatedUser });
-    }
   };
 
   const handleSave = async () => {
     setIsLoading(true);
     setMessage('');
-    const originalUser = user;
-    const optimisticUser = { ...user, ...formData } as any;
-    dispatch({ type: 'SET_USER', payload: optimisticUser });
     try {
-      const updatedUser = await authService.updateProfile(formData);
-      dispatch({ type: 'SET_USER', payload: updatedUser });
+      await updateProfile(formData);
       setMessage('Profile updated successfully!');
       setIsEditing(false);
     } catch (error: any) {
-      if (originalUser) {
-        dispatch({ type: 'SET_USER', payload: originalUser });
-      }
       setMessage(error.message || 'Failed to update profile');
     } finally {
       setIsLoading(false);
@@ -243,7 +230,7 @@ export function ProfilePage({ onNavigate }: ProfilePageProps) {
                   <div className="flex items-center justify-between">
                     <span className="text-crys-light-grey">Plan</span>
                     <Badge className={getTierColor(user.tier)}>
-                      {user.tier.charAt(0).toUpperCase() + user.tier.slice(1)}
+                      {user.tier ? user.tier.charAt(0).toUpperCase() + user.tier.slice(1) : 'Free'}
                     </Badge>
                   </div>
                   <div className="flex items-center justify-between">

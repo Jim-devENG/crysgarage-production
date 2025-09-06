@@ -1,0 +1,24 @@
+[33mcommit a72c48fea8dd5446fc68eff8f15fdeab6b2822a9[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmaster[m[33m, [m[1;31morigin/master[m[33m, [m[1;31morigin/HEAD[m[33m)[m
+Author: Crys Garage Developer <developer@crysgarage.com>
+Date:   Wed Sep 3 12:45:11 2025 +0100
+
+    Major update: Complete payment system, UI improvements, and dev account bypass
+    
+    - Implemented complete Paystack payment gateway integration
+    - Added custom styled confirmation modal (replaced browser confirm)
+    - Implemented freemium model for free tier with credit system
+    - Added mastering requirements display across all pages
+    - Updated branding: 'Crysgarage' → 'Crys Garage', 'AI' → 'Crys Garage Engine'
+    - Enhanced UI: larger logo/favicon, avatar images, compelling genre names
+    - Added community page with WhatsApp group integration
+    - Implemented dev account bypass for Professional/Advanced dashboards
+    - Added credit deduction for downloads across all tiers
+    - Updated tagline and navigation structure
+    - Enhanced currency conversion and payment flow
+    - Added comprehensive error handling and fallbacks
+    - Deployed all changes to live server
+
+M	crysgarage-frontend/components/Auth/AuthPage.tsx
+M	crysgarage-frontend/contexts/AppContext.tsx
+M	crysgarage-frontend/services/authService.ts
+M	crysgarage-frontend/services/googleAuth.ts

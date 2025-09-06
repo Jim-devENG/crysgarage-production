@@ -3,7 +3,7 @@ import { Button } from "./ui/button";
 import { Progress } from "./ui/progress";
 import { Badge } from "./ui/badge";
 import { Upload, FileAudio, X, Play, Pause } from "lucide-react";
-import { useApp } from '../contexts/AppContext';
+import { useAuth } from '../contexts/AuthenticationContext';
 
 interface UploadInterfaceProps {
   onFileUpload?: (file: File) => void;
@@ -12,7 +12,7 @@ interface UploadInterfaceProps {
 }
 
 export function UploadInterface({ onFileUpload, disabled = false, isLoading = false }: UploadInterfaceProps) {
-  const { uploadFile } = useApp();
+  const { user } = useAuth();
   const [dragOver, setDragOver] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -92,8 +92,8 @@ export function UploadInterface({ onFileUpload, disabled = false, isLoading = fa
       } else {
         // Only try real backend upload if no parent handler is provided
         try {
-          const audioId = await uploadFile(file);
-          console.log('File uploaded successfully to backend, audio_id:', audioId);
+          // TODO: Implement file upload to backend
+          console.log('File upload to backend not yet implemented');
           setUploadProgress(100);
         } catch (backendError) {
           console.error('Backend upload failed:', backendError);
