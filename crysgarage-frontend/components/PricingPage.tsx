@@ -193,7 +193,7 @@ export function PricingPage({ onSelectTier, onGoToDashboard }: PricingPageProps)
             <span className="block text-crys-gold">Mastering Experience</span>
           </h1>
           <p className="text-xl text-crys-light-grey mb-8">
-            Professional audio mastering for every need and budget. Start free, upgrade anytime.
+            Professional audio mastering for every need and budget. Pay per credit, no subscriptions.
           </p>
           
           <div className="flex items-center justify-center gap-6 text-sm text-crys-light-grey">
