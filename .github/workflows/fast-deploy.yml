@@ -23,7 +23,7 @@ jobs:
       - name: Check VPS directory structure
         run: |
           echo "Checking VPS directory structure..."
-          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa root@${{ secrets.VPS_HOST }} << 'EOF'
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa root@209.74.80.162 << 'EOF'
             echo "=== VPS Directory Check ==="
             echo "Current user: $(whoami)"
             echo "Current directory: $(pwd)"
@@ -44,7 +44,7 @@ jobs:
       - name: Deploy to VPS
         run: |
           echo "Starting deployment to VPS..."
-          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa root@${{ secrets.VPS_HOST }} << 'EOF'
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa root@209.74.80.162 << 'EOF'
             set -e  # Exit on any error
             echo "🚀 Starting fast deployment via GitHub Actions..."
             
