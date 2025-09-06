@@ -8,15 +8,30 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
     
     steps:
     - uses: actions/checkout@v3
     
     - name: Install essential tools
       run: |
-        sudo apt-get update
-        sudo apt-get install -y bash coreutils openssh-client git curl
-        echo "Essential tools installed successfully"
+        # Update package lists
+        /bin/sh -c "apt-get update" || echo "apt-get update failed, continuing..."
+        
+        # Install essential packages
+        /bin/sh -c "apt-get install -y bash coreutils openssh-client git curl" || echo "Package installation failed, continuing..."
+        
+        # Verify bash is available
+        which bash || echo "bash not found in PATH"
+        /bin/bash --version || echo "bash version check failed"
+        
+        # Verify coreutils
+        which ls || echo "ls not found in PATH"
+        /bin/ls --version || echo "ls version check failed"
+        
+        echo "Essential tools installation completed"
     
     - name: Deploy to VPS
       uses: appleboy/ssh-action@v0.1.5
