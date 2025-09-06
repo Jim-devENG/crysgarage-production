@@ -45,11 +45,11 @@ export function PricingTiers({ onTierSelect, selectedTier }: PricingTiersProps) 
     {
       id: "professional",
       name: "Professional",
-      price: "$9",
-      credits: "100 credits",
+      price: "$14.99",
+      credits: "6 credits",
       description: "Perfect for active producers",
       features: [
-        "100 mastering credits",
+        "6 mastering credits",
         "All audio formats",
         "Up to 192kHz sample rate",
         "24-bit/32-bit resolution ($1)",

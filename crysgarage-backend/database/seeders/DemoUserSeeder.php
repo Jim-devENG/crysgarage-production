@@ -34,7 +34,7 @@ class DemoUserSeeder extends Seeder
                 'name' => 'Demo Professional User',
                 'password' => Hash::make('password'),
                 'tier' => 'professional',
-                'credits' => 500, // Increased from 100 to 500 (2500 sessions with 0.2 credit cost)
+                'credits' => 6, // New pricing: 6 credits for $14.99
                 'total_tracks' => 0,
                 'total_spent' => 0,
                 'api_token' => 'demo_pro_token_' . uniqid(),

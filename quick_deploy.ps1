@@ -32,7 +32,7 @@ git add .
 $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
 $commitMessage = "Quick deploy: $timestamp"
 
-Write-Host "💾 Committing: $commitMessage" -ForegroundColor Blue
+Write-Host "Committing: $commitMessage" -ForegroundColor Blue
 git commit -m $commitMessage
 
 if ($LASTEXITCODE -ne 0) {

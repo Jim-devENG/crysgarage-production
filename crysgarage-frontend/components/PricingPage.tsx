@@ -32,8 +32,8 @@ export function PricingPage({ onSelectTier, onGoToDashboard }: PricingPageProps)
 
   const startDirectPayment = async (tierId: string) => {
     try {
-      const priceMap: Record<string, number> = { professional: 19.99, advanced: 49.99, free: 0 };
-      const creditsMap: Record<string, number> = { professional: 12, advanced: 25, free: 2 };
+      const priceMap: Record<string, number> = { professional: 14.99, advanced: 49.99, free: 2.99 };
+      const creditsMap: Record<string, number> = { professional: 6, advanced: 25, free: 1 };
       const price = priceMap[tierId] ?? 0;
       const credits = creditsMap[tierId] ?? 0;
       
@@ -102,12 +102,12 @@ export function PricingPage({ onSelectTier, onGoToDashboard }: PricingPageProps)
     {
       id: "professional",
       name: "Professional",
-      price: "$19.99",
-      priceNGN: formatNGN(convertUSDToNGN(19.99).ngn),
-      subtitle: "12 download credits",
+      price: "$14.99",
+      priceNGN: formatNGN(convertUSDToNGN(14.99).ngn),
+      subtitle: "6 download credits",
       description: "Perfect for active producers and artists",
       features: [
-        "12 download credits",
+        "6 download credits",
         "All audio formats (up to 100MB)",
         "44.1kHz, 48kHz sample rates",
         "Up to 192kHz",
@@ -118,7 +118,7 @@ export function PricingPage({ onSelectTier, onGoToDashboard }: PricingPageProps)
       ],
       limitations: [
         "Credits required per download",
-        "Max 12 downloads per pack"
+        "Max 6 downloads per pack"
       ],
       icon: <Zap className="w-6 h-6" />,
       buttonText: "Choose Professional",

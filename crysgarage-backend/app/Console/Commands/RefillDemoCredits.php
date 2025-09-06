@@ -46,11 +46,11 @@ class RefillDemoCredits extends Command
         $proUser = User::where('email', 'demo.pro@crysgarage.com')->first();
         if ($proUser) {
             $oldCredits = $proUser->credits;
-            $proUser->credits = 100; // Reset to original 100 credits
+            $proUser->credits = 6; // Reset to new 6 credits for $14.99
             $proUser->save();
             $this->info('✅ Professional Tier Demo Account Refilled:');
             $this->line("   📧 Email: demo.pro@crysgarage.com");
-            $this->line("   💰 Credits: {$oldCredits} → 100");
+            $this->line("   💰 Credits: {$oldCredits} → 6 (New $14.99 pricing)");
         } else {
             $this->error('❌ Professional Tier Demo Account not found');
         }

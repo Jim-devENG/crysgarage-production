@@ -52,11 +52,11 @@ export function PaymentModal({
     professional: {
       id: 'professional',
       name: 'Professional',
-      price: 10,
-      credits: 10,
+      price: 14.99,
+      credits: 6,
       description: 'Perfect for content creators',
       features: [
-        '10 mastering credits',
+        '6 mastering credits',
         'AI-powered mastering',
         'Genre-specific presets',
         'High-quality exports',
