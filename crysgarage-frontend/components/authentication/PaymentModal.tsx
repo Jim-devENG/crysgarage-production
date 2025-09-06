@@ -36,9 +36,9 @@ export function PaymentModal({
     free: {
       id: 'free',
       name: 'Pay Per Download',
-      price: 2.99,
+      price: 3.00,
       credits: 1,
-      description: 'Pay $2.99 per download',
+      description: '$3 for 1 download',
       features: [
         '1 download credit',
         'High-quality mastered track',
@@ -52,29 +52,30 @@ export function PaymentModal({
     professional: {
       id: 'professional',
       name: 'Professional',
-      price: 14.99,
-      credits: 6,
-      description: 'Perfect for content creators',
+      price: 15.00,
+      credits: 5,
+      description: '$15 for 5 credits ($3 per credit)',
       features: [
-        '6 mastering credits',
+        '5 mastering credits',
         'AI-powered mastering',
         'Genre-specific presets',
         'High-quality exports',
         'WAV, MP3, FLAC formats',
         '444 tuning (free)',
         'All genres included',
-        'Live preview & feedback'
+        'Live preview & feedback',
+        'Better value than pay-per-download'
       ],
       icon: <Zap className="w-6 h-6" />
     },
     advanced: {
       id: 'advanced',
       name: 'Advanced Manual',
-      price: 20,
-      credits: -1, // Unlimited
-      description: 'Full control for professionals',
+      price: 25.00,
+      credits: 6, // 5 credits + 1 bonus
+      description: '$25 for 5 credits + 1 bonus credit',
       features: [
-        'Unlimited mastering',
+        '5 credits + 1 bonus credit',
         'Real-time manual controls',
         '8-band graphic EQ',
         'Advanced compression',
@@ -84,7 +85,8 @@ export function PaymentModal({
         'All sample rates & formats',
         '444 tuning (free)',
         'All genres included',
-        'Live preview & feedback'
+        'Live preview & feedback',
+        'Best value with bonus credit'
       ],
       icon: <Crown className="w-6 h-6" />
     }

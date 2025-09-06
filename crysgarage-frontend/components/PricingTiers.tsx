@@ -26,11 +26,11 @@ export function PricingTiers({ onTierSelect, selectedTier }: PricingTiersProps) 
     {
       id: "free",
       name: "Pay Per Download",
-      price: "$2.99",
-      credits: "per download",
-      description: "Pay only when you download",
+      price: "$3.00",
+      credits: "1 download",
+      description: "$3 for 1 download",
       features: [
-        "Pay $2.99 per download",
+        "1 download credit",
         "MP3/WAV upload",
         "44.1kHz sample rate",
         "16-bit resolution",
@@ -45,11 +45,11 @@ export function PricingTiers({ onTierSelect, selectedTier }: PricingTiersProps) 
     {
       id: "professional",
       name: "Professional",
-      price: "$14.99",
-      credits: "6 credits",
-      description: "Perfect for active producers",
+      price: "$15.00",
+      credits: "5 credits",
+      description: "$3 per credit",
       features: [
-        "6 mastering credits",
+        "5 mastering credits",
         "All audio formats",
         "Up to 192kHz sample rate",
         "24-bit/32-bit resolution ($1)",
@@ -57,7 +57,8 @@ export function PricingTiers({ onTierSelect, selectedTier }: PricingTiersProps) 
         "Premium genres ($1 each)",
         "444 tuning correction",
         "Noise reduction",
-        "Download in WAV/MP3/FLAC"
+        "Download in WAV/MP3/FLAC",
+        "Better value than pay-per-download"
       ],
       popular: true,
       icon: <Zap className="w-6 h-6" />,
@@ -67,11 +68,11 @@ export function PricingTiers({ onTierSelect, selectedTier }: PricingTiersProps) 
     {
       id: "advanced",
       name: "Advanced Manual",
-      price: "$20",
-      credits: "Unlimited",
-      description: "Full control for professionals",
+      price: "$25.00",
+      credits: "5 + 1 bonus",
+      description: "Best value with bonus credit",
       features: [
-        "Unlimited mastering",
+        "5 credits + 1 bonus credit",
         "Real-time manual controls",
         "8-band graphic EQ",
         "Advanced compression",

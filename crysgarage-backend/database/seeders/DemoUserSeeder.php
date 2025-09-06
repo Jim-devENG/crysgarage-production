@@ -34,7 +34,7 @@ class DemoUserSeeder extends Seeder
                 'name' => 'Demo Professional User',
                 'password' => Hash::make('password'),
                 'tier' => 'professional',
-                'credits' => 6, // New pricing: 6 credits for $14.99
+                'credits' => 5, // New pricing: 5 credits for $15.00
                 'total_tracks' => 0,
                 'total_spent' => 0,
                 'api_token' => 'demo_pro_token_' . uniqid(),
@@ -48,7 +48,7 @@ class DemoUserSeeder extends Seeder
                 'name' => 'Demo Advanced User',
                 'password' => Hash::make('password'),
                 'tier' => 'advanced',
-                'credits' => 9999, // Unlimited for demo (no credit consumption)
+                'credits' => 6, // New pricing: 6 credits (5 + 1 bonus) for $25.00
                 'total_tracks' => 0,
                 'total_spent' => 0,
                 'api_token' => 'demo_advanced_token_' . uniqid(),

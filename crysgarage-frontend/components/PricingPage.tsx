@@ -32,8 +32,8 @@ export function PricingPage({ onSelectTier, onGoToDashboard }: PricingPageProps)
 
   const startDirectPayment = async (tierId: string) => {
     try {
-      const priceMap: Record<string, number> = { professional: 14.99, advanced: 49.99, free: 2.99 };
-      const creditsMap: Record<string, number> = { professional: 6, advanced: 25, free: 1 };
+      const priceMap: Record<string, number> = { professional: 15.00, advanced: 25.00, free: 3.00 };
+      const creditsMap: Record<string, number> = { professional: 5, advanced: 6, free: 1 };
       const price = priceMap[tierId] ?? 0;
       const credits = creditsMap[tierId] ?? 0;
       
@@ -76,12 +76,12 @@ export function PricingPage({ onSelectTier, onGoToDashboard }: PricingPageProps)
     {
       id: "free",
       name: "Pay Per Download",
-      price: "$2.99",
-      priceNGN: formatNGN(convertUSDToNGN(2.99).ngn),
-      subtitle: "Pay only when you download",
+      price: "$3.00",
+      priceNGN: formatNGN(convertUSDToNGN(3.00).ngn),
+      subtitle: "$3 for 1 download",
       description: "Perfect for occasional users",
       features: [
-        "Pay $2.99 per download",
+        "1 download credit",
         "MP3/WAV upload (up to 60MB)",
         "44.1kHz sample rate",
         "16-bit resolution",
@@ -102,23 +102,24 @@ export function PricingPage({ onSelectTier, onGoToDashboard }: PricingPageProps)
     {
       id: "professional",
       name: "Professional",
-      price: "$14.99",
-      priceNGN: formatNGN(convertUSDToNGN(14.99).ngn),
-      subtitle: "6 download credits",
+      price: "$15.00",
+      priceNGN: formatNGN(convertUSDToNGN(15.00).ngn),
+      subtitle: "5 credits ($3 per credit)",
       description: "Perfect for active producers and artists",
       features: [
-        "6 download credits",
+        "5 download credits",
         "All audio formats (up to 100MB)",
         "44.1kHz, 48kHz sample rates",
         "Up to 192kHz",
         "16/24/32-bit resolution",
         "Genre optimization",
         "Noise reduction included",
-        "Download WAV/MP3/FLAC"
+        "Download WAV/MP3/FLAC",
+        "Better value than pay-per-download"
       ],
       limitations: [
         "Credits required per download",
-        "Max 6 downloads per pack"
+        "Max 5 downloads per pack"
       ],
       icon: <Zap className="w-6 h-6" />,
       buttonText: "Choose Professional",
@@ -127,20 +128,24 @@ export function PricingPage({ onSelectTier, onGoToDashboard }: PricingPageProps)
     },
     {
       id: "advanced",
-      name: "Advanced",
-      price: "$49.99",
-      priceNGN: formatNGN(convertUSDToNGN(49.99).ngn),
-      subtitle: "25 download credits",
-      description: "More capacity and premium tools",
+      name: "Advanced Manual",
+      price: "$25.00",
+      priceNGN: formatNGN(convertUSDToNGN(25.00).ngn),
+      subtitle: "5 credits + 1 bonus credit",
+      description: "Full control for professionals",
       features: [
-        "25 download credits",
-        "All audio formats (unlimited size)",
-        "All sample rates (44.1kHz - 192kHz)",
-        "All bit depths (16/24/32-bit)",
+        "5 credits + 1 bonus credit",
+        "Real-time manual controls",
+        "8-band graphic EQ",
+        "Advanced compression",
+        "Stereo imaging controls",
+        "Limiter settings",
+        "A/B comparison",
+        "All sample rates & formats",
+        "444 tuning (free)",
         "All genres included",
-        "Advanced processing pipeline",
-        "Studio-grade quality",
-        "Priority processing"
+        "Live preview & feedback",
+        "Best value with bonus credit"
       ],
       limitations: [
         "Credits required per download"

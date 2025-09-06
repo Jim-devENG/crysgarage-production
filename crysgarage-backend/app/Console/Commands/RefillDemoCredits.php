@@ -46,11 +46,11 @@ class RefillDemoCredits extends Command
         $proUser = User::where('email', 'demo.pro@crysgarage.com')->first();
         if ($proUser) {
             $oldCredits = $proUser->credits;
-            $proUser->credits = 6; // Reset to new 6 credits for $14.99
+            $proUser->credits = 5; // Reset to new 5 credits for $15.00
             $proUser->save();
             $this->info('✅ Professional Tier Demo Account Refilled:');
             $this->line("   📧 Email: demo.pro@crysgarage.com");
-            $this->line("   💰 Credits: {$oldCredits} → 6 (New $14.99 pricing)");
+            $this->line("   💰 Credits: {$oldCredits} → 5 (New $15.00 pricing)");
         } else {
             $this->error('❌ Professional Tier Demo Account not found');
         }
@@ -59,11 +59,11 @@ class RefillDemoCredits extends Command
         $advancedUser = User::where('email', 'demo.advanced@crysgarage.com')->first();
         if ($advancedUser) {
             $oldCredits = $advancedUser->credits;
-            $advancedUser->credits = 999; // Reset to original 999 credits (unlimited)
+            $advancedUser->credits = 6; // Reset to new 6 credits (5 + 1 bonus) for $25.00
             $advancedUser->save();
             $this->info('✅ Advanced Tier Demo Account Refilled:');
             $this->line("   📧 Email: demo.advanced@crysgarage.com");
-            $this->line("   💰 Credits: {$oldCredits} → 999 (Unlimited)");
+            $this->line("   💰 Credits: {$oldCredits} → 6 (5 + 1 bonus for $25.00)");
         } else {
             $this->error('❌ Advanced Tier Demo Account not found');
         }
