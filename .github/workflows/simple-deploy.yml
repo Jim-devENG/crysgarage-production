@@ -1,4 +1,4 @@
-name: Auto Deploy to VPS
+name: Simple Deploy to VPS
 
 on:
   push:
@@ -10,36 +10,48 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     
     - name: Deploy to VPS
-      uses: appleboy/ssh-action@v0.1.5
+      uses: appleboy/ssh-action@v0.1.8
       with:
         host: ${{ secrets.VPS_HOST }}
         username: ${{ secrets.VPS_USER }}
         key: ${{ secrets.SSH_PRIVATE_KEY }}
         script: |
+          echo "🚀 Starting deployment..."
+          
+          # Navigate to deployment directory
           cd /var/www/crysgarage-deploy
+          
+          # Pull latest changes
+          echo "📥 Pulling latest changes..."
           git pull origin master
           
           # Build frontend
+          echo "🌐 Building frontend..."
           cd crysgarage-frontend
+          npm ci
           npm run build
-          cd ..
           
           # Deploy frontend
+          echo "📁 Deploying frontend..."
           rm -rf /var/www/html/*
-          cp -r crysgarage-frontend/dist/* /var/www/html/
+          cp -r dist/* /var/www/html/
+          chown -R nginx:nginx /var/www/html/
+          chmod -R 755 /var/www/html/
           
-          # Deploy backend
-          cd crysgarage-backend
+          # Deploy backend essentials
+          echo "🔧 Deploying backend..."
+          cd ../crysgarage-backend
           composer install --no-dev --optimize-autoloader
           php artisan config:clear
           php artisan route:clear
           php artisan cache:clear
           
           # Restart services
+          echo "🔄 Restarting services..."
           systemctl restart php-fpm
           systemctl reload nginx
           
-          echo "Deployment completed at $(date)"
+          echo "✅ Deployment completed at $(date)"
