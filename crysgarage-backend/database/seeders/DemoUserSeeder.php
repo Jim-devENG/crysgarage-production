@@ -20,7 +20,7 @@ class DemoUserSeeder extends Seeder
                 'name' => 'Demo Free User',
                 'password' => Hash::make('password'),
                 'tier' => 'free',
-                'credits' => 50, // Increased from 5 to 50 (250 sessions with 0.2 credit cost)
+                'credits' => 0, // Free tier users start with 0 credits (pay per download)
                 'total_tracks' => 0,
                 'total_spent' => 0,
                 'api_token' => 'demo_free_token_' . uniqid(),

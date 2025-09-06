@@ -50,7 +50,7 @@ class AuthController extends Controller
                     'name' => $user->name,
                     'email' => $user->email,
                     'tier' => $user->tier ?? 'free',
-                    'credits' => $user->credits ?? 5,
+                    'credits' => $user->tier === 'free' ? 0 : ($user->credits ?? 5),
                     'join_date' => $user->created_at->toISOString(),
                     'total_tracks' => $user->total_tracks ?? 0,
                     'total_spent' => $user->total_spent ?? 0,
@@ -88,7 +88,7 @@ class AuthController extends Controller
             'email' => $request->email,
             'password' => Hash::make($request->password),
             'tier' => 'free',
-            'credits' => 5,
+            'credits' => 0, // Free tier users start with 0 credits (pay per download)
             'total_tracks' => 0,
             'total_spent' => 0,
             'api_token' => Str::random(60),
@@ -159,7 +159,7 @@ class AuthController extends Controller
                     'email' => $request->email,
                     'password' => Hash::make(Str::random(32)), // Random password for OAuth users
                     'tier' => 'free',
-                    'credits' => 5,
+                    'credits' => 0, // Free tier users start with 0 credits (pay per download)
                     'total_tracks' => 0,
                     'total_spent' => 0,
                     'api_token' => Str::random(60),
@@ -253,7 +253,7 @@ class AuthController extends Controller
                 'email' => $request->email,
                 'password' => Hash::make(Str::random(32)), // Random password for OAuth users
                 'tier' => 'free',
-                'credits' => 5,
+                'credits' => 0, // Free tier users start with 0 credits (pay per download)
                 'total_tracks' => 0,
                 'total_spent' => 0,
                 'api_token' => Str::random(60),
@@ -315,7 +315,7 @@ class AuthController extends Controller
                 'name' => $user->name,
                 'email' => $user->email,
                 'tier' => $user->tier ?? 'free',
-                'credits' => $user->credits ?? 5,
+                    'credits' => $user->tier === 'free' ? 0 : ($user->credits ?? 5),
                 'join_date' => $user->created_at->toISOString(),
                 'total_tracks' => $user->total_tracks ?? 0,
                 'total_spent' => $user->total_spent ?? 0,

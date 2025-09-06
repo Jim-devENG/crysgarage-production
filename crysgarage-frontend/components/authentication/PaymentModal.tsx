@@ -35,16 +35,17 @@ export function PaymentModal({
   const tiers = {
     free: {
       id: 'free',
-      name: 'Download Credits',
-      price: 5,
+      name: 'Pay Per Download',
+      price: 2.99,
       credits: 1,
-      description: 'Download your mastered track',
+      description: 'Pay $2.99 per download',
       features: [
         '1 download credit',
         'High-quality mastered track',
         'Download in WAV/MP3/FLAC',
         'Professional mastering',
-        'Instant download'
+        'Instant download',
+        'No subscription required'
       ],
       icon: <Shield className="w-6 h-6" />
     },

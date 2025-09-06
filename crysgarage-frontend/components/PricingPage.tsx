@@ -75,26 +75,27 @@ export function PricingPage({ onSelectTier, onGoToDashboard }: PricingPageProps)
   const pricingTiers = [
     {
       id: "free",
-      name: "Free Automatic",
-      price: "Free",
-      subtitle: "Get started with 5 free masters",
-      description: "Perfect for trying out our platform",
+      name: "Pay Per Download",
+      price: "$2.99",
+      priceNGN: formatNGN(convertUSDToNGN(2.99).ngn),
+      subtitle: "Pay only when you download",
+      description: "Perfect for occasional users",
       features: [
-        "5 free mastering credits",
+        "Pay $2.99 per download",
         "MP3/WAV upload (up to 60MB)",
         "44.1kHz sample rate",
         "16-bit resolution",
-        "Playback preview only",
-        "Basic genres ($1 each)",
-        "No downloads on free credits"
+        "Professional mastering",
+        "Download in WAV/MP3/FLAC",
+        "No subscription required"
       ],
       limitations: [
-        "Cannot download free masters",
-        "Premium features locked",
+        "Pay per download only",
+        "No free credits",
         "Limited file size"
       ],
       icon: <Star className="w-6 h-6" />,
-      buttonText: "Try Free Trial",
+      buttonText: "Pay Per Download",
       buttonVariant: "outline" as const,
       popular: false
     },

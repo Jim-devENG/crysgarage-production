@@ -33,11 +33,11 @@ class RefillDemoCredits extends Command
         $freeUser = User::where('email', 'demo.free@crysgarage.com')->first();
         if ($freeUser) {
             $oldCredits = $freeUser->credits;
-            $freeUser->credits = 5; // Reset to original 5 credits
+            $freeUser->credits = 0; // No free credits - pay per download
             $freeUser->save();
             $this->info('✅ Free Tier Demo Account Refilled:');
             $this->line("   📧 Email: demo.free@crysgarage.com");
-            $this->line("   💰 Credits: {$oldCredits} → 5");
+            $this->line("   💰 Credits: {$oldCredits} → 0 (Pay per download)");
         } else {
             $this->error('❌ Free Tier Demo Account not found');
         }

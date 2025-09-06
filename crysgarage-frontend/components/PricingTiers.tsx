@@ -25,21 +25,21 @@ export function PricingTiers({ onTierSelect, selectedTier }: PricingTiersProps) 
   const tiers: PricingTier[] = [
     {
       id: "free",
-      name: "Free Automatic",
-      price: "Free",
-      credits: "5 free masters",
-      description: "Get started with basic mastering",
+      name: "Pay Per Download",
+      price: "$2.99",
+      credits: "per download",
+      description: "Pay only when you download",
       features: [
-        "5 free mastering credits",
+        "Pay $2.99 per download",
         "MP3/WAV upload",
         "44.1kHz sample rate",
         "16-bit resolution",
-        "Basic genre selection ($1 each)",
-        "Playback preview only",
-        "No downloads on free credits"
+        "Professional mastering",
+        "Download in WAV/MP3/FLAC",
+        "No subscription required"
       ],
       icon: <Star className="w-6 h-6" />,
-      buttonText: "Start Free",
+      buttonText: "Pay Per Download",
       buttonVariant: "outline"
     },
     {

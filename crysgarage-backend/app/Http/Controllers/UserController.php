@@ -19,7 +19,7 @@ class UserController extends Controller
             'name' => $user->name,
             'email' => $user->email,
             'tier' => $user->tier ?? 'free',
-            'credits' => $user->credits ?? 5,
+            'credits' => $user->tier === 'free' ? 0 : ($user->credits ?? 5),
             'join_date' => $user->created_at->toISOString(),
             'total_tracks' => $user->total_tracks ?? 0,
             'total_spent' => $user->total_spent ?? 0,
@@ -45,7 +45,7 @@ class UserController extends Controller
             'name' => $user->name,
             'email' => $user->email,
             'tier' => $user->tier ?? 'free',
-            'credits' => $user->credits ?? 5,
+            'credits' => $user->tier === 'free' ? 0 : ($user->credits ?? 5),
             'join_date' => $user->created_at->toISOString(),
             'total_tracks' => $user->total_tracks ?? 0,
             'total_spent' => $user->total_spent ?? 0,
@@ -62,7 +62,7 @@ class UserController extends Controller
         return response()->json([
             'total_tracks' => $user->total_tracks ?? 0,
             'total_spent' => $user->total_spent ?? 0,
-            'credits_remaining' => $user->credits ?? 5,
+            'credits_remaining' => $user->tier === 'free' ? 0 : ($user->credits ?? 5),
             'tier_usage' => [
                 'free' => 0,
                 'pro' => 0,

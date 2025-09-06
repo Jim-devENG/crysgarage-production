@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::table('users', function (Blueprint $table) {
             $table->string('tier')->default('free')->after('email');
-            $table->integer('credits')->default(5)->after('tier');
+            $table->integer('credits')->default(0)->after('tier'); // Free tier users start with 0 credits (pay per download)
             $table->integer('total_tracks')->default(0)->after('credits');
             $table->decimal('total_spent', 10, 2)->default(0.00)->after('total_tracks');
             $table->string('api_token', 80)->nullable()->after('total_spent');

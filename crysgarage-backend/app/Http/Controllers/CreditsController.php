@@ -14,7 +14,7 @@ class CreditsController extends Controller
         $user = $request->user();
 
         return response()->json([
-            'credits' => $user->credits ?? 5,
+            'credits' => $user->tier === 'free' ? 0 : ($user->credits ?? 5),
             'tier' => $user->tier ?? 'free',
         ]);
     }
