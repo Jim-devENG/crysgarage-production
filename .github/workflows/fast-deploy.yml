@@ -16,9 +16,20 @@ jobs:
       - name: Set up SSH key
         run: |
           mkdir -p ~/.ssh
+          echo "Setting up SSH key..."
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
+          echo "SSH key file created, checking format..."
+          ssh-keygen -l -f ~/.ssh/id_rsa || echo "Key format issue detected"
+          echo "Adding VPS to known hosts..."
           ssh-keyscan -H 209.74.80.162 >> ~/.ssh/known_hosts
+          echo "SSH setup completed"
+
+      - name: Test SSH connection
+        run: |
+          echo "Testing SSH connection..."
+          ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa root@209.74.80.162 "echo 'SSH connection test successful'"
+          echo "SSH connection test completed"
 
       - name: Check VPS directory structure
         run: |
