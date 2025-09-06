@@ -22,7 +22,7 @@ jobs:
           echo "SSH key file created, checking format..."
           ssh-keygen -l -f ~/.ssh/id_rsa || echo "Key format issue detected"
           echo "Adding VPS to known hosts..."
-          ssh-keyscan -H 209.74.80.162 >> ~/.ssh/known_hosts
+          ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
           echo "SSH setup completed"
 
       - name: Test SSH connection
