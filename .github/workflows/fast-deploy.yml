@@ -58,10 +58,14 @@ jobs:
         run: |
           echo "Checking VPS directory structure..."
           ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa root@209.74.80.162 << 'EOF'
+            # Set proper PATH
+            export PATH="/usr/local/ruby-3.1.0/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+            
             echo "=== VPS Directory Check ==="
             echo "Current user: $(whoami)"
             echo "Current directory: $(pwd)"
             echo "Home directory: $HOME"
+            echo "PATH: $PATH"
             echo "Root directory contents:"
             ls -la /root/
             echo "Checking for crysgarage-deploy:"
@@ -80,6 +84,9 @@ jobs:
         run: |
           echo "Starting deployment to VPS..."
           ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa root@209.74.80.162 << 'EOF'
+            # Set proper PATH
+            export PATH="/usr/local/ruby-3.1.0/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+            
             set -e  # Exit on any error
             echo "🚀 Starting fast deployment via GitHub Actions..."
             
