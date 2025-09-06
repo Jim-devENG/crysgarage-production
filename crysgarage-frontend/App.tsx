@@ -9,7 +9,7 @@ import { ProcessingPage } from './components/ProcessingPage';
 import { MasteringResults } from './components/MasteringResults';
 import { PricingPage } from './components/PricingPage';
 import { HelpPage } from './components/HelpPage';
-import { CoursesPage } from './components/CoursesPage';
+// import { CoursesPage } from './components/CoursesPage';
 import { AddonsMarketplace } from './components/AddonsMarketplace';
 import { UserProfile } from './components/UserProfile';
 import { BillingModal } from './components/BillingModal';
@@ -193,11 +193,11 @@ function AppContent() {
           />
         )}
 
-        {currentPage === 'courses' && (
+        {/* {currentPage === 'courses' && (
           <CoursesPage 
             onGetStarted={() => handleNavigation('studio')}
           />
-        )}
+        )} */}
 
         {currentPage === 'marketplace' && (
           <AddonsMarketplace 

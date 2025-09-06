@@ -29,7 +29,7 @@ export function Header({
   const navigationItems = [
     { id: 'landing', label: 'Home' },
     { id: 'studio', label: 'Studio' },
-    { id: 'courses', label: 'Courses' },
+    // { id: 'courses', label: 'Courses' },
     { id: 'community', label: 'Community' },
     { id: 'help', label: 'Help' },
   ];

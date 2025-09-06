@@ -65,12 +65,12 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, onShowAuthModal }) => {
             >
               Help
             </button>
-            <button
+            {/* <button
               onClick={() => onNavigate('courses')}
               className="text-crys-light-grey hover:text-white transition-colors"
             >
               Courses
-            </button>
+            </button> */}
           </nav>
 
           {/* Right Side - Auth or User Menu */}
@@ -173,7 +173,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, onShowAuthModal }) => {
               >
                 Help
               </button>
-              <button
+              {/* <button
                 onClick={() => {
                   onNavigate('courses');
                   setIsMobileMenuOpen(false);
@@ -181,7 +181,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, onShowAuthModal }) => {
                 className="block w-full text-left px-3 py-2 text-crys-light-grey hover:text-white transition-colors"
               >
                 Courses
-              </button>
+              </button> */}
               
               {/* Mobile Auth Section */}
               <div className="pt-4 border-t border-crys-light-grey">

@@ -62,7 +62,7 @@ export function Footer({ onNavigate }: FooterProps) {
     { name: "About Us", href: "/about" },
     { name: "Help Center", href: "/help" },
     { name: "Community", href: "/community" },
-    { name: "Courses", href: "/courses" }
+    // { name: "Courses", href: "/courses" }
   ];
 
   const companyLinks = [

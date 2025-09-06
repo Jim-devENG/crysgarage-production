@@ -4,7 +4,7 @@ import { FirebaseAuthModal, UserDropdown, PaymentModal } from './components/auth
 import { LandingPage } from './components/LandingPage';
 import { PricingPage } from './components/PricingPage';
 import { HelpPage } from './components/HelpPage';
-import { CoursesPage } from './components/CoursesPage';
+// import { CoursesPage } from './components/CoursesPage';
 import { AddonsMarketplace } from './components/AddonsMarketplace';
 import FreeTierDashboard from './components/FreeTier/FreeTierDashboard';
 import ProfessionalTierDashboard from './components/ProfessionalTierDashboard';
@@ -87,8 +87,8 @@ const AppContent: React.FC = () => {
         />;
       case 'help':
         return <HelpPage onGetStarted={() => setCurrentPage('pricing')} />;
-      case 'courses':
-        return <CoursesPage onGetStarted={() => setCurrentPage('pricing')} />;
+      // case 'courses':
+      //   return <CoursesPage onGetStarted={() => setCurrentPage('pricing')} />;
       case 'addons':
         return <AddonsMarketplace 
           onClose={() => setCurrentPage('landing')} 
