@@ -232,7 +232,12 @@ const ExportStep: React.FC<ExportStepProps> = ({
         };
         
         console.log('🎵 Calling getProcessedAudioUrl...');
-        processedAudioUrl = await localRealTimeAudioPlayerRef.current.getProcessedAudioUrl(updateRealTimeProgress);
+        const targetSampleRate = 48000; // Professional tier uses 48kHz
+        processedAudioUrl = await localRealTimeAudioPlayerRef.current.getProcessedAudioUrl(
+          updateRealTimeProgress, 
+          targetSampleRate, 
+          downloadFormat
+        );
         console.log('🎵 getProcessedAudioUrl returned:', processedAudioUrl);
       }
       

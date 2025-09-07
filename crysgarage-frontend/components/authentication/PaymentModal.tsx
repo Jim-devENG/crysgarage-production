@@ -61,7 +61,7 @@ export function PaymentModal({
         'Genre-specific presets',
         'High-quality exports',
         'WAV, MP3, FLAC formats',
-        '444 tuning (free)',
+        '+16 tuning (free)',
         'All genres included',
         'Live preview & feedback',
         'Better value than pay-per-download'
@@ -83,7 +83,7 @@ export function PaymentModal({
         'Limiter settings',
         'A/B comparison',
         'All sample rates & formats',
-        '444 tuning (free)',
+        '+16 tuning (free)',
         'All genres included',
         'Live preview & feedback',
         'Best value with bonus credit'

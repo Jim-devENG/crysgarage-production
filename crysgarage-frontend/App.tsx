@@ -23,6 +23,8 @@ import { BillingPage } from './components/Billing/BillingPage';
 import { ProfilePage } from './components/ProfilePage';
 import { PaymentSuccessPage } from './components/Payment/PaymentSuccessPage';
 import { AuthModal, UserDropdown, PaymentModal } from './components/authentication';
+import { DEV_MODE, logDevAction } from './utils/devMode';
+import { DevModeToggle } from './components/DevModeToggle';
 
 function AppContent() {
   const { user, isAuthenticated, isLoading } = useAuth();
@@ -64,6 +66,13 @@ function AppContent() {
     console.log('App.tsx: handleTierSelection called with tierId:', tierId);
     console.log('App.tsx: isAuthenticated:', isAuthenticated);
     setSelectedTier(tierId);
+    
+    if (DEV_MODE) {
+      // In Dev Mode, bypass authentication and payment
+      logDevAction(`Tier selection bypassed - granting access to ${tierId} tier`);
+      handlePaymentSuccess(tierId === 'free' ? 1 : tierId === 'professional' ? 5 : 6);
+      return;
+    }
     
     if (!isAuthenticated) {
       // User needs to authenticate first
@@ -110,6 +119,12 @@ function AppContent() {
   };
 
   const handleDownloadAttempt = () => {
+    if (DEV_MODE) {
+      // In Dev Mode, always allow downloads
+      logDevAction('Download attempt bypassed - allowing download');
+      return true;
+    }
+    
     if (!isAuthenticated) {
       setPendingTierAccess('free');
       setShowAuthModal(true);
@@ -223,6 +238,9 @@ function AppContent() {
       </main>
 
       <Footer onNavigate={handleNavigation} />
+
+      {/* Dev Mode Toggle (only in development) */}
+      <DevModeToggle />
 
       {/* Authentication Modal */}
       <AuthModal

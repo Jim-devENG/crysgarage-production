@@ -10,6 +10,7 @@ import {
   updateProfile
 } from 'firebase/auth';
 import { auth, googleProvider } from '../firebase/config';
+import { DEV_MODE, DEV_USER, logDevAction, initDevMode } from '../utils/devMode';
 
 // User interface that matches your existing system
 export interface User {
@@ -109,6 +110,22 @@ class FirebaseAuthService {
   private authStateListeners: ((user: User | null) => void)[] = [];
 
   constructor() {
+    // Initialize Dev Mode warnings
+    initDevMode();
+    
+    if (DEV_MODE) {
+      // In Dev Mode, immediately set the dev user and notify listeners
+      logDevAction('Firebase Auth bypassed - using Dev Mode user');
+      tokenManager.setToken('dev-token');
+      tokenManager.setUser(DEV_USER);
+      
+      // Notify all listeners with dev user
+      setTimeout(() => {
+        this.authStateListeners.forEach(listener => listener(DEV_USER));
+      }, 100);
+      return;
+    }
+    
     // Check for redirect result first
     this.handleRedirectResult();
     
@@ -167,6 +184,11 @@ class FirebaseAuthService {
 
   // Sign in with Google
   async signInWithGoogle(): Promise<User> {
+    if (DEV_MODE) {
+      logDevAction('Google sign in bypassed - returning Dev Mode user');
+      return DEV_USER;
+    }
+    
     try {
       console.log('FirebaseAuth: Starting Google sign in...');
       
@@ -202,6 +224,11 @@ class FirebaseAuthService {
 
   // Sign in with email and password
   async signInWithEmail(email: string, password: string): Promise<User> {
+    if (DEV_MODE) {
+      logDevAction('Email sign in bypassed - returning Dev Mode user');
+      return DEV_USER;
+    }
+    
     try {
       console.log('FirebaseAuth: Starting email sign in...');
       const result = await signInWithEmailAndPassword(auth, email, password);
@@ -217,6 +244,11 @@ class FirebaseAuthService {
 
   // Sign up with email and password
   async signUpWithEmail(email: string, password: string, name: string): Promise<User> {
+    if (DEV_MODE) {
+      logDevAction('Email sign up bypassed - returning Dev Mode user');
+      return DEV_USER;
+    }
+    
     try {
       console.log('FirebaseAuth: Starting email sign up...');
       const result = await createUserWithEmailAndPassword(auth, email, password);
@@ -236,6 +268,13 @@ class FirebaseAuthService {
 
   // Sign out
   async signOut(): Promise<void> {
+    if (DEV_MODE) {
+      logDevAction('Sign out bypassed - clearing Dev Mode user');
+      tokenManager.clearAuth();
+      this.authStateListeners.forEach(listener => listener(null));
+      return;
+    }
+    
     try {
       console.log('FirebaseAuth: Starting sign out...');
       await signOut(auth);
@@ -248,6 +287,10 @@ class FirebaseAuthService {
 
   // Get current user
   getCurrentUser(): User | null {
+    if (DEV_MODE) {
+      return DEV_USER;
+    }
+    
     const user = tokenManager.getUser();
     console.log('FirebaseAuth: getCurrentUser() =', user);
     return user;
@@ -255,6 +298,10 @@ class FirebaseAuthService {
 
   // Check if user is authenticated
   isAuthenticated(): boolean {
+    if (DEV_MODE) {
+      return true;
+    }
+    
     const token = tokenManager.getToken();
     const user = tokenManager.getUser();
     const isAuth = !!(token && user);
@@ -264,6 +311,11 @@ class FirebaseAuthService {
 
   // Refresh user data (get fresh token)
   async refreshUser(): Promise<User | null> {
+    if (DEV_MODE) {
+      logDevAction('User refresh bypassed - returning Dev Mode user');
+      return DEV_USER;
+    }
+    
     const currentUser = auth.currentUser;
     if (!currentUser) {
       console.log('FirebaseAuth: No current user to refresh');
@@ -288,6 +340,13 @@ class FirebaseAuthService {
 
   // Update user profile
   async updateProfile(updates: Partial<User>): Promise<User> {
+    if (DEV_MODE) {
+      logDevAction('Profile update bypassed - returning updated Dev Mode user');
+      const updatedUser = { ...DEV_USER, ...updates };
+      tokenManager.setUser(updatedUser);
+      return updatedUser;
+    }
+    
     const currentUser = auth.currentUser;
     if (!currentUser) {
       throw new Error('No authenticated user');

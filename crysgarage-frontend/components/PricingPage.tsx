@@ -142,7 +142,7 @@ export function PricingPage({ onSelectTier, onGoToDashboard }: PricingPageProps)
         "Limiter settings",
         "A/B comparison",
         "All sample rates & formats",
-        "444 tuning (free)",
+        "+16 tuning (free)",
         "All genres included",
         "Live preview & feedback",
         "Best value with bonus credit"

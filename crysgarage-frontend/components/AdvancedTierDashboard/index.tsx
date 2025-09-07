@@ -112,7 +112,7 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
     
     // Advanced features
     gSurround: { width: 0, depth: 0, enabled: false },
-    gTuner: { enabled: false, frequency: 450 }
+    gTuner: { enabled: false, frequency: 450, cents: 16 }
   });
 
   const [surroundEnabled, setSurroundEnabled] = useState(false);
@@ -888,7 +888,7 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
         enabled: false 
       },
       gSurround: { width: 0, depth: 0, enabled: false },
-      gTuner: { enabled: false, frequency: 450 }
+      gTuner: { enabled: false, frequency: 450, cents: 16 }
     });
     // Reset meter settings and auto-adjustment
     setMeterSettings({

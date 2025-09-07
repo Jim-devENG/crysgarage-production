@@ -55,7 +55,7 @@ export function PricingTiers({ onTierSelect, selectedTier }: PricingTiersProps) 
         "24-bit/32-bit resolution ($1)",
         "Free: Pop, Rock, Reggae",
         "Premium genres ($1 each)",
-        "444 tuning correction",
+        "+16 tuning correction",
         "Noise reduction",
         "Download in WAV/MP3/FLAC",
         "Better value than pay-per-download"
@@ -80,7 +80,7 @@ export function PricingTiers({ onTierSelect, selectedTier }: PricingTiersProps) 
         "Limiter settings",
         "A/B comparison",
         "All sample rates & formats",
-        "444 tuning (free)",
+        "+16 tuning (free)",
         "All genres included",
         "Live preview & feedback"
       ],

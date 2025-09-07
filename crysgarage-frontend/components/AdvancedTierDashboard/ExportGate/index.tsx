@@ -11,7 +11,11 @@ interface ExportGateProps {
   onUpdateEffectSettings?: (effectType: string, settings: any) => void;
   meterData?: any;
   selectedGenre?: string;
-  getProcessedAudioUrl?: (onProgress?: (progress: number, stage: string, chunks?: number, size?: number) => void) => Promise<string | null>;
+  getProcessedAudioUrl?: (
+    onProgress?: (progress: number, stage: string) => void,
+    sampleRate?: number,
+    format?: 'mp3' | 'wav16' | 'wav24' | 'wav32'
+  ) => Promise<string | null>;
 }
 
 const ExportGate: React.FC<ExportGateProps> = ({ 
@@ -25,7 +29,7 @@ const ExportGate: React.FC<ExportGateProps> = ({
   getProcessedAudioUrl
 }) => {
   const [downloadFormat, setDownloadFormat] = useState<'mp3' | 'wav16' | 'wav24' | 'wav32'>('wav16');
-  const [sampleRate, setSampleRate] = useState<'44.1kHz' | '48kHz' | '88.2kHz' | '96kHz' | '192kHz'>('44.1kHz');
+  const [sampleRate, setSampleRate] = useState<'44.1kHz' | '48kHz'>('44.1kHz');
   const [gTunerEnabled, setGTunerEnabled] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState(0);
@@ -65,13 +69,9 @@ const ExportGate: React.FC<ExportGateProps> = ({
   const calculateTotalCost = () => {
     let cost = 0;
     
-    // Format costs
+    // Format costs - higher bit depths cost more
+    if (downloadFormat === 'wav24') cost += 1;
     if (downloadFormat === 'wav32') cost += 2;
-    
-    // Sample rate costs
-    if (sampleRate === '88.2kHz') cost += 3;
-    if (sampleRate === '96kHz') cost += 5;
-    if (sampleRate === '192kHz') cost += 10;
     
     // Feature costs
     if (gTunerEnabled) cost += 3;
@@ -130,17 +130,18 @@ const ExportGate: React.FC<ExportGateProps> = ({
     if (onUpdateEffectSettings) {
       onUpdateEffectSettings('gTuner', {
         enabled: enabled,
-        frequency: 444 // Fixed 444Hz reference frequency
+        frequency: 444, // 444Hz = +16 cents above standard 440Hz
+        cents: 16 // +16 cents tuning
       });
     }
     
-    console.log(`🎵 G-Tuner ${enabled ? 'ENABLED' : 'DISABLED'} - applying 444Hz frequency correction`);
+    console.log(`🎵 G-Tuner ${enabled ? 'ENABLED' : 'DISABLED'} - applying +16 cents pitch correction`);
     
     // Show visual feedback
     if (enabled) {
-      console.log('✅ 444Hz pitch correction is now ACTIVE and applied to audio');
+      console.log('✅ +16 cents pitch correction is now ACTIVE and applied to audio');
     } else {
-      console.log('❌ 444Hz pitch correction DISABLED - audio returned to original pitch');
+      console.log('❌ +16 cents pitch correction DISABLED - audio returned to original pitch');
     }
   };
 
@@ -197,33 +198,45 @@ const ExportGate: React.FC<ExportGateProps> = ({
           updateProgress(15, 'Applying audio effects...');
           console.log('🎵 Getting processed audio with effects applied...');
           
-          // Use enhanced real-time progress tracking
-          const processedAudioUrl = await getProcessedAudioUrl((progress, stage, chunks, size) => {
-            updateRealTimeProgress(progress, stage, chunks, size);
-          });
+          // Convert sample rate string to number
+          const targetSampleRate = parseInt(sampleRate.replace('kHz', '')) * 1000;
+          
+          // Use enhanced real-time progress tracking with format conversion
+          const processedAudioUrl = await getProcessedAudioUrl(
+            (progress, stage) => {
+              updateRealTimeProgress(progress, stage);
+            },
+            targetSampleRate,
+            downloadFormat
+          );
           
           if (processedAudioUrl) {
-            updateProgress(60, 'Converting to WAV format...');
+            const formatName = downloadFormat === 'mp3' ? 'MP3 320kbps' : 
+                              downloadFormat === 'wav16' ? 'WAV 16-bit' :
+                              downloadFormat === 'wav24' ? 'WAV 24-bit' : 'WAV 32-bit';
+            updateProgress(60, `Converting to ${formatName} format...`);
             console.log('🎵 Got processed audio URL:', processedAudioUrl);
             
             // Fetch the processed audio blob
             const response = await fetch(processedAudioUrl);
+            
+            if (!response.ok) {
+              throw new Error(`Failed to fetch processed audio: ${response.status}`);
+            }
+            
             audioToDownload = await response.blob();
             audioUrl = URL.createObjectURL(audioToDownload);
             console.log('✅ Using processed audio with effects for download');
             console.log('Processed blob size:', audioToDownload.size, 'bytes');
             console.log('Original file size:', originalFile.size, 'bytes');
           } else {
-            console.warn('No processed audio URL available, using original file');
+            throw new Error('No processed audio available - processing failed');
           }
         } catch (error) {
-          console.warn('Failed to get processed audio, using original:', error);
-          // Fallback to original file
-          audioToDownload = originalFile;
-          audioUrl = URL.createObjectURL(originalFile);
+          throw new Error(`Audio processing failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
       } else {
-        console.warn('getProcessedAudioUrl function not available, using original file');
+        throw new Error('Audio processing system not available');
       }
       
       updateProgress(80, 'Preparing download...');
@@ -236,7 +249,9 @@ const ExportGate: React.FC<ExportGateProps> = ({
       const originalName = originalFile.name;
       const nameWithoutExt = originalName.replace(/\.[^/.]+$/, '');
       const formatExt = downloadFormat === 'mp3' ? 'mp3' : 'wav';
-      const bitDepth = downloadFormat === 'wav16' ? '16bit' : downloadFormat === 'wav24' ? '24bit' : '32bit';
+      const bitDepth = downloadFormat === 'wav16' ? '16bit' : 
+                      downloadFormat === 'wav24' ? '24bit' : 
+                      downloadFormat === 'wav32' ? '32bit' : '16bit';
       const sampleRateLabel = sampleRate.replace('kHz', 'k');
       
       const filename = downloadFormat === 'mp3' 
@@ -255,12 +270,25 @@ const ExportGate: React.FC<ExportGateProps> = ({
       
       console.log(`✅ Successfully downloaded mastered audio: ${filename}`);
       console.log(`📊 Format: ${downloadFormat}, Sample Rate: ${sampleRate}, G-Tuner: ${gTunerEnabled ? 'Enabled' : 'Disabled'}`);
+      console.log(`🎵 Actual processing: ${parseInt(sampleRate.replace('kHz', '')) * 1000}Hz, ${downloadFormat} format with all effects applied`);
       
       // Success - no alert needed, user can see the download in their browser
       
     } catch (error) {
       console.error('❌ Error downloading file:', error);
-      alert('Error downloading file. Please try again.');
+      
+      // Provide more specific error messages
+      if (error instanceof Error) {
+        if (error.message.includes('timeout')) {
+          alert('Download timed out. The audio file might be too large or the processing is taking too long. Please try again with a shorter audio file.');
+        } else if (error.message.includes('AbortError')) {
+          alert('Download was cancelled due to timeout. Please try again.');
+        } else {
+          alert(`Download failed: ${error.message}. Please try again.`);
+        }
+      } else {
+        alert('An unexpected error occurred during download. Please try again.');
+      }
     } finally {
       setIsDownloading(false);
       setChunkCount(0);
@@ -288,7 +316,7 @@ const ExportGate: React.FC<ExportGateProps> = ({
   return (
     <>
       <RealTimeVisualizer />
-      <div className="max-w-4xl mx-auto space-y-4">
+    <div className="max-w-4xl mx-auto space-y-4">
 
       {/* Header */}
       <div className="flex items-center justify-between">
@@ -317,11 +345,11 @@ const ExportGate: React.FC<ExportGateProps> = ({
 
       {/* File Information */}
       {originalFile && (
-        <div className="bg-gradient-to-br from-gray-800 to-gray-700 rounded-lg p-4 border border-gray-600">
+       <div className="bg-gradient-to-br from-gray-800 to-gray-700 rounded-lg p-4 border border-gray-600">
           <h3 className="text-md font-semibold text-white mb-4 flex items-center">
             <Download className="w-4 h-4 mr-2" />
             File Information
-          </h3>
+           </h3>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-3">
@@ -334,13 +362,13 @@ const ExportGate: React.FC<ExportGateProps> = ({
                 <span className="text-white font-medium">
                   {(originalFile.size / (1024 * 1024)).toFixed(2)} MB
                 </span>
-              </div>
+            </div>
               <div className="flex justify-between text-sm">
                 <span className="text-gray-300">File Type:</span>
                 <span className="text-white font-medium">{originalFile.type || 'Audio'}</span>
-              </div>
-            </div>
-            
+          </div>
+        </div>
+        
             <div className="space-y-3">
               <div className="flex justify-between text-sm">
                 <span className="text-gray-300">Genre Preset:</span>
@@ -349,16 +377,16 @@ const ExportGate: React.FC<ExportGateProps> = ({
               <div className="flex justify-between text-sm">
                 <span className="text-gray-300">Processing:</span>
                 <span className="text-green-400 font-medium">Complete</span>
-              </div>
+          </div>
               <div className="flex justify-between text-sm">
                 <span className="text-gray-300">Effects Applied:</span>
                 <span className="text-purple-400 font-medium">
                   {Object.values(audioEffects).filter((effect: any) => effect.enabled).length} Effects
                 </span>
-              </div>
-            </div>
+          </div>
           </div>
         </div>
+      </div>
       )}
 
       {/* Export Settings */}
@@ -413,65 +441,6 @@ const ExportGate: React.FC<ExportGateProps> = ({
                 </div>
               </label>
 
-              <label className="flex items-center justify-between p-2 bg-gray-900 rounded border border-gray-600 cursor-pointer hover:bg-gray-800 transition-colors">
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="radio"
-                    name="sampleRate"
-                    value="88.2kHz"
-                    checked={sampleRate === '88.2kHz'}
-                    onChange={(e) => setSampleRate(e.target.value as any)}
-                    className="text-crys-gold"
-                  />
-                  <div>
-                    <div className="text-white text-sm">88.2 kHz</div>
-                    <div className="text-xs text-gray-400">High resolution</div>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="text-white text-sm">$3.00</div>
-                </div>
-              </label>
-
-              <label className="flex items-center justify-between p-2 bg-gray-900 rounded border border-gray-600 cursor-pointer hover:bg-gray-800 transition-colors">
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="radio"
-                    name="sampleRate"
-                    value="96kHz"
-                    checked={sampleRate === '96kHz'}
-                    onChange={(e) => setSampleRate(e.target.value as any)}
-                    className="text-crys-gold"
-                  />
-                  <div>
-                    <div className="text-white text-sm">96 kHz</div>
-                    <div className="text-xs text-gray-400">Ultra high</div>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="text-white text-sm">$5.00</div>
-                </div>
-              </label>
-
-              <label className="flex items-center justify-between p-2 bg-gray-900 rounded border border-gray-600 cursor-pointer hover:bg-gray-800 transition-colors">
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="radio"
-                    name="sampleRate"
-                    value="192kHz"
-                    checked={sampleRate === '192kHz'}
-                    onChange={(e) => setSampleRate(e.target.value as any)}
-                    className="text-crys-gold"
-                  />
-                  <div>
-                    <div className="text-white text-sm">192 kHz</div>
-                    <div className="text-xs text-gray-400">Maximum</div>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="text-white text-sm">$10.00</div>
-                </div>
-              </label>
             </div>
           </div>
 
@@ -535,7 +504,7 @@ const ExportGate: React.FC<ExportGateProps> = ({
                   </div>
                 </div>
                 <div className="text-right">
-                  <div className="text-white text-sm">$0.00</div>
+                  <div className="text-white text-sm">$1.00</div>
                 </div>
               </label>
 
@@ -558,6 +527,7 @@ const ExportGate: React.FC<ExportGateProps> = ({
                   <div className="text-white text-sm">$2.00</div>
                 </div>
               </label>
+
             </div>
           </div>
         </div>
@@ -566,7 +536,7 @@ const ExportGate: React.FC<ExportGateProps> = ({
         <div className="mt-4">
           <h4 className="text-sm font-semibold text-white mb-2 flex items-center">
             <Cpu className="w-3 h-3 mr-1.5 text-crys-gold" />
-            G-Tuner (444Hz Reference)
+            G-Tuner (+16 Tuning)
           </h4>
           <div className="bg-gray-900 rounded p-3 border border-gray-600">
             <div className="flex items-center justify-between">
@@ -574,8 +544,8 @@ const ExportGate: React.FC<ExportGateProps> = ({
                 <div className="text-white text-sm mb-0.5">Pitch Correction</div>
                 <div className="text-xs text-gray-400">
                   {gTunerEnabled 
-                    ? 'Mastered audio tuned to 444Hz' 
-                    : 'Apply 444Hz pitch correction'
+                    ? 'Mastered audio tuned to +16 cents' 
+                    : 'Apply +16 cents pitch correction'
                   }
                 </div>
               </div>
@@ -598,8 +568,8 @@ const ExportGate: React.FC<ExportGateProps> = ({
             {gTunerEnabled && (
               <div className="mt-2 bg-gradient-to-r from-yellow-800 to-yellow-900 rounded p-2 border border-yellow-600">
                 <div className="text-center">
-                  <div className="text-yellow-200 text-sm font-bold mb-0.5">444 Hz</div>
-                  <div className="text-yellow-300 text-xs">Reference Frequency Applied</div>
+                  <div className="text-yellow-200 text-sm font-bold mb-0.5">+16 Cents</div>
+                  <div className="text-yellow-300 text-xs">Pitch Correction Applied</div>
                   <div className="text-yellow-400 text-xs mt-0.5">✓ ACTIVE</div>
                 </div>
               </div>
@@ -632,7 +602,7 @@ const ExportGate: React.FC<ExportGateProps> = ({
           {isDownloading ? (
             <>
               <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin"></div>
-              <span>Downloading...</span>
+              <span>Processing & Downloading...</span>
             </>
           ) : (
             <>
@@ -641,14 +611,28 @@ const ExportGate: React.FC<ExportGateProps> = ({
             </>
           )}
         </button>
+        
+        {/* Processing time warning */}
+        {!isDownloading && originalFile && (
+          <div className="mt-3 text-xs text-gray-400 max-w-md mx-auto">
+            <div className="bg-yellow-900/20 border border-yellow-600/30 rounded-lg p-2">
+              <div className="text-yellow-300 font-medium mb-1">⚠️ Processing Time</div>
+              <div className="text-yellow-200">
+                Large files may take 30-60 seconds to process. Please be patient and don't close the browser.
+              </div>
+            </div>
+          </div>
+        )}
         {gTunerEnabled && (
           <div className="mt-2 text-xs text-crys-gold">
-            ✓ G-Tuner (444Hz) applied to final export
+            ✓ G-Tuner (+16 cents) applied to final export
           </div>
         )}
         {originalFile && (
           <div className="mt-2 text-xs text-gray-400">
-            Format: {downloadFormat === 'mp3' ? 'MP3 320kbps' : downloadFormat === 'wav16' ? 'WAV 16-bit' : downloadFormat === 'wav24' ? 'WAV 24-bit' : 'WAV 32-bit'} • Sample Rate: {sampleRate}
+            Format: {downloadFormat === 'mp3' ? 'MP3 320kbps' : 
+                    downloadFormat === 'wav16' ? 'WAV 16-bit' :
+                    downloadFormat === 'wav24' ? 'WAV 24-bit' : 'WAV 32-bit'} • Sample Rate: {sampleRate}
           </div>
         )}
       </div>

@@ -3,23 +3,35 @@ import { Music, Music2, Music3, Music4, Palette, Lock, Unlock } from 'lucide-rea
 import { availableGenres, Genre as GenreType } from '../../GenreDropdown';
 import { GENRE_PRESETS } from '../utils/genrePresets';
 
-// Simple gradient function for genre colors
+// Advanced tier gradient function for genre colors
 const getGenreGradient = (genreId: string): string => {
-  const gradients: Record<string, string> = {
-    afrobeats: 'from-red-500 to-orange-500',
-    trap: 'from-purple-500 to-pink-500',
-    drill: 'from-gray-600 to-gray-800',
-    hiphop: 'from-yellow-500 to-red-500',
-    pop: 'from-pink-500 to-purple-500',
-    rock: 'from-orange-500 to-red-500',
-    electronic: 'from-blue-500 to-purple-500',
-    jazz: 'from-green-500 to-blue-500',
-    classical: 'from-indigo-500 to-purple-500',
-    country: 'from-yellow-600 to-orange-600',
-    rnb: 'from-purple-600 to-pink-600',
-    reggae: 'from-green-600 to-yellow-600'
+  const colorMap: Record<string, string> = {
+    afrobeats: 'from-red-500 to-red-700',
+    trap: 'from-red-400 to-red-600',
+    drill: 'from-red-600 to-red-800',
+    dubstep: 'from-red-300 to-red-500',
+    gospel: 'from-blue-500 to-blue-700',
+    'r-b': 'from-blue-400 to-blue-600',
+    'lofi-hiphop': 'from-blue-600 to-blue-800',
+    'hip-hop': 'from-orange-500 to-orange-700',
+    house: 'from-orange-400 to-orange-600',
+    techno: 'from-orange-600 to-orange-800',
+    highlife: 'from-green-500 to-green-700',
+    instrumentals: 'from-green-400 to-green-600',
+    beats: 'from-green-600 to-green-800',
+    amapiano: 'from-purple-500 to-purple-700',
+    trance: 'from-purple-400 to-purple-600',
+    'drum-bass': 'from-purple-600 to-purple-800',
+    reggae: 'from-yellow-500 to-yellow-700',
+    'voice-over': 'from-yellow-400 to-yellow-600',
+    journalist: 'from-yellow-600 to-yellow-800',
+    soul: 'from-pink-500 to-pink-700',
+    'content-creator': 'from-pink-400 to-pink-600',
+    pop: 'from-pink-600 to-pink-800',
+    jazz: 'from-indigo-500 to-indigo-700',
+    'crysgarage': 'from-orange-500 to-orange-700'
   };
-  return gradients[genreId] || 'from-gray-500 to-gray-700';
+  return colorMap[genreId] || 'from-gray-500 to-gray-600';
 };
 
 interface GenrePresetsProps {
