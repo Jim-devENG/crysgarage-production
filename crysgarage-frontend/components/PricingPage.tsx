@@ -14,7 +14,8 @@ import {
   Clock,
   Music,
   Download,
-  Users
+  Users,
+  MessageCircle
 } from "lucide-react";
 
 interface PricingPageProps {
@@ -182,7 +183,7 @@ export function PricingPage({ onSelectTier, onGoToDashboard }: PricingPageProps)
 
   return (
     <div className="min-h-screen">
-              <div className="container mx-auto px-6 sm:px-8 lg:px-12">
+      <div className="container mx-auto px-6 sm:px-8 lg:px-12">
         {/* Header */}
         <div className="text-center mb-16 max-w-4xl mx-auto">
           <Badge variant="secondary" className="bg-crys-gold/20 text-crys-gold mb-4">
@@ -383,6 +384,83 @@ export function PricingPage({ onSelectTier, onGoToDashboard }: PricingPageProps)
             </div>
           </div>
         )}
+
+        {/* One-on-One Mastering Service */}
+        <div className="bg-gradient-to-r from-crys-gold/10 via-crys-gold/5 to-crys-gold/10 border border-crys-gold/30 rounded-3xl p-8 md:p-12 mb-16">
+          <div className="text-center mb-8">
+            <div className="w-16 h-16 bg-crys-gold/20 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Users className="w-8 h-8 text-crys-gold" />
+            </div>
+            <h2 className="text-3xl font-bold text-crys-white mb-4">
+              Need Personal Mastering?
+            </h2>
+            <p className="text-crys-light-grey text-lg max-w-2xl mx-auto">
+              Want a professional engineer to master your track with personalized attention? 
+              Get one-on-one mastering sessions with our expert engineers.
+            </p>
+          </div>
+          
+          <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+            <div className="space-y-4">
+              <h3 className="text-xl font-semibold text-crys-white mb-4">What You Get:</h3>
+              <div className="space-y-3">
+                <div className="flex items-start gap-3">
+                  <Check className="w-5 h-5 text-crys-gold flex-shrink-0 mt-0.5" />
+                  <div>
+                    <h4 className="text-crys-white font-medium">Personal Engineer</h4>
+                    <p className="text-crys-light-grey text-sm">Work directly with a professional mastering engineer</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <Check className="w-5 h-5 text-crys-gold flex-shrink-0 mt-0.5" />
+                  <div>
+                    <h4 className="text-crys-white font-medium">Custom Approach</h4>
+                    <p className="text-crys-light-grey text-sm">Tailored mastering for your specific sound and vision</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <Check className="w-5 h-5 text-crys-gold flex-shrink-0 mt-0.5" />
+                  <div>
+                    <h4 className="text-crys-white font-medium">Multiple Revisions</h4>
+                    <p className="text-crys-light-grey text-sm">Unlimited revisions until you're completely satisfied</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <Check className="w-5 h-5 text-crys-gold flex-shrink-0 mt-0.5" />
+                  <div>
+                    <h4 className="text-crys-white font-medium">Fast Turnaround</h4>
+                    <p className="text-crys-light-grey text-sm">Professional results delivered within 24-48 hours</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="space-y-6">
+              <div className="bg-crys-black/30 rounded-2xl p-6 border border-crys-gold/20">
+                <h3 className="text-lg font-semibold text-crys-white mb-3">Ready to Get Started?</h3>
+                <p className="text-crys-light-grey text-sm mb-4">
+                  Contact us on WhatsApp to discuss your project and get a personalized quote.
+                </p>
+                <Button 
+                  onClick={() => window.open('https://wa.me/2348069919304?text=Hi! I\'m interested in one-on-one mastering services. Can you tell me more about the process and pricing?', '_blank')}
+                  className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3"
+                >
+                  <MessageCircle className="w-5 h-5 mr-2" />
+                  Contact on WhatsApp
+                </Button>
+                <p className="text-crys-light-grey text-xs mt-2 text-center">
+                  +234 806 991 9304
+                </p>
+              </div>
+              
+              <div className="text-center">
+                <p className="text-crys-gold text-sm font-medium">
+                  💬 Available 24/7 for consultations
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
 
         {/* Additional Features */}
         <div className="bg-crys-charcoal/30 rounded-3xl p-8 md:p-12 mb-16">

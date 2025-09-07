@@ -27,33 +27,34 @@ export function Footer({ onNavigate }: FooterProps) {
     {
       name: "Instagram",
       icon: <Instagram className="w-5 h-5" />,
-      url: "https://instagram.com/crysgarage",
+      url: "https://www.instagram.com/crysgarage/",
       color: "hover:text-pink-400"
-    },
-    {
-      name: "Twitter/X",
-      icon: <Twitter className="w-5 h-5" />,
-      url: "https://twitter.com/crysgarage",
-      color: "hover:text-blue-400"
-    },
-    {
-      name: "Facebook",
-      icon: <Facebook className="w-5 h-5" />,
-      url: "https://facebook.com/crysgarage",
-      color: "hover:text-blue-600"
-    },
-    {
-      name: "YouTube",
-      icon: <Youtube className="w-5 h-5" />,
-      url: "https://youtube.com/@crysgarage",
-      color: "hover:text-red-500"
-    },
-    {
-      name: "LinkedIn",
-      icon: <Linkedin className="w-5 h-5" />,
-      url: "https://linkedin.com/company/crysgarage",
-      color: "hover:text-blue-700"
     }
+    // Commented out for now - will be used later
+    // {
+    //   name: "Twitter/X",
+    //   icon: <Twitter className="w-5 h-5" />,
+    //   url: "https://twitter.com/crysgarage",
+    //   color: "hover:text-blue-400"
+    // },
+    // {
+    //   name: "Facebook",
+    //   icon: <Facebook className="w-5 h-5" />,
+    //   url: "https://facebook.com/crysgarage",
+    //   color: "hover:text-blue-600"
+    // },
+    // {
+    //   name: "YouTube",
+    //   icon: <Youtube className="w-5 h-5" />,
+    //   url: "https://youtube.com/@crysgarage",
+    //   color: "hover:text-red-500"
+    // },
+    // {
+    //   name: "LinkedIn",
+    //   icon: <Linkedin className="w-5 h-5" />,
+    //   url: "https://linkedin.com/company/crysgarage",
+    //   color: "hover:text-blue-700"
+    // }
   ];
 
   const quickLinks = [
@@ -66,31 +67,30 @@ export function Footer({ onNavigate }: FooterProps) {
   ];
 
   const companyLinks = [
-    { name: "Privacy Policy", href: "/privacy" },
-    { name: "Terms of Service", href: "/terms" },
-    { name: "Cookie Policy", href: "/cookies" },
-    { name: "Support", href: "/support" },
-    { name: "API Documentation", href: "/api" },
-    { name: "Careers", href: "/careers" }
+    { name: "Privacy Policy", page: "privacy" },
+    { name: "Terms of Service", page: "terms" },
+    { name: "Cookie Policy", page: "cookies" },
+    { name: "Support", page: "support" },
+    { name: "Careers", page: "careers" }
   ];
 
   const contactInfo = [
     {
       icon: <Mail className="w-4 h-4" />,
       label: "Email",
-      value: "hello@crysgarage.com",
-      href: "mailto:hello@crysgarage.com"
+      value: "crysgaragestudio@gmail.com",
+      href: "mailto:crysgaragestudio@gmail.com"
     },
     {
       icon: <Phone className="w-4 h-4" />,
       label: "Phone",
-      value: "+234 123 456 7890",
-      href: "tel:+2341234567890"
+      value: "08069919304",
+      href: "tel:+2348069919304"
     },
     {
       icon: <MapPin className="w-4 h-4" />,
       label: "Location",
-      value: "Lagos, Nigeria",
+      value: "Plateau, Nigeria",
       href: "#"
     }
   ];
@@ -101,6 +101,9 @@ export function Footer({ onNavigate }: FooterProps) {
       onNavigate(section);
     } else if (href.startsWith('http')) {
       window.open(href, '_blank', 'noopener,noreferrer');
+    } else if (onNavigate) {
+      // Handle direct page names (for company links)
+      onNavigate(href);
     }
   };
 
@@ -139,7 +142,7 @@ export function Footer({ onNavigate }: FooterProps) {
               viewport={{ once: true }}
             >
               <div className="flex items-center gap-3 mb-6">
-                <CrysGarageLogo className="w-8 h-8" />
+                <CrysGarageLogo className="w-4 h-4" />
                 <span className="text-2xl font-bold text-crys-white">Crys Garage</span>
               </div>
               <p className="text-crys-light-grey mb-6 leading-relaxed">
@@ -222,7 +225,7 @@ export function Footer({ onNavigate }: FooterProps) {
                     viewport={{ once: true }}
                   >
                     <button
-                      onClick={() => handleNavigation(link.href)}
+                      onClick={() => handleNavigation(link.page)}
                       className="text-crys-light-grey hover:text-crys-gold transition-colors duration-300 flex items-center gap-2 group"
                     >
                       <span>{link.name}</span>

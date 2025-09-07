@@ -25,6 +25,11 @@ import { PaymentSuccessPage } from './components/Payment/PaymentSuccessPage';
 import { AuthModal, UserDropdown, PaymentModal } from './components/authentication';
 import { DEV_MODE, logDevAction } from './utils/devMode';
 import { DevModeToggle } from './components/DevModeToggle';
+import PrivacyPolicy from './components/PrivacyPolicy';
+import TermsOfService from './components/TermsOfService';
+import CookiePolicy from './components/CookiePolicy';
+import Support from './components/Support';
+import Careers from './components/Careers';
 
 function AppContent() {
   const { user, isAuthenticated, isLoading } = useAuth();
@@ -234,6 +239,28 @@ function AppContent() {
           <PaymentSuccessPage 
             onNavigate={handleNavigation}
           />
+        )}
+
+        {/* Legal and Support Pages */}
+        {currentPage === 'privacy' && (
+          <PrivacyPolicy />
+        )}
+
+        {currentPage === 'terms' && (
+          <TermsOfService />
+        )}
+
+        {currentPage === 'cookies' && (
+          <CookiePolicy />
+        )}
+
+        {currentPage === 'support' && (
+          <Support />
+        )}
+
+
+        {currentPage === 'careers' && (
+          <Careers />
         )}
       </main>
 

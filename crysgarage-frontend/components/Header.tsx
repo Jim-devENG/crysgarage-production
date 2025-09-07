@@ -53,9 +53,11 @@ export function Header({
             <Button
               variant="ghost"
               onClick={() => onNavigate('landing')}
-              className="flex items-center space-x-2 text-crys-white hover:text-crys-gold transition-colors"
+              className="flex items-center text-crys-white hover:text-crys-gold transition-colors"
             >
-              <CrysGarageLogo className="w-8 h-8" />
+              <div className="flex items-center justify-center mt-3 -mr-4">
+                <CrysGarageLogo className="w-4 h-4" />
+              </div>
               <span className="font-bold text-lg">Crys Garage</span>
             </Button>
           </div>

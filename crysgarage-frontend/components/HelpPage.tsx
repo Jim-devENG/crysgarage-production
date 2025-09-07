@@ -27,36 +27,6 @@ export function HelpPage({ onGetStarted }: HelpPageProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState('getting-started');
 
-  const tutorials = [
-    {
-      title: 'Getting Started with Crys Garage',
-      description: 'Learn the basics of uploading and mastering your first track',
-      duration: '5 min',
-      difficulty: 'Beginner',
-      icon: <PlayCircle className="w-5 h-5" />
-    },
-    {
-      title: 'Understanding Genre Optimization',
-      description: 'How to choose the right genre for your track',
-      duration: '8 min',
-      difficulty: 'Beginner',
-      icon: <Music className="w-5 h-5" />
-    },
-    {
-      title: 'Advanced Manual Controls',
-      description: 'Master the professional controls in Advanced tier',
-      duration: '15 min',
-      difficulty: 'Advanced',
-      icon: <Settings className="w-5 h-5" />
-    },
-    {
-      title: 'Optimizing for Streaming Platforms',
-      description: 'Best practices for Spotify, Apple Music, and YouTube',
-      duration: '10 min',
-      difficulty: 'Intermediate',
-      icon: <Download className="w-5 h-5" />
-    }
-  ];
 
   const contactOptions = [
     {
@@ -113,25 +83,7 @@ export function HelpPage({ onGetStarted }: HelpPageProps) {
         </div>
 
         {/* Quick Actions */}
-        <div className="grid md:grid-cols-3 gap-6 mb-12">
-          <Card className="bg-audio-panel-bg border-audio-panel-border hover:border-crys-gold/50 transition-all duration-300 cursor-pointer">
-            <CardContent className="p-6 text-center">
-              <div className="w-12 h-12 bg-crys-gold/20 rounded-lg flex items-center justify-center mx-auto mb-4">
-                <Zap className="w-6 h-6 text-crys-gold" />
-              </div>
-              <h3 className="text-crys-white font-semibold mb-2">Quick Start Guide</h3>
-              <p className="text-crys-light-grey text-sm mb-4">
-                Get up and running with your first master in 5 minutes
-              </p>
-              <Button 
-                variant="outline" 
-                className="border-crys-gold/30 text-crys-gold hover:bg-crys-gold/10"
-              >
-                Start Tutorial
-              </Button>
-            </CardContent>
-          </Card>
-
+        <div className="grid md:grid-cols-2 gap-6 mb-12">
           <Card className="bg-audio-panel-bg border-audio-panel-border hover:border-crys-gold/50 transition-all duration-300 cursor-pointer">
             <CardContent className="p-6 text-center">
               <div className="w-12 h-12 bg-crys-gold/20 rounded-lg flex items-center justify-center mx-auto mb-4">
@@ -141,7 +93,10 @@ export function HelpPage({ onGetStarted }: HelpPageProps) {
               <p className="text-crys-light-grey text-sm mb-4">
                 Get instant help from our 24/7 support team
               </p>
-              <Button className="bg-crys-gold hover:bg-crys-gold-muted text-crys-black">
+              <Button 
+                onClick={() => window.open('https://wa.me/2348069919304', '_blank')}
+                className="bg-crys-gold hover:bg-crys-gold-muted text-crys-black"
+              >
                 Start Chat
               </Button>
             </CardContent>
@@ -157,6 +112,7 @@ export function HelpPage({ onGetStarted }: HelpPageProps) {
                 Comprehensive guides and technical documentation
               </p>
               <Button 
+                onClick={() => window.open('https://status.crysgarage.studio', '_blank')}
                 variant="outline" 
                 className="border-crys-gold/30 text-crys-gold hover:bg-crys-gold/10"
               >
@@ -168,9 +124,8 @@ export function HelpPage({ onGetStarted }: HelpPageProps) {
 
         {/* Main Content Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-3 bg-crys-graphite/50 mb-8">
+          <TabsList className="grid w-full grid-cols-2 bg-crys-graphite/50 mb-8">
             <TabsTrigger value="getting-started" className="text-crys-white">Getting Started</TabsTrigger>
-            <TabsTrigger value="tutorials" className="text-crys-white">Tutorials</TabsTrigger>
             <TabsTrigger value="contact" className="text-crys-white">Contact</TabsTrigger>
           </TabsList>
 
@@ -275,50 +230,6 @@ export function HelpPage({ onGetStarted }: HelpPageProps) {
             </div>
           </TabsContent>
 
-          {/* Tutorials Tab */}
-          <TabsContent value="tutorials" className="space-y-6">
-            <div className="grid md:grid-cols-2 gap-6">
-              {tutorials.map((tutorial, index) => (
-                <Card key={index} className="bg-audio-panel-bg border-audio-panel-border hover:border-crys-gold/50 transition-all duration-300">
-                  <CardContent className="p-6">
-                    <div className="flex items-start gap-4">
-                      <div className="w-12 h-12 bg-crys-gold/20 rounded-lg flex items-center justify-center text-crys-gold">
-                        {tutorial.icon}
-                      </div>
-                      <div className="flex-1">
-                        <h3 className="text-crys-white font-semibold mb-2">{tutorial.title}</h3>
-                        <p className="text-crys-light-grey text-sm mb-4">{tutorial.description}</p>
-                        <div className="flex items-center gap-4 text-xs text-crys-light-grey mb-4">
-                          <div className="flex items-center gap-1">
-                            <Clock className="w-3 h-3" />
-                            <span>{tutorial.duration}</span>
-                          </div>
-                          <Badge 
-                            variant="secondary" 
-                            className={`
-                              ${tutorial.difficulty === 'Beginner' ? 'bg-green-500/20 text-green-400' : 
-                                tutorial.difficulty === 'Intermediate' ? 'bg-yellow-500/20 text-yellow-400' : 
-                                'bg-red-500/20 text-red-400'}
-                            `}
-                          >
-                            {tutorial.difficulty}
-                          </Badge>
-                        </div>
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          className="border-crys-gold/30 text-crys-gold hover:bg-crys-gold/10"
-                        >
-                          <PlayCircle className="w-4 h-4 mr-2" />
-                          Watch Tutorial
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </TabsContent>
 
           {/* Contact Tab */}
           <TabsContent value="contact" className="space-y-8">
@@ -333,6 +244,15 @@ export function HelpPage({ onGetStarted }: HelpPageProps) {
                     <p className="text-crys-light-grey text-sm mb-2">{option.description}</p>
                     <p className="text-crys-gold text-xs mb-4">{option.availability}</p>
                     <Button 
+                      onClick={() => {
+                        if (option.method === 'Live Chat') {
+                          window.open('https://wa.me/2348069919304', '_blank');
+                        } else if (option.method === 'Email Support') {
+                          window.open('mailto:crysgaragestudio@gmail.com', '_blank');
+                        } else if (option.method === 'Phone Support') {
+                          window.open('tel:+2348069919304', '_blank');
+                        }
+                      }}
                       className={option.primary ? 
                         "bg-crys-gold hover:bg-crys-gold-muted text-crys-black w-full" : 
                         "border-crys-gold/30 text-crys-gold hover:bg-crys-gold/10 w-full"
@@ -355,11 +275,15 @@ export function HelpPage({ onGetStarted }: HelpPageProps) {
                   Our support team is standing by to help you get the most out of Crys Garage Studio.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                  <Button className="bg-crys-gold hover:bg-crys-gold-muted text-crys-black">
+                  <Button 
+                    onClick={() => window.open('https://wa.me/2348069919304', '_blank')}
+                    className="bg-crys-gold hover:bg-crys-gold-muted text-crys-black"
+                  >
                     <MessageCircle className="w-4 h-4 mr-2" />
                     Start Live Chat
                   </Button>
                   <Button 
+                    onClick={() => window.open('mailto:crysgaragestudio@gmail.com', '_blank')}
                     variant="outline"
                     className="border-crys-gold/30 text-crys-gold hover:bg-crys-gold/10"
                   >
