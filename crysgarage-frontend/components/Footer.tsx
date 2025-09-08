@@ -129,7 +129,7 @@ export function Footer({ onNavigate }: FooterProps) {
         </div>
       </div>
 
-      <div className="container mx-auto px-8 sm:px-8 lg:px-12 relative z-10 max-w-[1100px]">
+      <div className="max-w-7xl mx-auto px-6 relative z-10">
         {/* Main Footer Content */}
         <div className="py-16">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
