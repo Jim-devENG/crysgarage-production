@@ -5,6 +5,9 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\PaystackController;
 use App\Http\Middleware\JsonMiddleware;
+use Illuminate\Support\Facades\Cookie;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Http\Request;
 
 /*
 |--------------------------------------------------------------------------
@@ -65,6 +68,31 @@ Route::post('/test-post', function(Request $request) {
         'Access-Control-Allow-Methods' => 'POST, OPTIONS',
         'Access-Control-Allow-Headers' => 'Content-Type, Authorization, Accept'
     ]);
+});
+
+// Dev Mode endpoints (secure cookie-based toggle)
+Route::post('/dev-mode/login', function(Request $request) {
+    $email = $request->input('email');
+    $password = $request->input('password');
+
+    $allowedEmail = env('DEV_MODE_EMAIL', 'dev@crysgarage.studio');
+    $allowedPassword = env('DEV_MODE_PASSWORD'); // must be set in env
+
+    if (!$allowedPassword) {
+        return response()->json(['ok' => false, 'error' => 'DEV mode not configured'], 403);
+    }
+
+    if ($email !== $allowedEmail || !hash_equals($allowedPassword, $password)) {
+        return response()->json(['ok' => false, 'error' => 'Invalid credentials'], 401);
+    }
+
+    $cookie = cookie('cg_dev_mode', '1', 60 * 24, '/', null, true, true, false, 'Lax');
+    return response()->json(['ok' => true])->cookie($cookie);
+});
+
+Route::post('/dev-mode/logout', function() {
+    $forget = Cookie::forget('cg_dev_mode', '/', null, true, true, false, 'Lax');
+    return response()->json(['ok' => true])->withCookie($forget);
 });
 
 // Test Google auth route
