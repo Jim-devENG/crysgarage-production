@@ -30,6 +30,7 @@ import TermsOfService from './components/TermsOfService';
 import CookiePolicy from './components/CookiePolicy';
 import Support from './components/Support';
 import Careers from './components/Careers';
+import DevAccess from './components/DevAccess';
 
 function AppContent() {
   const { user, isAuthenticated, isLoading } = useAuth();
@@ -167,6 +168,9 @@ function AppContent() {
       />
 
       <main className="pt-20">
+        {currentPage === 'dev' && (
+          <DevAccess />
+        )}
         {(currentPage === 'landing' || currentPage === 'home') && (
           <LandingPage 
             onGetStarted={() => handleNavigation('studio')}

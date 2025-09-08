@@ -5,7 +5,14 @@
  */
 
 // Check if Dev Mode is enabled via environment variable
-export const DEV_MODE = import.meta.env.VITE_DEV_MODE === 'true';
+export const DEV_MODE = import.meta.env.VITE_DEV_MODE === 'true' || (() => {
+  try {
+    // cookie-based dev mode set by backend
+    return document.cookie.split(';').some(c => c.trim().startsWith('cg_dev_mode='));
+  } catch (_) {
+    return false;
+  }
+})();
 
 // Dev Mode User Object
 export const DEV_USER = {
