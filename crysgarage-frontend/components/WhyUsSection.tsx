@@ -133,7 +133,7 @@ export function WhyUsSection({ onGetStarted, onTryMastering }: WhyUsSectionProps
         ))}
       </div>
 
-      <div className="container mx-auto px-6 sm:px-8 lg:px-12 relative z-10 max-w-[1100px]">
+      <div className="container mx-auto px-8 sm:px-8 lg:px-12 relative z-10 max-w-[1100px]">
         {/* Header */}
         <motion.div 
           className="text-center mb-16"
