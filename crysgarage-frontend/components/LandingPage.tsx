@@ -345,7 +345,7 @@ export function LandingPage({ onGetStarted, onTryMastering }: LandingPageProps) 
                 className="text-xl md:text-2xl text-crys-light-grey mb-4 max-w-2xl leading-relaxed"
                 variants={itemVariants}
               >
-                Professional audio mastering platform designed for African by African. 
+                Professional audio mastering platform designed for Africa by Africans. 
                 Get studio-quality masters in minutes, not hours.
               </motion.p>
               
