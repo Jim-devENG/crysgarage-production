@@ -8,7 +8,10 @@
 export const DEV_MODE = import.meta.env.VITE_DEV_MODE === 'true' || (() => {
   try {
     // cookie-based dev mode set by backend
-    return document.cookie.split(';').some(c => c.trim().startsWith('cg_dev_mode='));
+    const cookieOn = document.cookie.split(';').some(c => c.trim().startsWith('cg_dev_mode='));
+    // local override (frontend-only) for super-simple dev access
+    const localOn = (typeof localStorage !== 'undefined' && localStorage.getItem('cg_dev_mode') === '1');
+    return cookieOn || localOn;
   } catch (_) {
     return false;
   }
