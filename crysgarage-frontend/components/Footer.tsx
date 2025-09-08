@@ -141,8 +141,10 @@ export function Footer({ onNavigate }: FooterProps) {
               transition={{ duration: 0.6 }}
               viewport={{ once: true }}
             >
-              <div className="flex items-center gap-3 mb-6">
-                <CrysGarageLogo className="w-4 h-4" />
+              <div className="flex items-center gap-1 mb-6">
+                <div className="flex items-center justify-center mt-3 -mr-2">
+                  <CrysGarageLogo className="w-4 h-4" />
+                </div>
                 <span className="text-2xl font-bold text-crys-white">Crys Garage</span>
               </div>
               <p className="text-crys-light-grey mb-6 leading-relaxed">
