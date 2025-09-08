@@ -46,37 +46,37 @@ export function WhyUsSection({ onGetStarted, onTryMastering }: WhyUsSectionProps
 
   const reasons = [
     {
-      icon: <Award className="w-8 h-8" />,
+      icon: <Award className="w-6 h-6" />,
       title: "African Music Expertise",
       description: "Built specifically for African music styles - Afrobeats, Gospel, Hip-Hop, and more. Our algorithms understand the cultural nuances and sonic characteristics that make African music unique.",
       features: ["Genre-specific optimization", "Cultural understanding", "Local music patterns", "Traditional rhythm recognition"]
     },
     {
-      icon: <Zap className="w-8 h-8" />,
+      icon: <Zap className="w-6 h-6" />,
       title: "Lightning Fast Processing",
       description: "Professional mastering in under 2 minutes. No more waiting days or weeks for studio availability. Get your tracks ready for release instantly.",
       features: ["2-minute processing", "Real-time preview", "Instant downloads", "No waiting queues"]
     },
     {
-      icon: <Shield className="w-8 h-8" />,
+      icon: <Shield className="w-6 h-6" />,
       title: "Industry Standard Quality",
       description: "Professional loudness levels (-14 LUFS) perfect for Spotify, Apple Music, YouTube, and radio broadcast. Meet all streaming platform requirements.",
       features: ["-14 LUFS compliance", "Multi-platform optimization", "Broadcast-ready output", "Professional standards"]
     },
     {
-      icon: <Users className="w-8 h-8" />,
+      icon: <Users className="w-6 h-6" />,
       title: "Community-Driven",
       description: "Built by African artists, for African artists. Our platform grows with feedback from the community, ensuring we meet real needs of African creators.",
       features: ["Community feedback", "Local artist input", "Continuous improvement", "Cultural relevance"]
     },
     {
-      icon: <Globe className="w-8 h-8" />,
+      icon: <Globe className="w-6 h-6" />,
       title: "Global Reach, Local Heart",
       description: "While optimized for African music, our platform serves creators worldwide. Export in multiple formats for global distribution.",
       features: ["Global distribution", "Multiple formats", "International standards", "Local optimization"]
     },
     {
-      icon: <TrendingUp className="w-8 h-8" />,
+      icon: <TrendingUp className="w-6 h-6" />,
       title: "Affordable Excellence",
       description: "Professional studio-quality mastering at a fraction of the cost. No expensive studio bookings or equipment investments required.",
       features: ["Cost-effective", "No equipment needed", "Professional results", "Accessible pricing"]
@@ -192,7 +192,7 @@ export function WhyUsSection({ onGetStarted, onTryMastering }: WhyUsSectionProps
 
         {/* Reasons Grid */}
         <motion.div 
-          className="grid md:grid-cols-2 lg:grid-cols-3 gap-8"
+          className="grid md:grid-cols-2 lg:grid-cols-3 gap-6"
           variants={containerVariants}
           initial="hidden"
           whileInView="visible"
@@ -206,10 +206,10 @@ export function WhyUsSection({ onGetStarted, onTryMastering }: WhyUsSectionProps
               transition={{ duration: 0.3 }}
             >
               <Card className="bg-audio-panel-bg/80 border-audio-panel-border hover:border-crys-gold/50 transition-all duration-300 h-full backdrop-blur-sm group">
-                <CardContent className="p-6">
+                <CardContent className="p-4">
                   {/* Icon */}
                   <motion.div 
-                    className="w-12 h-12 bg-gradient-to-br from-crys-gold/20 to-crys-gold/10 rounded-xl flex items-center justify-center text-crys-gold mb-4 group-hover:scale-110 transition-transform duration-300"
+                    className="w-10 h-10 bg-gradient-to-br from-crys-gold/20 to-crys-gold/10 rounded-lg flex items-center justify-center text-crys-gold mb-3 group-hover:scale-110 transition-transform duration-300"
                     whileHover={{ rotate: 360 }}
                     transition={{ duration: 0.5 }}
                   >
@@ -217,20 +217,20 @@ export function WhyUsSection({ onGetStarted, onTryMastering }: WhyUsSectionProps
                   </motion.div>
                   
                   {/* Title */}
-                  <h3 className="text-crys-white font-semibold text-lg mb-3 group-hover:text-crys-gold transition-colors duration-300">
+                  <h3 className="text-crys-white font-semibold text-base mb-2 group-hover:text-crys-gold transition-colors duration-300">
                     {reason.title}
                   </h3>
                   
                   {/* Description */}
-                  <p className="text-crys-light-grey mb-4 leading-relaxed">
+                  <p className="text-crys-light-grey mb-3 leading-relaxed text-sm">
                     {reason.description}
                   </p>
                   
                   {/* Features List */}
-                  <ul className="space-y-2">
+                  <ul className="space-y-1">
                     {reason.features.map((feature, i) => (
-                      <li key={i} className="flex items-center gap-2 text-crys-light-grey text-sm">
-                        <CheckCircle className="w-4 h-4 text-crys-gold flex-shrink-0" />
+                      <li key={i} className="flex items-center gap-2 text-crys-light-grey text-xs">
+                        <CheckCircle className="w-3 h-3 text-crys-gold flex-shrink-0" />
                         <span>{feature}</span>
                       </li>
                     ))}
