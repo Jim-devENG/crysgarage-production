@@ -1,0 +1,55 @@
+name: Enable Dev Mode
+
+on:
+  workflow_dispatch:
+    inputs:
+      email:
+        description: Dev email
+        required: true
+        default: dev@crysgarage.studio
+      password:
+        description: Dev password
+        required: true
+        default: "TheCrysgarage(100%)"
+
+jobs:
+  enable:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup SSH key
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: |
+            ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Add host to known_hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Apply DEV_MODE credentials and reload services
+        env:
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          DEV_EMAIL: ${{ github.event.inputs.email }}
+          DEV_PASSWORD: ${{ github.event.inputs.password }}
+        run: |
+          ssh -o StrictHostKeyChecking=no ${SSH_USER}@${SSH_HOST} bash -lc '
+            set -e
+            cd /var/www/crysgarage-deploy/crysgarage-backend/laravel
+            # Clean any prior bad lines and existing creds
+            sed -i "/^-NoNewline/d" .env || true
+            sed -i "/^DEV_MODE_EMAIL=/d" .env || true
+            sed -i "/^DEV_MODE_PASSWORD=/d" .env || true
+            # Append new creds (quote password safely)
+            printf "%s\n" "DEV_MODE_EMAIL=${DEV_EMAIL}" >> .env
+            printf "%s\n" "DEV_MODE_PASSWORD='${DEV_PASSWORD}'" >> .env
+            # Clear Laravel caches
+            php artisan config:clear
+            php artisan cache:clear
+            # Reload services
+            (systemctl reload php-fpm || systemctl reload php8.1-fpm) || true
+            systemctl reload nginx
+          '
+
+
