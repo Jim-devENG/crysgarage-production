@@ -46,7 +46,7 @@ const TeamSection: React.FC = () => {
           </div>
           
           <div className="bg-crys-graphite/30 rounded-2xl p-6 border border-crys-gold/10">
-            <img src="https://api.dicebear.com/7.x/initials/svg?seed=Ishaya%20Jeremiah&backgroundColor=ffd166&fontSize=40" 
+            <img src="/Jusi.png" 
                  alt="Ishaya Jeremiah" 
                  className="w-32 h-32 rounded-full mx-auto mb-4 object-cover border-4 border-crys-gold/20" />
             <h3 className="text-xl font-bold text-crys-gold mb-2">
@@ -63,11 +63,18 @@ const TeamSection: React.FC = () => {
 
           <div className="bg-crys-graphite/30 rounded-2xl p-6 border border-crys-gold/10">
             <img src="/Image7.png" 
-                 alt="Digital Marketer" 
+                 alt="Ypee" 
                  className="w-32 h-32 rounded-full mx-auto mb-4 object-cover border-4 border-crys-gold/20" />
-            <h3 className="text-xl font-bold text-crys-gold mb-2">Digital Marketer</h3>
-            <p className="text-crys-gold/80 font-medium mb-3">Growth & Marketing</p>
-            <p className="text-gray-300 text-sm">Drives brand growth, campaigns, and community engagement across channels to reach and retain creators.</p>
+            <h3 className="text-xl font-bold text-crys-gold mb-2">
+              <a href="https://www.linkedin.com/in/ephraim-samuel-54b690209?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=ios_app" target="_blank" rel="noopener noreferrer" className="hover:underline">Ypee</a>
+            </h3>
+            <p className="text-crys-gold/80 font-medium mb-3">Digital Marketer</p>
+            <p className="text-gray-300 text-sm">Strategic digital marketing specialist driving growth and connecting African artists with global audiences.</p>
+            <div className="mt-4">
+              <a href="https://www.linkedin.com/in/ephraim-samuel-54b690209?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=ios_app" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-crys-gold hover:underline">
+                <Linkedin className="w-4 h-4" /> Contact
+              </a>
+            </div>
           </div>
         </div>
       </div>
