@@ -68,7 +68,7 @@ const DownloadStep: React.FC<DownloadStepProps> = ({
         <div className="mt-4 inline-flex items-center gap-2 bg-gradient-to-r from-amber-500/20 to-yellow-400/20 border border-amber-500/30 rounded-lg px-4 py-2">
           <DollarSign className="w-4 h-4 text-amber-400" />
           <span className="text-sm text-amber-400 font-medium">
-            Download Cost: <span className="text-white">$4.99 for 2 Credits</span>
+            Download Cost: <span className="text-white">$2.99 per download</span>
           </span>
         </div>
       </div>
@@ -164,19 +164,15 @@ const DownloadStep: React.FC<DownloadStepProps> = ({
           <div className="flex items-center justify-center gap-4 text-sm">
             <div className="flex items-center gap-2">
               <span className="w-3 h-3 bg-amber-400 rounded-full"></span>
-              <span className="text-gray-300">$4.99 = 2 Credits</span>
+              <span className="text-gray-300">$2.99 = 1 Download</span>
             </div>
             <div className="flex items-center gap-2">
               <span className="w-3 h-3 bg-amber-400 rounded-full"></span>
-              <span className="text-gray-300">1 Credit = 1 Download</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="w-3 h-3 bg-amber-400 rounded-full"></span>
-              <span className="text-gray-300">2 Downloads per purchase</span>
+              <span className="text-gray-300">Pay-per-download model</span>
             </div>
           </div>
           <p className="text-xs text-amber-300">
-            After using your 2 credits, you'll need to purchase more to continue downloading.
+            Each mastered audio download costs $2.99.
           </p>
         </div>
       </div>
@@ -189,7 +185,7 @@ const DownloadStep: React.FC<DownloadStepProps> = ({
           className="bg-amber-500 hover:bg-amber-600 text-black px-8 py-4 rounded-lg font-semibold transition-colors flex items-center gap-3 mx-auto disabled:opacity-50 disabled:cursor-not-allowed text-lg relative overflow-hidden"
         >
           <Download className="w-6 h-6" />
-          {isDownloading ? 'Recording Processed Audio...' : 'Download Mastered Audio - $4.99'}
+          {isDownloading ? 'Recording Processed Audio...' : 'Download Mastered Audio - $2.99'}
           
           {/* Progress bar */}
           {isDownloading && (

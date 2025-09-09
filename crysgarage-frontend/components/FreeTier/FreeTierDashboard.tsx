@@ -46,14 +46,14 @@ const FREE_GENRE_PRESETS: Record<string, GenrePreset> = {
   'hip-hop': {
     gain: 2.0,
     compression: { threshold: -19, ratio: 3.5, attack: 0.003, release: 0.2 },
-    eq: { low: 1.2, mid: 1.0, high: 0.9 },
+    eq: { low: 1.6, mid: 1.0, high: 0.8 },
     truePeak: -0.2,
     targetLufs: -8.0
   },
   'afrobeats': {
     gain: 2.2,
     compression: { threshold: -18, ratio: 4, attack: 0.002, release: 0.2 },
-    eq: { low: 0.95, mid: 1.0, high: 1.2 },
+    eq: { low: 0.9, mid: 1.0, high: 1.6 },
     truePeak: -0.1,
     targetLufs: -7.0
   }
