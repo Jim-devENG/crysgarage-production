@@ -19,6 +19,10 @@ class AudioController extends Controller
     {
         $this->rubyServiceUrl = env('VITE_RUBY_SERVICE_URL', 'http://localhost:4567');
         $this->maxFileSize = env('MAX_FILE_SIZE', 200) * 1024 * 1024; // Convert MB to bytes
+        
+        // Apply rate limiting to all methods
+        $this->middleware('throttle:60,1')->except(['getFeatures']);
+        $this->middleware('auth:sanctum')->except(['getFeatures']);
     }
 
     /**

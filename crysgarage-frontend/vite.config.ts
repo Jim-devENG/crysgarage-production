@@ -16,8 +16,19 @@ export default defineConfig({
       }
     }
   },
+  build: {
+    sourcemap: false, // Remove source maps in production
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        drop_console: true, // Remove console.log statements
+        drop_debugger: true, // Remove debugger statements
+      },
+    },
+  },
   esbuild: {
     jsxFactory: 'React.createElement',
-    jsxFragment: 'React.Fragment'
+    jsxFragment: 'React.Fragment',
+    drop: ['console', 'debugger'], // Remove console and debugger in production
   }
 }) 
