@@ -78,9 +78,9 @@ export function BillingPage({ onNavigate }: BillingPageProps) {
   }, [user, updateProfile]);
 
   const tierPricing = {
-    free: { credits: 2, price: 4.99, name: 'Free Tier Credits' },
-    pro: { credits: 12, price: 19.99, name: 'Professional Credits' },
-    advanced: { credits: 25, price: 49.99, name: 'Advanced Credits' }
+    free: { credits: 1, price: 3.00, name: 'Pay Per Download' },
+    pro: { credits: 5, price: 15.00, name: 'Professional Credits' },
+    advanced: { credits: 6, price: 25.00, name: 'Advanced Credits (5+1 bonus)' }
   };
 
   const getTierInfo = () => {
@@ -89,26 +89,26 @@ export function BillingPage({ onNavigate }: BillingPageProps) {
       case 'pro':
         return {
           name: 'Professional',
-          price: 19.99,
-          credits: 12,
+          price: 15.00,
+          credits: 5,
           color: 'bg-blue-500',
-          features: ['12 download credits', 'All audio formats', 'Up to 192kHz sample rate']
+          features: ['5 download credits', 'All audio formats', '44.1kHz, 48kHz sample rates', 'Advanced genre presets']
         };
       case 'advanced':
         return {
           name: 'Advanced',
-          price: 49.99,
-          credits: 25,
+          price: 25.00,
+          credits: 6,
           color: 'bg-purple-500',
-          features: ['25 download credits', 'Real-time manual controls', '8-band graphic EQ']
+          features: ['6 download credits (5+1 bonus)', 'Real-time manual controls', '8-band graphic EQ', 'All sample rates & formats']
         };
       default:
         return {
-          name: 'Free',
-          price: 4.99,
-          credits: 2,
+          name: 'Pay Per Download',
+          price: 3.00,
+          credits: 1,
           color: 'bg-gray-500',
-          features: ['2 download credits', 'Basic audio formats', 'Up to 44.1kHz sample rate']
+          features: ['1 download credit', 'MP3/WAV upload', '44.1kHz sample rate', '16-bit resolution']
         };
     }
   };
@@ -121,39 +121,13 @@ export function BillingPage({ onNavigate }: BillingPageProps) {
     
     setIsLoadingData(true);
     try {
-      // Load payment methods (mock data for now)
-      const mockPaymentMethods = [
-        {
-          id: 1,
-          type: 'card',
-          last4: '4242',
-          brand: 'visa',
-          expiry: '12/25',
-          isDefault: true
-        }
-      ];
-      setPaymentMethods(mockPaymentMethods);
+      // TODO: Load real payment methods from API
+      // For now, show empty state if no payment methods
+      setPaymentMethods([]);
 
-      // Load transaction history (mock data for now)
-      const mockTransactions = [
-        {
-          id: 1,
-          amount: 19.99,
-          credits: 12,
-          status: 'completed',
-          date: new Date().toISOString(),
-          description: 'Professional Credits Purchase'
-        },
-        {
-          id: 2,
-          amount: 4.99,
-          credits: 2,
-          status: 'completed',
-          date: new Date(Date.now() - 86400000).toISOString(),
-          description: 'Free Tier Credits Purchase'
-        }
-      ];
-      setTransactions(mockTransactions);
+      // TODO: Load real transaction history from API
+      // For now, show empty state if no transactions
+      setTransactions([]);
     } catch (error) {
       console.error('Failed to load billing data:', error);
       setError('Failed to load billing information');
@@ -382,7 +356,7 @@ export function BillingPage({ onNavigate }: BillingPageProps) {
               <CardHeader>
                 <CardTitle className="text-crys-white flex items-center gap-2">
                   <Wallet className="w-5 h-5 text-crys-gold" />
-                  Current Balance
+                  {user?.tier === 'free' ? 'Pay Per Download' : 'Current Balance'}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -392,12 +366,25 @@ export function BillingPage({ onNavigate }: BillingPageProps) {
                       <Wallet className="w-6 h-6 text-crys-gold" />
                     </div>
                     <div>
-                      <h3 className="text-lg font-semibold text-crys-white">
-                        {user?.credits || 0} Credits
-                      </h3>
-                      <p className="text-crys-light-grey text-sm">
-                        Available for downloading mastered tracks
-                      </p>
+                      {user?.tier === 'free' ? (
+                        <>
+                          <h3 className="text-lg font-semibold text-crys-white">
+                            Pay Per Download
+                          </h3>
+                          <p className="text-crys-light-grey text-sm">
+                            $3.00 per download - no credits required
+                          </p>
+                        </>
+                      ) : (
+                        <>
+                          <h3 className="text-lg font-semibold text-crys-white">
+                            {user?.credits || 0} Credits
+                          </h3>
+                          <p className="text-crys-light-grey text-sm">
+                            Available for downloading mastered tracks
+                          </p>
+                        </>
+                      )}
                     </div>
                   </div>
                   <Badge variant="outline" className="border-crys-gold text-crys-gold">
@@ -476,49 +463,6 @@ export function BillingPage({ onNavigate }: BillingPageProps) {
                </Card>
              )}
 
-                           {/* Manual Payment Verification */}
-              <Card className="bg-audio-panel-bg border-audio-panel-border">
-                <CardHeader>
-                  <CardTitle className="text-crys-white flex items-center gap-2">
-                    <CheckCircle className="w-5 h-5 text-crys-gold" />
-                    Payment Verification
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-6">
-                  <p className="text-crys-light-grey text-sm mb-4">
-                    If you completed a payment but don't see your credits, click below to verify your payment.
-                  </p>
-                  <div className="space-y-3">
-                    <Button
-                      onClick={() => {
-                        // Refresh user data to check for updated credits
-                        window.location.reload();
-                      }}
-                      className="w-full bg-crys-gold hover:bg-crys-gold/90 text-crys-black font-semibold"
-                    >
-                      <CheckCircle className="w-4 h-4 mr-2" />
-                      Check Payment Status
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        // Manually add credits for testing
-                        if (user) {
-                          const updatedUser = { ...user, credits: (user.credits || 0) + 2 };
-                          updateProfile(updatedUser);
-                          localStorage.setItem('crysgarage_user', JSON.stringify(updatedUser));
-                          setMessage('Credits added manually. Please check your balance.');
-                          setTimeout(() => setMessage(null), 5000);
-                        }
-                      }}
-                      className="w-full border-crys-graphite text-crys-light-grey hover:text-crys-white"
-                    >
-                      <AlertCircle className="w-4 h-4 mr-2" />
-                      Manual Credit Add (Test)
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
 
              {/* Purchase Credits */}
              <Card className="bg-audio-panel-bg border-audio-panel-border">

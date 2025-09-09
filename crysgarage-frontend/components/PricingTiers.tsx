@@ -51,12 +51,11 @@ export function PricingTiers({ onTierSelect, selectedTier }: PricingTiersProps) 
       features: [
         "5 mastering credits",
         "All audio formats",
-        "Up to 192kHz sample rate",
-        "24-bit/32-bit resolution ($1)",
-        "Free: Pop, Rock, Reggae",
-        "Premium genres ($1 each)",
+        "44.1kHz, 48kHz sample rates",
+        "16/24/32-bit resolution",
+        "Advanced genre presets",
+        "Noise reduction included",
         "+16 tuning correction",
-        "Noise reduction",
         "Download in WAV/MP3/FLAC",
         "Better value than pay-per-download"
       ],

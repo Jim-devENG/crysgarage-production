@@ -111,10 +111,10 @@ export function PricingPage({ onSelectTier, onGoToDashboard }: PricingPageProps)
         "5 download credits",
         "All audio formats (up to 100MB)",
         "44.1kHz, 48kHz sample rates",
-        "Up to 192kHz",
         "16/24/32-bit resolution",
-        "Genre optimization",
+        "Advanced genre presets",
         "Noise reduction included",
+        "+16 tuning correction",
         "Download WAV/MP3/FLAC",
         "Better value than pay-per-download"
       ],
