@@ -957,6 +957,32 @@ const FreeTierDashboard: React.FC<FreeTierDashboardProps> = ({ onDownloadAttempt
         </div>
       </div>
 
+      {/* Back to Upload (visible after upload) */}
+      {activeTab !== 'upload' && (
+        <div className="max-w-4xl mx-auto px-6 pt-4">
+          <button
+            onClick={() => {
+              try {
+                if (originalAudioElement && !originalAudioElement.paused) {
+                  originalAudioElement.pause();
+                  originalAudioElement.currentTime = 0;
+                }
+                if (originalAudioRef.current && !originalAudioRef.current.paused) {
+                  originalAudioRef.current.pause();
+                  originalAudioRef.current.currentTime = 0;
+                }
+              } catch {}
+              setIsPlayingOriginal(false);
+              setIsPlayingMastered(false);
+              setActiveTab('upload');
+            }}
+            className="inline-flex items-center gap-2 text-sm text-amber-400 hover:text-amber-300"
+          >
+            <ArrowLeft className="w-4 h-4" /> Back to Upload
+          </button>
+        </div>
+      )}
+
       {/* Content */}
       <div className="flex-1 p-6">
         <div className="max-w-4xl mx-auto">
