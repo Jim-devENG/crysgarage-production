@@ -85,49 +85,16 @@ const Support: React.FC = () => {
           </p>
         </div>
 
-        {/* Contact Options */}
+        {/* Contact Options - email only */}
         <div className="grid md:grid-cols-3 gap-6 mb-12">
-          <div className="bg-gray-800/50 rounded-lg p-6 border border-gray-700 text-center">
-            <div className="p-3 bg-blue-500/20 rounded-full w-fit mx-auto mb-4">
-              <MessageCircle className="w-8 h-8 text-blue-400" />
-            </div>
-            <h3 className="text-lg font-semibold mb-2">Live Chat</h3>
-            <p className="text-gray-300 text-sm mb-4">Get instant help from our support team</p>
-            <button className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors">
-              Start Chat
-            </button>
-          </div>
-
-          <div className="bg-gray-800/50 rounded-lg p-6 border border-gray-700 text-center">
+          <div className="bg-gray-800/50 rounded-lg p-6 border border-gray-700 text-center md:col-start-2">
             <div className="p-3 bg-green-500/20 rounded-full w-fit mx-auto mb-4">
               <Mail className="w-8 h-8 text-green-400" />
             </div>
             <h3 className="text-lg font-semibold mb-2">Email Support</h3>
             <p className="text-gray-300 text-sm mb-4">Send us a detailed message</p>
-            <a href="mailto:crysgaragestudio@gmail.com" className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg transition-colors inline-block">
+            <a href="mailto:info@crysgarage.studio" className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg transition-colors inline-block">
               Send Email
-            </a>
-          </div>
-
-          <div className="bg-gray-800/50 rounded-lg p-6 border border-gray-700 text-center">
-            <div className="p-3 bg-purple-500/20 rounded-full w-fit mx-auto mb-4">
-              <Phone className="w-8 h-8 text-purple-400" />
-            </div>
-            <h3 className="text-lg font-semibold mb-2">Phone Support</h3>
-            <p className="text-gray-300 text-sm mb-4">Call us for urgent issues</p>
-            <a href="tel:+2348069919304" className="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-lg transition-colors inline-block">
-              Call Now
-            </a>
-          </div>
-
-          <div className="bg-gray-800/50 rounded-lg p-6 border border-gray-700 text-center">
-            <div className="p-3 bg-green-600/20 rounded-full w-fit mx-auto mb-4">
-              <MessageCircle className="w-8 h-8 text-green-400" />
-            </div>
-            <h3 className="text-lg font-semibold mb-2">WhatsApp Chat</h3>
-            <p className="text-gray-300 text-sm mb-4">Chat with us instantly</p>
-            <a href="https://wa.me/2348069919304" target="_blank" rel="noopener noreferrer" className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors inline-block">
-              Start Chat
             </a>
           </div>
         </div>
@@ -226,31 +193,7 @@ const Support: React.FC = () => {
           </div>
         </div>
 
-        {/* Contact Information */}
-        <div className="bg-gradient-to-r from-crys-gold/20 to-orange-500/20 rounded-lg p-8 border border-crys-gold/30">
-          <h2 className="text-2xl font-semibold text-center mb-6">Still Need Help?</h2>
-          <div className="grid md:grid-cols-2 gap-8">
-            <div>
-              <h3 className="text-lg font-medium mb-4 text-crys-gold">Contact Information</h3>
-              <div className="space-y-3 text-gray-300">
-                <p><strong>Email:</strong> crysgaragestudio@gmail.com</p>
-                <p><strong>Phone:</strong> 08069919304</p>
-                <p><strong>WhatsApp:</strong> +234 806 991 9304</p>
-                <p><strong>Location:</strong> Plateau, Nigeria</p>
-                <p><strong>Response Time:</strong> Within 24 hours</p>
-              </div>
-            </div>
-            <div>
-              <h3 className="text-lg font-medium mb-4 text-crys-gold">Business Hours</h3>
-              <div className="space-y-2 text-gray-300">
-                <p><strong>Monday - Friday:</strong> 9:00 AM - 6:00 PM EST</p>
-                <p><strong>Saturday:</strong> 10:00 AM - 4:00 PM EST</p>
-                <p><strong>Sunday:</strong> Closed</p>
-                <p><strong>Emergency Support:</strong> 24/7 via live chat</p>
-              </div>
-            </div>
-          </div>
-        </div>
+        {/* Contact Information section removed as requested */}
       </div>
     </div>
   );

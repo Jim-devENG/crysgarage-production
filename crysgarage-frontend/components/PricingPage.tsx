@@ -448,9 +448,7 @@ export function PricingPage({ onSelectTier, onGoToDashboard }: PricingPageProps)
                   <MessageCircle className="w-5 h-5 mr-2" />
                   Contact on WhatsApp
                 </Button>
-                <p className="text-crys-light-grey text-xs mt-2 text-center">
-                  +234 806 991 9304
-                </p>
+                
               </div>
               
               <div className="text-center">

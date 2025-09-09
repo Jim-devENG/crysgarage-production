@@ -3,7 +3,7 @@ import { Button } from "./ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { Input } from "./ui/input";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
+// Tabs removed
 import { 
   Search, 
   Book, 
@@ -25,33 +25,17 @@ interface HelpPageProps {
 
 export function HelpPage({ onGetStarted }: HelpPageProps) {
   const [searchTerm, setSearchTerm] = useState('');
-  const [activeTab, setActiveTab] = useState('getting-started');
+  // Tabs removed: single page layout
 
 
   const contactOptions = [
-    {
-      method: 'Live Chat',
-      description: 'Get instant help from our support team',
-      availability: 'Available 24/7',
-      icon: <MessageCircle className="w-6 h-6" />,
-      action: 'Start Chat',
-      primary: true
-    },
     {
       method: 'Email Support',
       description: 'Send us a detailed message',
       availability: 'Response within 4 hours',
       icon: <Mail className="w-6 h-6" />,
       action: 'Send Email',
-      primary: false
-    },
-    {
-      method: 'Phone Support',
-      description: 'Talk to a mastering expert',
-      availability: 'Mon-Fri 9AM-6PM GMT',
-      icon: <Phone className="w-6 h-6" />,
-      action: 'Call Now',
-      primary: false
+      primary: true
     }
   ];
 
@@ -82,55 +66,10 @@ export function HelpPage({ onGetStarted }: HelpPageProps) {
           </div>
         </div>
 
-        {/* Quick Actions */}
-        <div className="grid md:grid-cols-2 gap-6 mb-12">
-          <Card className="bg-audio-panel-bg border-audio-panel-border hover:border-crys-gold/50 transition-all duration-300 cursor-pointer">
-            <CardContent className="p-6 text-center">
-              <div className="w-12 h-12 bg-crys-gold/20 rounded-lg flex items-center justify-center mx-auto mb-4">
-                <MessageCircle className="w-6 h-6 text-crys-gold" />
-              </div>
-              <h3 className="text-crys-white font-semibold mb-2">Live Chat Support</h3>
-              <p className="text-crys-light-grey text-sm mb-4">
-                Get instant help from our 24/7 support team
-              </p>
-              <Button 
-                onClick={() => window.open('https://wa.me/2348069919304', '_blank')}
-                className="bg-crys-gold hover:bg-crys-gold-muted text-crys-black"
-              >
-                Start Chat
-              </Button>
-            </CardContent>
-          </Card>
+        {/* Quick Actions - removed Live Chat and Documentation cards as requested */}
 
-          <Card className="bg-audio-panel-bg border-audio-panel-border hover:border-crys-gold/50 transition-all duration-300 cursor-pointer">
-            <CardContent className="p-6 text-center">
-              <div className="w-12 h-12 bg-crys-gold/20 rounded-lg flex items-center justify-center mx-auto mb-4">
-                <Book className="w-6 h-6 text-crys-gold" />
-              </div>
-              <h3 className="text-crys-white font-semibold mb-2">Documentation</h3>
-              <p className="text-crys-light-grey text-sm mb-4">
-                Comprehensive guides and technical documentation
-              </p>
-              <Button 
-                onClick={() => window.open('https://status.crysgarage.studio', '_blank')}
-                variant="outline" 
-                className="border-crys-gold/30 text-crys-gold hover:bg-crys-gold/10"
-              >
-                Browse Docs
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Main Content Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-2 bg-crys-graphite/50 mb-8">
-            <TabsTrigger value="getting-started" className="text-crys-white">Getting Started</TabsTrigger>
-            <TabsTrigger value="contact" className="text-crys-white">Contact</TabsTrigger>
-          </TabsList>
-
-          {/* Getting Started Tab */}
-          <TabsContent value="getting-started" className="space-y-8">
+        {/* Getting Started */}
+        <div className="space-y-8">
             <div className="grid md:grid-cols-2 gap-6">
               <Card className="bg-audio-panel-bg border-audio-panel-border">
                 <CardHeader>
@@ -228,11 +167,10 @@ export function HelpPage({ onGetStarted }: HelpPageProps) {
                 </CardContent>
               </Card>
             </div>
-          </TabsContent>
+        </div>
 
-
-          {/* Contact Tab */}
-          <TabsContent value="contact" className="space-y-8">
+        {/* Contact */}
+        <div className="space-y-8 mt-12">
             <div className="grid md:grid-cols-3 gap-6">
               {contactOptions.map((option, index) => (
                 <Card key={index} className="bg-audio-panel-bg border-audio-panel-border text-center">
@@ -245,13 +183,7 @@ export function HelpPage({ onGetStarted }: HelpPageProps) {
                     <p className="text-crys-gold text-xs mb-4">{option.availability}</p>
                     <Button 
                       onClick={() => {
-                        if (option.method === 'Live Chat') {
-                          window.open('https://wa.me/2348069919304', '_blank');
-                        } else if (option.method === 'Email Support') {
-                          window.open('mailto:crysgaragestudio@gmail.com', '_blank');
-                        } else if (option.method === 'Phone Support') {
-                          window.open('tel:+2348069919304', '_blank');
-                        }
+                        window.open('mailto:info@crysgarage.studio', '_blank');
                       }}
                       className={option.primary ? 
                         "bg-crys-gold hover:bg-crys-gold-muted text-crys-black w-full" : 
@@ -276,14 +208,7 @@ export function HelpPage({ onGetStarted }: HelpPageProps) {
                 </p>
                 <div className="flex flex-col sm:flex-row gap-3 justify-center">
                   <Button 
-                    onClick={() => window.open('https://wa.me/2348069919304', '_blank')}
-                    className="bg-crys-gold hover:bg-crys-gold-muted text-crys-black"
-                  >
-                    <MessageCircle className="w-4 h-4 mr-2" />
-                    Start Live Chat
-                  </Button>
-                  <Button 
-                    onClick={() => window.open('mailto:crysgaragestudio@gmail.com', '_blank')}
+                    onClick={() => window.open('mailto:info@crysgarage.studio', '_blank')}
                     variant="outline"
                     className="border-crys-gold/30 text-crys-gold hover:bg-crys-gold/10"
                   >
@@ -293,8 +218,7 @@ export function HelpPage({ onGetStarted }: HelpPageProps) {
                 </div>
               </CardContent>
             </Card>
-          </TabsContent>
-        </Tabs>
+        </div>
       </div>
     </div>
   );

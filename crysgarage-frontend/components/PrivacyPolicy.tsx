@@ -235,18 +235,11 @@ const PrivacyPolicy: React.FC = () => {
             </p>
           </section>
 
-          {/* Contact Information */}
-          <section className="bg-gradient-to-r from-crys-gold/20 to-orange-500/20 rounded-lg p-6 border border-crys-gold/30">
-            <h2 className="text-2xl font-semibold mb-4">Contact Us</h2>
-            <p className="text-gray-300 leading-relaxed mb-4">
-              If you have any questions about this Privacy Policy or our data practices, please contact us:
-            </p>
-            <div className="space-y-2 text-gray-300">
-              <p><strong>Email:</strong> crysgaragestudio@gmail.com</p>
-              <p><strong>Phone:</strong> 08069919304</p>
-              <p><strong>WhatsApp:</strong> +234 806 991 9304</p>
-              <p><strong>Location:</strong> Plateau, Nigeria</p>
-            </div>
+          {/* Contact */}
+          <section className="bg-gradient-to-r from-crys-gold/20 to-orange-500/20 rounded-lg p-6 border border-crys-gold/30 text-center">
+            <h2 className="text-2xl font-semibold mb-4">Contact</h2>
+            <p className="text-gray-300 leading-relaxed mb-6">Questions about this Privacy Policy?</p>
+            <a href="mailto:privacy@crysgarage.studio" className="inline-block bg-crys-gold hover:bg-orange-500 text-black font-semibold px-6 py-3 rounded-lg transition-colors">Email privacy@crysgarage.studio</a>
           </section>
         </div>
       </div>

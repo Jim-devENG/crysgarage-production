@@ -50,28 +50,7 @@ const Careers: React.FC = () => {
           </div>
         </div>
 
-        {/* Benefits */}
-        <div className="mb-12">
-          <h2 className="text-3xl font-bold text-center mb-8">Benefits & Perks</h2>
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div className="bg-gray-800/50 rounded-lg p-6 border border-gray-700 text-center">
-              <h3 className="font-medium mb-2 text-crys-gold">Health & Wellness</h3>
-              <p className="text-gray-300 text-sm">Comprehensive health, dental, and vision insurance for you and your family.</p>
-            </div>
-            <div className="bg-gray-800/50 rounded-lg p-6 border border-gray-700 text-center">
-              <h3 className="font-medium mb-2 text-crys-gold">Flexible Work</h3>
-              <p className="text-gray-300 text-sm">Remote-first culture with flexible hours and unlimited PTO.</p>
-            </div>
-            <div className="bg-gray-800/50 rounded-lg p-6 border border-gray-700 text-center">
-              <h3 className="font-medium mb-2 text-crys-gold">Learning & Growth</h3>
-              <p className="text-gray-300 text-sm">Annual learning budget, conference attendance, and mentorship programs.</p>
-            </div>
-            <div className="bg-gray-800/50 rounded-lg p-6 border border-gray-700 text-center">
-              <h3 className="font-medium mb-2 text-crys-gold">Equipment & Tools</h3>
-              <p className="text-gray-300 text-sm">Top-tier equipment, software licenses, and home office setup.</p>
-            </div>
-          </div>
-        </div>
+        
 
         {/* Open Positions */}
         <div className="mb-12">
@@ -134,16 +113,10 @@ const Careers: React.FC = () => {
         </div>
 
         {/* Contact */}
-        <div className="bg-gradient-to-r from-crys-gold/20 to-orange-500/20 rounded-lg p-8 border border-crys-gold/30">
-          <h2 className="text-2xl font-semibold text-center mb-6">Don't See Your Role?</h2>
-          <p className="text-gray-300 text-center mb-6">
-            We're always looking for talented individuals to join our team. Send us your resume and let us know how you'd like to contribute.
-          </p>
-          <div className="text-center">
-            <a href="mailto:careers@crysgarage.studio" className="bg-crys-gold hover:bg-orange-500 text-white px-8 py-3 rounded-lg transition-colors inline-block">
-              Send Us Your Resume
-            </a>
-          </div>
+        <div className="bg-gradient-to-r from-crys-gold/20 to-orange-500/20 rounded-lg p-8 border border-crys-gold/30 text-center">
+          <h2 className="text-2xl font-semibold mb-4">Don't See Your Role?</h2>
+          <p className="text-gray-300 mb-6">We're always looking for talented individuals. Send us your resume.</p>
+          <a href="mailto:career@crysgarage.studio" className="bg-crys-gold hover:bg-orange-500 text-black px-8 py-3 rounded-lg transition-colors inline-block">Email career@crysgarage.studio</a>
         </div>
       </div>
     </div>

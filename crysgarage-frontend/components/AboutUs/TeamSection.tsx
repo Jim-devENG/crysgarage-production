@@ -1,4 +1,5 @@
 import React from 'react';
+import { Linkedin } from 'lucide-react';
 
 const TeamSection: React.FC = () => {
   return (
@@ -13,30 +14,60 @@ const TeamSection: React.FC = () => {
         
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
           <div className="bg-crys-graphite/30 rounded-2xl p-6 border border-crys-gold/10">
-            <img src="https://api.dicebear.com/7.x/initials/svg?seed=James%20Enietan&backgroundColor=ffd166&fontSize=40" 
+            <img src="/Jim.png" 
                  alt="James Enietan" 
                  className="w-32 h-32 rounded-full mx-auto mb-4 object-cover border-4 border-crys-gold/20" />
-            <h3 className="text-xl font-bold text-crys-gold mb-2">James Enietan</h3>
-            <p className="text-crys-gold/80 font-medium mb-3">Full Stack Software Developer</p>
-            <p className="text-gray-300 text-sm">Expert in React, Node.js, and modern web technologies. Building the digital foundation of Crys Garage.</p>
+            <h3 className="text-xl font-bold text-crys-gold mb-2">
+              <a href="https://www.linkedin.com/in/enietan-jimmy/" target="_blank" rel="noopener noreferrer" className="hover:underline">Jimmy De Billionaire</a>
+            </h3>
+            <p className="text-crys-gold/80 font-medium mb-3">Software Engineer</p>
+            <p className="text-gray-300 text-sm">Architects intelligent systems and scalable platforms; built crysgarage.studio end‑to‑end with a focus on performance and user experience.</p>
+            <div className="mt-4">
+              <a href="https://www.linkedin.com/in/enietan-jimmy/" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-crys-gold hover:underline">
+                <Linkedin className="w-4 h-4" /> Contact
+              </a>
+            </div>
           </div>
           
           <div className="bg-crys-graphite/30 rounded-2xl p-6 border border-crys-gold/10">
-            <img src="https://api.dicebear.com/7.x/initials/svg?seed=Ishaya%20Shadrach&backgroundColor=ffd166&fontSize=40" 
+            <img src="/Shed.png" 
                  alt="Ishaya Shadrach" 
                  className="w-32 h-32 rounded-full mx-auto mb-4 object-cover border-4 border-crys-gold/20" />
-            <h3 className="text-xl font-bold text-crys-gold mb-2">Ishaya Shadrach</h3>
+            <h3 className="text-xl font-bold text-crys-gold mb-2">
+              <a href="https://www.linkedin.com/in/shadrach-ishaya-0b760459/" target="_blank" rel="noopener noreferrer" className="hover:underline">Supernova</a>
+            </h3>
             <p className="text-crys-gold/80 font-medium mb-3">Expert Sound Engineer & Producer</p>
             <p className="text-gray-300 text-sm">Master of audio engineering with deep expertise in mastering techniques and professional sound production.</p>
+            <div className="mt-4">
+              <a href="https://www.linkedin.com/in/shadrach-ishaya-0b760459/" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-crys-gold hover:underline">
+                <Linkedin className="w-4 h-4" /> Contact
+              </a>
+            </div>
           </div>
           
           <div className="bg-crys-graphite/30 rounded-2xl p-6 border border-crys-gold/10">
             <img src="https://api.dicebear.com/7.x/initials/svg?seed=Ishaya%20Jeremiah&backgroundColor=ffd166&fontSize=40" 
                  alt="Ishaya Jeremiah" 
                  className="w-32 h-32 rounded-full mx-auto mb-4 object-cover border-4 border-crys-gold/20" />
-            <h3 className="text-xl font-bold text-crys-gold mb-2">Ishaya Jeremiah</h3>
-            <p className="text-crys-gold/80 font-medium mb-3">Expert Digital Marketer</p>
-            <p className="text-gray-300 text-sm">Strategic digital marketing specialist driving growth and connecting African artists with global audiences.</p>
+            <h3 className="text-xl font-bold text-crys-gold mb-2">
+              <a href="https://www.linkedin.com/in/jerry-ishaya-b7734123a/" target="_blank" rel="noopener noreferrer" className="hover:underline">Jusi</a>
+            </h3>
+            <p className="text-crys-gold/80 font-medium mb-3">SaaS Project Manager</p>
+            <p className="text-gray-300 text-sm">Leads product planning and delivery for SaaS; aligns engineering, design, and business goals to ship quality experiences.</p>
+            <div className="mt-4">
+              <a href="https://www.linkedin.com/in/jerry-ishaya-b7734123a/" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-crys-gold hover:underline">
+                <Linkedin className="w-4 h-4" /> Contact
+              </a>
+            </div>
+          </div>
+
+          <div className="bg-crys-graphite/30 rounded-2xl p-6 border border-crys-gold/10">
+            <img src="/Image7.png" 
+                 alt="Digital Marketer" 
+                 className="w-32 h-32 rounded-full mx-auto mb-4 object-cover border-4 border-crys-gold/20" />
+            <h3 className="text-xl font-bold text-crys-gold mb-2">Digital Marketer</h3>
+            <p className="text-crys-gold/80 font-medium mb-3">Growth & Marketing</p>
+            <p className="text-gray-300 text-sm">Drives brand growth, campaigns, and community engagement across channels to reach and retain creators.</p>
           </div>
         </div>
       </div>

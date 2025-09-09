@@ -78,14 +78,8 @@ export function Footer({ onNavigate }: FooterProps) {
     {
       icon: <Mail className="w-4 h-4" />,
       label: "Email",
-      value: "crysgaragestudio@gmail.com",
-      href: "mailto:crysgaragestudio@gmail.com"
-    },
-    {
-      icon: <Phone className="w-4 h-4" />,
-      label: "Phone",
-      value: "08069919304",
-      href: "tel:+2348069919304"
+      value: "info@crysgarage.studio",
+      href: "mailto:info@crysgarage.studio"
     },
     {
       icon: <MapPin className="w-4 h-4" />,

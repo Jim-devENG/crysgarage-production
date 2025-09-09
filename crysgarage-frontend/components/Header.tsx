@@ -31,6 +31,7 @@ export function Header({
     { id: 'studio', label: 'Studio' },
     // { id: 'courses', label: 'Courses' },
     { id: 'community', label: 'Community' },
+    { id: 'about', label: 'About' },
     { id: 'help', label: 'Help' },
   ];
 
