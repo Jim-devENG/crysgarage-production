@@ -1067,7 +1067,7 @@ const FreeTierDashboard: React.FC<FreeTierDashboardProps> = ({ onDownloadAttempt
                       </div>
                       <div className="flex items-center gap-1">
                         <span className="w-2 h-2 bg-amber-400 rounded-full"></span>
-                        <span>Download: $4.99 for 2 credits</span>
+                        <span>Download: $2.99 for 1 download</span>
                       </div>
                       <div className="flex items-center gap-1">
                         <span className="w-2 h-2 bg-blue-400 rounded-full"></span>
