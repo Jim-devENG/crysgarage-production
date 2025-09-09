@@ -62,7 +62,7 @@ const TeamSection: React.FC = () => {
           </div>
 
           <div className="bg-crys-graphite/30 rounded-2xl p-6 border border-crys-gold/10">
-            <img src="/Image7.png" 
+            <img src="/Ypeeee.png" 
                  alt="Ypee" 
                  className="w-32 h-32 rounded-full mx-auto mb-4 object-cover border-4 border-crys-gold/20" />
             <h3 className="text-xl font-bold text-crys-gold mb-2">
