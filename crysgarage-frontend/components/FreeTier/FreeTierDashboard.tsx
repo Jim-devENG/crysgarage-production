@@ -63,13 +63,13 @@ const FREE_GENRE_PRESETS: Record<string, GenrePreset> = {
 const availableGenres: Genre[] = [
   {
     id: 'hip-hop',
-    name: 'Street Pulse',
+    name: 'Hip-Hop',
     color: 'bg-orange-500',
     description: 'Bass-Driven & Punchy'
   },
   {
     id: 'afrobeats',
-    name: 'Island Heat',
+    name: 'Afrobeats',
     color: 'bg-red-500',
     description: 'Rhythmic & Energetic'
   }
