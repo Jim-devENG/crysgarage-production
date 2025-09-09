@@ -959,7 +959,7 @@ const FreeTierDashboard: React.FC<FreeTierDashboardProps> = ({ onDownloadAttempt
 
       {/* Back to Upload (visible after upload) */}
       {activeTab !== 'upload' && (
-        <div className="max-w-4xl mx-auto px-6 pt-4">
+        <div className="max-w-4xl mx-auto px-6 pt-6">
           <button
             onClick={() => {
               try {
