@@ -1,0 +1,50 @@
+name: Diagnose API Routes Issue
+
+on:
+  workflow_dispatch:
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Diagnose API Routes on Server
+      uses: appleboy/ssh-action@v0.1.5
+      with:
+        host: 209.74.80.162
+        username: ${{ secrets.VPS_USER }}
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        script: |
+          echo "=== DIAGNOSING API ROUTES ISSUE ==="
+          
+          # Check if API routes file exists
+          echo "1. Checking API routes file:"
+          ls -la /var/www/html/api/routes/api.php
+          
+          # Check bootstrap file
+          echo "2. Checking bootstrap file:"
+          cat /var/www/html/api/bootstrap/app.php | grep -A 5 -B 5 "withRouting"
+          
+          # Check if there are multiple routes files
+          echo "3. Looking for all routes files:"
+          find /var/www/html/api -name "*.php" -path "*/routes/*" -exec echo "Found: {}" \;
+          
+          # Check Laravel routes
+          echo "4. Testing Laravel route list:"
+          cd /var/www/html/api
+          php artisan route:list --path=api | head -10
+          
+          # Check if there's a catch-all route
+          echo "5. Looking for catch-all routes:"
+          grep -r "Route::.*\*\|Route::any\|Route::fallback" /var/www/html/api/routes/ || echo "No catch-all routes found"
+          
+          # Check AudioController
+          echo "6. Checking AudioController methods:"
+          grep -n "public function" /var/www/html/api/app/Http/Controllers/AudioController.php | head -10
+          
+          # Test a simple route
+          echo "7. Testing simple route:"
+          curl -s "http://localhost/api/health" | head -100
+          
+          echo "=== DIAGNOSIS COMPLETE ==="
