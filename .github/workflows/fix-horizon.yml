@@ -1,0 +1,73 @@
+name: Fix Horizon Dashboard
+
+on:
+  workflow_dispatch:
+
+jobs:
+  fix-horizon:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Fix Horizon Dashboard
+      uses: appleboy/ssh-action@v0.1.5
+      with:
+        host: 209.74.80.162
+        username: ${{ secrets.VPS_USER }}
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        script: |
+          echo "🔧 FIXING HORIZON DASHBOARD..."
+          echo "============================="
+          
+          cd /var/www/html/api
+          
+          # Ensure Horizon is properly installed
+          echo "📦 Reinstalling Laravel Horizon..."
+          composer require laravel/horizon --no-interaction
+          php artisan horizon:install
+          
+          # Publish Horizon assets
+          echo "📤 Publishing Horizon assets..."
+          php artisan vendor:publish --tag=horizon-assets --force
+          php artisan vendor:publish --tag=horizon-config --force
+          
+          # Clear all caches
+          echo "🧹 Clearing all caches..."
+          php artisan config:clear
+          php artisan route:clear
+          php artisan cache:clear
+          php artisan view:clear
+          
+          # Restart Horizon service
+          echo "🔄 Restarting Horizon service..."
+          systemctl restart crysgarage-horizon
+          sleep 3
+          
+          # Check Horizon status
+          echo "📊 Checking Horizon status..."
+          systemctl status crysgarage-horizon --no-pager -l
+          
+          # Test Horizon endpoint
+          echo "🧪 Testing Horizon endpoint..."
+          curl -I http://localhost:8000/horizon || echo "Horizon endpoint test failed"
+          
+          # Check if Horizon routes are working
+          echo "🔍 Checking Horizon routes..."
+          php artisan route:list | grep horizon || echo "No Horizon routes found"
+          
+          # Set proper permissions
+          echo "🔐 Setting proper permissions..."
+          chown -R nginx:nginx /var/www/html/api
+          chmod -R 755 /var/www/html/api
+          chmod -R 775 /var/www/html/api/storage
+          chmod -R 775 /var/www/html/api/bootstrap/cache
+          
+          # Restart all services
+          echo "🔄 Restarting all services..."
+          systemctl restart nginx
+          systemctl restart php-fpm
+          systemctl restart crysgarage-horizon
+          
+          echo "✅ Horizon dashboard fix completed!"
+          echo "🌐 Try accessing: https://crysgarage.studio/horizon"
