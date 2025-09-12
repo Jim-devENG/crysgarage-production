@@ -24,7 +24,7 @@ class AudioController extends Controller
         
         // Apply rate limiting to all methods
         $this->middleware('throttle:60,1')->except(['getFeatures']);
-        $this->middleware('auth:sanctum')->except(['getFeatures']);
+        $this->middleware('auth:sanctum')->except(['getFeatures', 'uploadAudio', 'processAudio', 'getProcessingStatus', 'downloadProcessed', 'processFreeDownload']);
     }
 
     /**
