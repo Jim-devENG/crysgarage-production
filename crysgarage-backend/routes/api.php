@@ -47,6 +47,18 @@ Route::get('/test/debug', function() {
     ]);
 });
 
+// ML Pipeline Test Route (bypasses routing issues)
+Route::post('/ml-test/upload', function(Request $request) {
+    return response()->json([
+        'status' => 'success',
+        'message' => 'ML Pipeline Upload Endpoint Working',
+        'timestamp' => now()->toISOString(),
+        'received_data' => $request->all(),
+        'method' => $request->method(),
+        'url' => $request->url()
+    ]);
+});
+
 // Create test audio file for development
 Route::get('/test/create-audio', function() {
     $testAudioPath = storage_path('app/test_audio.wav');
