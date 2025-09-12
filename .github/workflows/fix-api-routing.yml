@@ -1,0 +1,59 @@
+name: Fix API Routing Issue
+
+on:
+  workflow_dispatch:
+
+jobs:
+  fix-routing:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Fix API Routing on Server
+      uses: appleboy/ssh-action@v0.1.5
+      with:
+        host: 209.74.80.162
+        username: ${{ secrets.VPS_USER }}
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        script: |
+          echo "=== FIXING API ROUTING ISSUE ==="
+          
+          # Check current API routes file
+          echo "1. Checking current API routes:"
+          head -20 /var/www/html/api/routes/api.php
+          
+          # Check if there are multiple routes files
+          echo "2. Looking for all routes files:"
+          find /var/www/html/api -name "*.php" -path "*/routes/*" -exec echo "Found: {}" \;
+          
+          # Check bootstrap configuration
+          echo "3. Checking bootstrap configuration:"
+          cat /var/www/html/api/bootstrap/app.php | grep -A 10 -B 5 "withRouting"
+          
+          # Clear all Laravel caches
+          echo "4. Clearing Laravel caches:"
+          cd /var/www/html/api
+          php artisan config:clear
+          php artisan route:clear
+          php artisan cache:clear
+          php artisan view:clear
+          
+          # Check route list
+          echo "5. Checking route list:"
+          php artisan route:list --path=api | head -20
+          
+          # Test a simple route
+          echo "6. Testing simple route:"
+          curl -s "http://localhost/api/health" | head -100
+          
+          # Restart services
+          echo "7. Restarting services:"
+          systemctl restart php-fpm
+          systemctl reload nginx
+          
+          # Test again after restart
+          echo "8. Testing after restart:"
+          sleep 5
+          curl -s "http://localhost/api/health" | head -100
+          
+          echo "=== ROUTING FIX COMPLETE ==="
