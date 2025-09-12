@@ -1,0 +1,66 @@
+name: Fix Server Configuration
+
+on:
+  workflow_dispatch:
+
+jobs:
+  fix-server:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Fix Server Configuration
+      uses: appleboy/ssh-action@v0.1.5
+      with:
+        host: 209.74.80.162
+        username: ${{ secrets.VPS_USER }}
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        script: |
+          echo "=== FIXING SERVER CONFIGURATION ==="
+          
+          # Check Nginx configuration
+          echo "1. Checking Nginx configuration:"
+          cat /etc/nginx/sites-available/default | grep -A 10 -B 5 "location /api"
+          
+          # Check if there's a rewrite rule
+          echo "2. Looking for rewrite rules:"
+          grep -r "rewrite\|redirect" /etc/nginx/sites-available/ || echo "No rewrite rules found"
+          
+          # Check PHP configuration
+          echo "3. Checking PHP configuration:"
+          php -i | grep -E "auto_prepend_file|auto_append_file" || echo "No auto prepend/append files"
+          
+          # Check Laravel configuration
+          echo "4. Checking Laravel configuration:"
+          cd /var/www/html/api
+          cat .env | grep -E "APP_URL|APP_ENV" || echo "No APP_URL/APP_ENV found"
+          
+          # Check if there's a custom index.php
+          echo "5. Checking for custom index.php:"
+          ls -la /var/www/html/api/public/index.php
+          head -20 /var/www/html/api/public/index.php
+          
+          # Check if there's a custom .htaccess
+          echo "6. Checking for .htaccess files:"
+          find /var/www/html -name ".htaccess" -exec echo "Found: {}" \;
+          
+          # Clear all caches and restart
+          echo "7. Clearing all caches:"
+          cd /var/www/html/api
+          php artisan config:clear
+          php artisan route:clear
+          php artisan cache:clear
+          php artisan view:clear
+          php artisan optimize:clear
+          
+          # Restart all services
+          echo "8. Restarting services:"
+          systemctl restart php-fpm
+          systemctl restart nginx
+          
+          # Test after restart
+          echo "9. Testing after restart:"
+          sleep 5
+          curl -s "http://localhost/api/health" | head -100
+          
+          echo "=== SERVER CONFIGURATION FIX COMPLETE ==="

@@ -1,0 +1,75 @@
+name: Direct Server Fix
+
+on:
+  workflow_dispatch:
+
+jobs:
+  fix-server:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Direct Server Fix
+      uses: appleboy/ssh-action@v0.1.5
+      with:
+        host: 209.74.80.162
+        username: ${{ secrets.VPS_USER }}
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        script: |
+          echo "=== DIRECT SERVER FIX ==="
+          
+          # Check current directory structure
+          echo "1. Checking directory structure:"
+          ls -la /var/www/html/
+          ls -la /var/www/html/api/
+          
+          # Check if there are multiple Laravel installations
+          echo "2. Looking for Laravel installations:"
+          find /var/www/html -name "artisan" -exec echo "Found Laravel at: {}" \;
+          
+          # Check Nginx configuration
+          echo "3. Checking Nginx configuration:"
+          cat /etc/nginx/sites-available/default | grep -A 10 -B 5 "location /api"
+          
+          # Check if there's a redirect in Nginx
+          echo "4. Checking for redirects:"
+          grep -r "return.*api" /etc/nginx/ || echo "No API redirects found"
+          
+          # Check PHP configuration
+          echo "5. Checking PHP configuration:"
+          php -v
+          php -m | grep -E "(curl|json|mbstring)"
+          
+          # Check Laravel configuration
+          echo "6. Checking Laravel configuration:"
+          cd /var/www/html/api
+          php artisan --version
+          php artisan config:show | head -20
+          
+          # Clear ALL caches
+          echo "7. Clearing ALL caches:"
+          php artisan config:clear
+          php artisan route:clear
+          php artisan cache:clear
+          php artisan view:clear
+          php artisan optimize:clear
+          
+          # Check route list
+          echo "8. Checking route list:"
+          php artisan route:list --path=api | head -20
+          
+          # Test local endpoint
+          echo "9. Testing local endpoint:"
+          curl -s "http://localhost/api/health" | head -100
+          
+          # Restart services
+          echo "10. Restarting services:"
+          systemctl restart php-fpm
+          systemctl restart nginx
+          
+          # Test after restart
+          echo "11. Testing after restart:"
+          sleep 5
+          curl -s "http://localhost/api/health" | head -100
+          
+          echo "=== DIRECT FIX COMPLETE ==="
