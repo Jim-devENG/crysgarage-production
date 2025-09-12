@@ -1,0 +1,143 @@
+name: Diagnose ML Pipeline Setup
+
+on:
+  workflow_dispatch:
+
+jobs:
+  diagnose-ml-setup:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Diagnose ML Pipeline Status
+      uses: appleboy/ssh-action@v0.1.5
+      with:
+        host: 209.74.80.162
+        username: ${{ secrets.VPS_USER }}
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        script: |
+          echo "🔍 DIAGNOSING ML PIPELINE SETUP..."
+          echo "=================================="
+          
+          # Check system services
+          echo "📊 System Services Status:"
+          echo "Redis: $(systemctl is-active redis)"
+          echo "ML Service: $(systemctl is-active crysgarage-ml)"
+          echo "Horizon: $(systemctl is-active crysgarage-horizon)"
+          echo "Nginx: $(systemctl is-active nginx)"
+          echo "PHP-FPM: $(systemctl is-active php-fpm)"
+          echo ""
+          
+          # Check Redis connection
+          echo "🔍 Testing Redis connection:"
+          if redis-cli ping | grep -q "PONG"; then
+            echo "✅ Redis: WORKING"
+          else
+            echo "❌ Redis: FAILED"
+          fi
+          echo ""
+          
+          # Check ML service
+          echo "🔍 Testing ML service:"
+          if curl -f -s http://localhost:8001/health > /dev/null; then
+            echo "✅ ML Service: RESPONDING"
+            curl -s http://localhost:8001/health | head -5
+          else
+            echo "❌ ML Service: NOT RESPONDING"
+            echo "Checking ML service logs:"
+            journalctl -u crysgarage-ml --no-pager -l | tail -10
+          fi
+          echo ""
+          
+          # Check Horizon
+          echo "🔍 Checking Horizon status:"
+          if systemctl is-active --quiet crysgarage-horizon; then
+            echo "✅ Horizon Service: RUNNING"
+            echo "Checking Horizon logs:"
+            journalctl -u crysgarage-horizon --no-pager -l | tail -10
+          else
+            echo "❌ Horizon Service: NOT RUNNING"
+            echo "Checking Horizon logs:"
+            journalctl -u crysgarage-horizon --no-pager -l | tail -10
+          fi
+          echo ""
+          
+          # Check Laravel configuration
+          echo "🔍 Checking Laravel configuration:"
+          cd /var/www/html/api
+          echo "Current directory: $(pwd)"
+          echo "Laravel version: $(php artisan --version)"
+          echo ""
+          
+          # Check environment variables
+          echo "🔍 Checking environment variables:"
+          if [ -f .env ]; then
+            echo "✅ .env file exists"
+            echo "ML_SERVICE_URL: $(grep ML_SERVICE_URL .env || echo 'NOT SET')"
+            echo "QUEUE_CONNECTION: $(grep QUEUE_CONNECTION .env || echo 'NOT SET')"
+            echo "FFMPEG_PATH: $(grep FFMPEG_PATH .env || echo 'NOT SET')"
+          else
+            echo "❌ .env file not found"
+          fi
+          echo ""
+          
+          # Check database migrations
+          echo "🔍 Checking database migrations:"
+          php artisan migrate:status | tail -10
+          echo ""
+          
+          # Check Horizon installation
+          echo "🔍 Checking Horizon installation:"
+          if composer show laravel/horizon > /dev/null 2>&1; then
+            echo "✅ Laravel Horizon: INSTALLED"
+            composer show laravel/horizon
+          else
+            echo "❌ Laravel Horizon: NOT INSTALLED"
+          fi
+          echo ""
+          
+          # Check if Horizon routes are published
+          echo "🔍 Checking Horizon routes:"
+          if [ -f routes/horizon.php ]; then
+            echo "✅ Horizon routes: PUBLISHED"
+          else
+            echo "❌ Horizon routes: NOT PUBLISHED"
+          fi
+          echo ""
+          
+          # Check ports
+          echo "🔍 Checking open ports:"
+          netstat -tlnp | grep -E ':(6379|8001|8000|80|443)' || echo "No relevant ports found"
+          echo ""
+          
+          # Check file permissions
+          echo "🔍 Checking file permissions:"
+          ls -la /var/www/html/api/ | head -5
+          echo ""
+          
+          # Check if ML service files exist
+          echo "🔍 Checking ML service files:"
+          if [ -d ml-service ]; then
+            echo "✅ ML service directory exists"
+            ls -la ml-service/
+          else
+            echo "❌ ML service directory not found"
+          fi
+          echo ""
+          
+          # Try to restart services
+          echo "🔄 Attempting to restart services..."
+          systemctl restart redis
+          systemctl restart crysgarage-ml
+          systemctl restart crysgarage-horizon
+          sleep 5
+          
+          echo "📊 Final Status After Restart:"
+          echo "Redis: $(systemctl is-active redis)"
+          echo "ML Service: $(systemctl is-active crysgarage-ml)"
+          echo "Horizon: $(systemctl is-active crysgarage-horizon)"
+          echo ""
+          
+          echo "🎯 DIAGNOSIS COMPLETE!"
+          echo "Check the output above to identify any issues."
