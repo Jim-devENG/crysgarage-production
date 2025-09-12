@@ -1,0 +1,181 @@
+name: Setup ML Audio Pipeline
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ master ]
+    paths:
+      - 'crysgarage-backend/ml-service/**'
+      - 'crysgarage-backend/app/Jobs/**'
+      - 'crysgarage-backend/config/queue.php'
+      - 'crysgarage-backend/config/horizon.php'
+
+jobs:
+  setup-ml-pipeline:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup ML Pipeline on VPS
+      uses: appleboy/ssh-action@v0.1.5
+      with:
+        host: 209.74.80.162
+        username: ${{ secrets.VPS_USER }}
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        script: |
+          echo "🚀 Setting up ML Audio Pipeline..."
+          
+          # 1. Install Redis if not installed
+          if ! command -v redis-server &> /dev/null; then
+            echo "📦 Installing Redis..."
+            yum install -y redis
+            systemctl enable redis
+            systemctl start redis
+            echo "✅ Redis installed and started"
+          else
+            echo "✅ Redis already installed"
+            systemctl start redis
+          fi
+          
+          # 2. Install Python and pip if not installed
+          if ! command -v python3 &> /dev/null; then
+            echo "📦 Installing Python 3..."
+            yum install -y python3 python3-pip
+            echo "✅ Python 3 installed"
+          else
+            echo "✅ Python 3 already installed"
+          fi
+          
+          # 3. Install FFmpeg if not installed
+          if ! command -v ffmpeg &> /dev/null; then
+            echo "📦 Installing FFmpeg..."
+            yum install -y epel-release
+            yum install -y ffmpeg
+            echo "✅ FFmpeg installed"
+          else
+            echo "✅ FFmpeg already installed"
+          fi
+          
+          # 4. Navigate to backend directory
+          cd /var/www/html/api
+          
+          # 5. Run database migrations
+          echo "🗄️ Running database migrations..."
+          php artisan migrate --force
+          echo "✅ Database migrations completed"
+          
+          # 6. Install ML service dependencies
+          echo "🐍 Setting up ML service..."
+          cd ml-service
+          if [ -f requirements.txt ]; then
+            pip3 install -r requirements.txt
+            echo "✅ ML service dependencies installed"
+          else
+            echo "⚠️ requirements.txt not found, skipping ML setup"
+          fi
+          
+          # 7. Create ML service systemd service
+          echo "⚙️ Creating ML service..."
+          cat > /etc/systemd/system/crysgarage-ml.service << 'EOF'
+          [Unit]
+          Description=Crys Garage ML Audio Service
+          After=network.target
+          
+          [Service]
+          Type=simple
+          User=nginx
+          WorkingDirectory=/var/www/html/api/ml-service
+          ExecStart=/usr/bin/python3 app.py
+          Restart=always
+          RestartSec=10
+          Environment=PYTHONPATH=/var/www/html/api/ml-service
+          
+          [Install]
+          WantedBy=multi-user.target
+          EOF
+          
+          # 8. Start ML service
+          systemctl daemon-reload
+          systemctl enable crysgarage-ml
+          systemctl start crysgarage-ml
+          echo "✅ ML service started"
+          
+          # 9. Install Laravel Horizon
+          echo "📊 Installing Laravel Horizon..."
+          cd /var/www/html/api
+          composer require laravel/horizon
+          php artisan horizon:install
+          echo "✅ Laravel Horizon installed"
+          
+          # 10. Create Horizon systemd service
+          cat > /etc/systemd/system/crysgarage-horizon.service << 'EOF'
+          [Unit]
+          Description=Crys Garage Horizon Queue Worker
+          After=network.target redis.service
+          
+          [Service]
+          Type=simple
+          User=nginx
+          WorkingDirectory=/var/www/html/api
+          ExecStart=/usr/bin/php artisan horizon
+          Restart=always
+          RestartSec=10
+          
+          [Install]
+          WantedBy=multi-user.target
+          EOF
+          
+          # 11. Start Horizon
+          systemctl daemon-reload
+          systemctl enable crysgarage-horizon
+          systemctl start crysgarage-horizon
+          echo "✅ Laravel Horizon started"
+          
+          # 12. Update environment configuration
+          echo "🔧 Updating environment configuration..."
+          if [ -f .env ]; then
+            # Add ML service configuration
+            if ! grep -q "ML_SERVICE_URL" .env; then
+              echo "ML_SERVICE_URL=http://localhost:8001" >> .env
+              echo "ML_SERVICE_TIMEOUT=30" >> .env
+            fi
+            
+            # Add queue configuration
+            if ! grep -q "QUEUE_CONNECTION" .env; then
+              echo "QUEUE_CONNECTION=redis" >> .env
+            fi
+            
+            # Add FFmpeg configuration
+            if ! grep -q "FFMPEG_PATH" .env; then
+              echo "FFMPEG_PATH=/usr/bin/ffmpeg" >> .env
+            fi
+            
+            echo "✅ Environment configuration updated"
+          fi
+          
+          # 13. Clear Laravel caches
+          php artisan config:clear
+          php artisan route:clear
+          php artisan cache:clear
+          php artisan queue:restart
+          echo "✅ Laravel caches cleared"
+          
+          # 14. Check service status
+          echo "📊 Checking service status..."
+          systemctl status redis --no-pager -l
+          systemctl status crysgarage-ml --no-pager -l
+          systemctl status crysgarage-horizon --no-pager -l
+          
+          # 15. Test ML service endpoint
+          echo "🧪 Testing ML service..."
+          sleep 5
+          curl -f http://localhost:8001/health || echo "⚠️ ML service health check failed"
+          
+          echo "🎉 ML Audio Pipeline setup completed!"
+          echo "📋 Services running:"
+          echo "  - Redis: $(systemctl is-active redis)"
+          echo "  - ML Service: $(systemctl is-active crysgarage-ml)"
+          echo "  - Horizon: $(systemctl is-active crysgarage-horizon)"
+          echo "  - Nginx: $(systemctl is-active nginx)"
+          echo "  - PHP-FPM: $(systemctl is-active php-fpm)"
