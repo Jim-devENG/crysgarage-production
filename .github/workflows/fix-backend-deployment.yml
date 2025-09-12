@@ -1,0 +1,73 @@
+name: Fix Backend Deployment
+
+on:
+  workflow_dispatch:
+
+jobs:
+  fix-backend:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Fix Backend Deployment on VPS
+      uses: appleboy/ssh-action@v0.1.5
+      with:
+        host: 209.74.80.162
+        username: ${{ secrets.VPS_USER }}
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        script: |
+          echo "=== FIXING BACKEND DEPLOYMENT ==="
+          
+          # Create API directory
+          echo "1. Creating API directory:"
+          mkdir -p /var/www/html/api
+          ls -la /var/www/html/api
+          
+          # Deploy backend files
+          echo "2. Deploying backend files:"
+          cp -r /var/www/crysgarage-deploy/crysgarage-backend/* /var/www/html/api/
+          
+          # Set permissions
+          echo "3. Setting permissions:"
+          chown -R nginx:nginx /var/www/html/api/
+          chmod -R 755 /var/www/html/api/
+          
+          # Check what was deployed
+          echo "4. Checking deployed files:"
+          ls -la /var/www/html/api/routes/
+          
+          # Install dependencies
+          echo "5. Installing dependencies:"
+          cd /var/www/html/api
+          composer install --no-dev --optimize-autoloader
+          
+          # Clear caches
+          echo "6. Clearing Laravel caches:"
+          php artisan config:clear
+          php artisan route:clear
+          php artisan cache:clear
+          
+          # Check routes
+          echo "7. Checking routes:"
+          php artisan route:list --path=api | head -10
+          
+          # Check Nginx configuration
+          echo "8. Checking Nginx configuration:"
+          find /etc/nginx -name "*.conf" | head -5
+          ls -la /etc/nginx/sites-available/
+          ls -la /etc/nginx/sites-enabled/
+          
+          # Restart services
+          echo "9. Restarting services:"
+          systemctl restart php-fpm
+          systemctl restart nginx
+          
+          # Test endpoints
+          echo "10. Testing API endpoints:"
+          sleep 5
+          curl -s "http://localhost/api/health" | head -100
+          
+          echo "11. Testing ML pipeline endpoint:"
+          curl -s -X POST "http://localhost/api/ml-test/upload" -H "Content-Type: application/json" -d '{"test": "data"}' | head -100
+          
+          echo "=== BACKEND DEPLOYMENT FIX COMPLETE ==="

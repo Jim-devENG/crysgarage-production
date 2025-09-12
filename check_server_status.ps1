@@ -1,54 +1,44 @@
-# Check Server Status - What's Actually Running
-param(
-    [string]$VPS_HOST = "209.74.80.162",
-    [string]$VPS_USER = "root"
-)
+# Check Server Status - Simple Diagnostic
+# This script will check what's actually running on your VPS
 
-Write-Host "🔍 Checking Current Server Status..." -ForegroundColor Cyan
+Write-Host "=== CRYS GARAGE SERVER STATUS CHECK ===" -ForegroundColor Green
 Write-Host ""
 
-Write-Host "Please run these commands on your server to check what's actually running:" -ForegroundColor Yellow
-Write-Host ""
+# VPS Connection Details
+$VPS_HOST = "209.74.80.162"
+$VPS_USER = "root"  # Adjust if different
 
-Write-Host "1. Check if Redis is installed and running:" -ForegroundColor Green
-Write-Host "   systemctl status redis" -ForegroundColor White
-Write-Host "   redis-cli ping" -ForegroundColor White
-Write-Host ""
+Write-Host "Connecting to VPS: $VPS_HOST" -ForegroundColor Cyan
 
-Write-Host "2. Check if Python ML service exists:" -ForegroundColor Green
-Write-Host "   ls -la /var/www/html/api/ml-service/" -ForegroundColor White
-Write-Host "   systemctl status crysgarage-ml" -ForegroundColor White
-Write-Host ""
+# Function to run SSH commands
+function Invoke-SSHCommand {
+    param($Command)
+    Write-Host "Running: $Command" -ForegroundColor Gray
+    ssh $VPS_USER@$VPS_HOST $Command
+}
 
-Write-Host "3. Check if Laravel Horizon is installed:" -ForegroundColor Green
-Write-Host "   cd /var/www/html/api && composer show laravel/horizon" -ForegroundColor White
-Write-Host "   systemctl status crysgarage-horizon" -ForegroundColor White
-Write-Host ""
+Write-Host "`n1. CHECKING IF DEPLOYMENT ACTUALLY HAPPENED" -ForegroundColor Yellow
+Invoke-SSHCommand "ls -la /var/www/html/api/routes/api.php"
 
-Write-Host "4. Check if FFmpeg is installed:" -ForegroundColor Green
-Write-Host "   which ffmpeg" -ForegroundColor White
-Write-Host "   ffmpeg -version" -ForegroundColor White
-Write-Host ""
+Write-Host "`n2. CHECKING FILE MODIFICATION TIME" -ForegroundColor Yellow
+Invoke-SSHCommand "stat /var/www/html/api/routes/api.php"
 
-Write-Host "5. Check database migrations:" -ForegroundColor Green
-Write-Host "   cd /var/www/html/api && php artisan migrate:status" -ForegroundColor White
-Write-Host ""
+Write-Host "`n3. CHECKING IF ML PIPELINE ROUTES EXIST" -ForegroundColor Yellow
+Invoke-SSHCommand "grep -n 'upload-audio' /var/www/html/api/routes/api.php"
 
-Write-Host "6. Check environment configuration:" -ForegroundColor Green
-Write-Host "   cd /var/www/html/api && grep -E 'ML_SERVICE|QUEUE_CONNECTION|FFMPEG' .env" -ForegroundColor White
-Write-Host ""
+Write-Host "`n4. CHECKING IF CATCH-ALL ROUTE EXISTS" -ForegroundColor Yellow
+Invoke-SSHCommand "grep -n 'Route::any' /var/www/html/api/routes/api.php"
 
-Write-Host "7. Check what's actually running on ports:" -ForegroundColor Green
-Write-Host "   netstat -tlnp | grep -E ':(6379|8001|8000)'" -ForegroundColor White
-Write-Host ""
+Write-Host "`n5. CHECKING LARAVEL ROUTE LIST" -ForegroundColor Yellow
+Invoke-SSHCommand "cd /var/www/html/api && php artisan route:list --path=api | grep -E '(upload-audio|ml-test)'"
 
-Write-Host "8. Check recent logs:" -ForegroundColor Green
-Write-Host "   journalctl -u crysgarage-ml --since '1 hour ago'" -ForegroundColor White
-Write-Host "   journalctl -u crysgarage-horizon --since '1 hour ago'" -ForegroundColor White
-Write-Host ""
+Write-Host "`n6. TESTING ENDPOINT DIRECTLY" -ForegroundColor Yellow
+Invoke-SSHCommand "curl -s 'http://localhost/api/ml-test/upload' -X POST -H 'Content-Type: application/json' -d '{\"test\": \"data\"}'"
 
-Write-Host "🎯 Based on the results, we'll know:" -ForegroundColor Cyan
-Write-Host "   - If the ML pipeline is actually set up" -ForegroundColor White
-Write-Host "   - What services are missing" -ForegroundColor White
-Write-Host "   - Why the browser is crashing" -ForegroundColor White
-Write-Host "   - What needs to be fixed" -ForegroundColor White
+Write-Host "`n7. CHECKING NGINX ERROR LOGS" -ForegroundColor Yellow
+Invoke-SSHCommand "tail -20 /var/log/nginx/error.log"
+
+Write-Host "`n8. CHECKING PHP ERROR LOGS" -ForegroundColor Yellow
+Invoke-SSHCommand "tail -20 /var/log/php-fpm/error.log"
+
+Write-Host "`n=== STATUS CHECK COMPLETE ===" -ForegroundColor Green
