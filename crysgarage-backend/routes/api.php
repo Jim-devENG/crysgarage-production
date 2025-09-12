@@ -295,6 +295,18 @@ Route::get('/public/status/{audio_id}', [AudioController::class, 'getPublicStatu
 // Public result route for free tier (no auth required)
 Route::get('/public/result/{audio_id}', [AudioController::class, 'getPublicResult']);
 
+// NEW PIPELINE ROUTES - Tier-Aware Audio Processing
+Route::middleware('auth:sanctum')->group(function () {
+    // Audio processing pipeline
+    Route::post('/upload-audio', [AudioController::class, 'uploadAudio']);
+    Route::post('/process-audio', [AudioController::class, 'processAudio']);
+    Route::get('/status/{audioId}', [AudioController::class, 'getStatus']);
+    Route::get('/download/{audioId}/{format}', [AudioController::class, 'download']);
+    
+    // Payment routes for free tier
+    Route::post('/payment/free-download', [AudioController::class, 'processFreeDownload']);
+});
+
 // Cleanup routes (admin only)
 Route::middleware(ApiTokenAuth::class)->group(function () {
     Route::post('/admin/audio/cleanup', [AudioController::class, 'manualCleanup']);

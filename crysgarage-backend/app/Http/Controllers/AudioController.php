@@ -9,6 +9,8 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use App\Models\Audio;
 use App\Models\User;
+use App\Jobs\ProcessAudioJob;
+use App\Http\Helpers\SecureResponse;
 
 class AudioController extends Controller
 {
@@ -822,5 +824,349 @@ class AudioController extends Controller
                 'error' => 'Manual cleanup failed: ' . $e->getMessage()
             ], 500);
         }
+    }
+
+    /**
+     * NEW PIPELINE ENDPOINTS - Tier-Aware Audio Processing
+     */
+
+    /**
+     * Upload audio file for processing (new pipeline)
+     */
+    public function uploadAudio(Request $request)
+    {
+        try {
+            $user = $request->user();
+            $userTier = $user->tier ?? 'free';
+            $tierLimits = $this->getTierLimits($userTier);
+
+            // Validate request
+            $request->validate([
+                'audio' => 'required|file|mimes:' . implode(',', $tierLimits['allowed_formats']) . '|max:' . $tierLimits['max_file_size'],
+                'genre' => 'required|string',
+                'formats' => 'array',
+                'formats.*' => 'string|in:' . implode(',', $tierLimits['allowed_formats'])
+            ]);
+
+            $file = $request->file('audio');
+            $genre = $request->input('genre', 'hip-hop');
+            $requestedFormats = $request->input('formats', ['wav']);
+
+            // Validate requested formats against tier
+            $invalidFormats = array_diff($requestedFormats, $tierLimits['allowed_formats']);
+            if (!empty($invalidFormats)) {
+                return SecureResponse::error(
+                    "Formats not allowed for your tier: " . implode(', ', $invalidFormats),
+                    403
+                );
+            }
+
+            // Check file size
+            if ($file->getSize() > $tierLimits['max_file_size'] * 1024 * 1024) {
+                return SecureResponse::error(
+                    "File size exceeds tier limit: {$tierLimits['max_file_size']}MB",
+                    413
+                );
+            }
+
+            // Store original file
+            $fileName = Str::uuid() . '.' . $file->getClientOriginalExtension();
+            $filePath = $file->storeAs('uploads', $fileName, 'local');
+
+            // Create audio record
+            $audio = Audio::create([
+                'user_id' => $user->id,
+                'original_filename' => $file->getClientOriginalName(),
+                'file_path' => $filePath,
+                'file_size' => round($file->getSize() / 1024 / 1024, 2), // MB
+                'genre' => $genre,
+                'tier' => $userTier,
+                'status' => 'uploaded',
+                'processing_status' => 'pending'
+            ]);
+
+            Log::info("🎵 Audio uploaded for processing", [
+                'audio_id' => $audio->id,
+                'user_id' => $user->id,
+                'tier' => $userTier,
+                'file_size' => $audio->file_size
+            ]);
+
+            return SecureResponse::success([
+                'audio_id' => $audio->id,
+                'status' => 'uploaded',
+                'tier' => $userTier,
+                'allowed_formats' => $tierLimits['allowed_formats'],
+                'max_file_size' => $tierLimits['max_file_size']
+            ], 'Audio uploaded successfully');
+
+        } catch (\Exception $e) {
+            Log::error("❌ Audio upload failed", [
+                'error' => $e->getMessage(),
+                'user_id' => $request->user()?->id
+            ]);
+
+            return SecureResponse::error(
+                'Upload failed: ' . $e->getMessage(),
+                500
+            );
+        }
+    }
+
+    /**
+     * Start audio processing job
+     */
+    public function processAudio(Request $request)
+    {
+        try {
+            $user = $request->user();
+            $audioId = $request->input('audio_id');
+            $genre = $request->input('genre', 'hip-hop');
+            $formats = $request->input('formats', ['wav']);
+
+            // Validate audio exists and belongs to user
+            $audio = Audio::where('id', $audioId)
+                ->where('user_id', $user->id)
+                ->first();
+
+            if (!$audio) {
+                return SecureResponse::error('Audio not found', 404);
+            }
+
+            // Check if already processing
+            if ($audio->processing_status === 'processing') {
+                return SecureResponse::error('Audio is already being processed', 409);
+            }
+
+            // Dispatch processing job
+            ProcessAudioJob::dispatch(
+                $audio->id,
+                $user->id,
+                $user->tier ?? 'free',
+                $genre,
+                $formats
+            );
+
+            // Update status
+            $audio->update(['processing_status' => 'queued']);
+
+            Log::info("🚀 Audio processing job dispatched", [
+                'audio_id' => $audio->id,
+                'user_id' => $user->id,
+                'tier' => $user->tier
+            ]);
+
+            return SecureResponse::success([
+                'audio_id' => $audio->id,
+                'job_status' => 'queued',
+                'estimated_time' => $this->getEstimatedProcessingTime($user->tier ?? 'free')
+            ], 'Processing started');
+
+        } catch (\Exception $e) {
+            Log::error("❌ Failed to start processing", [
+                'error' => $e->getMessage(),
+                'audio_id' => $request->input('audio_id')
+            ]);
+
+            return SecureResponse::error(
+                'Failed to start processing: ' . $e->getMessage(),
+                500
+            );
+        }
+    }
+
+    /**
+     * Get processing status
+     */
+    public function getStatus(Request $request, $audioId)
+    {
+        try {
+            $user = $request->user();
+            
+            // Validate audio belongs to user
+            $audio = Audio::where('id', $audioId)
+                ->where('user_id', $user->id)
+                ->first();
+
+            if (!$audio) {
+                return SecureResponse::error('Audio not found', 404);
+            }
+
+            // Get job status from cache
+            $jobStatus = cache()->get("audio_job_{$audioId}");
+            
+            $status = [
+                'audio_id' => $audio->id,
+                'status' => $audio->processing_status,
+                'created_at' => $audio->created_at,
+                'updated_at' => $audio->updated_at
+            ];
+
+            if ($jobStatus) {
+                $status = array_merge($status, $jobStatus);
+            }
+
+            return SecureResponse::success($status);
+
+        } catch (\Exception $e) {
+            return SecureResponse::error(
+                'Failed to get status: ' . $e->getMessage(),
+                500
+            );
+        }
+    }
+
+    /**
+     * Download processed audio
+     */
+    public function download(Request $request, $audioId, $format)
+    {
+        try {
+            $user = $request->user();
+            
+            // Validate audio belongs to user
+            $audio = Audio::where('id', $audioId)
+                ->where('user_id', $user->id)
+                ->first();
+
+            if (!$audio) {
+                return SecureResponse::error('Audio not found', 404);
+            }
+
+            // Check if processing is complete
+            if ($audio->processing_status !== 'completed') {
+                return SecureResponse::error('Audio processing not complete', 409);
+            }
+
+            // Check if format is available
+            $processedFiles = json_decode($audio->processed_files, true);
+            if (!isset($processedFiles[$format])) {
+                return SecureResponse::error("Format {$format} not available", 404);
+            }
+
+            // Handle tier-specific download logic
+            if ($user->tier === 'free') {
+                // Free tier: direct payment required
+                return $this->handleFreeTierDownload($audio, $format);
+            } else {
+                // Pro/Advanced: credit-based download
+                return $this->handleCreditBasedDownload($user, $audio, $format);
+            }
+
+        } catch (\Exception $e) {
+            Log::error("❌ Download failed", [
+                'error' => $e->getMessage(),
+                'audio_id' => $audioId,
+                'format' => $format
+            ]);
+
+            return SecureResponse::error(
+                'Download failed: ' . $e->getMessage(),
+                500
+            );
+        }
+    }
+
+    /**
+     * Handle free tier download (direct payment)
+     */
+    private function handleFreeTierDownload(Audio $audio, string $format)
+    {
+        // For free tier, we'll return a payment URL
+        // This integrates with your existing $2.99 payment flow
+        $paymentUrl = route('payment.free-download', [
+            'audio_id' => $audio->id,
+            'format' => $format
+        ]);
+
+        return SecureResponse::success([
+            'payment_required' => true,
+            'amount' => 2.99,
+            'currency' => 'USD',
+            'payment_url' => $paymentUrl,
+            'format' => $format
+        ], 'Payment required for download');
+    }
+
+    /**
+     * Handle credit-based download (Pro/Advanced)
+     */
+    private function handleCreditBasedDownload(User $user, Audio $audio, string $format)
+    {
+        // Check if user has credits
+        if ($user->credits <= 0) {
+            return SecureResponse::error('Insufficient credits', 402);
+        }
+
+        // Deduct credit
+        $user->decrement('credits');
+
+        // Get file path
+        $processedFiles = json_decode($audio->processed_files, true);
+        $filePath = $processedFiles[$format]['path'];
+
+        if (!file_exists($filePath)) {
+            return SecureResponse::error('File not found', 404);
+        }
+
+        // Log download
+        Log::info("📥 Credit-based download", [
+            'user_id' => $user->id,
+            'audio_id' => $audio->id,
+            'format' => $format,
+            'remaining_credits' => $user->credits
+        ]);
+
+        // Return file download
+        return SecureResponse::file(
+            $filePath,
+            "{$audio->original_filename}_mastered.{$format}"
+        );
+    }
+
+    /**
+     * Get tier limits
+     */
+    private function getTierLimits(string $tier): array
+    {
+        return match($tier) {
+            'free' => [
+                'max_file_size' => 50, // MB
+                'allowed_formats' => ['wav', 'mp3'],
+                'max_sample_rate' => 48000,
+                'processing_priority' => 'standard'
+            ],
+            'pro' => [
+                'max_file_size' => 200, // MB
+                'allowed_formats' => ['wav', 'mp3', 'flac'],
+                'max_sample_rate' => 96000,
+                'processing_priority' => 'faster'
+            ],
+            'advanced' => [
+                'max_file_size' => 500, // MB
+                'allowed_formats' => ['wav', 'mp3', 'flac', 'aiff'],
+                'max_sample_rate' => 192000,
+                'processing_priority' => 'highest'
+            ],
+            default => [
+                'max_file_size' => 50,
+                'allowed_formats' => ['wav', 'mp3'],
+                'max_sample_rate' => 48000,
+                'processing_priority' => 'standard'
+            ]
+        };
+    }
+
+    /**
+     * Get estimated processing time based on tier
+     */
+    private function getEstimatedProcessingTime(string $tier): string
+    {
+        return match($tier) {
+            'advanced' => '1-2 minutes',
+            'pro' => '2-3 minutes',
+            'free' => '3-5 minutes',
+            default => '3-5 minutes'
+        };
     }
 } 
