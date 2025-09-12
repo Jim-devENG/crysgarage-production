@@ -1,0 +1,239 @@
+name: Force ML Pipeline Setup
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ master ]
+    paths:
+      - 'force_ml_setup.yml'
+
+jobs:
+  force-ml-setup:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Force ML Pipeline Setup on VPS
+      uses: appleboy/ssh-action@v0.1.5
+      with:
+        host: 209.74.80.162
+        username: ${{ secrets.VPS_USER }}
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        script: |
+          echo "🚀 FORCE ML PIPELINE SETUP STARTING..."
+          echo "======================================"
+          
+          # Step 1: Update system
+          echo "📦 Updating system packages..."
+          yum update -y
+          
+          # Step 2: Install Redis
+          echo "📦 Installing Redis..."
+          if ! command -v redis-server &> /dev/null; then
+            yum install -y redis
+            systemctl enable redis
+            systemctl start redis
+            echo "✅ Redis installed and started"
+          else
+            systemctl start redis
+            echo "✅ Redis already installed, started service"
+          fi
+          
+          # Test Redis
+          if redis-cli ping | grep -q "PONG"; then
+            echo "✅ Redis is responding correctly"
+          else
+            echo "❌ Redis is not responding"
+            exit 1
+          fi
+          
+          # Step 3: Install Python 3
+          echo "🐍 Installing Python 3..."
+          if ! command -v python3 &> /dev/null; then
+            yum install -y python3 python3-pip
+            echo "✅ Python 3 installed"
+          else
+            echo "✅ Python 3 already installed"
+          fi
+          
+          # Upgrade pip
+          python3 -m pip install --upgrade pip
+          echo "✅ Pip upgraded"
+          
+          # Step 4: Install FFmpeg
+          echo "🎬 Installing FFmpeg..."
+          if ! command -v ffmpeg &> /dev/null; then
+            yum install -y epel-release
+            yum install -y ffmpeg
+            echo "✅ FFmpeg installed"
+          else
+            echo "✅ FFmpeg already installed"
+          fi
+          
+          # Test FFmpeg
+          if ffmpeg -version | head -1 | grep -q "ffmpeg"; then
+            echo "✅ FFmpeg is working correctly"
+          else
+            echo "❌ FFmpeg installation failed"
+            exit 1
+          fi
+          
+          # Step 5: Navigate to backend
+          echo "📁 Setting up backend directory..."
+          cd /var/www/html/api
+          
+          # Step 6: Run migrations
+          echo "🗄️ Running database migrations..."
+          php artisan migrate --force
+          echo "✅ Database migrations completed"
+          
+          # Step 7: Setup ML service
+          echo "🤖 Setting up ML service..."
+          cd ml-service
+          
+          # Install Python dependencies
+          pip3 install fastapi==0.104.1 uvicorn[standard]==0.24.0 pydantic==2.5.0
+          pip3 install librosa==0.10.1 soundfile==0.12.1 numpy==1.24.3 scipy==1.11.4
+          pip3 install scikit-learn==1.3.2 httpx==0.25.2 requests==2.31.0
+          pip3 install python-multipart==0.0.6
+          echo "✅ ML service dependencies installed"
+          
+          # Step 8: Create ML service systemd service
+          echo "⚙️ Creating ML service systemd service..."
+          cat > /etc/systemd/system/crysgarage-ml.service << 'EOF'
+          [Unit]
+          Description=Crys Garage ML Audio Service
+          After=network.target
+          
+          [Service]
+          Type=simple
+          User=nginx
+          WorkingDirectory=/var/www/html/api/ml-service
+          ExecStart=/usr/bin/python3 app.py
+          Restart=always
+          RestartSec=10
+          Environment=PYTHONPATH=/var/www/html/api/ml-service
+          StandardOutput=journal
+          StandardError=journal
+          
+          [Install]
+          WantedBy=multi-user.target
+          EOF
+          
+          # Start ML service
+          systemctl daemon-reload
+          systemctl enable crysgarage-ml
+          systemctl start crysgarage-ml
+          sleep 5
+          
+          if systemctl is-active --quiet crysgarage-ml; then
+            echo "✅ ML service started successfully"
+          else
+            echo "⚠️ ML service failed to start, checking logs..."
+            journalctl -u crysgarage-ml --no-pager -l
+          fi
+          
+          # Step 9: Install Laravel Horizon
+          echo "📊 Installing Laravel Horizon..."
+          cd /var/www/html/api
+          composer require laravel/horizon
+          php artisan horizon:install
+          echo "✅ Laravel Horizon installed"
+          
+          # Step 10: Create Horizon systemd service
+          echo "⚙️ Creating Horizon systemd service..."
+          cat > /etc/systemd/system/crysgarage-horizon.service << 'EOF'
+          [Unit]
+          Description=Crys Garage Horizon Queue Worker
+          After=network.target redis.service
+          
+          [Service]
+          Type=simple
+          User=nginx
+          WorkingDirectory=/var/www/html/api
+          ExecStart=/usr/bin/php artisan horizon
+          Restart=always
+          RestartSec=10
+          StandardOutput=journal
+          StandardError=journal
+          
+          [Install]
+          WantedBy=multi-user.target
+          EOF
+          
+          # Start Horizon
+          systemctl daemon-reload
+          systemctl enable crysgarage-horizon
+          systemctl start crysgarage-horizon
+          sleep 5
+          
+          if systemctl is-active --quiet crysgarage-horizon; then
+            echo "✅ Laravel Horizon started successfully"
+          else
+            echo "⚠️ Horizon failed to start, checking logs..."
+            journalctl -u crysgarage-horizon --no-pager -l
+          fi
+          
+          # Step 11: Update environment
+          echo "🔧 Updating environment configuration..."
+          if [ -f .env ]; then
+            if ! grep -q "ML_SERVICE_URL" .env; then
+              echo "ML_SERVICE_URL=http://localhost:8001" >> .env
+              echo "ML_SERVICE_TIMEOUT=30" >> .env
+            fi
+            if ! grep -q "QUEUE_CONNECTION" .env; then
+              echo "QUEUE_CONNECTION=redis" >> .env
+            fi
+            if ! grep -q "FFMPEG_PATH" .env; then
+              echo "FFMPEG_PATH=/usr/bin/ffmpeg" >> .env
+            fi
+            echo "✅ Environment configuration updated"
+          fi
+          
+          # Step 12: Clear caches
+          echo "🧹 Clearing Laravel caches..."
+          php artisan config:clear
+          php artisan route:clear
+          php artisan cache:clear
+          php artisan queue:restart
+          echo "✅ Laravel caches cleared"
+          
+          # Step 13: Set permissions
+          echo "🔐 Setting proper permissions..."
+          chown -R nginx:nginx /var/www/html/api
+          chmod -R 755 /var/www/html/api
+          echo "✅ Permissions set correctly"
+          
+          # Step 14: Final status check
+          echo "📊 Final status check..."
+          echo "======================================"
+          echo "Redis: $(systemctl is-active redis)"
+          echo "ML Service: $(systemctl is-active crysgarage-ml)"
+          echo "Horizon: $(systemctl is-active crysgarage-horizon)"
+          echo "Nginx: $(systemctl is-active nginx)"
+          echo "PHP-FPM: $(systemctl is-active php-fpm)"
+          
+          # Test ML service endpoint
+          echo "🧪 Testing ML service endpoint..."
+          sleep 3
+          if curl -f -s http://localhost:8001/health > /dev/null; then
+            echo "✅ ML service endpoint: RESPONDING"
+          else
+            echo "⚠️ ML service endpoint: NOT RESPONDING"
+          fi
+          
+          # Test Redis connection
+          if redis-cli ping | grep -q "PONG"; then
+            echo "✅ Redis connection: WORKING"
+          else
+            echo "❌ Redis connection: FAILED"
+          fi
+          
+          echo "======================================"
+          echo "🎉 FORCE ML PIPELINE SETUP COMPLETE!"
+          echo "======================================"
+          echo ""
+          echo "Your ML audio processing pipeline is now fully operational!"
+          echo "Site: https://crysgarage.studio"
+          echo "Horizon Dashboard: https://crysgarage.studio/horizon"
