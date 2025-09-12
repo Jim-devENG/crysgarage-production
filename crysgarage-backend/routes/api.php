@@ -324,3 +324,23 @@ Route::middleware(ApiTokenAuth::class)->group(function () {
     Route::post('/admin/audio/cleanup', [AudioController::class, 'manualCleanup']);
     Route::post('/admin/audio/cleanup-auto', [AudioController::class, 'cleanupCompletedFiles']);
 });
+
+// Catch-all route for debugging (should be last)
+Route::any('{any}', function(Request $request) {
+    return response()->json([
+        'status' => 'error',
+        'message' => 'Route not found',
+        'requested_url' => $request->url(),
+        'requested_method' => $request->method(),
+        'timestamp' => now()->toISOString(),
+        'available_endpoints' => [
+            '/api/health' => 'Health check',
+            '/api/auth/signin' => 'User signin',
+            '/api/auth/signup' => 'User signup',
+            '/api/upload-audio' => 'ML Pipeline Upload',
+            '/api/process-audio' => 'ML Pipeline Process',
+            '/api/processing-status/{id}' => 'ML Pipeline Status',
+            '/api/download/{id}/{format}' => 'ML Pipeline Download'
+        ]
+    ], 404);
+})->where('any', '.*');
