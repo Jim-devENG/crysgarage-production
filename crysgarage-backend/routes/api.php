@@ -300,8 +300,8 @@ Route::middleware('auth:sanctum')->group(function () {
     // Audio processing pipeline
     Route::post('/upload-audio', [AudioController::class, 'uploadAudio']);
     Route::post('/process-audio', [AudioController::class, 'processAudio']);
-    Route::get('/status/{audioId}', [AudioController::class, 'getStatus']);
-    Route::get('/download/{audioId}/{format}', [AudioController::class, 'download']);
+    Route::get('/status/{audioId}', [AudioController::class, 'getProcessingStatus']);
+    Route::get('/download/{audioId}/{format}', [AudioController::class, 'downloadProcessed']);
     
     // Payment routes for free tier
     Route::post('/payment/free-download', [AudioController::class, 'processFreeDownload']);

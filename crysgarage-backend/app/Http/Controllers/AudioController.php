@@ -978,7 +978,7 @@ class AudioController extends Controller
     /**
      * Get processing status
      */
-    public function getStatus(Request $request, $audioId)
+    public function getProcessingStatus(Request $request, $audioId)
     {
         try {
             $user = $request->user();
@@ -1019,7 +1019,7 @@ class AudioController extends Controller
     /**
      * Download processed audio
      */
-    public function download(Request $request, $audioId, $format)
+    public function downloadProcessed(Request $request, $audioId, $format)
     {
         try {
             $user = $request->user();

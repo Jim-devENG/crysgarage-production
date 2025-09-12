@@ -35,10 +35,7 @@ Write-Host "This will take 5-10 minutes to complete..." -ForegroundColor Cyan
 Write-Host ""
 
 try {
-    ssh -i $SSH_KEY -o StrictHostKeyChecking=no $VPS_USER@$VPS_HOST @"
-        chmod +x /tmp/expert_ml_setup.sh
-        /tmp/expert_ml_setup.sh
-    "@
+    ssh -i $SSH_KEY -o StrictHostKeyChecking=no $VPS_USER@$VPS_HOST "chmod +x /tmp/expert_ml_setup.sh && /tmp/expert_ml_setup.sh"
     
     if ($LASTEXITCODE -eq 0) {
         Write-Host ""
