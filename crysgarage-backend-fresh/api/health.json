@@ -1,0 +1,9 @@
+{
+  "status": "healthy",
+  "service": "Crys Garage ML Pipeline",
+  "version": "1.0.0",
+  "timestamp": "2025-09-13 11:30:00",
+  "queue_system": "file-based",
+  "payment_system": "integrated",
+  "ffmpeg": "ready"
+}

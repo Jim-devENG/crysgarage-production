@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ML Pipeline Frontend Integration Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { background: #d4edda; border-color: #c3e6cb; color: #155724; }
+        .error { background: #f8d7da; border-color: #f5c6cb; color: #721c24; }
+        .info { background: #d1ecf1; border-color: #bee5eb; color: #0c5460; }
+        button { padding: 10px 20px; margin: 5px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        .result { margin-top: 10px; padding: 10px; border-radius: 4px; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 4px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 ML Pipeline Frontend Integration Test</h1>
+        
+        <div class="test-section info">
+            <h3>📋 Test Overview</h3>
+            <p>This page tests the ML Pipeline frontend integration by making direct API calls to verify:</p>
+            <ul>
+                <li>✅ Backend connectivity</li>
+                <li>✅ API endpoint responses</li>
+                <li>✅ Data format compatibility</li>
+                <li>✅ Error handling</li>
+            </ul>
+        </div>
+
+        <div class="test-section">
+            <h3>🔍 Test 1: Health Check</h3>
+            <button onclick="testHealthCheck()">Test Health Check</button>
+            <div id="healthResult" class="result" style="display: none;"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>📤 Test 2: Audio Upload</h3>
+            <button onclick="testAudioUpload()">Test Audio Upload</button>
+            <div id="uploadResult" class="result" style="display: none;"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>⚙️ Test 3: Audio Processing</h3>
+            <button onclick="testAudioProcessing()">Test Audio Processing</button>
+            <div id="processResult" class="result" style="display: none;"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>🎵 Test 4: Complete Workflow</h3>
+            <button onclick="testCompleteWorkflow()">Test Complete Workflow</button>
+            <div id="workflowResult" class="result" style="display: none;"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>📊 Test Results Summary</h3>
+            <div id="summaryResult" class="result" style="display: none;"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8000';
+        let testResults = {};
+
+        async function testHealthCheck() {
+            const resultDiv = document.getElementById('healthResult');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result';
+            resultDiv.innerHTML = 'Testing...';
+
+            try {
+                const response = await fetch(`${API_BASE}/api/health.php`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.className = 'result success';
+                    resultDiv.innerHTML = `
+                        <h4>✅ Health Check: SUCCESS</h4>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                    testResults.healthCheck = { status: 'success', data };
+                } else {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = `
+                    <h4>❌ Health Check: FAILED</h4>
+                    <p>Error: ${error.message}</p>
+                `;
+                testResults.healthCheck = { status: 'error', error: error.message };
+            }
+        }
+
+        async function testAudioUpload() {
+            const resultDiv = document.getElementById('uploadResult');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result';
+            resultDiv.innerHTML = 'Testing...';
+
+            try {
+                const uploadData = {
+                    filename: 'test_audio.wav',
+                    tier: 'free',
+                    genre: 'hip_hop',
+                    file_size: 1024000
+                };
+
+                const response = await fetch(`${API_BASE}/api/upload-audio.php`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(uploadData)
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.className = 'result success';
+                    resultDiv.innerHTML = `
+                        <h4>✅ Audio Upload: SUCCESS</h4>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                    testResults.audioUpload = { status: 'success', data };
+                    window.testAudioId = data.audio_id; // Store for processing test
+                } else {
+                    throw new Error(`HTTP ${response.status}: ${data.message || 'Unknown error'}`);
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = `
+                    <h4>❌ Audio Upload: FAILED</h4>
+                    <p>Error: ${error.message}</p>
+                `;
+                testResults.audioUpload = { status: 'error', error: error.message };
+            }
+        }
+
+        async function testAudioProcessing() {
+            const resultDiv = document.getElementById('processResult');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result';
+            resultDiv.innerHTML = 'Testing...';
+
+            if (!window.testAudioId) {
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = `
+                    <h4>❌ Audio Processing: FAILED</h4>
+                    <p>No audio ID available. Run upload test first.</p>
+                `;
+                testResults.audioProcessing = { status: 'error', error: 'No audio ID' };
+                return;
+            }
+
+            try {
+                const processData = {
+                    audio_id: window.testAudioId
+                };
+
+                const response = await fetch(`${API_BASE}/api/process-audio.php`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(processData)
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.className = 'result success';
+                    resultDiv.innerHTML = `
+                        <h4>✅ Audio Processing: SUCCESS</h4>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                    testResults.audioProcessing = { status: 'success', data };
+                } else {
+                    throw new Error(`HTTP ${response.status}: ${data.message || 'Unknown error'}`);
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = `
+                    <h4>❌ Audio Processing: FAILED</h4>
+                    <p>Error: ${error.message}</p>
+                `;
+                testResults.audioProcessing = { status: 'error', error: error.message };
+            }
+        }
+
+        async function testCompleteWorkflow() {
+            const resultDiv = document.getElementById('workflowResult');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result';
+            resultDiv.innerHTML = 'Testing complete workflow...';
+
+            try {
+                // Test different tiers and genres
+                const testCases = [
+                    { tier: 'pro', genre: 'afrobeats' },
+                    { tier: 'advanced', genre: 'gospel' }
+                ];
+
+                let workflowResults = [];
+
+                for (const testCase of testCases) {
+                    // Upload
+                    const uploadData = {
+                        filename: `test_${testCase.genre}.wav`,
+                        tier: testCase.tier,
+                        genre: testCase.genre,
+                        file_size: 2048000
+                    };
+
+                    const uploadResponse = await fetch(`${API_BASE}/api/upload-audio.php`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(uploadData)
+                    });
+
+                    if (!uploadResponse.ok) {
+                        throw new Error(`Upload failed for ${testCase.tier}/${testCase.genre}`);
+                    }
+
+                    const uploadResult = await uploadResponse.json();
+
+                    // Process
+                    const processData = { audio_id: uploadResult.audio_id };
+                    const processResponse = await fetch(`${API_BASE}/api/process-audio.php`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(processData)
+                    });
+
+                    if (!processResponse.ok) {
+                        throw new Error(`Processing failed for ${testCase.tier}/${testCase.genre}`);
+                    }
+
+                    const processResult = await processResponse.json();
+                    workflowResults.push({
+                        tier: testCase.tier,
+                        genre: testCase.genre,
+                        audio_id: uploadResult.audio_id,
+                        formats: Object.keys(processResult.download_urls),
+                        compression_ratio: processResult.ml_recommendations.compression.ratio
+                    });
+                }
+
+                resultDiv.className = 'result success';
+                resultDiv.innerHTML = `
+                    <h4>✅ Complete Workflow: SUCCESS</h4>
+                    <h5>Test Results:</h5>
+                    <pre>${JSON.stringify(workflowResults, null, 2)}</pre>
+                `;
+                testResults.completeWorkflow = { status: 'success', data: workflowResults };
+
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = `
+                    <h4>❌ Complete Workflow: FAILED</h4>
+                    <p>Error: ${error.message}</p>
+                `;
+                testResults.completeWorkflow = { status: 'error', error: error.message };
+            }
+
+            // Show summary
+            showSummary();
+        }
+
+        function showSummary() {
+            const resultDiv = document.getElementById('summaryResult');
+            resultDiv.style.display = 'block';
+            
+            const totalTests = Object.keys(testResults).length;
+            const passedTests = Object.values(testResults).filter(r => r.status === 'success').length;
+            const failedTests = totalTests - passedTests;
+
+            resultDiv.className = `result ${failedTests === 0 ? 'success' : 'error'}`;
+            resultDiv.innerHTML = `
+                <h4>📊 Test Summary</h4>
+                <p><strong>Total Tests:</strong> ${totalTests}</p>
+                <p><strong>Passed:</strong> ${passedTests} ✅</p>
+                <p><strong>Failed:</strong> ${failedTests} ❌</p>
+                <p><strong>Success Rate:</strong> ${Math.round((passedTests / totalTests) * 100)}%</p>
+                ${failedTests === 0 ? '<p><strong>🎉 All tests passed! Frontend integration is working perfectly!</strong></p>' : '<p><strong>⚠️ Some tests failed. Check the individual test results above.</strong></p>'}
+            `;
+        }
+    </script>
+</body>
+</html>

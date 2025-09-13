@@ -19,6 +19,7 @@ import { CommunityPage } from './components/CommunityPage';
 import AboutUs from './components/AboutUs';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { Footer } from './components/Footer';
+import MLPipelineTestPage from './components/MLPipelineTestPage';
 import { BillingPage } from './components/Billing/BillingPage';
 import { ProfilePage } from './components/ProfilePage';
 import { PaymentSuccessPage } from './components/Payment/PaymentSuccessPage';
@@ -265,6 +266,10 @@ function AppContent() {
 
         {currentPage === 'careers' && (
           <Careers />
+        )}
+
+        {currentPage === 'ml-pipeline' && (
+          <MLPipelineTestPage />
         )}
       </main>
 
