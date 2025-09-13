@@ -110,14 +110,18 @@ jobs:
             cp -r dist/* /var/www/html/
             restorecon -Rv /var/www/html
             
-            # Backend: Update and restart
-            echo "🔧 Updating backend..."
-            cd ../crysgarage-backend
-            composer install --no-dev --optimize-autoloader
-            php artisan config:cache
-            php artisan route:cache
-            php artisan view:cache
-            systemctl restart crysgarage-backend
+            # Backend: Update ML Pipeline (standalone PHP)
+            echo "🔧 Updating ML Pipeline backend..."
+            cd ../crysgarage-backend-fresh
+            # ML Pipeline is standalone PHP - no composer needed
+            echo "✅ ML Pipeline backend updated (standalone PHP)"
+            
+            # Copy ML Pipeline files to web directory
+            echo "📁 Setting up ML Pipeline on web server..."
+            mkdir -p /var/www/html/ml-pipeline
+            cp -r . /var/www/html/ml-pipeline/
+            chown -R nginx:nginx /var/www/html/ml-pipeline
+            chmod -R 755 /var/www/html/ml-pipeline
             
             # Ruby service: Update and restart
             echo "💎 Updating Ruby service..."
@@ -133,7 +137,8 @@ jobs:
             # Health check
             echo "🏥 Running health check..."
             sleep 5
-            curl -f https://crysgarage.studio || echo "Health check failed but deployment completed"
+            curl -f https://crysgarage.studio || echo "Main site health check failed but deployment completed"
+            curl -f https://crysgarage.studio/ml-pipeline/api/health.php || echo "ML Pipeline health check failed but deployment completed"
             
             echo "✅ Fast deployment completed successfully!"
           EOF
