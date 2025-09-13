@@ -15,7 +15,7 @@ export interface MLPipelineState {
 export interface MLPipelineActions {
   processAudioFile: (
     file: File,
-    tier: 'free' | 'pro' | 'advanced',
+    tier: 'free' | 'professional' | 'advanced' | 'one_on_one',
     genre: 'hip_hop' | 'afrobeats' | 'gospel' | 'highlife' | 'r_b' | 'general'
   ) => Promise<void>;
   reset: () => void;
@@ -39,7 +39,7 @@ export const useMLPipeline = (): MLPipelineState & MLPipelineActions => {
 
   const processAudioFile = useCallback(async (
     file: File,
-    tier: 'free' | 'pro' | 'advanced',
+    tier: 'free' | 'professional' | 'advanced' | 'one_on_one',
     genre: 'hip_hop' | 'afrobeats' | 'gospel' | 'highlife' | 'r_b' | 'general'
   ) => {
     try {

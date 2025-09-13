@@ -25,7 +25,7 @@ class AudioController extends Controller
         try {
             $request->validate([
                 'audio' => 'required|file|mimes:wav,mp3,flac,aiff|max:500000', // 500MB max
-                'tier' => 'required|in:free,pro,advanced,one_on_one',
+                'tier' => 'required|in:free,professional,advanced,one_on_one',
                 'genre' => 'required|string|max:50',
             ]);
 
@@ -348,7 +348,7 @@ class AudioController extends Controller
     {
         return match($tier) {
             'free' => '2-5 minutes',
-            'pro' => '1-3 minutes',
+            'professional' => '1-3 minutes',
             'advanced' => '30 seconds - 2 minutes',
             'one_on_one' => 'Manual processing',
             default => '2-5 minutes',

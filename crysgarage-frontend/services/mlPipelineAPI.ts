@@ -1,7 +1,7 @@
 import axios from 'axios';
 
-// ML Pipeline API Configuration
-export const ML_PIPELINE_BASE_URL = import.meta.env.VITE_ML_PIPELINE_URL || 'https://crysgarage.studio/ml-pipeline';
+// ML Pipeline API Configuration - Use Laravel backend instead of direct ML pipeline
+export const ML_PIPELINE_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://crysgarage.studio/api';
 
 // Create axios instance for ML Pipeline
 export const mlPipelineAPI = axios.create({
@@ -59,10 +59,9 @@ export interface MLHealthResponse {
 }
 
 export interface MLUploadRequest {
-  filename: string;
-  tier: 'free' | 'pro' | 'advanced';
+  audio: File; // Changed to File object for proper upload
+  tier: 'free' | 'professional' | 'advanced' | 'one_on_one'; // Match Laravel tier names
   genre: 'hip_hop' | 'afrobeats' | 'gospel' | 'highlife' | 'r_b' | 'general';
-  file_size: number;
 }
 
 export interface MLUploadResponse {
@@ -110,15 +109,24 @@ export const mlPipelineService = {
     return response.data;
   },
 
-  // Upload audio file
+  // Upload audio file - Use Laravel backend
   uploadAudio: async (uploadData: MLUploadRequest): Promise<MLUploadResponse> => {
-    const response = await mlPipelineAPI.post('/api/upload-audio.php', uploadData);
+    const formData = new FormData();
+    formData.append('audio', uploadData.audio);
+    formData.append('tier', uploadData.tier);
+    formData.append('genre', uploadData.genre);
+    
+    const response = await mlPipelineAPI.post('/upload-audio', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
     return response.data;
   },
 
-  // Process audio
+  // Process audio - Use Laravel backend
   processAudio: async (processData: MLProcessRequest): Promise<MLProcessResponse> => {
-    const response = await mlPipelineAPI.post('/api/process-audio.php', processData);
+    const response = await mlPipelineAPI.post('/process-audio', processData);
     return response.data;
   },
 
@@ -132,12 +140,11 @@ export const mlPipelineService = {
     processResult: MLProcessResponse;
   }> => {
     try {
-      // Step 1: Upload audio
+      // Step 1: Upload audio to Laravel backend
       const uploadData: MLUploadRequest = {
-        filename: file.name,
-        tier: tier,
-        genre: genre,
-        file_size: file.size
+        audio: file,
+        tier: tier as 'free' | 'professional' | 'advanced' | 'one_on_one',
+        genre: genre
       };
 
       console.log('Starting ML Pipeline upload...', uploadData);

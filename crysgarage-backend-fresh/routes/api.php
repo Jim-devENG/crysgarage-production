@@ -37,6 +37,36 @@ Route::post('/ml-test/upload', function(Request $request) {
     ]);
 });
 
+// Python Microservice Test Route
+Route::get('/python-service/health', function() {
+    try {
+        $pythonServiceUrl = env('PYTHON_SERVICE_URL', 'http://209.74.80.162:8002');
+        $response = \Illuminate\Support\Facades\Http::timeout(10)->get("{$pythonServiceUrl}/health");
+        
+        if ($response->successful()) {
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Python microservice is healthy',
+                'python_service_response' => $response->json(),
+                'timestamp' => now()->toISOString()
+            ]);
+        } else {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Python microservice health check failed',
+                'status_code' => $response->status(),
+                'timestamp' => now()->toISOString()
+            ], 500);
+        }
+    } catch (\Exception $e) {
+        return response()->json([
+            'status' => 'error',
+            'message' => 'Failed to connect to Python microservice: ' . $e->getMessage(),
+            'timestamp' => now()->toISOString()
+        ], 500);
+    }
+});
+
 // Public routes (no authentication required)
 Route::post('/upload-audio', [AudioController::class, 'uploadAudio']);
 Route::post('/process-audio', [AudioController::class, 'processAudio']);

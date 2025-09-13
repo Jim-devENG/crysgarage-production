@@ -41,11 +41,15 @@ class ProcessAudioJob implements ShouldQueue
                 'processing_started_at' => now(),
             ]);
 
-            // Get ML recommendations
+            // Get ML recommendations from Python microservice
             $mlRecommendations = $this->getMLRecommendations($audio);
 
-            // Process audio with FFmpeg
-            $processedFiles = $this->processAudioWithFFmpeg($audio, $mlRecommendations);
+            // Process audio - either use Python microservice result or fallback to FFmpeg
+            if (isset($mlRecommendations['mastered_file_url']) && $mlRecommendations['mastered_file_url']) {
+                $processedFiles = $this->downloadMasteredFile($audio, $mlRecommendations);
+            } else {
+                $processedFiles = $this->processAudioWithFFmpeg($audio, $mlRecommendations);
+            }
 
             // Store processed files
             $audio->update([
@@ -81,42 +85,45 @@ class ProcessAudioJob implements ShouldQueue
     private function getMLRecommendations(Audio $audio): array
     {
         try {
-            // Use our working ML service from the standalone pipeline
-            $mlServiceUrl = env('ML_SERVICE_URL', 'http://localhost:5000');
+            // Use our new Python microservice
+            $pythonServiceUrl = env('PYTHON_SERVICE_URL', 'http://209.74.80.162:8002');
             $audioPath = Storage::path($audio->original_path);
             
             if (!file_exists($audioPath)) {
                 throw new \Exception("Audio file not found: {$audioPath}");
             }
 
-            // Call our working ML service
-            $response = Http::timeout(30)->attach(
-                'audio', file_get_contents($audioPath), $audio->original_filename
-            )->post("{$mlServiceUrl}/analyze", [
+            // Create a temporary URL for the file (in production, use S3 or similar)
+            $fileUrl = $this->createTemporaryFileUrl($audioPath);
+
+            // Call our Python microservice for mastering
+            $response = Http::timeout(120)->post("{$pythonServiceUrl}/master", [
+                'file_url' => $fileUrl,
+                'target_format' => $this->getPrimaryFormat($audio->tier),
+                'target_sample_rate' => $this->getTargetSampleRate($audio->tier),
                 'tier' => $audio->tier,
-                'genre' => $audio->genre
+                'genre' => $audio->genre,
+                'target_lufs' => $this->getTargetLufs($audio->tier, $audio->genre)
             ]);
 
             if ($response->successful()) {
                 $data = $response->json();
-                Log::info("ML recommendations received", $data);
+                Log::info("Python microservice response received", $data);
                 
-                // Extract recommendations from our ML service response
-                if (isset($data['recommendations'])) {
-                    return $data['recommendations'];
-                } elseif (isset($data['eq']) || isset($data['compression'])) {
-                    // Handle direct response format from our ML service
-                    return [
-                        'eq' => $data['eq'] ?? ['low' => 1.0, 'mid' => 1.0, 'high' => 1.0],
-                        'compression' => $data['compression'] ?? ['ratio' => 2.0, 'threshold' => -12.0],
-                        'genre' => $audio->genre,
-                        'tier' => $audio->tier
-                    ];
-                }
+                // Return the mastered file URL and metadata
+                return [
+                    'mastered_file_url' => $data['url'] ?? null,
+                    'lufs' => $data['lufs'] ?? -14,
+                    'format' => $data['format'] ?? 'wav',
+                    'duration' => $data['duration'] ?? 0,
+                    'genre' => $audio->genre,
+                    'tier' => $audio->tier,
+                    'processing_method' => 'python_microservice'
+                ];
             }
 
         } catch (\Exception $e) {
-            Log::warning("ML service failed, using default recommendations: " . $e->getMessage());
+            Log::warning("Python microservice failed, using default recommendations: " . $e->getMessage());
         }
 
         return $this->getDefaultRecommendations($audio->tier, $audio->genre);
@@ -296,6 +303,88 @@ class ProcessAudioJob implements ShouldQueue
         $cmd .= " -y \"{$outputPath}\"";
         
         return $cmd;
+    }
+
+    private function createTemporaryFileUrl(string $filePath): string
+    {
+        // For now, create a simple file URL
+        // In production, upload to S3 or similar and return the public URL
+        $filename = basename($filePath);
+        return "file://{$filePath}";
+    }
+
+    private function getPrimaryFormat(string $tier): string
+    {
+        return match($tier) {
+            'free' => 'wav',
+            'pro' => 'wav',
+            'advanced' => 'wav',
+            default => 'wav',
+        };
+    }
+
+    private function getTargetSampleRate(string $tier): int
+    {
+        return match($tier) {
+            'free' => 44100,
+            'pro' => 48000,
+            'advanced' => 96000,
+            default => 44100,
+        };
+    }
+
+    private function getTargetLufs(string $tier, string $genre): int
+    {
+        $genreLufs = [
+            'hip_hop' => -7,
+            'afrobeats' => -8,
+            'gospel' => -14,
+            'highlife' => -9,
+            'r_b' => -8,
+        ];
+
+        $baseLufs = $genreLufs[$genre] ?? -14;
+        
+        // Adjust based on tier
+        return match($tier) {
+            'free' => $baseLufs + 2, // Slightly quieter for free tier
+            'pro' => $baseLufs,
+            'advanced' => $baseLufs - 1, // Slightly louder for advanced
+            default => $baseLufs,
+        };
+    }
+
+    private function downloadMasteredFile(Audio $audio, array $recommendations): array
+    {
+        try {
+            $masteredUrl = $recommendations['mastered_file_url'];
+            $outputDir = storage_path('app/public/masters/' . $audio->id);
+            
+            // Create output directory
+            if (!file_exists($outputDir)) {
+                mkdir($outputDir, 0755, true);
+            }
+
+            // Download the mastered file
+            $response = Http::timeout(60)->get($masteredUrl);
+            
+            if ($response->successful()) {
+                $format = $recommendations['format'] ?? 'wav';
+                $outputPath = "{$outputDir}/mastered.{$format}";
+                
+                file_put_contents($outputPath, $response->body());
+                
+                Log::info("Downloaded mastered file from Python microservice: {$outputPath}");
+                
+                return [$format => $outputPath];
+            } else {
+                throw new \Exception("Failed to download mastered file: " . $response->status());
+            }
+
+        } catch (\Exception $e) {
+            Log::error("Failed to download mastered file: " . $e->getMessage());
+            throw $e;
+        }
     }
 
     public function failed(\Throwable $exception): void

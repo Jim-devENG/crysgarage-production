@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { useMLPipeline } from '../hooks/useMLPipeline';
 import { mlPipelineService } from '../services/mlPipelineAPI';
+import { useAuth } from '../contexts/AuthenticationContext';
 
 interface MLPipelineUploadProps {
   onProcessingComplete?: (result: any) => void;
@@ -11,9 +12,10 @@ const MLPipelineUpload: React.FC<MLPipelineUploadProps> = ({
   onProcessingComplete,
   onError,
 }) => {
+  const { user, isAuthenticated } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [selectedTier, setSelectedTier] = useState<'free' | 'pro' | 'advanced'>('free');
+  const [selectedTier, setSelectedTier] = useState<'free' | 'professional' | 'advanced' | 'one_on_one'>('free');
   const [selectedGenre, setSelectedGenre] = useState<'hip_hop' | 'afrobeats' | 'gospel' | 'highlife' | 'r_b' | 'general'>('hip_hop');
   const [recommendations, setRecommendations] = useState<any>(null);
 
@@ -58,6 +60,30 @@ const MLPipelineUpload: React.FC<MLPipelineUploadProps> = ({
 
   const handleProcess = async () => {
     if (!selectedFile) return;
+
+    // Check authentication first
+    if (!isAuthenticated) {
+      if (onError) {
+        onError('Please log in to process audio files');
+      }
+      return;
+    }
+
+    // Check tier access for non-free tiers
+    if (selectedTier !== 'free' && user?.tier !== selectedTier) {
+      if (onError) {
+        onError(`You need ${selectedTier} tier access to use this feature. Please upgrade your account.`);
+      }
+      return;
+    }
+
+    // Check credits for non-free tiers
+    if (selectedTier !== 'free' && user?.credits && user.credits <= 0) {
+      if (onError) {
+        onError('Insufficient credits. Please purchase more credits to continue.');
+      }
+      return;
+    }
 
     try {
       await processAudioFile(selectedFile, selectedTier, selectedGenre);
@@ -106,6 +132,27 @@ const MLPipelineUpload: React.FC<MLPipelineUploadProps> = ({
   return (
     <div className="max-w-4xl mx-auto p-6 bg-crys-charcoal rounded-lg border border-crys-graphite">
       <h2 className="text-2xl font-bold text-crys-white mb-6">ML Pipeline Audio Processing</h2>
+      
+      {/* User Info */}
+      {isAuthenticated && user && (
+        <div className="mb-6 p-4 bg-crys-graphite rounded-lg border border-crys-gold">
+          <h3 className="text-lg font-semibold text-crys-white mb-2">Account Information</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+            <div>
+              <div className="font-medium text-crys-gold">Current Tier</div>
+              <div className="text-crys-light-grey capitalize">{user.tier || 'Free'}</div>
+            </div>
+            <div>
+              <div className="font-medium text-crys-gold">Credits</div>
+              <div className="text-crys-light-grey">{user.credits || 0}</div>
+            </div>
+            <div>
+              <div className="font-medium text-crys-gold">Email</div>
+              <div className="text-crys-light-grey">{user.email}</div>
+            </div>
+          </div>
+        </div>
+      )}
       
       {/* File Upload Area */}
       <div
@@ -168,8 +215,9 @@ const MLPipelineUpload: React.FC<MLPipelineUploadProps> = ({
               disabled={isProcessing}
             >
               <option value="free" className="bg-crys-charcoal text-crys-white">Free - Basic Processing</option>
-              <option value="pro" className="bg-crys-charcoal text-crys-white">Pro - Enhanced Processing</option>
+              <option value="professional" className="bg-crys-charcoal text-crys-white">Professional - Enhanced Processing</option>
               <option value="advanced" className="bg-crys-charcoal text-crys-white">Advanced - Premium Processing</option>
+              <option value="one_on_one" className="bg-crys-charcoal text-crys-white">One-on-One - Expert Processing</option>
             </select>
             <div className="mt-2 text-sm text-crys-light-grey">
               <div>Formats: {getAvailableFormats().join(', ')}</div>

@@ -12,11 +12,13 @@ const MLPipelineTestPage: React.FC = () => {
 
   const checkHealth = async () => {
     try {
-      const health = await mlPipelineService.healthCheck();
+      // Check Laravel backend health instead of direct ML pipeline
+      const response = await fetch('/api/health');
+      const health = await response.json();
       setHealthStatus(health);
     } catch (error) {
       console.error('Health check failed:', error);
-      setHealthStatus({ status: 'error', message: 'ML Pipeline not available' });
+      setHealthStatus({ status: 'error', message: 'Backend service not available' });
     } finally {
       setIsLoading(false);
     }
@@ -71,7 +73,7 @@ const MLPipelineTestPage: React.FC = () => {
                 <div className={`font-medium ${
                   healthStatus?.status === 'healthy' ? 'text-crys-white' : 'text-red-400'
                 }`}>
-                  ML Pipeline Status: {healthStatus?.status || 'Unknown'}
+                  Backend Service Status: {healthStatus?.status || 'Unknown'}
                 </div>
                 {healthStatus?.service && (
                   <div className="text-sm text-crys-light-grey">
