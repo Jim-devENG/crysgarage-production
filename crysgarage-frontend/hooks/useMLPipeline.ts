@@ -20,7 +20,7 @@ export interface MLPipelineActions {
   ) => Promise<void>;
   reset: () => void;
   getRecommendations: (
-    tier: 'free' | 'pro' | 'advanced',
+    tier: 'free' | 'professional' | 'advanced' | 'one_on_one',
     genre: 'hip_hop' | 'afrobeats' | 'gospel' | 'highlife' | 'r_b' | 'general'
   ) => Promise<MLRecommendations>;
 }
@@ -57,10 +57,9 @@ export const useMLPipeline = (): MLPipelineState & MLPipelineActions => {
       // Step 1: Upload
       setState(prev => ({ ...prev, progress: 25 }));
       const uploadResult = await mlPipelineService.uploadAudio({
-        filename: file.name,
+        audio: file,
         tier,
         genre,
-        file_size: file.size,
       });
 
       setState(prev => ({
@@ -98,7 +97,7 @@ export const useMLPipeline = (): MLPipelineState & MLPipelineActions => {
   }, []);
 
   const getRecommendations = useCallback(async (
-    tier: 'free' | 'pro' | 'advanced',
+    tier: 'free' | 'professional' | 'advanced' | 'one_on_one',
     genre: 'hip_hop' | 'afrobeats' | 'gospel' | 'highlife' | 'r_b' | 'general'
   ): Promise<MLRecommendations> => {
     try {

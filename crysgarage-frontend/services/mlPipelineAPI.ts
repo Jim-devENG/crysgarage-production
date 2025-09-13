@@ -172,7 +172,7 @@ export const mlPipelineService = {
 
   // Get ML recommendations for a specific genre and tier
   getMLRecommendations: async (
-    tier: 'free' | 'pro' | 'advanced',
+    tier: 'free' | 'professional' | 'advanced' | 'one_on_one',
     genre: 'hip_hop' | 'afrobeats' | 'gospel' | 'highlife' | 'r_b' | 'general'
   ): Promise<MLRecommendations> => {
     // This is a mock function that generates recommendations
@@ -208,33 +208,39 @@ export const mlPipelineService = {
     }
 
     // Tier-specific adjustments
-    if (tier === 'pro') {
+    if (tier === 'professional') {
       baseRecommendations.compression.ratio *= 1.2;
     } else if (tier === 'advanced') {
       baseRecommendations.compression.ratio *= 1.5;
       baseRecommendations.stereo_width = 1.1;
       baseRecommendations.harmonic_exciter = { amount: 0.1 };
+    } else if (tier === 'one_on_one') {
+      baseRecommendations.compression.ratio *= 1.8;
+      baseRecommendations.stereo_width = 1.2;
+      baseRecommendations.harmonic_exciter = { amount: 0.15 };
     }
 
     return baseRecommendations;
   },
 
   // Get available file formats for a tier
-  getAvailableFormats: (tier: 'free' | 'pro' | 'advanced'): string[] => {
+  getAvailableFormats: (tier: 'free' | 'professional' | 'advanced' | 'one_on_one'): string[] => {
     const formats = {
       free: ['wav', 'mp3'],
-      pro: ['wav', 'mp3', 'flac'],
-      advanced: ['wav', 'mp3', 'flac', 'aiff']
+      professional: ['wav', 'mp3', 'flac'],
+      advanced: ['wav', 'mp3', 'flac', 'aiff'],
+      one_on_one: ['wav', 'mp3', 'flac', 'aiff', 'aac', 'ogg']
     };
     return formats[tier] || formats.free;
   },
 
   // Get estimated processing time for a tier
-  getEstimatedProcessingTime: (tier: 'free' | 'pro' | 'advanced'): string => {
+  getEstimatedProcessingTime: (tier: 'free' | 'professional' | 'advanced' | 'one_on_one'): string => {
     const times = {
       free: '2-5 minutes',
-      pro: '1-3 minutes',
-      advanced: '30 seconds - 2 minutes'
+      professional: '1-3 minutes',
+      advanced: '30 seconds - 2 minutes',
+      one_on_one: 'Manual processing'
     };
     return times[tier] || times.free;
   }
