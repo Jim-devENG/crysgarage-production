@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ML Pipeline API</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; background: #f5f5f5; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; }
+        h1 { color: #333; border-bottom: 2px solid #007bff; padding-bottom: 10px; }
+        .endpoint { background: #f8f9fa; padding: 15px; margin: 10px 0; border-radius: 5px; border-left: 4px solid #007bff; }
+        .method { font-weight: bold; color: #007bff; }
+        .status { color: #28a745; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>ML Pipeline API</h1>
+        <p class="status">Service Status: Operational</p>
+        
+        <h2>Available Endpoints:</h2>
+        
+        <div class="endpoint">
+            <div class="method">GET/POST</div>
+            <strong>/api/health.php</strong> - Health check and service status
+        </div>
+        
+        <div class="endpoint">
+            <div class="method">GET/POST</div>
+            <strong>/api/upload-audio.php</strong> - Audio file upload endpoint
+        </div>
+        
+        <div class="endpoint">
+            <div class="method">GET/POST</div>
+            <strong>/api/process-audio.php</strong> - Audio processing endpoint
+        </div>
+        
+        <p><em>All endpoints support CORS and handle OPTIONS requests for preflight.</em></p>
+    </div>
+</body>
+</html>
