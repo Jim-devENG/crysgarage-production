@@ -36,6 +36,8 @@ jobs:
     - name: Start SSH agent
       run: |
         eval "$(ssh-agent -s)"
+        echo "SSH_AUTH_SOCK=$SSH_AUTH_SOCK" >> $GITHUB_ENV
+        echo "SSH_AGENT_PID=$SSH_AGENT_PID" >> $GITHUB_ENV
         echo "SSH agent started"
       shell: bash
 
@@ -45,6 +47,9 @@ jobs:
         ssh-add - <<< "${{ secrets.SSH_PRIVATE_KEY }}"
         echo "SSH key added to agent"
       shell: bash
+      env:
+        SSH_AUTH_SOCK: ${{ env.SSH_AUTH_SOCK }}
+        SSH_AGENT_PID: ${{ env.SSH_AGENT_PID }}
 
     - name: Setup known_hosts
       run: |
@@ -60,6 +65,9 @@ jobs:
         ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no ${{ secrets.VPS_USER }}@209.74.80.162 "echo 'SSH connection test successful'"
         echo "SSH connection test completed"
       shell: bash
+      env:
+        SSH_AUTH_SOCK: ${{ env.SSH_AUTH_SOCK }}
+        SSH_AGENT_PID: ${{ env.SSH_AGENT_PID }}
     
     - name: Deploy to VPS
       run: |
@@ -108,3 +116,6 @@ jobs:
           echo "🌐 Website should now be accessible at https://crysgarage.studio"
         EOF
       shell: bash
+      env:
+        SSH_AUTH_SOCK: ${{ env.SSH_AUTH_SOCK }}
+        SSH_AGENT_PID: ${{ env.SSH_AGENT_PID }}
