@@ -21,35 +21,19 @@ jobs:
         sudo apt-get install -y bash coreutils openssh-client git curl || echo "Package installation failed, continuing..."
         echo "Essential tools installation completed"
 
-    - name: Set up SSH key
-      run: |
-        mkdir -p ~/.ssh
-        echo "Setting up SSH key..."
-        echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
-        chmod 600 ~/.ssh/id_rsa
-        echo "SSH key file created, checking format..."
-        ssh-keygen -l -f ~/.ssh/id_rsa || echo "Key format issue detected"
-        echo "Adding VPS to known hosts..."
-        ssh-keyscan -H 209.74.80.162 >> ~/.ssh/known_hosts
-        echo "SSH setup completed"
-      shell: bash
-
-    - name: Test SSH connection
-      run: |
-        echo "Testing SSH connection..."
-        ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa root@209.74.80.162 "echo 'SSH connection test successful'"
-        echo "SSH connection test completed"
-      shell: bash
-
     - name: Deploy to VPS
-      run: |
-        echo "Starting deployment to VPS..."
-        ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa root@209.74.80.162 << 'EOF'
+      uses: appleboy/ssh-action@v0.1.8
+      with:
+        host: 209.74.80.162
+        username: ${{ secrets.VPS_USER }}
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        script: |
+          echo "🚀 Starting deployment to current VPS setup..."
+          
           # Set proper PATH
           export PATH="/usr/local/ruby-3.1.0/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
           
           set -e  # Exit on any error
-          echo "🚀 Starting deployment to current VPS setup..."
           
           # Navigate to deployment directory
           cd /var/www/crysgarage-deploy
@@ -92,5 +76,3 @@ jobs:
           
           echo "✅ Deployment completed at $(date)"
           echo "🌐 Website should now be accessible at https://crysgarage.studio"
-        EOF
-      shell: bash
