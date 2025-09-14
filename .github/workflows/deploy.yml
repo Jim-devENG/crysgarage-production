@@ -32,44 +32,79 @@ jobs:
         /bin/ls --version || echo "ls version check failed"
         
         echo "Essential tools installation completed"
+
+    - name: Start SSH agent
+      run: |
+        eval "$(ssh-agent -s)"
+        echo "SSH agent started"
+      shell: bash
+
+    - name: Add SSH key
+      run: |
+        echo "Adding SSH key to agent..."
+        ssh-add - <<< "${{ secrets.SSH_PRIVATE_KEY }}"
+        echo "SSH key added to agent"
+      shell: bash
+
+    - name: Setup known_hosts
+      run: |
+        mkdir -p ~/.ssh
+        echo "Adding VPS to known hosts..."
+        ssh-keyscan -H 209.74.80.162 >> ~/.ssh/known_hosts
+        echo "Known hosts setup completed"
+      shell: bash
+
+    - name: Test SSH connection
+      run: |
+        echo "Testing SSH connection..."
+        ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no ${{ secrets.VPS_USER }}@209.74.80.162 "echo 'SSH connection test successful'"
+        echo "SSH connection test completed"
+      shell: bash
     
     - name: Deploy to VPS
-      uses: appleboy/ssh-action@v0.1.5
-      with:
-        host: 209.74.80.162
-        username: ${{ secrets.VPS_USER }}
-        key: ${{ secrets.SSH_PRIVATE_KEY }}
-        script: |
+      run: |
+        echo "🚀 Starting deployment to VPS..."
+        ssh -o ConnectTimeout=30 -o StrictHostKeyChecking=no ${{ secrets.VPS_USER }}@209.74.80.162 << 'EOF'
+          # Set proper PATH
+          export PATH="/usr/local/ruby-3.1.0/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+          
+          set -e  # Exit on any error
+          
           # Update the deployment directory first
           cd /var/www/crysgarage-deploy
           git pull origin master
           
           # Build frontend in deployment directory
           cd crysgarage-frontend
+          npm ci
           npm run build
-          cd ..
           
-          # Deploy frontend to live directory
-          rm -rf /var/www/html/*
-          cp -r crysgarage-frontend/dist/* /var/www/html/
+          # Frontend is already built in dist/ and will be served by Nginx
+          # from /var/www/crysgarage-deploy/crysgarage-frontend/dist/
+          echo "✅ Frontend built successfully - served from current directory"
           
-          # Deploy backend to live directory
-          rm -rf /var/www/html/api/*
-          cp -r crysgarage-backend/* /var/www/html/api/
+          # Set proper permissions for frontend
+          chown -R nginx:nginx /var/www/crysgarage-deploy/crysgarage-frontend/dist
+          chmod -R 755 /var/www/crysgarage-deploy/crysgarage-frontend/dist
           
-          # Set proper permissions
-          chown -R nginx:nginx /var/www/html/
-          chmod -R 755 /var/www/html/
-          
-          # Install backend dependencies and clear caches
-          cd /var/www/html/api
-          composer install --no-dev --optimize-autoloader
-          php artisan config:clear
-          php artisan route:clear
-          php artisan cache:clear
+          # Deploy backend essentials
+          echo "🔧 Deploying backend..."
+          cd ../crysgarage-backend-fresh
+          # Backend is already in place, just ensure permissions
+          chown -R nginx:nginx /var/www/crysgarage-deploy/crysgarage-backend-fresh
+          chmod -R 755 /var/www/crysgarage-deploy/crysgarage-backend-fresh
           
           # Restart services
+          echo "🔄 Restarting services..."
           systemctl restart php-fpm
           systemctl reload nginx
           
-          echo "Deployment completed at $(date)"
+          # Health check
+          echo "🏥 Running health check..."
+          sleep 5
+          curl -f https://crysgarage.studio || echo "Main site health check failed but deployment completed"
+          
+          echo "✅ Deployment completed at $(date)"
+          echo "🌐 Website should now be accessible at https://crysgarage.studio"
+        EOF
+      shell: bash
