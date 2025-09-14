@@ -62,16 +62,17 @@ jobs:
       shell: bash
     
     - name: Deploy to VPS
-      uses: appleboy/ssh-action@v0.1.8
-      with:
-        host: 209.74.80.162
-        username: ${{ secrets.VPS_USER }}
-        key: ${{ secrets.SSH_PRIVATE_KEY }}
-        script: |
-          echo "🚀 Starting deployment..."
+      run: |
+        echo "🚀 Starting deployment to current VPS setup..."
+        ssh -o ConnectTimeout=30 -o StrictHostKeyChecking=no ${{ secrets.VPS_USER }}@209.74.80.162 << 'EOF'
+          # Set proper PATH
+          export PATH="/usr/local/ruby-3.1.0/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+          
+          set -e  # Exit on any error
           
           # Navigate to deployment directory
           cd /var/www/crysgarage-deploy
+          echo "📁 Current directory: $(pwd)"
           
           # Pull latest changes
           echo "📥 Pulling latest changes..."
@@ -110,3 +111,5 @@ jobs:
           
           echo "✅ Deployment completed at $(date)"
           echo "🌐 Website should now be accessible at https://crysgarage.studio"
+        EOF
+      shell: bash
