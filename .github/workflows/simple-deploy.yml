@@ -32,6 +32,26 @@ jobs:
         /bin/ls --version || echo "ls version check failed"
         
         echo "Essential tools installation completed"
+
+    - name: Setup SSH key and known_hosts
+      run: |
+        mkdir -p ~/.ssh
+        echo "Setting up SSH key..."
+        echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        echo "SSH key file created, checking format..."
+        ssh-keygen -l -f ~/.ssh/id_rsa || echo "Key format issue detected"
+        echo "Adding VPS to known hosts..."
+        ssh-keyscan -H 209.74.80.162 >> ~/.ssh/known_hosts
+        echo "SSH setup completed"
+      shell: bash
+
+    - name: Test SSH connection
+      run: |
+        echo "Testing SSH connection..."
+        ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa ${{ secrets.VPS_USER }}@209.74.80.162 "echo 'SSH connection test successful'"
+        echo "SSH connection test completed"
+      shell: bash
     
     - name: Deploy to VPS
       uses: appleboy/ssh-action@v0.1.8
