@@ -33,23 +33,31 @@ jobs:
         
         echo "Essential tools installation completed"
 
-    - name: Setup SSH key and known_hosts
+    - name: Start SSH agent
+      run: |
+        eval "$(ssh-agent -s)"
+        echo "SSH agent started"
+      shell: bash
+
+    - name: Add SSH key
+      run: |
+        echo "Adding SSH key to agent..."
+        ssh-add - <<< "${{ secrets.SSH_PRIVATE_KEY }}"
+        echo "SSH key added to agent"
+      shell: bash
+
+    - name: Setup known_hosts
       run: |
         mkdir -p ~/.ssh
-        echo "Setting up SSH key..."
-        echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
-        chmod 600 ~/.ssh/id_rsa
-        echo "SSH key file created, checking format..."
-        ssh-keygen -l -f ~/.ssh/id_rsa || echo "Key format issue detected"
         echo "Adding VPS to known hosts..."
         ssh-keyscan -H 209.74.80.162 >> ~/.ssh/known_hosts
-        echo "SSH setup completed"
+        echo "Known hosts setup completed"
       shell: bash
 
     - name: Test SSH connection
       run: |
         echo "Testing SSH connection..."
-        ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa ${{ secrets.VPS_USER }}@209.74.80.162 "echo 'SSH connection test successful'"
+        ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no ${{ secrets.VPS_USER }}@209.74.80.162 "echo 'SSH connection test successful'"
         echo "SSH connection test completed"
       shell: bash
     
