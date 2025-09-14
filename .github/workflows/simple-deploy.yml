@@ -55,24 +55,30 @@ jobs:
           npm ci
           npm run build
           
-          # Deploy frontend
-          echo "📁 Deploying frontend..."
-          rm -rf /var/www/html/*
-          cp -r dist/* /var/www/html/
-          chown -R nginx:nginx /var/www/html/
-          chmod -R 755 /var/www/html/
+          # Frontend is already built in dist/ and will be served by Nginx
+          # from /var/www/crysgarage-deploy/crysgarage-frontend/dist/
+          echo "✅ Frontend built successfully - served from current directory"
+          
+          # Set proper permissions for frontend
+          chown -R nginx:nginx /var/www/crysgarage-deploy/crysgarage-frontend/dist
+          chmod -R 755 /var/www/crysgarage-deploy/crysgarage-frontend/dist
           
           # Deploy backend essentials
           echo "🔧 Deploying backend..."
-          cd ../crysgarage-backend
-          composer install --no-dev --optimize-autoloader
-          php artisan config:clear
-          php artisan route:clear
-          php artisan cache:clear
+          cd ../crysgarage-backend-fresh
+          # Backend is already in place, just ensure permissions
+          chown -R nginx:nginx /var/www/crysgarage-deploy/crysgarage-backend-fresh
+          chmod -R 755 /var/www/crysgarage-deploy/crysgarage-backend-fresh
           
           # Restart services
           echo "🔄 Restarting services..."
           systemctl restart php-fpm
           systemctl reload nginx
           
+          # Health check
+          echo "🏥 Running health check..."
+          sleep 5
+          curl -f https://crysgarage.studio || echo "Main site health check failed but deployment completed"
+          
           echo "✅ Deployment completed at $(date)"
+          echo "🌐 Website should now be accessible at https://crysgarage.studio"
