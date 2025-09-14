@@ -1,0 +1,68 @@
+name: Deploy to Current VPS Setup
+
+on:
+  push:
+    branches: [ master ]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install essential tools
+      run: |
+        sudo apt-get update || echo "apt-get update failed, continuing..."
+        sudo apt-get install -y bash coreutils openssh-client git curl || echo "Package installation failed, continuing..."
+        echo "Essential tools installation completed"
+    
+    - name: Deploy to VPS
+      uses: appleboy/ssh-action@v0.1.8
+      with:
+        host: 209.74.80.162
+        username: ${{ secrets.VPS_USER }}
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        script: |
+          echo "🚀 Starting deployment to current VPS setup..."
+          
+          # Navigate to deployment directory
+          cd /var/www/crysgarage-deploy
+          echo "📁 Current directory: $(pwd)"
+          
+          # Pull latest changes
+          echo "📥 Pulling latest changes..."
+          git pull origin master
+          
+          # Build frontend
+          echo "🌐 Building frontend..."
+          cd crysgarage-frontend
+          npm ci
+          npm run build
+          
+          # The built files are now in dist/ and will be served by Nginx
+          # from /var/www/crysgarage-deploy/crysgarage-frontend/dist/
+          echo "✅ Frontend built successfully"
+          
+          # Update backend if needed
+          echo "🔧 Updating backend..."
+          cd ../crysgarage-backend-fresh
+          # Backend is already in place, just ensure permissions
+          chown -R nginx:nginx /var/www/crysgarage-deploy/crysgarage-backend-fresh
+          chmod -R 755 /var/www/crysgarage-deploy/crysgarage-backend-fresh
+          
+          # Set proper permissions for frontend
+          chown -R nginx:nginx /var/www/crysgarage-deploy/crysgarage-frontend/dist
+          chmod -R 755 /var/www/crysgarage-deploy/crysgarage-frontend/dist
+          
+          # Restart services
+          echo "🔄 Restarting services..."
+          systemctl restart php-fpm
+          systemctl reload nginx
+          
+          echo "✅ Deployment completed at $(date)"
+          echo "🌐 Website should now be accessible at https://crysgarage.studio"
