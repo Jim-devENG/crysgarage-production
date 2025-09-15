@@ -65,6 +65,10 @@ export interface MasteringResponse {
   genre_used: string;
 }
 
+export interface IndustryPresetsResponse {
+  presets: Record<string, GenreInfo>;
+}
+
 class PythonAudioService {
   private baseURL: string;
 
@@ -210,6 +214,24 @@ class PythonAudioService {
       console.error('Failed to get genre preview:', error);
       throw new Error('Failed to get genre preview');
     }
+  }
+
+  /**
+   * Fetch ML "industry presets" for key genres from backend
+   */
+  async getIndustryPresets(): Promise<Record<string, GenreInfo>> {
+    const response = await axios.get(`${this.baseURL}/genre-presets`);
+    return response.data.presets as Record<string, GenreInfo>;
+  }
+
+  async getPresetForGenre(genre: string): Promise<GenreInfo> {
+    const presets = await this.getIndustryPresets();
+    // Try exact then case-insensitive fallback
+    return (
+      presets[genre] ||
+      presets[Object.keys(presets).find(k => k.toLowerCase() === genre.toLowerCase()) || ''] ||
+      (await this.getGenrePreview(genre, 'free'))
+    );
   }
 
   /**

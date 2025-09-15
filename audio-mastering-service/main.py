@@ -265,6 +265,34 @@ async def get_tier_info():
         }
     }
 
+@app.get("/genre-presets")
+async def get_industry_presets():
+    """Return simplified industry presets for key genres used by the frontend for real-time preview."""
+    try:
+        genre_info = ml_engine.get_genre_information()
+        # Normalize and pick two key presets; fall back to defaults if missing
+        def pick(name: str) -> Dict[str, Any]:
+            return genre_info.get(name) or genre_info.get(name.title()) or genre_info.get(name.capitalize()) or {
+                "eq_curve": {
+                    "low_shelf": {"freq": 120, "gain": 0},
+                    "low_mid": {"freq": 250, "gain": 0},
+                    "mid": {"freq": 1000, "gain": 0},
+                    "high_mid": {"freq": 3000, "gain": 0},
+                    "high_shelf": {"freq": 8000, "gain": 0},
+                },
+                "compression": {"ratio": 2, "threshold": -24, "attack": 0.01, "release": 0.25},
+                "stereo_width": 1.0,
+                "target_lufs": -14,
+            }
+        presets = {
+            "Hip-Hop": pick("Hip-Hop"),
+            "Afrobeats": pick("Afrobeats"),
+        }
+        return {"status": "success", "presets": presets, "timestamp": datetime.utcnow().isoformat()}
+    except Exception as e:
+        logger.error(f"Failed to get industry presets: {e}")
+        raise HTTPException(status_code=500, detail="Failed to get industry presets")
+
 async def cleanup_temp_files(file_paths: list):
     """Clean up temporary files"""
     for file_path in file_paths:
