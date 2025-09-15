@@ -25,3 +25,7 @@ public/
 ├── CRG_Logo_svg.svg  ← Official Crys Garage logo
 └── README.md
 ```
+
+# Crys Garage Production
+
+Small CI trigger note to run Auto Deploy to VPS.
