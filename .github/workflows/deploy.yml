@@ -80,7 +80,10 @@ jobs:
           
           # Update the deployment directory first
           cd /var/www/crysgarage-deploy
-          git pull origin master
+          echo "⚙️ Resetting repository to origin/master (clean)"
+          git fetch --all
+          git reset --hard origin/master
+          git clean -fd
           
           # Build frontend in deployment directory
           cd crysgarage-frontend

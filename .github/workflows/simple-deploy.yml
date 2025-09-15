@@ -75,8 +75,10 @@ jobs:
           echo "📁 Current directory: $(pwd)"
           
           # Pull latest changes
-          echo "📥 Pulling latest changes..."
-          git pull origin master
+          echo "📥 Pulling latest changes (clean reset)..."
+          git fetch --all
+          git reset --hard origin/master
+          git clean -fd
           
           # Build frontend
           echo "🌐 Building frontend..."
