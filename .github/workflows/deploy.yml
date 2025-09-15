@@ -71,7 +71,7 @@ jobs:
     
     - name: Deploy to VPS
       run: |
-        echo "🚀 Starting deployment to VPS..."
+          echo "🚀 Starting deployment to VPS... (Test deployment)"
         ssh -o ConnectTimeout=30 -o StrictHostKeyChecking=no ${{ secrets.VPS_USER }}@209.74.80.162 << 'EOF'
           # Set proper PATH
           export PATH="/usr/local/ruby-3.1.0/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
