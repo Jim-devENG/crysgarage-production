@@ -1,0 +1,293 @@
+/**
+ * Python Audio Processing Service
+ * Integrates with the Python microservice for tier-based audio mastering
+ */
+
+import axios from 'axios';
+
+// Hardcode HTTPS proxy URL to avoid Mixed Content in production builds
+const PYTHON_SERVICE_URL = 'https://crysgarage.studio/api/python';
+
+export interface TierInfo {
+  processing_quality: string;
+  max_processing_time: number;
+  available_formats: string[];
+  max_sample_rate: number;
+  max_bit_depth: number;
+  features: {
+    stereo_widening: boolean;
+    harmonic_exciter: boolean;
+    multiband_compression: boolean;
+    advanced_features: boolean;
+  };
+  processing_limits: {
+    eq_bands: number;
+    compression_ratio_max: number;
+  };
+}
+
+export interface GenreInfo {
+  eq_curve: {
+    low_shelf: { freq: number; gain: number };
+    low_mid: { freq: number; gain: number };
+    mid: { freq: number; gain: number };
+    high_mid: { freq: number; gain: number };
+    high_shelf: { freq: number; gain: number };
+  };
+  compression: {
+    ratio: number;
+    threshold: number;
+    attack: number;
+    release: number;
+  };
+  stereo_width: number;
+  target_lufs: number;
+}
+
+export interface MasteringRequest {
+  user_id: string;
+  tier: 'free' | 'professional' | 'advanced' | 'one_on_one';
+  genre: string;
+  target_lufs?: number;
+  file_url: string;
+  target_format?: string;
+  target_sample_rate?: number;
+}
+
+export interface MasteringResponse {
+  status: string;
+  url: string;
+  lufs: number;
+  format: string;
+  duration: number;
+  processing_time: number;
+  tier_used: string;
+  genre_used: string;
+}
+
+class PythonAudioService {
+  private baseURL: string;
+
+  constructor() {
+    this.baseURL = PYTHON_SERVICE_URL;
+  }
+
+  /**
+   * Get tier information from Python service
+   */
+  async getTierInformation(): Promise<Record<string, TierInfo>> {
+    try {
+      const response = await axios.get(`${this.baseURL}/tiers`);
+      return response.data.tiers;
+    } catch (error) {
+      console.error('Failed to get tier information:', error);
+      throw new Error('Failed to get tier information from Python service');
+    }
+  }
+
+  /**
+   * Get genre information from Python service
+   */
+  async getGenreInformation(): Promise<Record<string, GenreInfo>> {
+    try {
+      const response = await axios.get(`${this.baseURL}/genres`);
+      return response.data.genres;
+    } catch (error) {
+      console.error('Failed to get genre information:', error);
+      throw new Error('Failed to get genre information from Python service');
+    }
+  }
+
+  /**
+   * Get available genres for a specific tier
+   */
+  async getAvailableGenresForTier(tier: string): Promise<string[]> {
+    try {
+      const tierInfo = await this.getTierInformation();
+      const genreInfo = await this.getGenreInformation();
+      
+      // For free tier, return only 2 genres
+      if (tier === 'free') {
+        return ['Hip-Hop', 'Afrobeats'];
+      }
+      
+      // For other tiers, return all available genres
+      return Object.keys(genreInfo);
+    } catch (error) {
+      console.error('Failed to get available genres for tier:', error);
+      return ['Hip-Hop', 'Afrobeats']; // Fallback
+    }
+  }
+
+  /**
+   * Process audio with Python microservice
+   */
+  async processAudio(request: MasteringRequest): Promise<MasteringResponse> {
+    try {
+      console.log('Sending mastering request to Python service:', request);
+      
+      const response = await axios.post(`${this.baseURL}/master`, request, {
+        timeout: 300000, // 5 minutes timeout for processing
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      return response.data;
+    } catch (error: any) {
+      console.error('Python audio processing failed:', error);
+      
+      if (error.response?.status === 400) {
+        throw new Error('Invalid request parameters');
+      } else if (error.response?.status === 413) {
+        throw new Error('File too large for processing');
+      } else if (error.response?.status === 415) {
+        throw new Error('Unsupported file format');
+      } else if (error.response?.status === 500) {
+        throw new Error('Audio processing failed on server');
+      } else if (error.code === 'ECONNABORTED') {
+        throw new Error('Processing timeout - file may be too large or complex');
+      } else {
+        throw new Error('Failed to process audio: ' + (error.message || 'Unknown error'));
+      }
+    }
+  }
+
+  /**
+   * Upload file to Laravel backend first, then process with Python
+   */
+  async uploadAndProcessAudio(
+    file: File,
+    tier: 'free' | 'professional' | 'advanced' | 'one_on_one',
+    genre: string,
+    userId: string
+  ): Promise<MasteringResponse> {
+    try {
+      // Step 1: Upload file to Laravel backend
+      const formData = new FormData();
+      formData.append('audio', file);
+      formData.append('tier', tier);
+      formData.append('genre', genre);
+      formData.append('user_id', userId);
+
+      console.log('Uploading file to Laravel backend...');
+      const uploadResponse = await axios.post('/api/upload-audio', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      const { file_url, file_id } = uploadResponse.data;
+      console.log('File uploaded successfully:', file_url);
+
+      // Step 2: Process with Python microservice
+      const masteringRequest: MasteringRequest = {
+        user_id: userId,
+        tier,
+        genre,
+        file_url,
+        target_lufs: -14.0, // Default LUFS target
+      };
+
+      console.log('Processing with Python microservice...');
+      const result = await this.processAudio(masteringRequest);
+      
+      return result;
+    } catch (error: any) {
+      console.error('Upload and process failed:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get real-time preview of genre effects (for real-time player)
+   */
+  async getGenrePreview(genre: string, tier: string): Promise<GenreInfo> {
+    try {
+      const genreInfo = await this.getGenreInformation();
+      return genreInfo[genre] || genreInfo['Pop'];
+    } catch (error) {
+      console.error('Failed to get genre preview:', error);
+      throw new Error('Failed to get genre preview');
+    }
+  }
+
+  /**
+   * Generate real-time preview of genre effects on audio
+   */
+  async generateGenrePreview(
+    file: File,
+    genre: string,
+    tier: 'free' | 'professional' | 'advanced' | 'one_on_one',
+    userId: string
+  ): Promise<{ preview_url: string; genre: string; duration: number }> {
+    try {
+      // Step 1: Upload file to Laravel backend
+      const formData = new FormData();
+      formData.append('audio', file);
+      formData.append('tier', tier);
+      formData.append('genre', genre);
+      formData.append('user_id', userId);
+
+      console.log('Uploading file for genre preview...');
+      const uploadResponse = await axios.post('/api/upload-audio', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      const { file_url } = uploadResponse.data;
+      console.log('File uploaded for preview:', file_url);
+
+      // Step 2: Generate preview with Python microservice
+      const previewRequest: MasteringRequest = {
+        user_id: userId,
+        tier,
+        genre,
+        file_url,
+        target_lufs: -14.0,
+      };
+
+      console.log('Generating genre preview...');
+      const response = await axios.post(`${this.baseURL}/preview`, previewRequest, {
+        timeout: 60000, // 1 minute timeout for preview
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      return response.data;
+    } catch (error: any) {
+      console.error('Genre preview generation failed:', error);
+      
+      if (error.response?.status === 400) {
+        throw new Error('Invalid request parameters for preview');
+      } else if (error.response?.status === 413) {
+        throw new Error('File too large for preview');
+      } else if (error.response?.status === 415) {
+        throw new Error('Unsupported file format for preview');
+      } else if (error.response?.status === 500) {
+        throw new Error('Preview generation failed on server');
+      } else if (error.code === 'ECONNABORTED') {
+        throw new Error('Preview generation timeout');
+      } else {
+        throw new Error('Failed to generate preview: ' + (error.message || 'Unknown error'));
+      }
+    }
+  }
+
+  /**
+   * Check if Python service is healthy
+   */
+  async healthCheck(): Promise<boolean> {
+    try {
+      const response = await axios.get(`${this.baseURL}/health`);
+      return response.data.status === 'healthy';
+    } catch (error) {
+      console.error('Python service health check failed:', error);
+      return false;
+    }
+  }
+}
+
+export const pythonAudioService = new PythonAudioService();
