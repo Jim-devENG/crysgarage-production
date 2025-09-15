@@ -114,6 +114,27 @@ jobs:
           # Backend is already in place, just ensure permissions
           chown -R nginx:nginx /var/www/crysgarage-deploy/crysgarage-backend-fresh
           chmod -R 755 /var/www/crysgarage-deploy/crysgarage-backend-fresh
+
+          # Update Python audio-mastering service
+          echo "🐍 Updating Python service..."
+          if [ -d "/opt/audio-mastering-service" ]; then
+            cd /opt/audio-mastering-service
+            git fetch --all || true
+            git reset --hard origin/master || true
+            # Ensure venv exists
+            if [ -d "venv" ]; then
+              ./venv/bin/pip install -U pip wheel setuptools || true
+              ./venv/bin/pip install -r requirements.txt || true
+            elif command -v python3 >/dev/null 2>&1; then
+              python3 -m venv venv && ./venv/bin/pip install -U pip && ./venv/bin/pip install -r requirements.txt || true
+            fi
+            # Restart uvicorn (no systemd assumed)
+            pkill -f "uvicorn main:app" 2>/dev/null || true
+            nohup ./venv/bin/uvicorn main:app --host 0.0.0.0 --port 8002 >/var/log/uvicorn.log 2>&1 &
+            echo "Python service restarted"
+          else
+            echo "Warning: /opt/audio-mastering-service not found; skipping Python service update"
+          fi
           
           # Restart services
           echo "🔄 Restarting services..."
