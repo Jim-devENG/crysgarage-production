@@ -220,8 +220,81 @@ class PythonAudioService {
    * Fetch ML "industry presets" for key genres from backend
    */
   async getIndustryPresets(): Promise<Record<string, GenreInfo>> {
-    const response = await axios.get(`${this.baseURL}/genre-presets`);
-    return response.data.presets as Record<string, GenreInfo>;
+    try {
+      const response = await axios.get(`${this.baseURL}/genre-presets`);
+      return response.data.presets as Record<string, GenreInfo>;
+    } catch (error) {
+      // Fallback: build presets from /genres (case-insensitive matching)
+      try {
+        const genres = await this.getGenreInformation();
+        const presets: Record<string, GenreInfo> = {};
+
+        const findGenre = (name: string): GenreInfo | undefined => {
+          const key = Object.keys(genres).find(
+            k => k.toLowerCase() === name.toLowerCase()
+          );
+          return key ? genres[key] : undefined;
+        };
+
+        const hipHop = findGenre('Hip-Hop') || {
+          eq_curve: {
+            low_shelf: { freq: 80, gain: 3 },
+            low_mid: { freq: 250, gain: -1 },
+            mid: { freq: 1000, gain: 0 },
+            high_mid: { freq: 3500, gain: 1 },
+            high_shelf: { freq: 10000, gain: 2 },
+          },
+          compression: { ratio: 3, threshold: -18, attack: 10, release: 120 },
+          stereo_width: 0.1,
+          target_lufs: -9,
+        };
+
+        const afrobeats = findGenre('Afrobeats') || {
+          eq_curve: {
+            low_shelf: { freq: 90, gain: 2 },
+            low_mid: { freq: 300, gain: 0 },
+            mid: { freq: 1200, gain: 0.5 },
+            high_mid: { freq: 4000, gain: 1.5 },
+            high_shelf: { freq: 12000, gain: 2 },
+          },
+          compression: { ratio: 2.5, threshold: -16, attack: 12, release: 140 },
+          stereo_width: 0.15,
+          target_lufs: -10,
+        };
+
+        presets['Hip-Hop'] = hipHop;
+        presets['Afrobeats'] = afrobeats;
+        return presets;
+      } catch (fallbackError) {
+        // As a last resort, return minimal defaults for the two free genres
+        return {
+          'Hip-Hop': {
+            eq_curve: {
+              low_shelf: { freq: 80, gain: 3 },
+              low_mid: { freq: 250, gain: -1 },
+              mid: { freq: 1000, gain: 0 },
+              high_mid: { freq: 3500, gain: 1 },
+              high_shelf: { freq: 10000, gain: 2 },
+            },
+            compression: { ratio: 3, threshold: -18, attack: 10, release: 120 },
+            stereo_width: 0.1,
+            target_lufs: -9,
+          },
+          'Afrobeats': {
+            eq_curve: {
+              low_shelf: { freq: 90, gain: 2 },
+              low_mid: { freq: 300, gain: 0 },
+              mid: { freq: 1200, gain: 0.5 },
+              high_mid: { freq: 4000, gain: 1.5 },
+              high_shelf: { freq: 12000, gain: 2 },
+            },
+            compression: { ratio: 2.5, threshold: -16, attack: 12, release: 140 },
+            stereo_width: 0.15,
+            target_lufs: -10,
+          },
+        };
+      }
+    }
   }
 
   async getPresetForGenre(genre: string): Promise<GenreInfo> {
