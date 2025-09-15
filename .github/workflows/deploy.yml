@@ -168,6 +168,16 @@ jobs:
           exit 1;
         fi
 
+        # Verify public proxy path for Python service
+        echo "🔎 Verifying public /api/python/genre-presets endpoint..."
+        if ! curl -sf https://crysgarage.studio/api/python/genre-presets | head -c 200; then
+          echo "❌ Public /api/python/genre-presets is not available. Dumping recent uvicorn logs...";
+          tail -n 200 /var/log/uvicorn.log || true;
+          exit 1;
+        else
+          echo "✔ Public /api/python/genre-presets is responding";
+        fi
+
         # Health check
         echo "🏥 Running health check..."
         sleep 5
