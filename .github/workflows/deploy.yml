@@ -99,9 +99,14 @@ jobs:
         echo "🧹 Applying cache-busting to dist/index.html"
         JS_FILE=$(ls -1 dist/assets/index-*.js | sort | tail -n 1)
         CSS_FILE=$(ls -1 dist/assets/index-*.css | sort | tail -n 1)
-        echo "Using JS_FILE=${JS_FILE} CSS_FILE=${CSS_FILE}"
-        sed -i "s#\(/assets/index-.*\.js\)#/${JS_FILE}?v=${GITHUB_RUN_NUMBER}#" dist/index.html
-        sed -i "s#\(/assets/index-.*\.css\)#/${CSS_FILE}?v=${GITHUB_RUN_NUMBER}#" dist/index.html
+        # Strip leading 'dist/' so public paths remain /assets/... not /dist/assets/...
+        JS_PUBLIC=${JS_FILE#dist/}
+        CSS_PUBLIC=${CSS_FILE#dist/}
+        echo "Using JS_PUBLIC=${JS_PUBLIC} CSS_PUBLIC=${CSS_PUBLIC}"
+        sed -i "s#\(/assets/index-.*\.js\)#/${JS_PUBLIC}?v=${GITHUB_RUN_NUMBER}#" dist/index.html
+        sed -i "s#\(/assets/index-.*\.css\)#/${CSS_PUBLIC}?v=${GITHUB_RUN_NUMBER}#" dist/index.html
+        # Sanity check that referenced files exist
+        test -f "${JS_FILE}" && test -f "${CSS_FILE}" || (echo "Hashed asset(s) missing" && ls -la dist/assets && exit 1)
         touch dist/index.html
 
         # Set proper permissions for frontend
