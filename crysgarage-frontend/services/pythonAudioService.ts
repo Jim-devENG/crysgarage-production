@@ -71,6 +71,7 @@ export interface IndustryPresetsResponse {
 
 class PythonAudioService {
   private baseURL: string;
+  private presetsCache: Record<string, GenreInfo> | null = null;
 
   constructor() {
     this.baseURL = PYTHON_SERVICE_URL;
@@ -221,8 +222,12 @@ class PythonAudioService {
    */
   async getIndustryPresets(): Promise<Record<string, GenreInfo>> {
     try {
+      if (this.presetsCache) {
+        return this.presetsCache;
+      }
       const response = await axios.get(`${this.baseURL}/genre-presets`);
-      return response.data.presets as Record<string, GenreInfo>;
+      this.presetsCache = response.data.presets as Record<string, GenreInfo>;
+      return this.presetsCache;
     } catch (error) {
       // Fallback: build presets from /genres (case-insensitive matching)
       try {
@@ -264,10 +269,11 @@ class PythonAudioService {
 
         presets['Hip-Hop'] = hipHop;
         presets['Afrobeats'] = afrobeats;
-        return presets;
+        this.presetsCache = presets;
+        return this.presetsCache;
       } catch (fallbackError) {
         // As a last resort, return minimal defaults for the two free genres
-        return {
+        this.presetsCache = {
           'Hip-Hop': {
             eq_curve: {
               low_shelf: { freq: 80, gain: 3 },
@@ -293,6 +299,7 @@ class PythonAudioService {
             target_lufs: -10,
           },
         };
+        return this.presetsCache;
       }
     }
   }
