@@ -65,9 +65,18 @@ jobs:
           chmod -R 755 /var/www/crysgarage-deploy/crysgarage-frontend/dist
           
           # Restart services
-          echo "🔄 Restarting services..."
-          systemctl restart php-fpm
-          systemctl reload nginx
+          systemctl restart php-fpm || (echo "php-fpm restart failed" && systemctl status php-fpm | cat && exit 1)
+          if ! nginx -t; then
+            echo "nginx config test failed";
+            nginx -t 2>&1 | tail -n 50;
+            exit 1;
+          fi
+          if ! nginx -s reload; then
+            echo "nginx reload failed - showing status and logs";
+            systemctl status nginx --no-pager | cat || true;
+            journalctl -u nginx --no-pager -n 100 | cat || true;
+            exit 1;
+          fi
           
           # Health check
           echo "🏥 Running health check..."
