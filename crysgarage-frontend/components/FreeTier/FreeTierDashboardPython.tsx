@@ -109,6 +109,10 @@ const FreeTierDashboardPython: React.FC<FreeTierDashboardProps> = ({ onDownloadA
       const info = await pythonAudioService.getPresetForGenre(genreName);
       const ctx = audioContextRef.current;
       if (!ctx) return;
+      // Ensure AudioContext is running (autoplay policies may suspend it)
+      if (ctx.state !== 'running') {
+        try { await ctx.resume(); } catch {}
+      }
       // Set filter params (clamp and defaults)
       const { eq_curve, compression, stereo_width, target_lufs } = info;
       if (lowShelfRef.current) {
