@@ -225,13 +225,18 @@ class PythonAudioService {
   }
 
   async getPresetForGenre(genre: string): Promise<GenreInfo> {
-    const presets = await this.getIndustryPresets();
-    // Try exact then case-insensitive fallback
-    return (
-      presets[genre] ||
-      presets[Object.keys(presets).find(k => k.toLowerCase() === genre.toLowerCase()) || ''] ||
-      (await this.getGenrePreview(genre, 'free'))
-    );
+    try {
+      const presets = await this.getIndustryPresets();
+      // Try exact then case-insensitive fallback
+      return (
+        presets[genre] ||
+        presets[Object.keys(presets).find(k => k.toLowerCase() === genre.toLowerCase()) || ''] ||
+        (await this.getGenrePreview(genre, 'free'))
+      );
+    } catch {
+      // Fallback if backend presets endpoint is not available yet
+      return this.getGenrePreview(genre, 'free');
+    }
   }
 
   /**
