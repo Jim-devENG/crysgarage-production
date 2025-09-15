@@ -250,7 +250,14 @@ const FreeTierDashboardPython: React.FC<FreeTierDashboardProps> = ({ onDownloadA
     }
     previewDebounceRef.current = window.setTimeout(async () => {
       try {
-        // Keep current playback state and position
+        // If original is playing, apply preview to original element
+        if (originalAudioRef.current && !originalAudioRef.current.paused) {
+          ensurePreviewGraph(originalAudioRef.current);
+          await applyGenrePreviewSettings(genre.name);
+          return;
+        }
+
+        // Keep current playback state and position for mastered element
         const wasPlaying = isPlayingMastered;
         const currentTime = masteredAudioRef.current ? masteredAudioRef.current.currentTime : 0;
 
@@ -361,6 +368,11 @@ const FreeTierDashboardPython: React.FC<FreeTierDashboardProps> = ({ onDownloadA
       originalAudioRef.current.pause();
       setIsPlayingOriginal(false);
     } else {
+      // Ensure preview graph is connected for real-time effects on original
+      ensurePreviewGraph(originalAudioRef.current);
+      if (selectedGenre) {
+        applyGenrePreviewSettings(selectedGenre.name);
+      }
       originalAudioRef.current.play();
       setIsPlayingOriginal(true);
     }
