@@ -141,10 +141,59 @@ const FreeTierDashboardPython: React.FC<FreeTierDashboardProps> = ({ onDownloadA
     }
   };
 
-  // Genre selection handler
+  // Debounce timer ref for preview
+  const previewDebounceRef = useRef<number | undefined>(undefined);
+
+  // Genre selection handler with real-time preview
   const handleGenreSelect = (genre: Genre) => {
     setSelectedGenre(genre);
     console.log('Genre selected:', genre);
+
+    // Only run preview if we have an uploaded file
+    if (!uploadedFile) return;
+
+    // Debounce rapid clicks
+    if (previewDebounceRef.current) {
+      window.clearTimeout(previewDebounceRef.current);
+    }
+    previewDebounceRef.current = window.setTimeout(async () => {
+      try {
+        // Keep current playback state and position
+        const wasPlaying = isPlayingMastered;
+        const currentTime = masteredAudioRef.current ? masteredAudioRef.current.currentTime : 0;
+
+        const tier = 'free';
+        const preview = await pythonAudioService.generateGenrePreview(
+          uploadedFile.file,
+          genre.name,
+          tier,
+          user?.id || 'anonymous'
+        );
+
+        // Update mastered preview URL and swap audio source
+        setMasteredAudioUrl(preview.preview_url);
+
+        // Recreate or update the audio element
+        if (!masteredAudioRef.current) {
+          masteredAudioRef.current = new Audio(preview.preview_url);
+          masteredAudioRef.current.onended = () => setIsPlayingMastered(false);
+        } else {
+          masteredAudioRef.current.src = preview.preview_url;
+        }
+
+        // Restore time and playback
+        if (!Number.isNaN(currentTime) && currentTime > 0) {
+          try { masteredAudioRef.current.currentTime = currentTime; } catch {}
+        }
+        if (wasPlaying) {
+          masteredAudioRef.current.play().catch(() => {});
+          setIsPlayingMastered(true);
+        }
+      } catch (e: any) {
+        console.error('Real-time preview failed:', e);
+        // Do not surface as blocking error; keep UI responsive
+      }
+    }, 250);
   };
 
   // Process audio with Python service
