@@ -71,94 +71,110 @@ jobs:
     
     - name: Deploy to VPS
       run: |
-          echo "🚀 Starting deployment to VPS... (Test deployment v2)"
+        echo "🚀 Starting deployment to VPS... (Test deployment v2)"
         ssh -o ConnectTimeout=30 -o StrictHostKeyChecking=no ${{ secrets.VPS_USER }}@209.74.80.162 << 'EOF'
-          # Set proper PATH
-          export PATH="/usr/local/ruby-3.1.0/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
-          
-          set -e  # Exit on any error
-          
-          # Update the deployment directory first
-          cd /var/www/crysgarage-deploy
-          echo "⚙️ Resetting repository to origin/master (clean)"
-          git fetch --all
-          git reset --hard origin/master
-          git clean -fd
-          
-          # Build frontend in deployment directory
-          cd crysgarage-frontend
-          export VITE_PYTHON_SERVICE_URL="https://crysgarage.studio/api/python"
-          npm ci
-          npm run build
-          
-          # Frontend is already built in dist/ and will be served by Nginx
-          # from /var/www/crysgarage-deploy/crysgarage-frontend/dist/
-          echo "✅ Frontend built successfully - served from current directory"
+        # Set proper PATH
+        export PATH="/usr/local/ruby-3.1.0/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 
-          # Cache-bust: ensure dist/index.html points to latest hashed assets with version query
-          echo "🧹 Applying cache-busting to dist/index.html"
-          JS_FILE=$(ls -1 dist/assets/index-*.js | sort | tail -n 1)
-          CSS_FILE=$(ls -1 dist/assets/index-*.css | sort | tail -n 1)
-          echo "Using JS_FILE=${JS_FILE} CSS_FILE=${CSS_FILE}"
-          sed -i "s#\(/assets/index-.*\.js\)#/${JS_FILE}?v=${GITHUB_RUN_NUMBER}#" dist/index.html
-          sed -i "s#\(/assets/index-.*\.css\)#/${CSS_FILE}?v=${GITHUB_RUN_NUMBER}#" dist/index.html
-          touch dist/index.html
-          
-          # Set proper permissions for frontend
-          chown -R nginx:nginx /var/www/crysgarage-deploy/crysgarage-frontend/dist
-          chmod -R 755 /var/www/crysgarage-deploy/crysgarage-frontend/dist
-          
-          # Deploy backend essentials
-          echo "🔧 Deploying backend..."
-          cd ../crysgarage-backend-fresh
-          # Backend is already in place, just ensure permissions
-          chown -R nginx:nginx /var/www/crysgarage-deploy/crysgarage-backend-fresh
-          chmod -R 755 /var/www/crysgarage-deploy/crysgarage-backend-fresh
+        set -e  # Exit on any error
 
-          # Update Python audio-mastering service
-          echo "🐍 Updating Python service..."
-          if [ -d "/opt/audio-mastering-service" ]; then
-            cd /opt/audio-mastering-service
-            git fetch --all || true
-            git reset --hard origin/master || true
-            # Ensure venv exists
-            if [ -d "venv" ]; then
-              ./venv/bin/pip install -U pip wheel setuptools || true
-              ./venv/bin/pip install -r requirements.txt || true
-            elif command -v python3 >/dev/null 2>&1; then
-              python3 -m venv venv && ./venv/bin/pip install -U pip && ./venv/bin/pip install -r requirements.txt || true
+        # Update the deployment directory first
+        cd /var/www/crysgarage-deploy
+        echo "⚙️ Resetting repository to origin/master (clean)"
+        git fetch --all
+        git reset --hard origin/master
+        git clean -fd
+
+        # Build frontend in deployment directory
+        cd crysgarage-frontend
+        export VITE_PYTHON_SERVICE_URL="https://crysgarage.studio/api/python"
+        npm ci
+        npm run build
+
+        # Frontend is already built in dist/ and will be served by Nginx
+        # from /var/www/crysgarage-deploy/crysgarage-frontend/dist/
+        echo "✅ Frontend built successfully - served from current directory"
+
+        # Cache-bust: ensure dist/index.html points to latest hashed assets with version query
+        echo "🧹 Applying cache-busting to dist/index.html"
+        JS_FILE=$(ls -1 dist/assets/index-*.js | sort | tail -n 1)
+        CSS_FILE=$(ls -1 dist/assets/index-*.css | sort | tail -n 1)
+        echo "Using JS_FILE=${JS_FILE} CSS_FILE=${CSS_FILE}"
+        sed -i "s#\(/assets/index-.*\.js\)#/${JS_FILE}?v=${GITHUB_RUN_NUMBER}#" dist/index.html
+        sed -i "s#\(/assets/index-.*\.css\)#/${CSS_FILE}?v=${GITHUB_RUN_NUMBER}#" dist/index.html
+        touch dist/index.html
+
+        # Set proper permissions for frontend
+        chown -R nginx:nginx /var/www/crysgarage-deploy/crysgarage-frontend/dist
+        chmod -R 755 /var/www/crysgarage-deploy/crysgarage-frontend/dist
+
+        # Deploy backend essentials
+        echo "🔧 Deploying backend..."
+        cd ../crysgarage-backend-fresh
+        # Backend is already in place, just ensure permissions
+        chown -R nginx:nginx /var/www/crysgarage-deploy/crysgarage-backend-fresh
+        chmod -R 755 /var/www/crysgarage-deploy/crysgarage-backend-fresh
+
+        # Update Python audio-mastering service
+        echo "🐍 Updating Python service..."
+        if [ -d "/opt/audio-mastering-service" ]; then
+          cd /opt/audio-mastering-service
+          git fetch --all || true
+          git reset --hard origin/master || true
+          # Ensure venv exists
+          if [ -d "venv" ]; then
+            ./venv/bin/pip install -U pip wheel setuptools || true
+            ./venv/bin/pip install -r requirements.txt || true
+          elif command -v python3 >/dev/null 2>&1; then
+            python3 -m venv venv && ./venv/bin/pip install -U pip && ./venv/bin/pip install -r requirements.txt || true
+          fi
+          # Restart uvicorn (no systemd assumed)
+          pkill -f "uvicorn main:app" 2>/dev/null || true
+          nohup ./venv/bin/uvicorn main:app --host 0.0.0.0 --port 8002 >/var/log/uvicorn.log 2>&1 &
+          echo "Python service restarted"
+          # Verify genre-presets endpoint is available
+          echo "Checking Python /genre-presets endpoint..."
+          for i in 1 2 3 4 5; do
+            if curl -sf http://127.0.0.1:8002/genre-presets >/dev/null; then
+              echo "✔ /genre-presets is responding"
+              break
             fi
-            # Restart uvicorn (no systemd assumed)
-            pkill -f "uvicorn main:app" 2>/dev/null || true
-            nohup ./venv/bin/uvicorn main:app --host 0.0.0.0 --port 8002 >/var/log/uvicorn.log 2>&1 &
-            echo "Python service restarted"
-          else
-            echo "Warning: /opt/audio-mastering-service not found; skipping Python service update"
-          fi
-          
-          # Restart services
-          echo "🔄 Restarting services..."
-          systemctl restart php-fpm || (echo "php-fpm restart failed" && systemctl status php-fpm | cat && exit 1)
-          # Validate nginx config and reload without systemd to avoid namespace errors
-          if ! nginx -t; then
-            echo "nginx config test failed";
-            nginx -t 2>&1 | tail -n 50;
-            exit 1;
-          fi
-          if ! nginx -s reload; then
-            echo "nginx reload failed - showing status and logs";
-            systemctl status nginx --no-pager | cat || true;
-            journalctl -u nginx --no-pager -n 100 | cat || true;
-            exit 1;
-          fi
-          
-          # Health check
-          echo "🏥 Running health check..."
-          sleep 5
-          curl -f https://crysgarage.studio || echo "Main site health check failed but deployment completed"
-          
-          echo "✅ Deployment completed at $(date)"
-          echo "🌐 Website should now be accessible at https://crysgarage.studio"
+            echo "Attempt $i: /genre-presets not ready, retrying in 2s..."
+            sleep 2
+          done
+          # Final assert
+          curl -sf http://127.0.0.1:8002/genre-presets | head -c 200 || (echo "❌ /genre-presets not available" && exit 1)
+        else
+          echo "Warning: /opt/audio-mastering-service not found; skipping Python service update"
+        fi
+
+        # Ensure global client_max_body_size to prevent 413 on uploads
+        echo "Setting global client_max_body_size to 100M in Nginx..."
+        echo "client_max_body_size 100M;" > /etc/nginx/conf.d/99-client-max-body-size.conf
+
+        # Restart services
+        echo "🔄 Restarting services..."
+        systemctl restart php-fpm || (echo "php-fpm restart failed" && systemctl status php-fpm | cat && exit 1)
+        # Validate nginx config and reload without systemd to avoid namespace errors
+        if ! nginx -t; then
+          echo "nginx config test failed";
+          nginx -t 2>&1 | tail -n 50;
+          exit 1;
+        fi
+        if ! nginx -s reload; then
+          echo "nginx reload failed - showing status and logs";
+          systemctl status nginx --no-pager | cat || true;
+          journalctl -u nginx --no-pager -n 100 | cat || true;
+          exit 1;
+        fi
+
+        # Health check
+        echo "🏥 Running health check..."
+        sleep 5
+        curl -f https://crysgarage.studio || echo "Main site health check failed but deployment completed"
+
+        echo "✅ Deployment completed at $(date)"
+        echo "🌐 Website should now be accessible at https://crysgarage.studio"
         EOF
       shell: bash
       env:
