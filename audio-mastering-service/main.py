@@ -79,6 +79,36 @@ async def health_check():
         logger.error(f"Health check failed: {str(e)}")
         raise HTTPException(status_code=500, detail="Service unhealthy")
 
+@app.get("/tiers")
+async def get_tier_information():
+    """Get tier-specific processing information"""
+    try:
+        tier_info = ml_engine.get_tier_information()
+        return {
+            "status": "success",
+            "tiers": tier_info,
+            "timestamp": datetime.utcnow().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to get tier information: {e}")
+        raise HTTPException(status_code=500, detail="Failed to get tier information")
+
+@app.get("/genres")
+async def get_genre_information():
+    """Get genre-specific processing information"""
+    try:
+        genre_info = ml_engine.get_genre_information()
+        return {
+            "status": "success",
+            "genres": genre_info,
+            "timestamp": datetime.utcnow().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to get genre information: {e}")
+        raise HTTPException(status_code=500, detail="Failed to get genre information")
+
 @app.post("/master", response_model=MasteringResponse)
 async def master_audio(request: MasteringRequest, background_tasks: BackgroundTasks):
     """
@@ -143,6 +173,63 @@ async def master_audio(request: MasteringRequest, background_tasks: BackgroundTa
     except Exception as e:
         logger.error(f"Mastering failed: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Mastering failed: {str(e)}")
+
+@app.post("/preview")
+async def preview_genre_effects(request: MasteringRequest):
+    """
+    Real-time preview endpoint for genre effects
+    Applies genre-specific processing to audio for live preview
+    """
+    try:
+        logger.info(f"Starting genre preview for genre: {request.genre}, tier: {request.tier}")
+        
+        # Validate request
+        if not request.file_url:
+            raise HTTPException(status_code=400, detail="file_url is required")
+        
+        # Download input file
+        logger.info(f"Downloading input file for preview: {request.file_url}")
+        input_file_path = await audio_processor.download_file(request.file_url)
+        
+        # Apply genre-specific effects for preview (faster processing)
+        logger.info(f"Applying genre preview effects for: {request.genre}")
+        preview_file_path = await ml_engine.preview_genre_effects(
+            input_file_path=input_file_path,
+            genre=request.genre,
+            tier=request.tier
+        )
+        
+        # Upload preview to storage
+        logger.info("Uploading preview file to storage")
+        preview_url = await storage_manager.upload_file(
+            file_path=preview_file_path,
+            user_id=request.user_id,
+            format="wav",
+            is_preview=True
+        )
+        
+        # Get audio metadata
+        metadata = await audio_processor.get_audio_metadata(preview_file_path)
+        
+        # Cleanup temporary files
+        import asyncio
+        asyncio.create_task(cleanup_temp_files([input_file_path, preview_file_path]))
+        
+        logger.info(f"Genre preview completed for genre: {request.genre}")
+        
+        return {
+            "status": "success",
+            "preview_url": preview_url,
+            "genre": request.genre,
+            "tier": request.tier,
+            "duration": metadata.get("duration", 0),
+            "format": "wav",
+            "timestamp": datetime.utcnow().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Genre preview failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Preview failed: {str(e)}")
 
 @app.get("/formats")
 async def get_supported_formats():

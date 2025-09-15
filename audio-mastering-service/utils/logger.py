@@ -51,3 +51,5 @@ def setup_logger(name: str, level: str = "INFO") -> logging.Logger:
     logger.addHandler(file_handler)
     
     return logger
+
+

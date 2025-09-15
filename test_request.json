@@ -1,0 +1,9 @@
+{
+  "user_id": 123,
+  "file_url": "http://209.74.80.162:8003/test_audio.wav",
+  "target_format": "WAV",
+  "target_sample_rate": 44100,
+  "tier": "Pro",
+  "genre": "Hip-Hop",
+  "target_lufs": -8
+}

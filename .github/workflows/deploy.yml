@@ -94,6 +94,15 @@ jobs:
           # Frontend is already built in dist/ and will be served by Nginx
           # from /var/www/crysgarage-deploy/crysgarage-frontend/dist/
           echo "✅ Frontend built successfully - served from current directory"
+
+          # Cache-bust: ensure dist/index.html points to latest hashed assets with version query
+          echo "🧹 Applying cache-busting to dist/index.html"
+          JS_FILE=$(ls -1 dist/assets/index-*.js | sort | tail -n 1)
+          CSS_FILE=$(ls -1 dist/assets/index-*.css | sort | tail -n 1)
+          echo "Using JS_FILE=${JS_FILE} CSS_FILE=${CSS_FILE}"
+          sed -i "s#\(/assets/index-.*\.js\)#/${JS_FILE}?v=${GITHUB_RUN_NUMBER}#" dist/index.html
+          sed -i "s#\(/assets/index-.*\.css\)#/${CSS_FILE}?v=${GITHUB_RUN_NUMBER}#" dist/index.html
+          touch dist/index.html
           
           # Set proper permissions for frontend
           chown -R nginx:nginx /var/www/crysgarage-deploy/crysgarage-frontend/dist

@@ -67,6 +67,106 @@ Route::get('/python-service/health', function() {
     }
 });
 
+// Python Microservice Proxy Routes
+Route::prefix('python')->group(function () {
+    // Health check
+    Route::get('/health', function() {
+        try {
+            $pythonServiceUrl = env('PYTHON_SERVICE_URL', 'http://localhost:8002');
+            $response = \Illuminate\Support\Facades\Http::timeout(10)->get("{$pythonServiceUrl}/health");
+            
+            if ($response->successful()) {
+                return response()->json($response->json());
+            } else {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Python microservice is not responding',
+                    'status_code' => $response->status()
+                ], 500);
+            }
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to connect to Python microservice',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    });
+
+    // Get tier information
+    Route::get('/tiers', function() {
+        try {
+            $pythonServiceUrl = env('PYTHON_SERVICE_URL', 'http://localhost:8002');
+            $response = \Illuminate\Support\Facades\Http::timeout(10)->get("{$pythonServiceUrl}/tiers");
+            
+            if ($response->successful()) {
+                return response()->json($response->json());
+            } else {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Failed to get tier information',
+                    'status_code' => $response->status()
+                ], 500);
+            }
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to connect to Python microservice',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    });
+
+    // Get genre information
+    Route::get('/genres', function() {
+        try {
+            $pythonServiceUrl = env('PYTHON_SERVICE_URL', 'http://localhost:8002');
+            $response = \Illuminate\Support\Facades\Http::timeout(10)->get("{$pythonServiceUrl}/genres");
+            
+            if ($response->successful()) {
+                return response()->json($response->json());
+            } else {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Failed to get genre information',
+                    'status_code' => $response->status()
+                ], 500);
+            }
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to connect to Python microservice',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    });
+
+    // Process audio
+    Route::post('/master', function(Request $request) {
+        try {
+            $pythonServiceUrl = env('PYTHON_SERVICE_URL', 'http://localhost:8002');
+            $response = \Illuminate\Support\Facades\Http::timeout(300)->post("{$pythonServiceUrl}/master", $request->all());
+            
+            if ($response->successful()) {
+                return response()->json($response->json());
+            } else {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Failed to process audio',
+                    'status_code' => $response->status(),
+                    'error' => $response->body()
+                ], 500);
+            }
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to connect to Python microservice',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    });
+});
+
 // Public routes (no authentication required)
 Route::post('/upload-audio', [AudioController::class, 'uploadAudio']);
 Route::post('/process-audio', [AudioController::class, 'processAudio']);

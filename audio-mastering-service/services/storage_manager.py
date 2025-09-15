@@ -81,7 +81,8 @@ class StorageManager:
         file_path: str,
         user_id: int,
         format: str,
-        metadata: Optional[Dict[str, Any]] = None
+        metadata: Optional[Dict[str, Any]] = None,
+        is_preview: bool = False
     ) -> str:
         """
         Upload file to storage
@@ -91,15 +92,16 @@ class StorageManager:
             user_id: User ID
             format: Audio format
             metadata: Additional metadata
+            is_preview: Whether this is a preview file
             
         Returns:
             str: URL of uploaded file
         """
         try:
-            logger.info(f"Uploading file: {file_path} for user {user_id}")
+            logger.info(f"Uploading file: {file_path} for user {user_id} (preview: {is_preview})")
             
             # Generate unique filename
-            filename = self._generate_filename(user_id, format)
+            filename = self._generate_filename(user_id, format, is_preview)
             
             if self.storage_type == 's3':
                 url = await self._upload_to_s3(file_path, filename, metadata)
@@ -113,11 +115,12 @@ class StorageManager:
             logger.error(f"File upload failed: {e}")
             raise
     
-    def _generate_filename(self, user_id: int, format: str) -> str:
+    def _generate_filename(self, user_id: int, format: str, is_preview: bool = False) -> str:
         """Generate unique filename"""
         timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
         random_suffix = hashlib.md5(f"{user_id}_{timestamp}".encode()).hexdigest()[:8]
-        return f"user_{user_id}_{timestamp}_{random_suffix}.{format.lower()}"
+        prefix = "preview" if is_preview else "mastered"
+        return f"{prefix}_user_{user_id}_{timestamp}_{random_suffix}.{format.lower()}"
     
     async def _upload_to_s3(self, file_path: str, filename: str, metadata: Optional[Dict[str, Any]] = None) -> str:
         """Upload file to S3"""
@@ -386,3 +389,4 @@ class StorageManager:
             return stat.f_bavail * stat.f_frsize
         except:
             return 0
+

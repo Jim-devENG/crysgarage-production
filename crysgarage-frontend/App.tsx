@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { AuthenticationProvider, useAuth } from './contexts/AuthenticationContext';
 import { LandingPage } from './components/LandingPage';
 import { FreeTierDashboard } from './components/FreeTier';
+import FreeTierDashboardPython from './components/FreeTier/FreeTierDashboardPython';
 import ProfessionalTierDashboard from './components/ProfessionalTierDashboard';
 import AdvancedTierDashboard from './components/AdvancedTierDashboard/index';
 import { Header } from './components/Header';
@@ -187,7 +188,7 @@ function AppContent() {
         )}
 
         {currentPage === 'dashboard' && (
-          <FreeTierDashboard 
+          <FreeTierDashboardPython 
             onDownloadAttempt={handleDownloadAttempt}
           />
         )}

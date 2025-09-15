@@ -1,22 +1,50 @@
-Write-Host "Starting fast frontend deployment..." -ForegroundColor Green
+# Simple deployment script - one password entry
+param(
+    [string]$VPS_HOST = "209.74.80.162",
+    [string]$VPS_USER = "root"
+)
 
-$LOCAL_BUILD_PATH = "crysgarage-frontend/dist"
+Write-Host "🚀 DEPLOYING CRYS GARAGE WEBSITE" -ForegroundColor Green
+Write-Host "This will only ask for password once..." -ForegroundColor Yellow
 
-if (-not (Test-Path $LOCAL_BUILD_PATH)) {
-    Write-Host "Build directory not found. Please run 'npm run build' first." -ForegroundColor Red
-    exit 1
+# Create a simple deployment command
+$deployCommand = @"
+# Deploy Crys Garage website
+echo "Deploying Crys Garage website..."
+
+# Backup existing files
+mkdir -p /var/www/html/backup
+cp -r /var/www/html/* /var/www/html/backup/ 2>/dev/null || true
+
+# Create clean web directory
+rm -rf /var/www/html/*
+mkdir -p /var/www/html
+
+echo "Website deployment completed!"
+echo "Server should now be working properly."
+"@
+
+# Execute the deployment
+ssh -o StrictHostKeyChecking=no $VPS_USER@$VPS_HOST $deployCommand
+
+# Copy the index.html file
+Write-Host "Copying website files..." -ForegroundColor Yellow
+scp -o StrictHostKeyChecking=no index.html $VPS_USER@$VPS_HOST:/var/www/html/
+
+# Set permissions
+ssh -o StrictHostKeyChecking=no $VPS_USER@$VPS_HOST "chown -R nginx:nginx /var/www/html && chmod -R 755 /var/www/html"
+
+Write-Host "✅ DEPLOYMENT COMPLETED!" -ForegroundColor Green
+Write-Host "Testing website..." -ForegroundColor Yellow
+
+# Test the website
+try {
+    $response = Invoke-WebRequest -Uri "http://crysgarage.studio" -TimeoutSec 10
+    Write-Host "✅ Website is working: $($response.StatusCode)" -ForegroundColor Green
+    Write-Host "🎉 Crys Garage is back online!" -ForegroundColor Green
+} catch {
+    Write-Host "❌ Website test failed: $($_.Exception.Message)" -ForegroundColor Red
+    Write-Host "The files have been deployed, but there might be a server configuration issue." -ForegroundColor Yellow
 }
 
-Write-Host "Deploying frontend files..." -ForegroundColor Yellow
-
-scp -o BatchMode=yes -o StrictHostKeyChecking=no -r "$LOCAL_BUILD_PATH/*" "root@209.74.80.162:/var/www/html/"
-
-if ($LASTEXITCODE -eq 0) {
-    Write-Host "Frontend deployment completed successfully!" -ForegroundColor Green
-    Write-Host "Your updated site should be live at: https://crysgarage.studio" -ForegroundColor Cyan
-    Write-Host "Please test the authentication flow on the live server." -ForegroundColor Yellow
-} else {
-    Write-Host "Deployment failed. Please check your SSH key setup." -ForegroundColor Red
-}
-
-Write-Host "Deployment script completed!" -ForegroundColor Green
+Write-Host "🌐 Visit: http://crysgarage.studio" -ForegroundColor Cyan

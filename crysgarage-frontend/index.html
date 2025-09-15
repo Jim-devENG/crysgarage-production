@@ -78,6 +78,13 @@
         background-color: #1a1a1a !important;
       }
     </style>
+    <script>
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(function(regs){
+          regs.forEach(function(reg){ reg.unregister(); });
+        }).catch(function(){});
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>
