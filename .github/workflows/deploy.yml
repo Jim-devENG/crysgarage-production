@@ -71,7 +71,7 @@ jobs:
     
     - name: Deploy to VPS
       run: |
-          echo "🚀 Starting deployment to VPS... (Test deployment)"
+          echo "🚀 Starting deployment to VPS... (Test deployment v2)"
         ssh -o ConnectTimeout=30 -o StrictHostKeyChecking=no ${{ secrets.VPS_USER }}@209.74.80.162 << 'EOF'
           # Set proper PATH
           export PATH="/usr/local/ruby-3.1.0/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
@@ -84,6 +84,7 @@ jobs:
           
           # Build frontend in deployment directory
           cd crysgarage-frontend
+          export VITE_PYTHON_SERVICE_URL="https://crysgarage.studio/api/python"
           npm ci
           npm run build
           
