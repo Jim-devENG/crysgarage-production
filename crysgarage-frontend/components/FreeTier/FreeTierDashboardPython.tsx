@@ -893,7 +893,7 @@ const FreeTierDashboardPython: React.FC<FreeTierDashboardProps> = ({ onDownloadA
                       className="bg-crys-charcoal border border-crys-graphite rounded px-3 py-2 text-crys-white"
                     >
                       <option value="mp3">MP3 (320 kbps, 44.1 kHz)</option>
-                      <option value="wav">WAV (32-bit, 44.1 kHz)</option>
+                      <option value="wav">WAV (24-bit, 44.1 kHz)</option>
                     </select>
                   </div>
                   <button

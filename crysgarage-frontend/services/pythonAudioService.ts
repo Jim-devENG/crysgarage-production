@@ -245,7 +245,7 @@ class PythonAudioService {
           file_url,
           target_lufs: -14.0,
           mp3_bitrate_kbps: format === 'mp3' ? 320 : undefined,
-          wav_bit_depth: format === 'wav' ? 32 : undefined,
+          wav_bit_depth: format === 'wav' ? 24 : undefined,
         };
 
         console.log('Processing with Python microservice...');
@@ -267,7 +267,7 @@ class PythonAudioService {
         if (format === 'mp3') {
           formData.append('mp3_bitrate_kbps', '320');
         } else if (format === 'wav') {
-          formData.append('wav_bit_depth', '32');
+          formData.append('wav_bit_depth', '24');
         }
 
         console.log('Uploading file directly to Python for mastering (prod)...');
