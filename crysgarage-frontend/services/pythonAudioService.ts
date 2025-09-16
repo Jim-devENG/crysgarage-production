@@ -237,36 +237,34 @@ class PythonAudioService {
         const result = await this.processAudio(masteringRequest);
         return result;
       } else {
-        // Production path: upload directly to Python service for full mastering (bypass Laravel)
+        // Production path: upload to Laravel, then call Python /master via nginx proxy
         const formData = new FormData();
         formData.append('audio', file);
         formData.append('tier', tier);
         formData.append('genre', genre);
         formData.append('user_id', userId);
-        formData.append('is_preview', 'false');
 
-        console.log('Uploading file directly to Python for mastering...');
-        const resp = await axios.post(`${this.baseURL}/upload-file`, formData, {
-          timeout: 300000,
-        });
+        console.log('Uploading file to Laravel backend (prod path)...');
+        const uploadResponse = await axios.post(
+          `/api/upload-audio`,
+          formData
+        );
 
-        const masteredUrl: string = resp.data?.mastered_url || resp.data?.url;
-        if (!masteredUrl) {
-          throw new Error('Python service did not return mastered_url');
-        }
+        const { file_url } = uploadResponse.data;
+        console.log('File uploaded successfully:', file_url);
 
-        // Construct a minimal MasteringResponse compatible object
-        const lower = masteredUrl.toLowerCase();
-        const resolvedFormat = lower.endsWith('.wav') ? 'WAV' : lower.endsWith('.mp3') ? 'MP3' : (format.toUpperCase());
-        const result: MasteringResponse = {
-          status: 'done',
-          url: masteredUrl,
-          lufs: -8, // backend targets -8 LUFS
-          format: resolvedFormat,
-          duration: 0,
-          processing_time: 0,
-          // Optional fields may be missing; UI tolerates undefined
-        } as any;
+        const masteringRequest: MasteringRequest = {
+          user_id: userId,
+          tier: tier.charAt(0).toUpperCase() + tier.slice(1) as any,
+          genre: genre as any,
+          target_format: (format.toUpperCase()) as any,
+          target_sample_rate: 44100 as any,
+          file_url,
+          target_lufs: -14.0,
+        };
+
+        console.log('Processing with Python microservice via nginx proxy...');
+        const result = await this.processAudio(masteringRequest);
         return result;
       }
     } catch (error: any) {
