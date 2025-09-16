@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Routing\Controller as BaseController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
@@ -10,7 +11,7 @@ use App\Models\Audio;
 use App\Models\User;
 use App\Jobs\ProcessAudioJob;
 
-class AudioController extends Controller
+class AudioController extends BaseController
 {
     public function __construct()
     {
@@ -23,10 +24,21 @@ class AudioController extends Controller
     public function uploadAudio(Request $request)
     {
         try {
+            Log::info('Upload request received', [
+                'has_audio' => $request->hasFile('audio'),
+                'tier' => $request->input('tier'),
+                'genre' => $request->input('genre'),
+                'user_id' => $request->input('user_id'),
+                'all_input' => $request->all(),
+                'files' => $request->allFiles(),
+                'content_type' => $request->header('Content-Type'),
+                'content_length' => $request->header('Content-Length')
+            ]);
+            
             $request->validate([
-                'audio' => 'required|file|mimes:wav,mp3,flac,aiff|max:500000', // 500MB max
+                'audio' => 'required|file|mimes:wav,mp3,flac,aiff|max:102400', // 100MB max (in KB)
                 'tier' => 'required|in:free,professional,advanced,one_on_one',
-                'genre' => 'required|string|max:50',
+                'genre' => 'nullable|string|max:50',
             ]);
 
             $user = auth()->user();
@@ -68,9 +80,9 @@ class AudioController extends Controller
                 ], 400);
             }
 
-            // Store the file
+            // Store the file to public disk so it is web-accessible via /storage
             $filename = Str::uuid() . '.' . $fileExtension;
-            $path = $file->storeAs('uploads', $filename, 'local');
+            $path = $file->storeAs('uploads', $filename, 'public');
 
             // Create audio record
             $audio = Audio::create([
@@ -84,10 +96,14 @@ class AudioController extends Controller
                 'status' => Audio::STATUS_UPLOADED,
             ]);
 
+            // Build a public URL for Python service to fetch
+            $fileUrl = url(\Illuminate\Support\Facades\Storage::url($path));
+
             return response()->json([
                 'status' => 'success',
                 'message' => 'Audio uploaded successfully',
                 'audio_id' => $audio->id,
+                'file_url' => $fileUrl,
                 'estimated_processing_time' => $this->getEstimatedProcessingTime($tier)
             ]);
 
@@ -380,5 +396,33 @@ class AudioController extends Controller
         }
         
         return 0;
+    }
+
+    /**
+     * Direct download for mastered files by filename (streams from public storage)
+     */
+    public function downloadFile(Request $request)
+    {
+        try {
+            $filename = $request->query('filename');
+            if (!$filename) {
+                return response()->json(['status' => 'error', 'message' => 'filename is required'], 400);
+            }
+
+            $relative = 'mastered/' . basename($filename);
+            if (!Storage::disk('public')->exists($relative)) {
+                return response()->json(['status' => 'error', 'message' => 'file not found'], 404);
+            }
+
+            $absolute = Storage::disk('public')->path($relative);
+            $mime = mime_content_type($absolute) ?: 'application/octet-stream';
+            return response()->download($absolute, basename($filename), [
+                'Content-Type' => $mime,
+                'Cache-Control' => 'no-cache'
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('downloadFile failed', ['error' => $e->getMessage()]);
+            return response()->json(['status' => 'error', 'message' => 'download failed'], 500);
+        }
     }
 }

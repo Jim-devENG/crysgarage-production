@@ -31,7 +31,7 @@ class StorageManager:
     
     def __init__(self):
         self.storage_type = os.getenv('STORAGE_TYPE', 'local')  # 'local' or 's3'
-        self.local_storage_path = os.getenv('LOCAL_STORAGE_PATH', '/tmp/mastered_audio')
+        self.local_storage_path = os.getenv('LOCAL_STORAGE_PATH', '../crysgarage-backend-fresh/storage/app/public/mastered')
         self.s3_bucket = os.getenv('S3_BUCKET', 'crysgarage-mastered-audio')
         self.s3_region = os.getenv('S3_REGION', 'us-east-1')
         self.base_url = os.getenv('BASE_URL', 'http://localhost:8000')
@@ -159,12 +159,11 @@ class StorageManager:
     async def _upload_to_local(self, file_path: str, filename: str, metadata: Optional[Dict[str, Any]] = None) -> str:
         """Upload file to local storage"""
         try:
-            # Create user directory
-            user_dir = os.path.join(self.local_storage_path, f"user_{filename.split('_')[1]}")
-            os.makedirs(user_dir, exist_ok=True)
+            # Create mastered directory (Laravel storage structure)
+            os.makedirs(self.local_storage_path, exist_ok=True)
             
             # Destination path
-            dest_path = os.path.join(user_dir, filename)
+            dest_path = os.path.join(self.local_storage_path, filename)
             
             # Copy file
             async with aiofiles.open(file_path, 'rb') as src:
@@ -179,8 +178,8 @@ class StorageManager:
                     import json
                     await f.write(json.dumps(metadata, indent=2))
             
-            # Generate URL
-            url = f"{self.base_url}/files/{filename.split('_')[1]}/{filename}"
+            # Generate URL using Laravel's storage format
+            url = f"{self.base_url}/storage/mastered/{filename}"
             return url
             
         except Exception as e:

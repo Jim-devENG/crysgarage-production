@@ -47,7 +47,8 @@ class FFmpegConverter:
         input_path: str,
         output_format: str,
         sample_rate: int,
-        bit_depth: Optional[int] = None
+        bit_depth: Optional[int] = None,
+        bitrate_kbps: Optional[int] = None
     ) -> str:
         """
         Convert audio file to target format and sample rate
@@ -81,7 +82,7 @@ class FFmpegConverter:
             
             # Build FFmpeg command
             cmd = self._build_ffmpeg_command(
-                input_path, output_path, output_format, sample_rate, bit_depth
+                input_path, output_path, output_format, sample_rate, bit_depth, bitrate_kbps
             )
             
             # Execute conversion
@@ -109,7 +110,8 @@ class FFmpegConverter:
         output_path: str,
         output_format: str,
         sample_rate: int,
-        bit_depth: Optional[int] = None
+        bit_depth: Optional[int] = None,
+        bitrate_kbps: Optional[int] = None
     ) -> list:
         """Build FFmpeg command for audio conversion"""
         
@@ -138,8 +140,7 @@ class FFmpegConverter:
         elif output_format == 'MP3':
             cmd.extend([
                 '-acodec', 'libmp3lame',
-                '-b:a', '320k',  # High quality MP3
-                '-q:a', '0'  # Best quality
+                '-b:a', f"{(bitrate_kbps or 320)}k",
             ])
         
         elif output_format == 'FLAC':
@@ -199,6 +200,30 @@ class FFmpegConverter:
             raise Exception("Audio conversion timed out")
         except Exception as e:
             logger.error(f"FFmpeg execution failed: {e}")
+            raise
+
+    async def apply_gain(
+        self,
+        input_path: str,
+        output_format: str,
+        sample_rate: int,
+        gain_db: float
+    ) -> str:
+        """Apply a simple gain (in dB) to the audio using ffmpeg volume filter."""
+        try:
+            base_name = Path(input_path).stem
+            out_path = os.path.join(self.temp_dir, f"{base_name}_gain.{output_format.lower()}")
+            cmd = [
+                'ffmpeg', '-y',
+                '-i', input_path,
+                '-filter:a', f"volume={gain_db}dB",
+                '-ar', str(sample_rate),
+                out_path
+            ]
+            await self._execute_ffmpeg(cmd)
+            return out_path
+        except Exception as e:
+            logger.error(f"FFmpeg gain apply failed: {e}")
             raise
     
     async def get_audio_info(self, file_path: str) -> Dict[str, Any]:

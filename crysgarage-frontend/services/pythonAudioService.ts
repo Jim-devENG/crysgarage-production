@@ -6,7 +6,10 @@
 import axios from 'axios';
 
 // Hardcode HTTPS proxy URL to avoid Mixed Content in production builds
-const PYTHON_SERVICE_URL = 'https://crysgarage.studio/api/python';
+const PYTHON_SERVICE_URL = 'http://localhost:8002';
+const LARAVEL_API_BASE = (typeof window !== 'undefined' && window.location.host.includes('localhost:5173'))
+  ? 'http://localhost:8000'
+  : '';
 
 export interface TierInfo {
   processing_quality: string;
@@ -61,8 +64,11 @@ export interface MasteringResponse {
   format: string;
   duration: number;
   processing_time: number;
-  tier_used: string;
-  genre_used: string;
+  sample_rate?: number;
+  file_size?: number;
+  // ML extras
+  ml_summary?: Array<{ area: string; action: string; reason?: string }>;
+  applied_params?: Record<string, any>;
 }
 
 export interface IndustryPresetsResponse {
@@ -75,6 +81,38 @@ class PythonAudioService {
 
   constructor() {
     this.baseURL = PYTHON_SERVICE_URL;
+  }
+  async analyzeOriginal(file: File, userId: string): Promise<{ lufs?: number; duration?: number; sample_rate?: number; file_size?: number }> {
+    try {
+      const formData = new FormData();
+      formData.append('audio', file);
+      formData.append('user_id', userId);
+      const response = await axios.post(`${this.baseURL}/analyze-file`, formData, {
+        timeout: 60000,
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      return response.data.metadata || {};
+    } catch (e) {
+      console.error('Analyze original failed:', e);
+      return {};
+    }
+  }
+
+  async analyzeML(file: File, userId: string, genre: string): Promise<{ ml_summary?: Array<{ area: string; action: string; reason?: string }>; predicted_params?: Record<string, any> }> {
+    try {
+      const formData = new FormData();
+      formData.append('audio', file);
+      formData.append('user_id', userId);
+      formData.append('genre', genre || 'Auto');
+      const response = await axios.post(`${this.baseURL}/analyze-ml`, formData, {
+        timeout: 60000,
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      return { ml_summary: response.data.ml_summary, predicted_params: response.data.predicted_params };
+    } catch (e) {
+      console.error('Analyze ML failed:', e);
+      return {} as any;
+    }
   }
 
   /**
@@ -165,7 +203,8 @@ class PythonAudioService {
     file: File,
     tier: 'free' | 'professional' | 'advanced' | 'one_on_one',
     genre: string,
-    userId: string
+    userId: string,
+    format: 'mp3' | 'wav' = 'mp3'
   ): Promise<MasteringResponse> {
     try {
       // Step 1: Upload file to Laravel backend
@@ -176,20 +215,21 @@ class PythonAudioService {
       formData.append('user_id', userId);
 
       console.log('Uploading file to Laravel backend...');
-      const uploadResponse = await axios.post('/api/upload-audio', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
+      const uploadResponse = await axios.post(
+        `${LARAVEL_API_BASE}/api/upload-audio`,
+        formData
+      );
 
       const { file_url, file_id } = uploadResponse.data;
       console.log('File uploaded successfully:', file_url);
 
       // Step 2: Process with Python microservice
       const masteringRequest: MasteringRequest = {
-        user_id: userId,
-        tier,
-        genre,
+        user_id: userId, // Keep as string for frontend interface
+        tier: tier.charAt(0).toUpperCase() + tier.slice(1) as any, // Capitalize first letter to match Python enum
+        genre: genre as any, // Cast to match Python enum
+        target_format: (format.toUpperCase()) as any,
+        target_sample_rate: 44100 as any, // Default sample rate
         file_url,
         target_lufs: -14.0, // Default LUFS target
       };
@@ -329,37 +369,23 @@ class PythonAudioService {
     userId: string
   ): Promise<{ preview_url: string; genre: string; duration: number }> {
     try {
-      // Step 1: Upload file to Laravel backend
+      // Send file directly to Python service for preview
       const formData = new FormData();
       formData.append('audio', file);
       formData.append('tier', tier);
       formData.append('genre', genre);
       formData.append('user_id', userId);
+      formData.append('is_preview', 'true');
 
-      console.log('Uploading file for genre preview...');
-      const uploadResponse = await axios.post('/api/upload-audio', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
-
-      const { file_url } = uploadResponse.data;
-      console.log('File uploaded for preview:', file_url);
-
-      // Step 2: Generate preview with Python microservice
-      const previewRequest: MasteringRequest = {
-        user_id: userId,
-        tier,
-        genre,
-        file_url,
-        target_lufs: -14.0,
-      };
-
-      console.log('Generating genre preview...');
-      const response = await axios.post(`${this.baseURL}/preview`, previewRequest, {
+      console.log('Generating genre preview directly with Python...');
+      console.log('File object:', file);
+      console.log('File size:', file.size);
+      console.log('File type:', file.type);
+      
+      const response = await axios.post(`${this.baseURL}/upload-file`, formData, {
         timeout: 60000, // 1 minute timeout for preview
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'multipart/form-data',
         },
       });
 
@@ -398,3 +424,4 @@ class PythonAudioService {
 }
 
 export const pythonAudioService = new PythonAudioService();
+

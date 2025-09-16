@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Upload, Play, Pause, Download, Activity, Music, ArrowLeft, CreditCard, DollarSign, Loader2 } from 'lucide-react';
 import DownloadStep from './DownloadStep';
+import ComparisonPlayer from './ComparisonPlayer';
 import { creditsAPI } from '../../services/api';
 import { pythonAudioService, TierInfo, GenreInfo } from '../../services/pythonAudioService';
 import { useAuth } from '../../contexts/AuthenticationContext';
@@ -38,6 +39,20 @@ interface FreeTierDashboardProps {
 const FreeTierDashboardPython: React.FC<FreeTierDashboardProps> = ({ onDownloadAttempt }) => {
   const { user } = useAuth();
   
+  // Debug: Log user on component mount
+  useEffect(() => {
+    console.log('FreeTierDashboardPython - user from useAuth:', user);
+  }, [user]);
+  
+  // Fallback user for dev mode
+  const effectiveUser = user || {
+    id: 'dev-user',
+    name: 'Dev Mode User',
+    email: 'dev@local.test',
+    tier: 'free',
+    credits: Infinity
+  };
+  
   // States
   const [activeTab, setActiveTab] = useState<TabType>('upload');
   const [uploadedFile, setUploadedFile] = useState<AudioFile | null>(null);
@@ -53,6 +68,7 @@ const FreeTierDashboardPython: React.FC<FreeTierDashboardProps> = ({ onDownloadA
   const [availableGenres, setAvailableGenres] = useState<Genre[]>([]);
   const [tierInfo, setTierInfo] = useState<TierInfo | null>(null);
   const [isLoadingGenres, setIsLoadingGenres] = useState(false);
+  const [downloadFormat, setDownloadFormat] = useState<'mp3' | 'wav'>('mp3');
 
   // Audio refs
   const originalAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -60,94 +76,178 @@ const FreeTierDashboardPython: React.FC<FreeTierDashboardProps> = ({ onDownloadA
 
   // WebAudio preview chain
   const audioContextRef = useRef<AudioContext | null>(null);
-  const sourceNodeRef = useRef<MediaElementAudioSourceNode | null>(null);
-  const lowShelfRef = useRef<BiquadFilterNode | null>(null);
-  const lowMidRef = useRef<BiquadFilterNode | null>(null);
-  const midRef = useRef<BiquadFilterNode | null>(null);
-  const highMidRef = useRef<BiquadFilterNode | null>(null);
-  const highShelfRef = useRef<BiquadFilterNode | null>(null);
-  const compressorRef = useRef<DynamicsCompressorNode | null>(null);
-  const pannerRef = useRef<StereoPannerNode | null>(null);
+  // Two independent chains: original and mastered
+  const originalChainRef = useRef({
+    source: null as MediaElementAudioSourceNode | null,
+    lowShelf: null as BiquadFilterNode | null,
+    lowMid: null as BiquadFilterNode | null,
+    mid: null as BiquadFilterNode | null,
+    highMid: null as BiquadFilterNode | null,
+    highShelf: null as BiquadFilterNode | null,
+    compressor: null as DynamicsCompressorNode | null,
+    panner: null as StereoPannerNode | null,
+  });
+  const masteredChainRef = useRef({
+    source: null as MediaElementAudioSourceNode | null,
+    lowShelf: null as BiquadFilterNode | null,
+    lowMid: null as BiquadFilterNode | null,
+    mid: null as BiquadFilterNode | null,
+    highMid: null as BiquadFilterNode | null,
+    highShelf: null as BiquadFilterNode | null,
+    compressor: null as DynamicsCompressorNode | null,
+    panner: null as StereoPannerNode | null,
+  });
+  const presetCacheRef = useRef<Record<string, GenreInfo>>({});
+  
+  // Additional refs for instant effects
+  const sourceNodeRef = useRef<AudioBufferSourceNode | null>(null);
+  const gainNodeRef = useRef<GainNode | null>(null);
+  const eqNodeRef = useRef<BiquadFilterNode | null>(null);
+  const compressorNodeRef = useRef<DynamicsCompressorNode | null>(null);
 
-  const ensurePreviewGraph = (audioEl: HTMLAudioElement) => {
+  // Initialize audio context and source for instant effects
+  const initializeAudioForInstantEffects = (audioUrl: string) => {
+    try {
+      // Create audio context if it doesn't exist
+      if (!audioContextRef.current) {
+        audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+      }
+
+      // Create audio element for instant effects
+      const audioElement = new Audio(audioUrl);
+      audioElement.crossOrigin = 'anonymous';
+      
+      // Create media element source
+      const source = audioContextRef.current.createMediaElementSource(audioElement);
+      
+      // Create gain node
+      const gain = audioContextRef.current.createGain();
+      
+      // Connect source to gain to destination
+      source.connect(gain);
+      gain.connect(audioContextRef.current.destination);
+      
+      // Store references
+      sourceNodeRef.current = source as any; // Type assertion for compatibility
+      gainNodeRef.current = gain;
+      
+      // Store audio element reference
+      masteredAudioRef.current = audioElement;
+      
+      console.log('Audio context initialized for instant effects');
+      
+    } catch (error) {
+      console.error('Failed to initialize audio for instant effects:', error);
+    }
+  };
+
+  const ensurePreviewGraph = (audioEl: HTMLAudioElement, target: 'original' | 'mastered') => {
     if (!audioContextRef.current) {
       audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
     }
     const ctx = audioContextRef.current;
-    if (!sourceNodeRef.current) {
-      sourceNodeRef.current = ctx.createMediaElementSource(audioEl);
-      // Build chain
-      lowShelfRef.current = ctx.createBiquadFilter();
-      lowShelfRef.current.type = 'lowshelf';
-      lowMidRef.current = ctx.createBiquadFilter();
-      lowMidRef.current.type = 'peaking';
-      midRef.current = ctx.createBiquadFilter();
-      midRef.current.type = 'peaking';
-      highMidRef.current = ctx.createBiquadFilter();
-      highMidRef.current.type = 'peaking';
-      highShelfRef.current = ctx.createBiquadFilter();
-      highShelfRef.current.type = 'highshelf';
-      compressorRef.current = ctx.createDynamicsCompressor();
-      pannerRef.current = ctx.createStereoPanner();
+    const chain = target === 'original' ? originalChainRef.current : masteredChainRef.current;
+    if (!chain.source) {
+      chain.source = ctx.createMediaElementSource(audioEl);
+      chain.lowShelf = ctx.createBiquadFilter();
+      chain.lowShelf.type = 'lowshelf';
+      chain.lowMid = ctx.createBiquadFilter();
+      chain.lowMid.type = 'peaking';
+      chain.mid = ctx.createBiquadFilter();
+      chain.mid.type = 'peaking';
+      chain.highMid = ctx.createBiquadFilter();
+      chain.highMid.type = 'peaking';
+      chain.highShelf = ctx.createBiquadFilter();
+      chain.highShelf.type = 'highshelf';
+      chain.compressor = ctx.createDynamicsCompressor();
+      chain.panner = ctx.createStereoPanner();
 
-      // Connect: source -> filters -> compressor -> panner -> destination
-      sourceNodeRef.current
-        .connect(lowShelfRef.current)
-        .connect(lowMidRef.current)
-        .connect(midRef.current)
-        .connect(highMidRef.current)
-        .connect(highShelfRef.current)
-        .connect(compressorRef.current)
-        .connect(pannerRef.current)
+      chain.source
+        .connect(chain.lowShelf)
+        .connect(chain.lowMid)
+        .connect(chain.mid)
+        .connect(chain.highMid)
+        .connect(chain.highShelf)
+        .connect(chain.compressor)
+        .connect(chain.panner)
         .connect(ctx.destination);
     }
   };
 
+  const rampParam = (param: AudioParam, value: number, ctx: AudioContext, time = 0.08) => {
+    try {
+      const now = ctx.currentTime;
+      param.cancelScheduledValues(now);
+      param.linearRampToValueAtTime(value, now + time);
+    } catch {}
+  };
+
   const applyGenrePreviewSettings = async (genreName: string) => {
     try {
-      // Prefer industry presets from backend
-      const info = await pythonAudioService.getPresetForGenre(genreName);
+      // Fetch once per session and cache
+      const lower = genreName.toLowerCase();
+      let info = presetCacheRef.current[lower];
+      if (!info) {
+        const all = await pythonAudioService.getIndustryPresets();
+        // cache
+        presetCacheRef.current = Object.keys(all).reduce((acc, k) => {
+          acc[k.toLowerCase()] = all[k];
+          return acc;
+        }, {} as Record<string, GenreInfo>);
+        info = presetCacheRef.current[lower];
+        if (!info) return; // strict: no fallback
+      }
       const ctx = audioContextRef.current;
       if (!ctx) return;
       // Ensure AudioContext is running (autoplay policies may suspend it)
       if (ctx.state !== 'running') {
         try { await ctx.resume(); } catch {}
       }
-      // Set filter params (clamp and defaults)
-      const { eq_curve, compression, stereo_width, target_lufs } = info;
-      if (lowShelfRef.current) {
-        lowShelfRef.current.frequency.value = eq_curve.low_shelf.freq || 120;
-        lowShelfRef.current.gain.value = eq_curve.low_shelf.gain || 0;
+      const applyToChain = (chain: typeof originalChainRef.current) => {
+        const { eq_curve, compression, stereo_width } = info as GenreInfo;
+        if (chain.lowShelf) {
+          rampParam(chain.lowShelf.frequency, eq_curve.low_shelf.freq || 120, ctx);
+          rampParam(chain.lowShelf.gain, eq_curve.low_shelf.gain || 0, ctx);
+        }
+        if (chain.lowMid) {
+          rampParam(chain.lowMid.frequency, eq_curve.low_mid.freq || 250, ctx);
+          try { chain.lowMid.Q.value = 1; } catch {}
+          rampParam(chain.lowMid.gain, eq_curve.low_mid.gain || 0, ctx);
+        }
+        if (chain.mid) {
+          rampParam(chain.mid.frequency, eq_curve.mid.freq || 1000, ctx);
+          try { chain.mid.Q.value = 1; } catch {}
+          rampParam(chain.mid.gain, eq_curve.mid.gain || 0, ctx);
+        }
+        if (chain.highMid) {
+          rampParam(chain.highMid.frequency, eq_curve.high_mid.freq || 3000, ctx);
+          try { chain.highMid.Q.value = 1; } catch {}
+          rampParam(chain.highMid.gain, eq_curve.high_mid.gain || 0, ctx);
+        }
+        if (chain.highShelf) {
+          rampParam(chain.highShelf.frequency, eq_curve.high_shelf.freq || 8000, ctx);
+          rampParam(chain.highShelf.gain, eq_curve.high_shelf.gain || 0, ctx);
+        }
+        if (chain.compressor) {
+          try { chain.compressor.ratio.value = Math.max(1, Math.min(20, (info as GenreInfo).compression.ratio || 2)); } catch {}
+          try { chain.compressor.threshold.value = Math.max(-100, Math.min(0, (info as GenreInfo).compression.threshold || -24)); } catch {}
+          try { chain.compressor.attack.value = Math.max(0.001, Math.min(1, ((info as GenreInfo).compression.attack || 0.01))); } catch {}
+          try { chain.compressor.release.value = Math.max(0.01, Math.min(2, ((info as GenreInfo).compression.release || 0.25))); } catch {}
+        }
+        if (chain.panner) {
+          const pan = Math.max(-1, Math.min(1, (((info as GenreInfo).stereo_width || 1) - 1) * 0.5));
+          rampParam(chain.panner.pan, pan, ctx);
+        }
+      };
+
+      // Apply to whichever is playing
+      if (originalAudioRef.current && !originalAudioRef.current.paused) {
+        ensurePreviewGraph(originalAudioRef.current, 'original');
+        applyToChain(originalChainRef.current);
       }
-      if (lowMidRef.current) {
-        lowMidRef.current.frequency.value = eq_curve.low_mid.freq || 250;
-        lowMidRef.current.Q.value = 1;
-        lowMidRef.current.gain.value = eq_curve.low_mid.gain || 0;
-      }
-      if (midRef.current) {
-        midRef.current.frequency.value = eq_curve.mid.freq || 1000;
-        midRef.current.Q.value = 1;
-        midRef.current.gain.value = eq_curve.mid.gain || 0;
-      }
-      if (highMidRef.current) {
-        highMidRef.current.frequency.value = eq_curve.high_mid.freq || 3000;
-        highMidRef.current.Q.value = 1;
-        highMidRef.current.gain.value = eq_curve.high_mid.gain || 0;
-      }
-      if (highShelfRef.current) {
-        highShelfRef.current.frequency.value = eq_curve.high_shelf.freq || 8000;
-        highShelfRef.current.gain.value = eq_curve.high_shelf.gain || 0;
-      }
-      if (compressorRef.current) {
-        compressorRef.current.ratio.value = Math.max(1, Math.min(20, compression.ratio || 2));
-        compressorRef.current.threshold.value = Math.max(-100, Math.min(0, compression.threshold || -24));
-        compressorRef.current.attack.value = Math.max(0.001, Math.min(1, (compression.attack || 0.01)));
-        compressorRef.current.release.value = Math.max(0.01, Math.min(2, (compression.release || 0.25)));
-      }
-      if (pannerRef.current) {
-        // Map stereo_width (0..2) to pan effect around 0 (this is a simplification)
-        const pan = Math.max(-1, Math.min(1, (stereo_width - 1) * 0.5));
-        pannerRef.current.pan.value = pan;
+      if (masteredAudioRef.current && !masteredAudioRef.current.paused) {
+        ensurePreviewGraph(masteredAudioRef.current, 'mastered');
+        applyToChain(masteredChainRef.current);
       }
     } catch (e) {
       console.error('Failed to apply genre preview settings:', e);
@@ -230,6 +330,23 @@ const FreeTierDashboardPython: React.FC<FreeTierDashboardProps> = ({ onDownloadA
       setActiveTab('processing');
       
       console.log('File uploaded successfully:', audioFile);
+
+      // Initialize audio context and create audio element for instant effects
+      initializeAudioForInstantEffects(audioFile.url);
+
+      // Analyze original on upload (async, fire-and-forget)
+      (async () => {
+        const meta = await pythonAudioService.analyzeOriginal(file, (effectiveUser as any).id || 'dev-user');
+        if (meta && typeof meta.lufs === 'number') {
+          setOriginalStats((prev) => ({
+            loudness: meta.lufs,
+            peak: prev?.peak ?? -0.2,
+            dynamicRange: prev?.dynamicRange ?? 12.5,
+            frequencyBalance: prev?.frequencyBalance ?? 0.8,
+            stereoWidth: prev?.stereoWidth ?? 1.0,
+          }));
+        }
+      })();
       
     } catch (error) {
       console.error('File upload failed:', error);
@@ -240,68 +357,186 @@ const FreeTierDashboardPython: React.FC<FreeTierDashboardProps> = ({ onDownloadA
   // Debounce timer ref for preview
   const previewDebounceRef = useRef<number | undefined>(undefined);
 
-  // Genre selection handler with real-time preview
+  // Genre selection handler with INSTANT Web Audio API effects
   const handleGenreSelect = (genre: Genre) => {
     setSelectedGenre(genre);
     console.log('Genre selected:', genre);
 
-    // Only run preview if we have an uploaded file
-    if (!uploadedFile) return;
+    // Only apply effects if we have an uploaded file and audio context
+    if (!uploadedFile || !audioContextRef.current) return;
 
-    // Debounce rapid clicks
-    if (previewDebounceRef.current) {
-      window.clearTimeout(previewDebounceRef.current);
-    }
-    previewDebounceRef.current = window.setTimeout(async () => {
-      try {
-        // If original is playing, apply preview to original element
-        if (originalAudioRef.current && !originalAudioRef.current.paused) {
-          ensurePreviewGraph(originalAudioRef.current);
-          await applyGenrePreviewSettings(genre.name);
-          return;
-        }
+    // Apply INSTANT genre effects using Web Audio API
+    applyInstantGenreEffects(genre);
+  };
 
-        // Keep current playback state and position for mastered element
-        const wasPlaying = isPlayingMastered;
-        const currentTime = masteredAudioRef.current ? masteredAudioRef.current.currentTime : 0;
+  // Play/pause handler for instant effects
+  const handlePlayPauseInstant = () => {
+    if (!masteredAudioRef.current) return;
 
-        const tier = 'free';
-        // Also fetch Python genre preview settings and apply WebAudio chain
-        await applyGenrePreviewSettings(genre.name);
-        // Optional: if backend preview URL is needed, uncomment below to swap audio src
-        // const preview = await pythonAudioService.generateGenrePreview(
-        //   uploadedFile.file,
-        //   genre.name,
-        //   tier,
-        //   user?.id || 'anonymous'
-        // );
-        // setMasteredAudioUrl(preview.preview_url);
-        // if (!masteredAudioRef.current) {
-        //   masteredAudioRef.current = new Audio(preview.preview_url);
-        //   masteredAudioRef.current.onended = () => setIsPlayingMastered(false);
-        // } else {
-        //   masteredAudioRef.current.src = preview.preview_url;
-        // }
-
-        // Restore time and playback
-        if (!Number.isNaN(currentTime) && currentTime > 0) {
-          try { masteredAudioRef.current.currentTime = currentTime; } catch {}
-        }
-        if (wasPlaying) {
-          masteredAudioRef.current.play().catch(() => {});
-          setIsPlayingMastered(true);
-        }
-      } catch (e: any) {
-        console.error('Real-time preview failed:', e);
-        // Do not surface as blocking error; keep UI responsive
+    try {
+      if (masteredAudioRef.current.paused) {
+        masteredAudioRef.current.play();
+        setIsPlayingMastered(true);
+        console.log('Playing instant effects audio');
+      } else {
+        masteredAudioRef.current.pause();
+        setIsPlayingMastered(false);
+        console.log('Paused instant effects audio');
       }
-    }, 250);
+    } catch (error) {
+      console.error('Play/pause failed:', error);
+    }
+  };
+
+  // Apply instant genre effects using Web Audio API
+  const applyInstantGenreEffects = (genre: Genre) => {
+    if (!audioContextRef.current || !sourceNodeRef.current || !gainNodeRef.current) {
+      console.log('Audio context not ready for instant effects');
+      return;
+    }
+
+    try {
+      const ctx = audioContextRef.current;
+      const source = sourceNodeRef.current;
+      const gain = gainNodeRef.current;
+
+      // Clear existing effects
+      if (eqNodeRef.current) {
+        eqNodeRef.current.disconnect();
+      }
+      if (compressorNodeRef.current) {
+        compressorNodeRef.current.disconnect();
+      }
+
+      // Disconnect current chain
+      source.disconnect();
+      gain.disconnect();
+
+      // Create genre-specific effects
+      let currentNode = source;
+
+      if (genre.name.toLowerCase() === 'hip-hop') {
+        // HIP-HOP: Heavy bass boost, scooped mids, loud
+        console.log('Applying HIP-HOP instant effects');
+        
+        // Bass boost (low shelf filter)
+        const bassBoost = ctx.createBiquadFilter();
+        bassBoost.type = 'lowshelf';
+        bassBoost.frequency.setValueAtTime(80, ctx.currentTime);
+        bassBoost.gain.setValueAtTime(8, ctx.currentTime); // +8dB bass boost
+        
+        // Mid scoop (notch filter)
+        const midScoop = ctx.createBiquadFilter();
+        midScoop.type = 'notch';
+        midScoop.frequency.setValueAtTime(1000, ctx.currentTime);
+        midScoop.Q.setValueAtTime(1, ctx.currentTime);
+        midScoop.gain.setValueAtTime(-6, ctx.currentTime); // -6dB mid scoop
+        
+        // Compression for punch
+        const compressor = ctx.createDynamicsCompressor();
+        compressor.threshold.setValueAtTime(-12, ctx.currentTime);
+        compressor.knee.setValueAtTime(30, ctx.currentTime);
+        compressor.ratio.setValueAtTime(12, ctx.currentTime);
+        compressor.attack.setValueAtTime(0.003, ctx.currentTime);
+        compressor.release.setValueAtTime(0.25, ctx.currentTime);
+        
+        // Connect chain: source -> bass boost -> mid scoop -> compressor -> gain -> destination
+        currentNode.connect(bassBoost);
+        bassBoost.connect(midScoop);
+        midScoop.connect(compressor);
+        compressor.connect(gain);
+        
+        // Store references for cleanup
+        eqNodeRef.current = bassBoost;
+        compressorNodeRef.current = compressor;
+        
+      } else if (genre.name.toLowerCase() === 'afrobeats') {
+        // AFROBEATS: Mid boost, warmth, light compression
+        console.log('Applying AFROBEATS instant effects');
+        
+        // Mid boost (peaking filter)
+        const midBoost = ctx.createBiquadFilter();
+        midBoost.type = 'peaking';
+        midBoost.frequency.setValueAtTime(2000, ctx.currentTime);
+        midBoost.Q.setValueAtTime(1, ctx.currentTime);
+        midBoost.gain.setValueAtTime(6, ctx.currentTime); // +6dB mid boost
+        
+        // High shelf for warmth
+        const highShelf = ctx.createBiquadFilter();
+        highShelf.type = 'highshelf';
+        highShelf.frequency.setValueAtTime(8000, ctx.currentTime);
+        highShelf.gain.setValueAtTime(4, ctx.currentTime); // +4dB high shelf
+        
+        // Light compression
+        const compressor = ctx.createDynamicsCompressor();
+        compressor.threshold.setValueAtTime(-8, ctx.currentTime);
+        compressor.knee.setValueAtTime(40, ctx.currentTime);
+        compressor.ratio.setValueAtTime(4, ctx.currentTime);
+        compressor.attack.setValueAtTime(0.01, ctx.currentTime);
+        compressor.release.setValueAtTime(0.3, ctx.currentTime);
+        
+        // Connect chain: source -> mid boost -> high shelf -> compressor -> gain -> destination
+        currentNode.connect(midBoost);
+        midBoost.connect(highShelf);
+        highShelf.connect(compressor);
+        compressor.connect(gain);
+        
+        // Store references for cleanup
+        eqNodeRef.current = midBoost;
+        compressorNodeRef.current = compressor;
+        
+      } else {
+        // DEFAULT: Gentle enhancement
+        console.log('Applying DEFAULT instant effects');
+        
+        // Gentle high shelf for brightness
+        const highShelf = ctx.createBiquadFilter();
+        highShelf.type = 'highshelf';
+        highShelf.frequency.setValueAtTime(10000, ctx.currentTime);
+        highShelf.gain.setValueAtTime(3, ctx.currentTime); // +3dB high shelf
+        
+        // Light compression
+        const compressor = ctx.createDynamicsCompressor();
+        compressor.threshold.setValueAtTime(-6, ctx.currentTime);
+        compressor.knee.setValueAtTime(40, ctx.currentTime);
+        compressor.ratio.setValueAtTime(3, ctx.currentTime);
+        compressor.attack.setValueAtTime(0.01, ctx.currentTime);
+        compressor.release.setValueAtTime(0.3, ctx.currentTime);
+        
+        // Connect chain: source -> high shelf -> compressor -> gain -> destination
+        currentNode.connect(highShelf);
+        highShelf.connect(compressor);
+        compressor.connect(gain);
+        
+        // Store references for cleanup
+        eqNodeRef.current = highShelf;
+        compressorNodeRef.current = compressor;
+      }
+      
+      // Final connection to destination
+      gain.connect(ctx.destination);
+      
+      console.log(`Instant ${genre.name} effects applied successfully!`);
+      
+    } catch (error) {
+      console.error('Failed to apply instant genre effects:', error);
+    }
   };
 
   // Process audio with Python service
   const handleProcessAudio = async () => {
-    if (!uploadedFile || !selectedGenre || !user) {
-      setError('Missing file, genre, or user information');
+    // Debug: Check what's missing
+    console.log('Debug - handleProcessAudio called:');
+    console.log('uploadedFile:', uploadedFile);
+    console.log('selectedGenre:', selectedGenre);
+    console.log('effectiveUser:', effectiveUser);
+    
+    if (!uploadedFile || !selectedGenre || !effectiveUser) {
+      const missing = [];
+      if (!uploadedFile) missing.push('file');
+      if (!selectedGenre) missing.push('genre');
+      if (!effectiveUser) missing.push('user');
+      setError(`Missing: ${missing.join(', ')}`);
       return;
     }
 
@@ -310,7 +545,8 @@ const FreeTierDashboardPython: React.FC<FreeTierDashboardProps> = ({ onDownloadA
       setProcessingProgress(0);
       setError(null);
 
-      console.log('Starting Python audio processing...');
+      console.log('Starting FINAL processing with Python service...');
+      console.log('Selected genre:', selectedGenre.name);
       
       // Simulate progress updates
       const progressInterval = setInterval(() => {
@@ -323,30 +559,38 @@ const FreeTierDashboardPython: React.FC<FreeTierDashboardProps> = ({ onDownloadA
         });
       }, 1000);
 
-      // Process audio with Python service
+      // Process audio with Python service for FINAL output (not preview)
       const result = await pythonAudioService.uploadAndProcessAudio(
         uploadedFile.file,
         'free',
         selectedGenre.name,
-        user.id
+        effectiveUser.id,
+        downloadFormat
       );
 
       clearInterval(progressInterval);
       setProcessingProgress(100);
 
-      console.log('Python processing completed:', result);
+      console.log('Final processing completed:', result);
 
-      // Set mastered audio URL
+      // Set mastered audio URL and ML details (if provided)
       setMasteredAudioUrl(result.url);
-
-      // Generate mock stats for display
+      // @ts-ignore: backend may include ML fields
+      const mlSummary = (result as any).ml_summary;
+      // @ts-ignore
+      const appliedParams = (result as any).applied_params;
+      // Combine stats and ML details in a single update to avoid overwriting
       setMasteredStats({
         loudness: result.lufs,
         peak: -0.2,
         dynamicRange: 12.5,
         frequencyBalance: 0.8,
-        stereoWidth: 1.2
-      });
+        stereoWidth: 1.2,
+        // @ts-ignore: extend for ML fields
+        mlSummary,
+        // @ts-ignore
+        appliedParams
+      } as any);
 
       // Move to download tab
       setActiveTab('download');
@@ -373,7 +617,7 @@ const FreeTierDashboardPython: React.FC<FreeTierDashboardProps> = ({ onDownloadA
       setIsPlayingOriginal(false);
     } else {
       // Ensure preview graph is connected for real-time effects on original
-      ensurePreviewGraph(originalAudioRef.current);
+      ensurePreviewGraph(originalAudioRef.current, 'original');
       if (selectedGenre) {
         applyGenrePreviewSettings(selectedGenre.name);
       }
@@ -391,7 +635,7 @@ const FreeTierDashboardPython: React.FC<FreeTierDashboardProps> = ({ onDownloadA
     }
 
     // Ensure preview graph is connected for real-time effects
-    ensurePreviewGraph(masteredAudioRef.current);
+    ensurePreviewGraph(masteredAudioRef.current, 'mastered');
     if (selectedGenre) {
       applyGenrePreviewSettings(selectedGenre.name);
     }
@@ -412,25 +656,28 @@ const FreeTierDashboardPython: React.FC<FreeTierDashboardProps> = ({ onDownloadA
       return;
     }
 
-    // Check if user can download (authentication and credits)
     if (onDownloadAttempt) {
       const canDownload = onDownloadAttempt();
-      if (!canDownload) {
-        return;
-      }
+      if (!canDownload) return;
     }
 
     try {
-      // Create download link
-      const link = document.createElement('a');
-      link.href = masteredAudioUrl;
-      link.download = `mastered_${uploadedFile?.name || 'audio'}.wav`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-
-      console.log('Download started successfully');
-      
+      // Fetch via python proxy and save as blob to avoid navigation/popups
+      const proxyUrl = `http://localhost:8002/proxy-download?file_url=${encodeURIComponent(masteredAudioUrl)}`;
+      const res = await fetch(proxyUrl, { method: 'GET' });
+      if (!res.ok) throw new Error(`Proxy HTTP ${res.status}`);
+      const blob = await res.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const base = (uploadedFile?.name?.replace(/\.[^/.]+$/, '') || 'audio');
+      const ext = masteredAudioUrl.toLowerCase().endsWith('.wav') ? 'wav' : 'mp3';
+      const a = document.createElement('a');
+      a.href = objectUrl;
+      a.download = `mastered_${base}.${ext}`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(objectUrl);
+      console.log('Download saved via blob');
     } catch (error) {
       console.error('Download failed:', error);
       setError('Failed to download mastered audio');
@@ -577,11 +824,11 @@ const FreeTierDashboardPython: React.FC<FreeTierDashboardProps> = ({ onDownloadA
                   </div>
                   
                   <button
-                    onClick={toggleOriginalPlayback}
-                    className="flex items-center space-x-2 bg-crys-gold/20 hover:bg-crys-gold/30 text-crys-gold px-4 py-2 rounded-lg transition-colors"
+                    onClick={handlePlayPauseInstant}
+                    className="flex items-center space-x-2 bg-crys-blue/20 hover:bg-crys-blue/30 text-crys-blue px-4 py-2 rounded-lg transition-colors"
                   >
-                    {isPlayingOriginal ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-                    <span className="text-sm">Preview</span>
+                    {isPlayingMastered ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+                    <span className="text-sm">Instant Preview</span>
                   </button>
                 </div>
               </div>
@@ -628,9 +875,30 @@ const FreeTierDashboardPython: React.FC<FreeTierDashboardProps> = ({ onDownloadA
                 </div>
               )}
 
+              {/* Instructions */}
+              {selectedGenre && uploadedFile && (
+                <div className="text-center mb-6">
+                  <p className="text-crys-light-grey text-sm">
+                    💡 <strong>Tip:</strong> Click "Instant Preview" above to play your audio, then switch between genres to hear instant effects!
+                  </p>
+                </div>
+              )}
+
               {/* Process Button */}
               {selectedGenre && (
                 <div className="text-center">
+                  {/* Format selector */}
+                  <div className="mb-4 flex items-center justify-center gap-3 text-sm">
+                    <label className="text-crys-light-grey">Format:</label>
+                    <select
+                      value={downloadFormat}
+                      onChange={(e) => setDownloadFormat(e.target.value as any)}
+                      className="bg-crys-charcoal border border-crys-graphite rounded px-3 py-2 text-crys-white"
+                    >
+                      <option value="mp3">MP3 (32 kbps, 44.1 kHz)</option>
+                      <option value="wav">WAV (16-bit, 44.1 kHz)</option>
+                    </select>
+                  </div>
                   <button
                     onClick={handleProcessAudio}
                     disabled={isProcessing}
@@ -639,7 +907,7 @@ const FreeTierDashboardPython: React.FC<FreeTierDashboardProps> = ({ onDownloadA
                     {isProcessing ? (
                       <>
                         <Loader2 className="w-5 h-5 animate-spin" />
-                        <span>Processing with Python...</span>
+                        <span>Final Processing...</span>
                       </>
                     ) : (
                       <>
@@ -668,11 +936,18 @@ const FreeTierDashboardPython: React.FC<FreeTierDashboardProps> = ({ onDownloadA
           </div>
         )}
 
-        {/* Download Tab */}
+        {/* Download/Comparison Tab */}
         {activeTab === 'download' && masteredAudioUrl && (
-          <DownloadStep
-            uploadedFile={uploadedFile}
+          <ComparisonPlayer
+            originalFile={uploadedFile}
+            masteredAudioUrl={masteredAudioUrl}
             selectedGenre={selectedGenre}
+            // @ts-ignore
+            mlSummary={(masteredStats as any)?.mlSummary}
+            // @ts-ignore
+            appliedParams={(masteredStats as any)?.appliedParams}
+            originalLufs={originalStats?.loudness}
+            masteredLufs={(masteredStats as any)?.loudness}
             onBack={() => setActiveTab('processing')}
             onNewUpload={() => {
               setUploadedFile(null);

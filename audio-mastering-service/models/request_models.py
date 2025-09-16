@@ -3,7 +3,7 @@ Request and Response models for the Audio Mastering Microservice
 """
 
 from pydantic import BaseModel, Field, validator
-from typing import Optional, Literal
+from typing import Optional, Literal, List, Dict, Any
 from enum import Enum
 
 class Tier(str, Enum):
@@ -37,7 +37,7 @@ class SampleRate(int, Enum):
 
 class MasteringRequest(BaseModel):
     """Request model for audio mastering"""
-    user_id: int = Field(..., description="User ID from Laravel")
+    user_id: str = Field(..., description="User ID from Laravel")
     tier: Tier = Field(..., description="User tier (Free, Pro, Advanced)")
     genre: Genre = Field(..., description="Music genre for mastering preset")
     target_format: AudioFormat = Field(..., description="Target output format")
@@ -68,6 +68,24 @@ class MasteringResponse(BaseModel):
     file_size: Optional[int] = Field(None, description="File size in bytes")
     processing_time: Optional[float] = Field(None, description="Processing time in seconds")
     error_message: Optional[str] = Field(None, description="Error message if status is error")
+    # ML additions (optional - populated when ML assistant is enabled)
+    ml_summary: Optional[List[Dict[str, Any]]] = Field(
+        default=None,
+        description="Human-readable summary of notable ML-driven or rule-based adjustments"
+    )
+    applied_params: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Parameters actually applied in mastering (subset: target_lufs, limiter ceiling, notes)"
+    )
+    # Analysis objects for UI
+    original_analysis: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Measured analysis of input file (e.g., lufs, peak, duration, sample_rate)"
+    )
+    mastered_analysis: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Measured analysis of mastered file"
+    )
 
 class ErrorResponse(BaseModel):
     """Error response model"""

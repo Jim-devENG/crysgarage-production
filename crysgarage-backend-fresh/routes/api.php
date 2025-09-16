@@ -169,9 +169,36 @@ Route::prefix('python')->group(function () {
 
 // Public routes (no authentication required)
 Route::post('/upload-audio', [AudioController::class, 'uploadAudio']);
+
+// Test endpoint for debugging file uploads
+Route::post('/test-upload', function (Request $request) {
+    \Log::info('Test upload received', [
+        'has_file' => $request->hasFile('audio'),
+        'all_files' => $request->allFiles(),
+        'all_input' => $request->all(),
+        'content_type' => $request->header('Content-Type'),
+        'content_length' => $request->header('Content-Length')
+    ]);
+    
+    if ($request->hasFile('audio')) {
+        $file = $request->file('audio');
+        return response()->json([
+            'status' => 'success',
+            'file_name' => $file->getClientOriginalName(),
+            'file_size' => $file->getSize(),
+            'file_type' => $file->getMimeType()
+        ]);
+    }
+    
+    return response()->json([
+        'status' => 'error',
+        'message' => 'No file received'
+    ], 400);
+});
 Route::post('/process-audio', [AudioController::class, 'processAudio']);
 Route::get('/processing-status/{audioId}', [AudioController::class, 'getProcessingStatus']);
 Route::get('/download/{audioId}/{format}', [AudioController::class, 'downloadProcessed']);
+Route::get('/download-file', [AudioController::class, 'downloadFile']);
 
 // Payment routes for free tier
 Route::post('/payment/free-download', [AudioController::class, 'processFreeDownload']);
