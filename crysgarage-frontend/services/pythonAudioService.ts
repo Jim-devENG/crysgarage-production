@@ -5,9 +5,23 @@
 
 import axios from 'axios';
 
-// Route Python calls: local dev -> localhost:8002, production -> nginx proxy /api/python
-const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
-const PYTHON_SERVICE_URL = isLocal ? 'http://localhost:8002' : 'https://crysgarage.studio/api/python';
+// Determine Python base URL at runtime to avoid accidental root-relative calls in production
+const isLocal = typeof window !== 'undefined'
+  && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+
+const computePythonBaseUrl = (): string => {
+  // Prefer explicit localhost for dev; otherwise, route through the public Nginx proxy
+  if (typeof window === 'undefined') {
+    return 'https://crysgarage.studio/api/python';
+  }
+  const { hostname, origin } = window.location;
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    return 'http://localhost:8002';
+  }
+  return `${origin}/api/python`;
+};
+
+const PYTHON_SERVICE_URL = computePythonBaseUrl();
 const LARAVEL_API_BASE = isLocal ? 'http://localhost:8000' : '';
 
 export interface TierInfo {
@@ -87,6 +101,10 @@ class PythonAudioService {
       if (!isLocal) {
         return {};
       }
+      // Ensure baseURL is valid at call time (guards against stale imports)
+      if (!this.baseURL || !this.baseURL.startsWith('http')) {
+        this.baseURL = computePythonBaseUrl();
+      }
       const formData = new FormData();
       formData.append('audio', file);
       formData.append('user_id', userId);
@@ -103,6 +121,9 @@ class PythonAudioService {
 
   async analyzeML(file: File, userId: string, genre: string): Promise<{ ml_summary?: Array<{ area: string; action: string; reason?: string }>; predicted_params?: Record<string, any> }> {
     try {
+      if (!this.baseURL || !this.baseURL.startsWith('http')) {
+        this.baseURL = computePythonBaseUrl();
+      }
       const formData = new FormData();
       formData.append('audio', file);
       formData.append('user_id', userId);
@@ -123,6 +144,9 @@ class PythonAudioService {
    */
   async getTierInformation(): Promise<Record<string, TierInfo>> {
     try {
+      if (!this.baseURL || !this.baseURL.startsWith('http')) {
+        this.baseURL = computePythonBaseUrl();
+      }
       const response = await axios.get(`${this.baseURL}/tiers`);
       return response.data.tiers;
     } catch (error) {
@@ -136,6 +160,9 @@ class PythonAudioService {
    */
   async getGenreInformation(): Promise<Record<string, GenreInfo>> {
     try {
+      if (!this.baseURL || !this.baseURL.startsWith('http')) {
+        this.baseURL = computePythonBaseUrl();
+      }
       const response = await axios.get(`${this.baseURL}/genres`);
       return response.data.genres;
     } catch (error) {
@@ -171,7 +198,9 @@ class PythonAudioService {
   async processAudio(request: MasteringRequest): Promise<MasteringResponse> {
     try {
       console.log('Sending mastering request to Python service:', request);
-      
+      if (!this.baseURL || !this.baseURL.startsWith('http')) {
+        this.baseURL = computePythonBaseUrl();
+      }
       const response = await axios.post(`${this.baseURL}/master`, request, {
         timeout: 300000, // 5 minutes timeout for processing
         headers: {
@@ -242,6 +271,9 @@ class PythonAudioService {
         return result;
       } else {
         // Production path: Python-only. Try /upload-file/ then /upload-file (no fallback to Laravel)
+        if (!this.baseURL || !this.baseURL.startsWith('http')) {
+          this.baseURL = computePythonBaseUrl();
+        }
         const formData = new FormData();
         formData.append('audio', file);
         formData.append('tier', tier);
@@ -406,6 +438,9 @@ class PythonAudioService {
     userId: string
   ): Promise<{ preview_url: string; genre: string; duration: number }> {
     try {
+      if (!this.baseURL || !this.baseURL.startsWith('http')) {
+        this.baseURL = computePythonBaseUrl();
+      }
       // Send file directly to Python service for preview
       const formData = new FormData();
       formData.append('audio', file);
