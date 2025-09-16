@@ -206,37 +206,69 @@ class PythonAudioService {
     format: 'mp3' | 'wav' = 'mp3'
   ): Promise<MasteringResponse> {
     try {
-      // Step 1: Upload file to Laravel backend
-      const formData = new FormData();
-      formData.append('audio', file);
-      formData.append('tier', tier);
-      formData.append('genre', genre);
-      formData.append('user_id', userId);
+      if (isLocal) {
+        // Local dev path: upload to Laravel then call Python /master
+        const formData = new FormData();
+        formData.append('audio', file);
+        formData.append('tier', tier);
+        formData.append('genre', genre);
+        formData.append('user_id', userId);
 
-      console.log('Uploading file to Laravel backend...');
-      const uploadResponse = await axios.post(
-        `${LARAVEL_API_BASE}/api/upload-audio`,
-        formData
-      );
+        console.log('Uploading file to Laravel backend...');
+        const uploadResponse = await axios.post(
+          `${LARAVEL_API_BASE}/api/upload-audio`,
+          formData
+        );
 
-      const { file_url, file_id } = uploadResponse.data;
-      console.log('File uploaded successfully:', file_url);
+        const { file_url } = uploadResponse.data;
+        console.log('File uploaded successfully:', file_url);
 
-      // Step 2: Process with Python microservice
-      const masteringRequest: MasteringRequest = {
-        user_id: userId, // Keep as string for frontend interface
-        tier: tier.charAt(0).toUpperCase() + tier.slice(1) as any, // Capitalize first letter to match Python enum
-        genre: genre as any, // Cast to match Python enum
-        target_format: (format.toUpperCase()) as any,
-        target_sample_rate: 44100 as any, // Default sample rate
-        file_url,
-        target_lufs: -14.0, // Default LUFS target
-      };
+        const masteringRequest: MasteringRequest = {
+          user_id: userId,
+          tier: tier.charAt(0).toUpperCase() + tier.slice(1) as any,
+          genre: genre as any,
+          target_format: (format.toUpperCase()) as any,
+          target_sample_rate: 44100 as any,
+          file_url,
+          target_lufs: -14.0,
+        };
 
-      console.log('Processing with Python microservice...');
-      const result = await this.processAudio(masteringRequest);
-      
-      return result;
+        console.log('Processing with Python microservice...');
+        const result = await this.processAudio(masteringRequest);
+        return result;
+      } else {
+        // Production path: upload directly to Python service for full mastering (bypass Laravel)
+        const formData = new FormData();
+        formData.append('audio', file);
+        formData.append('tier', tier);
+        formData.append('genre', genre);
+        formData.append('user_id', userId);
+        formData.append('is_preview', 'false');
+
+        console.log('Uploading file directly to Python for mastering...');
+        const resp = await axios.post(`${this.baseURL}/upload-file`, formData, {
+          timeout: 300000,
+        });
+
+        const masteredUrl: string = resp.data?.mastered_url || resp.data?.url;
+        if (!masteredUrl) {
+          throw new Error('Python service did not return mastered_url');
+        }
+
+        // Construct a minimal MasteringResponse compatible object
+        const lower = masteredUrl.toLowerCase();
+        const resolvedFormat = lower.endsWith('.wav') ? 'WAV' : lower.endsWith('.mp3') ? 'MP3' : (format.toUpperCase());
+        const result: MasteringResponse = {
+          status: 'done',
+          url: masteredUrl,
+          lufs: -8, // backend targets -8 LUFS
+          format: resolvedFormat,
+          duration: 0,
+          processing_time: 0,
+          // Optional fields may be missing; UI tolerates undefined
+        } as any;
+        return result;
+      }
     } catch (error: any) {
       console.error('Upload and process failed:', error);
       throw error;
