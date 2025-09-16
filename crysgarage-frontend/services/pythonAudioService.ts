@@ -83,11 +83,15 @@ class PythonAudioService {
   }
   async analyzeOriginal(file: File, userId: string): Promise<{ lufs?: number; duration?: number; sample_rate?: number; file_size?: number }> {
     try {
+      // On production, do not block UI with analysis; return immediately
+      if (!isLocal) {
+        return {};
+      }
       const formData = new FormData();
       formData.append('audio', file);
       formData.append('user_id', userId);
       const response = await axios.post(`${this.baseURL}/analyze-file`, formData, {
-        timeout: 60000,
+        timeout: 10000,
         headers: { 'Content-Type': 'multipart/form-data' },
       });
       return response.data.metadata || {};
