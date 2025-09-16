@@ -137,6 +137,7 @@ jobs:
           pkill -f "uvicorn main:app" 2>/dev/null || true
           nohup ./venv/bin/uvicorn main:app --host 0.0.0.0 --port 8002 >/var/log/uvicorn.log 2>&1 &
           echo "Python service restarted"
+          sleep 2
           # Verify genre-presets endpoint is available
           echo "Checking Python /genre-presets endpoint..."
           for i in 1 2 3 4 5; do
@@ -156,6 +157,15 @@ jobs:
         # Ensure global client_max_body_size to prevent 413 on uploads
         echo "Setting global client_max_body_size to 100M in Nginx..."
         echo "client_max_body_size 100M;" > /etc/nginx/conf.d/99-client-max-body-size.conf
+
+        # Ensure generous proxy timeouts for Python upstream
+        cat >/etc/nginx/conf.d/98-python-proxy-timeouts.conf <<'NGX'
+        proxy_read_timeout 600s;
+        proxy_send_timeout 600s;
+        proxy_connect_timeout 30s;
+        proxy_request_buffering off;
+        proxy_buffering off;
+        NGX
 
         # Restart services
         echo "🔄 Restarting services..."
