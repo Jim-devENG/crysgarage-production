@@ -133,6 +133,41 @@ jobs:
           elif command -v python3 >/dev/null 2>&1; then
             python3 -m venv venv && ./venv/bin/pip install -U pip && ./venv/bin/pip install -r requirements.txt || true
           fi
+
+          # Ensure system deps for audio libs
+          echo "Installing system dependencies (ffmpeg, libsndfile1)..."
+          sudo apt-get update -y || true
+          sudo apt-get install -y ffmpeg libsndfile1 || true
+
+          # Verify critical Python packages
+          echo "Verifying Python audio stack..."
+          ./venv/bin/python - <<'PYCHK'
+import importlib, sys
+mods = [
+  'numpy','scipy','librosa','soundfile','pyloudnorm','aiohttp','aiofiles'
+]
+missing = []
+for m in mods:
+  try:
+    importlib.import_module(m)
+  except Exception as e:
+    missing.append((m, str(e)))
+if missing:
+  print('Missing or failing imports:', missing)
+  sys.exit(1)
+print('All audio deps present')
+PYCHK
+
+          if [ $? -ne 0 ]; then
+            echo "Installing missing Python audio deps..."
+            ./venv/bin/pip install numpy scipy librosa soundfile pyloudnorm aiohttp aiofiles || true
+          fi
+
+          # Pre-warm heavy imports to avoid cold-start
+          ./venv/bin/python - <<'WARM'
+import librosa, numpy as np
+print('Librosa/Numpy pre-warmed')
+WARM
           # Restart uvicorn (no systemd assumed)
           pkill -f "uvicorn main:app" 2>/dev/null || true
           nohup ./venv/bin/uvicorn main:app --host 0.0.0.0 --port 8002 >/var/log/uvicorn.log 2>&1 &
