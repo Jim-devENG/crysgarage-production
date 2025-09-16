@@ -241,35 +241,30 @@ class PythonAudioService {
         const result = await this.processAudio(masteringRequest);
         return result;
       } else {
-        // Production path: upload to Laravel, then call Python /master via nginx proxy
+        // Production path: bypass Laravel. Upload directly to Python /upload-file for full mastering
         const formData = new FormData();
         formData.append('audio', file);
         formData.append('tier', tier);
         formData.append('genre', genre);
         formData.append('user_id', userId);
+        formData.append('is_preview', 'false');
 
-        console.log('Uploading file to Laravel backend (prod path)...');
-        const uploadResponse = await axios.post(
-          `/api/upload-audio`,
-          formData
-        );
-
-        const { file_url } = uploadResponse.data;
-        console.log('File uploaded successfully:', file_url);
-
-        const masteringRequest: MasteringRequest = {
-          user_id: userId,
-          tier: tier.charAt(0).toUpperCase() + tier.slice(1) as any,
-          genre: genre as any,
-          target_format: (format.toUpperCase()) as any,
-          target_sample_rate: 44100 as any,
-          file_url,
-          target_lufs: -14.0,
-        };
-
-        console.log('Processing with Python microservice via nginx proxy...');
-        const result = await this.processAudio(masteringRequest);
-        return result;
+        console.log('Uploading file directly to Python for mastering (prod)...');
+        const resp = await axios.post(`${this.baseURL}/upload-file`, formData, { timeout: 300000 });
+        const masteredUrl: string = resp.data?.mastered_url || resp.data?.url;
+        if (!masteredUrl) {
+          throw new Error('Python service did not return mastered_url');
+        }
+        const lower = masteredUrl.toLowerCase();
+        const resolvedFormat = lower.endsWith('.wav') ? 'WAV' : lower.endsWith('.mp3') ? 'MP3' : (format.toUpperCase());
+        return {
+          status: 'done',
+          url: masteredUrl,
+          lufs: -8,
+          format: resolvedFormat,
+          duration: 0,
+          processing_time: 0,
+        } as any;
       }
     } catch (error: any) {
       console.error('Upload and process failed:', error);
