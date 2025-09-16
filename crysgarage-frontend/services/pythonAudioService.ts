@@ -68,6 +68,8 @@ export interface MasteringRequest {
   file_url: string;
   target_format?: string;
   target_sample_rate?: number;
+  mp3_bitrate_kbps?: number;
+  wav_bit_depth?: number;
 }
 
 export interface MasteringResponse {
@@ -95,29 +97,7 @@ class PythonAudioService {
   constructor() {
     this.baseURL = PYTHON_SERVICE_URL;
   }
-  async analyzeOriginal(file: File, userId: string): Promise<{ lufs?: number; duration?: number; sample_rate?: number; file_size?: number }> {
-    try {
-      // On production, do not block UI with analysis; return immediately
-      if (!isLocal) {
-        return {};
-      }
-      // Ensure baseURL is valid at call time (guards against stale imports)
-      if (!this.baseURL || !this.baseURL.startsWith('http')) {
-        this.baseURL = computePythonBaseUrl();
-      }
-      const formData = new FormData();
-      formData.append('audio', file);
-      formData.append('user_id', userId);
-      const response = await axios.post(`${this.baseURL}/analyze-file`, formData, {
-        timeout: 10000,
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
-      return response.data.metadata || {};
-    } catch (e) {
-      console.error('Analyze original failed:', e);
-      return {};
-    }
-  }
+  // analyzeOriginal method removed - was causing timeouts and failures
 
   async analyzeML(file: File, userId: string, genre: string): Promise<{ ml_summary?: Array<{ area: string; action: string; reason?: string }>; predicted_params?: Record<string, any> }> {
     try {
@@ -264,6 +244,8 @@ class PythonAudioService {
           target_sample_rate: 44100 as any,
           file_url,
           target_lufs: -14.0,
+          mp3_bitrate_kbps: format === 'mp3' ? 320 : undefined,
+          wav_bit_depth: format === 'wav' ? 32 : undefined,
         };
 
         console.log('Processing with Python microservice...');
@@ -280,6 +262,13 @@ class PythonAudioService {
         formData.append('genre', genre);
         formData.append('user_id', userId);
         formData.append('is_preview', 'false');
+        formData.append('target_format', format.toUpperCase());
+        formData.append('target_sample_rate', '44100');
+        if (format === 'mp3') {
+          formData.append('mp3_bitrate_kbps', '320');
+        } else if (format === 'wav') {
+          formData.append('wav_bit_depth', '32');
+        }
 
         console.log('Uploading file directly to Python for mastering (prod)...');
         let resp;

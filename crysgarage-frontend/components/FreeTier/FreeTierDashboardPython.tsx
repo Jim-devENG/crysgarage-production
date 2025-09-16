@@ -334,19 +334,14 @@ const FreeTierDashboardPython: React.FC<FreeTierDashboardProps> = ({ onDownloadA
       // Initialize audio context and create audio element for instant effects
       initializeAudioForInstantEffects(audioFile.url);
 
-      // Analyze original on upload (async, fire-and-forget)
-      (async () => {
-        const meta = await pythonAudioService.analyzeOriginal(file, (effectiveUser as any).id || 'dev-user');
-        if (meta && typeof meta.lufs === 'number') {
-          setOriginalStats((prev) => ({
-            loudness: meta.lufs,
-            peak: prev?.peak ?? -0.2,
-            dynamicRange: prev?.dynamicRange ?? 12.5,
-            frequencyBalance: prev?.frequencyBalance ?? 0.8,
-            stereoWidth: prev?.stereoWidth ?? 1.0,
-          }));
-        }
-      })();
+      // Set default original stats (no analysis needed)
+      setOriginalStats({
+        loudness: -14.0, // Default LUFS
+        peak: -0.2,
+        dynamicRange: 12.5,
+        frequencyBalance: 0.8,
+        stereoWidth: 1.0,
+      });
       
     } catch (error) {
       console.error('File upload failed:', error);
@@ -897,8 +892,8 @@ const FreeTierDashboardPython: React.FC<FreeTierDashboardProps> = ({ onDownloadA
                       onChange={(e) => setDownloadFormat(e.target.value as any)}
                       className="bg-crys-charcoal border border-crys-graphite rounded px-3 py-2 text-crys-white"
                     >
-                      <option value="mp3">MP3 (32 kbps, 44.1 kHz)</option>
-                      <option value="wav">WAV (16-bit, 44.1 kHz)</option>
+                      <option value="mp3">MP3 (320 kbps, 44.1 kHz)</option>
+                      <option value="wav">WAV (32-bit, 44.1 kHz)</option>
                     </select>
                   </div>
                   <button
