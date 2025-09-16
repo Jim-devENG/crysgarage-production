@@ -241,30 +241,56 @@ class PythonAudioService {
         const result = await this.processAudio(masteringRequest);
         return result;
       } else {
-        // Production path: bypass Laravel. Upload directly to Python /upload-file for full mastering
-        const formData = new FormData();
-        formData.append('audio', file);
-        formData.append('tier', tier);
-        formData.append('genre', genre);
-        formData.append('user_id', userId);
-        formData.append('is_preview', 'false');
+        // Production path: try Python direct upload first; on 404 fallback to Laravel upload + /master
+        try {
+          const formData = new FormData();
+          formData.append('audio', file);
+          formData.append('tier', tier);
+          formData.append('genre', genre);
+          formData.append('user_id', userId);
+          formData.append('is_preview', 'false');
 
-        console.log('Uploading file directly to Python for mastering (prod)...');
-        const resp = await axios.post(`${this.baseURL}/upload-file`, formData, { timeout: 300000 });
-        const masteredUrl: string = resp.data?.mastered_url || resp.data?.url;
-        if (!masteredUrl) {
-          throw new Error('Python service did not return mastered_url');
+          console.log('Uploading file directly to Python for mastering (prod)...');
+          // Trailing slash helps on some Nginx prefix-strip configs
+          const resp = await axios.post(`${this.baseURL}/upload-file/`, formData, { timeout: 300000 });
+          const masteredUrl: string = resp.data?.mastered_url || resp.data?.url;
+          if (!masteredUrl) {
+            throw new Error('Python service did not return mastered_url');
+          }
+          const lower = masteredUrl.toLowerCase();
+          const resolvedFormat = lower.endsWith('.wav') ? 'WAV' : lower.endsWith('.mp3') ? 'MP3' : (format.toUpperCase());
+          return {
+            status: 'done',
+            url: masteredUrl,
+            lufs: -8,
+            format: resolvedFormat,
+            duration: 0,
+            processing_time: 0,
+          } as any;
+        } catch (err: any) {
+          if (err?.response?.status !== 404) throw err;
+          console.warn('Direct Python upload 404; falling back to Laravel upload + /master');
+
+          const formData2 = new FormData();
+          formData2.append('audio', file);
+          formData2.append('tier', tier);
+          formData2.append('genre', genre);
+          formData2.append('user_id', userId);
+
+          const uploadResponse = await axios.post(`/api/upload-audio`, formData2);
+          const { file_url } = uploadResponse.data;
+
+          const masteringRequest: MasteringRequest = {
+            user_id: userId,
+            tier: tier.charAt(0).toUpperCase() + tier.slice(1) as any,
+            genre: genre as any,
+            target_format: (format.toUpperCase()) as any,
+            target_sample_rate: 44100 as any,
+            file_url,
+            target_lufs: -14.0,
+          };
+          return await this.processAudio(masteringRequest);
         }
-        const lower = masteredUrl.toLowerCase();
-        const resolvedFormat = lower.endsWith('.wav') ? 'WAV' : lower.endsWith('.mp3') ? 'MP3' : (format.toUpperCase());
-        return {
-          status: 'done',
-          url: masteredUrl,
-          lufs: -8,
-          format: resolvedFormat,
-          duration: 0,
-          processing_time: 0,
-        } as any;
       }
     } catch (error: any) {
       console.error('Upload and process failed:', error);
