@@ -649,7 +649,11 @@ async def upload_file(
     tier: str = Form(...),
     genre: str = Form(...),
     user_id: str = Form(...),
-    is_preview: str = Form("false")
+    is_preview: str = Form("false"),
+    target_format: Optional[str] = Form(None),
+    target_sample_rate: Optional[int] = Form(None),
+    mp3_bitrate_kbps: Optional[int] = Form(None),
+    wav_bit_depth: Optional[int] = Form(None)
 ):
     """
     Direct file upload endpoint for real-time genre previews
@@ -722,32 +726,84 @@ async def upload_file(
                     pass
                 raise HTTPException(status_code=500, detail=f"Preview generation failed: {str(e)}")
         else:
-            # Full mastering process
-            logger.info(f"Starting full mastering process for: {genre}")
+            # Full mastering process with format handling (production fallback path)
+            logger.info(f"Starting full mastering process (upload-file) for: {genre}")
+            effective_target_lufs = -8.0
+
+            # Step 1: Mastering
             mastered_file_path = await ml_engine.process_audio(
                 input_file_path=temp_file_path,
                 tier=tier,
-                genre=genre
+                genre=genre,
+                target_lufs=effective_target_lufs
             )
-            
-            # Upload mastered file to storage
-            mastered_url = await storage_manager.upload_file(
-                file_path=mastered_file_path,
+
+            # Step 2: Conversion based on provided params (defaults: WAV 44100/16 or MP3 32kbps)
+            desired_format = (target_format or "MP3").upper()
+            desired_sr = int(target_sample_rate or 44100)
+            desired_mp3_bitrate = int(mp3_bitrate_kbps) if mp3_bitrate_kbps else (32 if desired_format == "MP3" else None)
+            desired_wav_bit_depth = int(wav_bit_depth) if wav_bit_depth else (16 if desired_format == "WAV" else None)
+
+            final_file_path = await ffmpeg_converter.convert_audio(
+                input_path=mastered_file_path,
+                output_format=desired_format,
+                sample_rate=desired_sr,
+                bit_depth=desired_wav_bit_depth,
+                bitrate_kbps=desired_mp3_bitrate
+            )
+
+            # Optional: loudness touch-up and peak safety (reuse logic from /master if needed)
+            try:
+                meta_conv = await audio_processor.get_audio_metadata(final_file_path)
+                current_lufs = meta_conv.get("lufs", effective_target_lufs)
+                gain_db = (effective_target_lufs - current_lufs)
+                if abs(gain_db) > 0.5:
+                    adjusted_path = await ffmpeg_converter.apply_gain(
+                        input_path=final_file_path,
+                        output_format=desired_format,
+                        sample_rate=desired_sr,
+                        gain_db=gain_db
+                    )
+                    final_file_path = adjusted_path
+            except Exception as e:
+                logger.warning(f"Upload-file LUFS adjustment skipped: {e}")
+
+            # Step 3: Upload to storage
+            file_url = await storage_manager.upload_file(
+                file_path=final_file_path,
                 user_id=user_id,
-                format="mp3",
+                format=desired_format,
                 is_preview=False
             )
-            
-            # Clean up temp files
-            os.remove(temp_file_path)
-            if mastered_file_path != temp_file_path:
-                os.remove(mastered_file_path)
-            
+
+            # Step 4: Metadata
+            metadata = await audio_processor.get_audio_metadata(final_file_path)
+
+            # Cleanup
+            try:
+                if os.path.exists(temp_file_path):
+                    os.remove(temp_file_path)
+            except Exception:
+                pass
+            try:
+                if os.path.exists(mastered_file_path) and mastered_file_path != temp_file_path:
+                    os.remove(mastered_file_path)
+            except Exception:
+                pass
+            try:
+                if os.path.exists(final_file_path) and final_file_path not in (temp_file_path, mastered_file_path):
+                    os.remove(final_file_path)
+            except Exception:
+                pass
+
             return {
-                "mastered_url": mastered_url,
-                "genre": genre,
-                "duration": 0,  # TODO: Calculate actual duration
-                "status": "success"
+                "status": "success",
+                "url": file_url,
+                "lufs": metadata.get("lufs", effective_target_lufs),
+                "format": desired_format,
+                "duration": metadata.get("duration", 0),
+                "sample_rate": desired_sr,
+                "file_size": metadata.get("file_size", 0)
             }
             
     except Exception as e:
@@ -756,6 +812,32 @@ async def upload_file(
         if 'temp_file_path' in locals() and os.path.exists(temp_file_path):
             os.remove(temp_file_path)
         raise HTTPException(status_code=500, detail=f"File upload failed: {str(e)}")
+
+
+# Mirror endpoint with trailing slash to avoid 307 redirects from Starlette's redirect_slashes
+@app.post("/upload-file/")
+async def upload_file_trailing(
+    audio: UploadFile = File(...),
+    tier: str = Form(...),
+    genre: str = Form(...),
+    user_id: str = Form(...),
+    is_preview: str = Form("false"),
+    target_format: Optional[str] = Form(None),
+    target_sample_rate: Optional[int] = Form(None),
+    mp3_bitrate_kbps: Optional[int] = Form(None),
+    wav_bit_depth: Optional[int] = Form(None)
+):
+    return await upload_file(
+        audio=audio,
+        tier=tier,
+        genre=genre,
+        user_id=user_id,
+        is_preview=is_preview,
+        target_format=target_format,
+        target_sample_rate=target_sample_rate,
+        mp3_bitrate_kbps=mp3_bitrate_kbps,
+        wav_bit_depth=wav_bit_depth,
+    )
 
 async def cleanup_temp_files(file_paths: list):
     """Clean up temporary files"""

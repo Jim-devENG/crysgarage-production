@@ -68,6 +68,24 @@ jobs:
       env:
         SSH_AUTH_SOCK: ${{ env.SSH_AUTH_SOCK }}
         SSH_AGENT_PID: ${{ env.SSH_AGENT_PID }}
+
+    - name: Upload Nginx site config
+      run: |
+        echo "Uploading clean Nginx config..."
+        scp -o StrictHostKeyChecking=no deploy/nginx/crysgarage.conf ${{ secrets.VPS_USER }}@209.74.80.162:/etc/nginx/conf.d/crysgarage.conf
+        echo "Nginx config uploaded"
+      shell: bash
+      env:
+        SSH_AUTH_SOCK: ${{ env.SSH_AUTH_SOCK }}
+        SSH_AGENT_PID: ${{ env.SSH_AGENT_PID }}
+
+    - name: Reload Nginx
+      run: |
+        ssh -o StrictHostKeyChecking=no ${{ secrets.VPS_USER }}@209.74.80.162 "nginx -t && nginx -s reload && echo 'Nginx reloaded'"
+      shell: bash
+      env:
+        SSH_AUTH_SOCK: ${{ env.SSH_AUTH_SOCK }}
+        SSH_AGENT_PID: ${{ env.SSH_AGENT_PID }}
     
     - name: Deploy to VPS
       run: |
@@ -170,7 +188,7 @@ print('Librosa/Numpy pre-warmed')
 WARM
           # Restart uvicorn (no systemd assumed)
           pkill -f "uvicorn main:app" 2>/dev/null || true
-          nohup ./venv/bin/uvicorn main:app --host 0.0.0.0 --port 8002 >/var/log/uvicorn.log 2>&1 &
+          nohup ./venv/bin/uvicorn main:app --host 0.0.0.0 --port 8002 --proxy-headers >/var/log/uvicorn.log 2>&1 &
           echo "Python service restarted"
           sleep 2
           # Verify genre-presets endpoint is available
@@ -185,6 +203,22 @@ WARM
           done
           # Final assert
           curl -sf http://127.0.0.1:8002/genre-presets | head -c 200 || (echo "❌ /genre-presets not available" && exit 1)
+
+          # Verify /upload-file routes exist (OPTIONS should return 200/405); fallback to GET /openapi.json check
+          echo "Checking Python /upload-file routes..."
+          UPLOAD_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X OPTIONS http://127.0.0.1:8002/upload-file || true)
+          UPLOAD_CODE_SLASH=$(curl -s -o /dev/null -w "%{http_code}" -X OPTIONS http://127.0.0.1:8002/upload-file/ || true)
+          if [ "$UPLOAD_CODE" != "200" ] && [ "$UPLOAD_CODE" != "405" ] && [ "$UPLOAD_CODE_SLASH" != "200" ] && [ "$UPLOAD_CODE_SLASH" != "405" ]; then
+            if curl -sf http://127.0.0.1:8002/openapi.json | grep -q "/upload-file"; then
+              echo "✔ /upload-file present in OpenAPI"
+            else
+              echo "❌ /upload-file not reachable and not in OpenAPI (HTTP $UPLOAD_CODE). Recent uvicorn logs:";
+              tail -n 200 /var/log/uvicorn.log || true;
+              exit 1;
+            fi
+          else
+            echo "✔ /upload-file reachable (HTTP $UPLOAD_CODE / $UPLOAD_CODE_SLASH)"
+          fi
         else
           echo "Warning: /var/www/crysgarage-deploy/audio-mastering-service not found; attempting to create from repo"
           cd /var/www/crysgarage-deploy
@@ -208,71 +242,19 @@ WARM
           fi
         fi
 
-        # Ensure global client_max_body_size to prevent 413 on uploads
-        echo "Setting global client_max_body_size to 100M in Nginx..."
+        # Ensure global client_max_body_size and proxy timeouts exist
         echo "client_max_body_size 100M;" > /etc/nginx/conf.d/99-client-max-body-size.conf
-
-        # Ensure generous proxy timeouts for Python upstream
         cat >/etc/nginx/conf.d/98-python-proxy-timeouts.conf <<'NGX'
-        proxy_read_timeout 600s;
-        proxy_send_timeout 600s;
-        proxy_connect_timeout 30s;
-        proxy_request_buffering off;
-        proxy_buffering off;
-        NGX
+proxy_read_timeout 600s;
+proxy_send_timeout 600s;
+proxy_connect_timeout 30s;
+proxy_request_buffering off;
+proxy_buffering off;
+NGX
 
-        # Ensure /api/python/ proxies to FastAPI root (strip prefix) inside existing server block
-        # This appends a location block; existing nginx server config must include the server stanza
-        if grep -q "server_name crysgarage.studio" /etc/nginx/conf.d/crysgarage.conf; then
-          # Add/replace python location
-          sed -i '/location \/api\/python\//,/}/d' /etc/nginx/conf.d/crysgarage.conf || true
-          cat >>/etc/nginx/conf.d/crysgarage.conf <<'NGX'
-          location /api/python/ {
-            proxy_pass http://127.0.0.1:8002/;
-            proxy_http_version 1.1;
-            proxy_set_header Host $host;
-            proxy_set_header X-Real-IP $remote_addr;
-            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-            proxy_set_header X-Forwarded-Proto $scheme;
-            proxy_read_timeout 600s;
-            proxy_send_timeout 600s;
-            proxy_request_buffering off;
-            proxy_buffering off;
-            client_max_body_size 100M;
-          }
-          NGX
-        else
-          echo "Warning: crysgarage.conf missing; cannot inject python location."
-        fi
-
-        # Ensure /api/ routes go to Laravel (avoid proxying to Python)
-        if grep -q "server_name crysgarage.studio" /etc/nginx/conf.d/crysgarage.conf; then
-          sed -i '/location \/api\//,/}/d' /etc/nginx/conf.d/crysgarage.conf || true
-          cat >>/etc/nginx/conf.d/crysgarage.conf <<'NGX'
-          location /api/ {
-            try_files $uri $uri/ @laravel_api;
-          }
-          location @laravel_api {
-            proxy_pass http://127.0.0.1:9000; # php-fpm via fastcgi usually; adjust if upstream defined
-          }
-          NGX
-        fi
-
-        # Restart services
-        echo "🔄 Restarting services..."
+        # Restart php-fpm gracefully (frontend uses static; API via Laravel)
+        echo "🔄 Restarting php-fpm..."
         systemctl restart php-fpm || (echo "php-fpm restart failed" && systemctl status php-fpm | cat && exit 1)
-        # Validate nginx config and reload without systemd to avoid namespace errors
-        if ! nginx -t; then
-          echo "nginx config test failed";
-          nginx -t 2>&1 | tail -n 50;
-          exit 1;
-        fi
-        if ! nginx -s reload; then
-          echo "nginx reload failed - showing status and logs";
-          systemctl status nginx --no-pager | cat || true;
-          journalctl -u nginx --no-pager -n 100 | cat || true;
-          exit 1;
-        fi
 
         # Verify public proxy path for Python service
         echo "🔎 Verifying public /api/python/genre-presets endpoint..."
