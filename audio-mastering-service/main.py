@@ -672,6 +672,7 @@ async def upload_file(
     """
     try:
         logger.info(f"Direct file upload received: {audio.filename}, genre: {genre}, tier: {tier}, preview: {is_preview}")
+        logger.info(f"Format params - target_format: {target_format}, target_sample_rate: {target_sample_rate}, mp3_bitrate_kbps: {mp3_bitrate_kbps}, wav_bit_depth: {wav_bit_depth}")
         
         # Validate file type
         if not audio.filename.lower().endswith(('.wav', '.mp3', '.flac', '.aiff')):
@@ -754,6 +755,8 @@ async def upload_file(
             desired_sr = int(target_sample_rate or 44100)
             desired_mp3_bitrate = int(mp3_bitrate_kbps) if mp3_bitrate_kbps else (320 if desired_format == "MP3" else None)
             desired_wav_bit_depth = int(wav_bit_depth) if wav_bit_depth else (32 if desired_format == "WAV" else None)
+            
+            logger.info(f"Final conversion params - format: {desired_format}, sample_rate: {desired_sr}, mp3_bitrate: {desired_mp3_bitrate}, wav_bit_depth: {desired_wav_bit_depth}")
 
             final_file_path = await ffmpeg_converter.convert_audio(
                 input_path=mastered_file_path,
