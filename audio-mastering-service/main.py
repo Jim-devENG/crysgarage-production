@@ -176,7 +176,7 @@ async def master_audio(request: MasteringRequest, background_tasks: BackgroundTa
         # Determine conversion params from request.applied format desires
         desired_format = request.target_format.value if hasattr(request.target_format, 'value') else request.target_format
         desired_sr = request.target_sample_rate.value if hasattr(request.target_sample_rate, 'value') else request.target_sample_rate
-        wav_bit_depth = request.wav_bit_depth if request.wav_bit_depth else (32 if str(desired_format).upper() == 'WAV' else None)
+        wav_bit_depth = request.wav_bit_depth if request.wav_bit_depth else (24 if str(desired_format).upper() == 'WAV' else None)
         mp3_bitrate = request.mp3_bitrate_kbps if request.mp3_bitrate_kbps else (320 if str(desired_format).upper() == 'MP3' else None)
 
         final_file_path = await ffmpeg_converter.convert_audio(
@@ -750,11 +750,11 @@ async def upload_file(
                 target_lufs=effective_target_lufs
             )
 
-            # Step 2: Conversion based on provided params (defaults: WAV 44100/32-bit or MP3 320kbps)
+            # Step 2: Conversion based on provided params (defaults: WAV 44100/24-bit or MP3 320kbps)
             desired_format = (target_format or "MP3").upper()
             desired_sr = int(target_sample_rate or 44100)
             desired_mp3_bitrate = int(mp3_bitrate_kbps) if mp3_bitrate_kbps else (320 if desired_format == "MP3" else None)
-            desired_wav_bit_depth = int(wav_bit_depth) if wav_bit_depth else (32 if desired_format == "WAV" else None)
+            desired_wav_bit_depth = int(wav_bit_depth) if wav_bit_depth else (24 if desired_format == "WAV" else None)
             
             logger.info(f"Final conversion params - format: {desired_format}, sample_rate: {desired_sr}, mp3_bitrate: {desired_mp3_bitrate}, wav_bit_depth: {desired_wav_bit_depth}")
 
