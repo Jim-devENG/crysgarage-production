@@ -663,7 +663,9 @@ const FreeTierDashboardPython: React.FC<FreeTierDashboardProps> = ({ onDownloadA
 
     try {
       // Fetch via python proxy and save as blob to avoid navigation/popups
-      const proxyUrl = `http://localhost:8002/proxy-download?file_url=${encodeURIComponent(masteredAudioUrl)}`;
+      const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+      const proxyBase = isLocal ? 'http://localhost:8002' : 'https://crysgarage.studio/api/python';
+      const proxyUrl = `${proxyBase}/proxy-download?file_url=${encodeURIComponent(masteredAudioUrl)}`;
       const res = await fetch(proxyUrl, { method: 'GET' });
       if (!res.ok) throw new Error(`Proxy HTTP ${res.status}`);
       const blob = await res.blob();
