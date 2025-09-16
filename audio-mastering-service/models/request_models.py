@@ -44,6 +44,8 @@ class MasteringRequest(BaseModel):
     target_sample_rate: SampleRate = Field(..., description="Target sample rate")
     file_url: str = Field(..., description="URL of the input audio file")
     target_lufs: float = Field(default=-14.0, description="Target LUFS level (-70 to 0)")
+    mp3_bitrate_kbps: Optional[int] = Field(None, description="MP3 bitrate in kbps (e.g., 320)")
+    wav_bit_depth: Optional[int] = Field(None, description="WAV bit depth (e.g., 16, 24, 32)")
     
     @validator('target_lufs')
     def validate_lufs(cls, v):

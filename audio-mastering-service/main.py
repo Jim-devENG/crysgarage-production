@@ -6,10 +6,7 @@ FastAPI-based service for professional audio mastering and format conversion
 from fastapi import FastAPI, HTTPException, BackgroundTasks, UploadFile, File, Form
 from fastapi.responses import StreamingResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
 from typing import Optional, Dict, Any
-import asyncio
-import logging
 import os
 from datetime import datetime
 
@@ -118,14 +115,21 @@ async def master_audio(request: MasteringRequest, background_tasks: BackgroundTa
     """
     try:
         logger.info(f"Starting mastering request for user {request.user_id}")
+        logger.info(f"Request details: genre={request.genre}, tier={request.tier}, format={request.target_format}")
         
         # Validate request
         if not request.file_url:
+            logger.error("file_url is required but not provided")
             raise HTTPException(status_code=400, detail="file_url is required")
         
         # Download input file
         logger.info(f"Downloading input file: {request.file_url}")
-        input_file_path = await audio_processor.download_file(request.file_url)
+        try:
+            input_file_path = await audio_processor.download_file(request.file_url)
+            logger.info(f"File downloaded successfully: {input_file_path}")
+        except Exception as e:
+            logger.error(f"Failed to download file: {e}")
+            raise HTTPException(status_code=500, detail=f"Failed to download file: {str(e)}")
         
         # Resolve genre name to known presets (case/alias tolerant)
         def _resolve_genre(g: str) -> str:
@@ -155,20 +159,25 @@ async def master_audio(request: MasteringRequest, background_tasks: BackgroundTa
         logger.info(f"Applying ML mastering for genre: {resolved_genre} (requested: {request.genre}), tier: {request.tier}")
         # Global LUFS policy: force all masters to -8 LUFS
         effective_target_lufs = -8.0
-        mastered_file_path = await ml_engine.process_audio(
-            input_file_path=input_file_path,
-            genre=resolved_genre,
-            tier=request.tier,
-            target_lufs=effective_target_lufs
-        )
+        try:
+            mastered_file_path = await ml_engine.process_audio(
+                input_file_path=input_file_path,
+                genre=resolved_genre,
+                tier=request.tier,
+                target_lufs=effective_target_lufs
+            )
+            logger.info(f"ML mastering completed: {mastered_file_path}")
+        except Exception as e:
+            logger.error(f"ML mastering failed: {e}")
+            raise HTTPException(status_code=500, detail=f"ML mastering failed: {str(e)}")
         
         # Convert to target format
         logger.info(f"Converting to format: {request.target_format}, sample rate: {request.target_sample_rate}")
         # Determine conversion params from request.applied format desires
         desired_format = request.target_format.value if hasattr(request.target_format, 'value') else request.target_format
         desired_sr = request.target_sample_rate.value if hasattr(request.target_sample_rate, 'value') else request.target_sample_rate
-        wav_bit_depth = 16 if str(desired_format).upper() == 'WAV' else None
-        mp3_bitrate = 32 if str(desired_format).upper() == 'MP3' else None
+        wav_bit_depth = request.wav_bit_depth if request.wav_bit_depth else (32 if str(desired_format).upper() == 'WAV' else None)
+        mp3_bitrate = request.mp3_bitrate_kbps if request.mp3_bitrate_kbps else (320 if str(desired_format).upper() == 'MP3' else None)
 
         final_file_path = await ffmpeg_converter.convert_audio(
             input_path=mastered_file_path,
@@ -262,8 +271,11 @@ async def master_audio(request: MasteringRequest, background_tasks: BackgroundTa
         )
         
     except Exception as e:
+        import traceback
+        error_details = traceback.format_exc()
         logger.error(f"Mastering failed: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Mastering failed: {str(e)}")
+        logger.error(f"Full traceback: {error_details}")
+        raise HTTPException(status_code=500, detail=f"Mastering failed: {str(e) if str(e) else 'Unknown error - check logs'}")
 
 @app.post("/preview")
 async def preview_genre_effects(request: MasteringRequest):
@@ -369,7 +381,6 @@ async def analyze_file_advanced(audio: UploadFile = File(...), user_id: str = Fo
         import time
         import numpy as np
         import librosa
-        import json
 
         # Save temp
         timestamp = int(time.time() * 1000)
@@ -722,7 +733,7 @@ async def upload_file(
                 try:
                     if os.path.exists(temp_file_path):
                         os.remove(temp_file_path)
-                except:
+                except Exception:
                     pass
                 raise HTTPException(status_code=500, detail=f"Preview generation failed: {str(e)}")
         else:
@@ -738,11 +749,11 @@ async def upload_file(
                 target_lufs=effective_target_lufs
             )
 
-            # Step 2: Conversion based on provided params (defaults: WAV 44100/16 or MP3 32kbps)
+            # Step 2: Conversion based on provided params (defaults: WAV 44100/32-bit or MP3 320kbps)
             desired_format = (target_format or "MP3").upper()
             desired_sr = int(target_sample_rate or 44100)
-            desired_mp3_bitrate = int(mp3_bitrate_kbps) if mp3_bitrate_kbps else (32 if desired_format == "MP3" else None)
-            desired_wav_bit_depth = int(wav_bit_depth) if wav_bit_depth else (16 if desired_format == "WAV" else None)
+            desired_mp3_bitrate = int(mp3_bitrate_kbps) if mp3_bitrate_kbps else (320 if desired_format == "MP3" else None)
+            desired_wav_bit_depth = int(wav_bit_depth) if wav_bit_depth else (32 if desired_format == "WAV" else None)
 
             final_file_path = await ffmpeg_converter.convert_audio(
                 input_path=mastered_file_path,
