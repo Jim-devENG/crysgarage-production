@@ -5,11 +5,10 @@
 
 import axios from 'axios';
 
-// Hardcode HTTPS proxy URL to avoid Mixed Content in production builds
-const PYTHON_SERVICE_URL = 'http://localhost:8002';
-const LARAVEL_API_BASE = (typeof window !== 'undefined' && window.location.host.includes('localhost:5173'))
-  ? 'http://localhost:8000'
-  : '';
+// Route Python calls: local dev -> localhost:8002, production -> nginx proxy /api/python
+const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+const PYTHON_SERVICE_URL = isLocal ? 'http://localhost:8002' : 'https://crysgarage.studio/api/python';
+const LARAVEL_API_BASE = isLocal ? 'http://localhost:8000' : '';
 
 export interface TierInfo {
   processing_quality: string;
