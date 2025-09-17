@@ -98,15 +98,15 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
   // Tracks the base preview gain computed from preset/level before applying the level multiplier
   const basePreviewGainRef = useRef<number>(1.0);
 
-  // Rainbow color scheme for genres
+  // Vibrant African-inspired color scheme for genres
   const rainbowColors = [
-    'bg-red-500',      // Red
-    'bg-orange-500',   // Orange  
-    'bg-yellow-500',   // Yellow
-    'bg-green-500',    // Green
-    'bg-blue-500',     // Blue
-    'bg-indigo-500',   // Indigo
-    'bg-purple-500'    // Violet
+    'bg-red-600',      // Vibrant Red (Afrobeats, Hip-life)
+    'bg-orange-600',   // Rich Orange (Alté, Azonto)
+    'bg-yellow-500',   // Golden Yellow (Naija Pop, Bongo Flava)
+    'bg-green-600',    // Deep Green (Amapiano, Kwaito)
+    'bg-blue-600',     // Electric Blue (Gqom, Shangaan Electro)
+    'bg-indigo-600',   // Royal Indigo (Kuduro, Ndombolo)
+    'bg-purple-600'    // Rich Purple (Gengetone, Shrap)
   ];
 
   // Initialize audio context
