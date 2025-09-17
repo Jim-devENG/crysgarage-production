@@ -40,6 +40,7 @@ export interface TierInfo {
     eq_bands: number;
     compression_ratio_max: number;
   };
+  max_file_size_mb?: number;
 }
 
 export interface GenreInfo {
