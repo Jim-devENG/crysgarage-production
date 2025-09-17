@@ -754,7 +754,8 @@ async def upload_file(
     target_format: Optional[str] = Form(None),
     target_sample_rate: Optional[int] = Form(None),
     mp3_bitrate_kbps: Optional[int] = Form(None),
-    wav_bit_depth: Optional[int] = Form(None)
+    wav_bit_depth: Optional[int] = Form(None),
+    target_lufs: Optional[float] = Form(None)
 ):
     """
     Direct file upload endpoint for real-time genre previews
@@ -765,13 +766,15 @@ async def upload_file(
         logger.info(f"Format params - target_format: {target_format}, target_sample_rate: {target_sample_rate}, mp3_bitrate_kbps: {mp3_bitrate_kbps}, wav_bit_depth: {wav_bit_depth}")
         
         # Validate file type
-        if not audio.filename.lower().endswith(('.wav', '.mp3', '.flac', '.aiff')):
+        if not audio.filename or not audio.filename.lower().endswith(('.wav', '.mp3', '.flac', '.aiff')):
             raise HTTPException(status_code=400, detail="Unsupported file format")
         
         # Save uploaded file temporarily with unique name
         import time
         timestamp = int(time.time() * 1000)  # milliseconds
-        temp_file_path = f"temp_{user_id}_{timestamp}_{audio.filename}"
+        safe_name = os.path.basename(audio.filename or "upload.wav")
+        temp_dir = os.path.join("/tmp") if os.path.isdir("/tmp") else "."
+        temp_file_path = os.path.join(temp_dir, f"temp_{user_id}_{timestamp}_{safe_name}")
         with open(temp_file_path, "wb") as buffer:
             content = await audio.read()
             buffer.write(content)
