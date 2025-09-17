@@ -833,6 +833,34 @@ async def upload_file(
         else:
             # Full mastering process with format handling (production fallback path)
             logger.info(f"Starting full mastering process (upload-file) for: {genre}")
+            # Resolve genre to known presets to avoid key errors (handles case/aliases)
+            def _resolve_genre_name(g: str) -> str:
+                gl = (g or "").strip().lower()
+                if "hip" in gl:
+                    return "Hip-Hop"
+                if "afro" in gl:
+                    return "Afrobeats"
+                if gl in ("r&b", "rnb", "rnb/soul", "r and b", "r n b"):
+                    return "R&B"
+                if "house" in gl:
+                    return "House"
+                if "trap" in gl:
+                    return "Trap"
+                if "gospel" in gl:
+                    return "Gospel"
+                if "rock" in gl:
+                    return "Rock"
+                if "electronic" in gl:
+                    return "Electronic"
+                if "jazz" in gl:
+                    return "Jazz"
+                if "classical" in gl:
+                    return "Classical"
+                if "pop" in gl:
+                    return "Pop"
+                return g.title() if g else "Pop"
+
+            resolved_genre = _resolve_genre_name(genre)
             # Allow client-provided target LUFS (low/medium/high), default -8 LUFS
             try:
                 effective_target_lufs = float(target_lufs) if target_lufs is not None else -8.0
@@ -861,7 +889,7 @@ async def upload_file(
             mastered_file_path = await ml_engine.process_audio(
                 input_file_path=temp_in_path,
                 tier=tier,
-                genre=genre,
+                genre=resolved_genre,
                 target_lufs=effective_target_lufs
             )
 
