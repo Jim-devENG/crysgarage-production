@@ -311,24 +311,9 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
       const proTierInfo = tierData.pro || tierData.professional;
       setTierInfo(proTierInfo);
 
-      // New African music genres (24 genres distributed across 7 colors)
-      const fixedOrder = [
-        'Afrobeats','Alté','Hip-life','Azonto','Naija Pop','Bongo Flava',
-        'Amapiano','Kwaito','Gqom','Shangaan Electro','Kuduro','Ndombolo',
-        'Gengetone','Shrap','Singeli','Urban Benga','Raï N\'B','Raï-hop',
-        'Gnawa Fusion','Afrotrap','Afro-Gospel','Urban Gospel','Kwela','New Benga'
-      ];
-
-      // Create genre objects for UI with rainbow colors in fixed order
-      const genres: Genre[] = fixedOrder.map((name, index) => {
-        const color = rainbowColors[index % rainbowColors.length];
-        return {
-          id: name.toLowerCase().replace(/\s+/g, '_'),
-          name,
-          color,
-          description: getGenreDescription(name)
-        };
-      });
+      // Import all professional genres (48 total: 24 African + 24 Advanced)
+      const { getAllGenresForUI } = await import('../ProfessionalDashboard/genres');
+      const genres: Genre[] = getAllGenresForUI();
       
       setAvailableGenres(genres);
       console.log('Loaded professional tier genres:', genres);
@@ -555,7 +540,7 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
             </div>
             <div>
               <h1 className="text-3xl font-bold text-crys-gold">Professional Tier</h1>
-              <p className="text-crys-light-grey">24+ Professional Genres • Advanced Mastering</p>
+              <p className="text-crys-light-grey">48+ Professional Genres • Advanced Mastering</p>
             </div>
           </div>
           
@@ -624,7 +609,7 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
               <Upload className="w-16 h-16 text-crys-gold mx-auto mb-4" />
               <h2 className="text-2xl font-bold mb-4">Upload Your Audio</h2>
               <p className="text-crys-light-grey mb-6">
-                Upload your audio file to start professional mastering with 24+ genre presets
+                Upload your audio file to start professional mastering with 48+ genre presets
               </p>
               
               <div className="border-2 border-dashed border-crys-gold/30 rounded-lg p-8 hover:border-crys-gold/60 transition-colors">
