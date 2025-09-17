@@ -1431,8 +1431,8 @@ class MLMasteringEngine:
             # 7. Limiting
             processed_audio = self._apply_limiting(processed_audio, sample_rate, tier_config)
             
-            # 8. LUFS Normalization
-            processed_audio = self._normalize_lufs(processed_audio, sample_rate, target_lufs)
+            # 8. Comprehensive Normalization
+            processed_audio = self._apply_comprehensive_normalization(processed_audio, sample_rate, target_lufs)
             
             # Save processed audio
             output_path = self._save_processed_audio(processed_audio, sample_rate, input_file_path)
@@ -1827,6 +1827,30 @@ class MLMasteringEngine:
             logger.warning(f"Limiting failed: {e}")
             return audio_data
     
+    def _apply_comprehensive_normalization(self, audio_data: np.ndarray, sample_rate: int, target_lufs: float) -> np.ndarray:
+        """
+        Apply comprehensive normalization including LUFS and peak normalization
+        Ensures all processed audio is properly normalized
+        """
+        try:
+            logger.info("Applying comprehensive normalization")
+            
+            # Step 1: LUFS Normalization
+            processed = self._normalize_lufs(audio_data, sample_rate, target_lufs)
+            
+            # Step 2: Peak Normalization to prevent clipping
+            processed = self._apply_peak_normalization(processed)
+            
+            # Step 3: Final safety check and soft limiting
+            processed = self._apply_soft_limiting(processed)
+            
+            logger.info("Comprehensive normalization completed")
+            return processed
+            
+        except Exception as e:
+            logger.error(f"Comprehensive normalization failed: {e}")
+            return audio_data
+
     def _normalize_lufs(self, audio_data: np.ndarray, sample_rate: int, target_lufs: float) -> np.ndarray:
         """Normalize audio to target LUFS level"""
         try:
@@ -1840,15 +1864,82 @@ class MLMasteringEngine:
             # Apply gain
             processed = audio_data * gain_linear
             
-            # Ensure no clipping
-            peak = np.max(np.abs(processed))
-            if peak > 0.95:
-                processed *= (0.95 / peak)
-            
+            logger.info(f"LUFS normalization: {current_lufs:.1f} → {target_lufs:.1f} LUFS")
             return processed
             
         except Exception as e:
             logger.warning(f"LUFS normalization failed: {e}")
+            return audio_data
+
+    def _apply_peak_normalization(self, audio_data: np.ndarray) -> np.ndarray:
+        """Apply peak normalization to prevent clipping"""
+        try:
+            # Find the maximum absolute value across all channels
+            if audio_data.ndim == 2:  # Stereo
+                peak = np.max(np.abs(audio_data))
+            else:  # Mono
+                peak = np.max(np.abs(audio_data))
+            
+            # Normalize to -0.1 dB (0.988) to leave headroom
+            target_peak = 0.988
+            if peak > 0:
+                gain = target_peak / peak
+                processed = audio_data * gain
+                logger.info(f"Peak normalization: {peak:.3f} → {target_peak:.3f}")
+            else:
+                processed = audio_data
+                logger.warning("Audio has no signal, skipping peak normalization")
+            
+            return processed
+            
+        except Exception as e:
+            logger.error(f"Peak normalization failed: {e}")
+            return audio_data
+
+    def _apply_soft_limiting(self, audio_data: np.ndarray) -> np.ndarray:
+        """Apply soft limiting as final safety measure"""
+        try:
+            # Soft limiting threshold at -0.3 dB (0.933)
+            threshold = 0.933
+            ratio = 10.0  # 10:1 ratio for soft limiting
+            
+            processed = audio_data.copy()
+            
+            # Apply soft limiting to each channel
+            if audio_data.ndim == 2:  # Stereo
+                for ch in range(audio_data.shape[0]):
+                    channel = processed[ch]
+                    # Find samples above threshold
+                    above_threshold = np.abs(channel) > threshold
+                    if np.any(above_threshold):
+                        # Apply soft limiting
+                        limited = np.where(
+                            above_threshold,
+                            np.sign(channel) * (threshold + (np.abs(channel) - threshold) / ratio),
+                            channel
+                        )
+                        processed[ch] = limited
+            else:  # Mono
+                channel = processed
+                above_threshold = np.abs(channel) > threshold
+                if np.any(above_threshold):
+                    limited = np.where(
+                        above_threshold,
+                        np.sign(channel) * (threshold + (np.abs(channel) - threshold) / ratio),
+                        channel
+                    )
+                    processed = limited
+            
+            # Final safety check - hard limit at -0.1 dB
+            max_peak = np.max(np.abs(processed))
+            if max_peak > 0.988:
+                processed *= (0.988 / max_peak)
+                logger.info(f"Final safety limiting applied: {max_peak:.3f} → 0.988")
+            
+            return processed
+            
+        except Exception as e:
+            logger.error(f"Soft limiting failed: {e}")
             return audio_data
     
     def _calculate_simple_lufs(self, audio_data: np.ndarray, sample_rate: int) -> float:
