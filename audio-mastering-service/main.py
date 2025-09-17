@@ -900,13 +900,57 @@ async def upload_file(
                 if gl in ("gnawa fusion", "gnawafusion"):
                     return "Gnawa Fusion"
                 
-                # Fusion genres
-                if gl == "afrotrap":
-                    return "Afrotrap"
-                if gl in ("afro-gospel", "afrogospel"):
-                    return "Afro-Gospel"
-                if gl in ("urban gospel", "urbangospel"):
-                    return "Urban Gospel"
+           # Fusion genres
+           if gl == "afrotrap":
+               return "Afrotrap"
+           if gl in ("afro-gospel", "afrogospel"):
+               return "Afro-Gospel"
+           if gl in ("urban gospel", "urbangospel"):
+               return "Urban Gospel"
+           
+           # Advanced tier genres
+           if gl == "trap":
+               return "Trap"
+           if gl == "drill":
+               return "Drill"
+           if gl == "dubstep":
+               return "Dubstep"
+           if gl in ("r&b", "rnb", "rnb/soul", "r and b", "r n b"):
+               return "R&B"
+           if gl in ("lofi-hiphop", "lofi hiphop", "lofi", "lo-fi"):
+               return "Lofi Hip-Hop"
+           if gl in ("hip-hop", "hip hop", "hiphop"):
+               return "Hip-Hop"
+           if gl == "house":
+               return "House"
+           if gl == "techno":
+               return "Techno"
+           if gl == "highlife":
+               return "Highlife"
+           if gl in ("instrumentals", "instrumental"):
+               return "Instrumentals"
+           if gl == "beats":
+               return "Beats"
+           if gl == "trance":
+               return "Trance"
+           if gl in ("drum-bass", "drum and bass", "drum&bass"):
+               return "Drum & Bass"
+           if gl == "reggae":
+               return "Reggae"
+           if gl in ("voice-over", "voiceover", "voice over"):
+               return "Voice Over"
+           if gl in ("journalist", "journalism"):
+               return "Journalist"
+           if gl == "soul":
+               return "Soul"
+           if gl in ("content-creator", "contentcreator", "content creator"):
+               return "Content Creator"
+           if gl == "pop":
+               return "Pop"
+           if gl == "jazz":
+               return "Jazz"
+           if gl in ("crysgarage", "crys garage"):
+               return "CrysGarage"
                 
                 # Legacy fallbacks
                 if "hip" in gl:

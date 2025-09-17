@@ -450,6 +450,347 @@ class MLMasteringEngine:
                 "stereo_width": 1.4,                             # Wide stereo chorus
                 "target_lufs": -9.0                              # -9 LUFS
             },
+            # Advanced Tier Genres (24 additional genres)
+            "Trap": {
+                "eq_curve": {
+                    "low_shelf": {"freq": 80, "gain": 3.5},      # Heavy bass
+                    "low_mid": {"freq": 300, "gain": 1.2},       # Mid punch
+                    "mid": {"freq": 1000, "gain": 0.0},          # Neutral
+                    "high_mid": {"freq": 4000, "gain": 0.6},     # High clarity
+                    "high_shelf": {"freq": 8000, "gain": 0.6}    # Crisp highs
+                },
+                "compression": {
+                    "ratio": 6.0,                                # Heavy compression
+                    "threshold": -14.0,                          # Hard threshold
+                    "attack": 0.001,                             # Very fast attack
+                    "release": 0.08                              # Fast release
+                },
+                "stereo_width": 1.2,                             # Wide stereo
+                "target_lufs": -7.2                              # -7.2 LUFS
+            },
+            "Drill": {
+                "eq_curve": {
+                    "low_shelf": {"freq": 80, "gain": 3.0},      # Heavy bass
+                    "low_mid": {"freq": 300, "gain": 1.8},       # Mid punch
+                    "mid": {"freq": 1000, "gain": 0.0},          # Neutral
+                    "high_mid": {"freq": 4000, "gain": 0.7},     # High clarity
+                    "high_shelf": {"freq": 8000, "gain": 0.7}    # Crisp highs
+                },
+                "compression": {
+                    "ratio": 5.0,                                # Heavy compression
+                    "threshold": -16.0,                          # Hard threshold
+                    "attack": 0.001,                             # Very fast attack
+                    "release": 0.1                               # Fast release
+                },
+                "stereo_width": 1.1,                             # Moderate stereo
+                "target_lufs": -7.5                              # -7.5 LUFS
+            },
+            "Dubstep": {
+                "eq_curve": {
+                    "low_shelf": {"freq": 40, "gain": 4.0},      # Deep bass
+                    "low_mid": {"freq": 200, "gain": 1.0},       # Mid control
+                    "mid": {"freq": 1000, "gain": 0.0},          # Neutral
+                    "high_mid": {"freq": 4000, "gain": 0.8},     # High clarity
+                    "high_shelf": {"freq": 8000, "gain": 0.8}    # Crisp highs
+                },
+                "compression": {
+                    "ratio": 8.0,                                # Very heavy compression
+                    "threshold": -12.0,                          # Very hard threshold
+                    "attack": 0.001,                             # Very fast attack
+                    "release": 0.05                              # Very fast release
+                },
+                "stereo_width": 1.3,                             # Wide stereo
+                "target_lufs": -7.0                              # -7.0 LUFS
+            },
+            "R&B": {
+                "eq_curve": {
+                    "low_shelf": {"freq": 80, "gain": 1.2},      # Gentle bass
+                    "low_mid": {"freq": 300, "gain": 2.5},       # Warm mids
+                    "mid": {"freq": 1000, "gain": 0.0},          # Neutral
+                    "high_mid": {"freq": 4000, "gain": 1.8},     # Bright highs
+                    "high_shelf": {"freq": 8000, "gain": 1.8}    # Airy highs
+                },
+                "compression": {
+                    "ratio": 2.2,                                # Gentle compression
+                    "threshold": -24.0,                          # Soft threshold
+                    "attack": 0.015,                             # Slow attack
+                    "release": 0.2                               # Slow release
+                },
+                "stereo_width": 1.2,                             # Moderate stereo
+                "target_lufs": -8.8                              # -8.8 LUFS
+            },
+            "Lofi Hip-Hop": {
+                "eq_curve": {
+                    "low_shelf": {"freq": 80, "gain": 0.8},      # Soft bass
+                    "low_mid": {"freq": 300, "gain": 1.5},       # Warm mids
+                    "mid": {"freq": 1000, "gain": 0.0},          # Neutral
+                    "high_mid": {"freq": 4000, "gain": 1.2},     # Soft highs
+                    "high_shelf": {"freq": 8000, "gain": 1.2}    # Airy highs
+                },
+                "compression": {
+                    "ratio": 1.8,                                # Very gentle compression
+                    "threshold": -26.0,                          # Very soft threshold
+                    "attack": 0.025,                             # Very slow attack
+                    "release": 0.3                               # Very slow release
+                },
+                "stereo_width": 1.0,                             # Natural stereo
+                "target_lufs": -9.0                              # -9.0 LUFS
+            },
+            "House": {
+                "eq_curve": {
+                    "low_shelf": {"freq": 80, "gain": 2.5},      # Strong bass
+                    "low_mid": {"freq": 300, "gain": 1.8},       # Warm mids
+                    "mid": {"freq": 1000, "gain": 0.0},          # Neutral
+                    "high_mid": {"freq": 4000, "gain": 1.0},     # Clear highs
+                    "high_shelf": {"freq": 8000, "gain": 1.0}    # Bright highs
+                },
+                "compression": {
+                    "ratio": 4.5,                                # Moderate compression
+                    "threshold": -17.0,                          # Moderate threshold
+                    "attack": 0.002,                             # Fast attack
+                    "release": 0.15                              # Moderate release
+                },
+                "stereo_width": 1.3,                             # Wide stereo
+                "target_lufs": -8.0                              # -8.0 LUFS
+            },
+            "Techno": {
+                "eq_curve": {
+                    "low_shelf": {"freq": 80, "gain": 3.2},      # Strong bass
+                    "low_mid": {"freq": 300, "gain": 1.6},       # Mid punch
+                    "mid": {"freq": 1000, "gain": 0.0},          # Neutral
+                    "high_mid": {"freq": 4000, "gain": 0.9},     # Clear highs
+                    "high_shelf": {"freq": 8000, "gain": 0.9}    # Bright highs
+                },
+                "compression": {
+                    "ratio": 5.5,                                # Heavy compression
+                    "threshold": -15.0,                          # Hard threshold
+                    "attack": 0.001,                             # Very fast attack
+                    "release": 0.08                              # Fast release
+                },
+                "stereo_width": 1.4,                             # Very wide stereo
+                "target_lufs": -7.5                              # -7.5 LUFS
+            },
+            "Highlife": {
+                "eq_curve": {
+                    "low_shelf": {"freq": 80, "gain": 1.8},      # Moderate bass
+                    "low_mid": {"freq": 300, "gain": 2.2},       # Warm mids
+                    "mid": {"freq": 1000, "gain": 0.0},          # Neutral
+                    "high_mid": {"freq": 4000, "gain": 1.2},     # Clear highs
+                    "high_shelf": {"freq": 8000, "gain": 1.2}    # Bright highs
+                },
+                "compression": {
+                    "ratio": 3.0,                                # Moderate compression
+                    "threshold": -20.0,                          # Soft threshold
+                    "attack": 0.005,                             # Moderate attack
+                    "release": 0.25                              # Slow release
+                },
+                "stereo_width": 1.2,                             # Moderate stereo
+                "target_lufs": -8.2                              # -8.2 LUFS
+            },
+            "Instrumentals": {
+                "eq_curve": {
+                    "low_shelf": {"freq": 80, "gain": 1.5},      # Moderate bass
+                    "low_mid": {"freq": 300, "gain": 2.0},       # Warm mids
+                    "mid": {"freq": 1000, "gain": 0.0},          # Neutral
+                    "high_mid": {"freq": 4000, "gain": 1.5},     # Clear highs
+                    "high_shelf": {"freq": 8000, "gain": 1.5}    # Bright highs
+                },
+                "compression": {
+                    "ratio": 2.8,                                # Gentle compression
+                    "threshold": -21.0,                          # Soft threshold
+                    "attack": 0.008,                             # Moderate attack
+                    "release": 0.25                              # Slow release
+                },
+                "stereo_width": 1.3,                             # Wide stereo
+                "target_lufs": -8.5                              # -8.5 LUFS
+            },
+            "Beats": {
+                "eq_curve": {
+                    "low_shelf": {"freq": 80, "gain": 2.2},      # Strong bass
+                    "low_mid": {"freq": 300, "gain": 1.8},       # Warm mids
+                    "mid": {"freq": 1000, "gain": 0.0},          # Neutral
+                    "high_mid": {"freq": 4000, "gain": 1.0},     # Clear highs
+                    "high_shelf": {"freq": 8000, "gain": 1.0}    # Bright highs
+                },
+                "compression": {
+                    "ratio": 3.5,                                # Moderate compression
+                    "threshold": -19.0,                          # Moderate threshold
+                    "attack": 0.003,                             # Fast attack
+                    "release": 0.2                               # Moderate release
+                },
+                "stereo_width": 1.2,                             # Moderate stereo
+                "target_lufs": -8.0                              # -8.0 LUFS
+            },
+            "Trance": {
+                "eq_curve": {
+                    "low_shelf": {"freq": 80, "gain": 2.0},      # Strong bass
+                    "low_mid": {"freq": 300, "gain": 1.5},       # Warm mids
+                    "mid": {"freq": 1000, "gain": 0.0},          # Neutral
+                    "high_mid": {"freq": 4000, "gain": 1.8},     # Bright highs
+                    "high_shelf": {"freq": 8000, "gain": 1.8}    # Airy highs
+                },
+                "compression": {
+                    "ratio": 4.0,                                # Moderate compression
+                    "threshold": -18.0,                          # Moderate threshold
+                    "attack": 0.002,                             # Fast attack
+                    "release": 0.2                               # Moderate release
+                },
+                "stereo_width": 1.4,                             # Very wide stereo
+                "target_lufs": -7.8                              # -7.8 LUFS
+            },
+            "Drum & Bass": {
+                "eq_curve": {
+                    "low_shelf": {"freq": 40, "gain": 3.8},      # Deep bass
+                    "low_mid": {"freq": 200, "gain": 1.4},       # Mid control
+                    "mid": {"freq": 1000, "gain": 0.0},          # Neutral
+                    "high_mid": {"freq": 4000, "gain": 1.0},     # Clear highs
+                    "high_shelf": {"freq": 8000, "gain": 1.0}    # Bright highs
+                },
+                "compression": {
+                    "ratio": 7.0,                                # Very heavy compression
+                    "threshold": -13.0,                          # Very hard threshold
+                    "attack": 0.001,                             # Very fast attack
+                    "release": 0.06                              # Very fast release
+                },
+                "stereo_width": 1.3,                             # Wide stereo
+                "target_lufs": -7.0                              # -7.0 LUFS
+            },
+            "Reggae": {
+                "eq_curve": {
+                    "low_shelf": {"freq": 80, "gain": 2.5},      # Strong bass
+                    "low_mid": {"freq": 300, "gain": 1.2},       # Warm mids
+                    "mid": {"freq": 1000, "gain": 0.0},          # Neutral
+                    "high_mid": {"freq": 4000, "gain": 0.6},     # Soft highs
+                    "high_shelf": {"freq": 8000, "gain": 0.6}    # Mellow highs
+                },
+                "compression": {
+                    "ratio": 2.8,                                # Gentle compression
+                    "threshold": -21.0,                          # Soft threshold
+                    "attack": 0.008,                             # Moderate attack
+                    "release": 0.3                               # Slow release
+                },
+                "stereo_width": 1.1,                             # Natural stereo
+                "target_lufs": -8.2                              # -8.2 LUFS
+            },
+            "Voice Over": {
+                "eq_curve": {
+                    "low_shelf": {"freq": 80, "gain": 0.8},      # Minimal bass
+                    "low_mid": {"freq": 300, "gain": 2.8},       # Strong mids
+                    "mid": {"freq": 1000, "gain": 0.0},          # Neutral
+                    "high_mid": {"freq": 4000, "gain": 2.2},     # Bright highs
+                    "high_shelf": {"freq": 8000, "gain": 2.2}    # Clear highs
+                },
+                "compression": {
+                    "ratio": 2.0,                                # Gentle compression
+                    "threshold": -25.0,                          # Very soft threshold
+                    "attack": 0.02,                              # Slow attack
+                    "release": 0.4                               # Very slow release
+                },
+                "stereo_width": 1.0,                             # Mono/centered
+                "target_lufs": -9.2                              # -9.2 LUFS
+            },
+            "Journalist": {
+                "eq_curve": {
+                    "low_shelf": {"freq": 80, "gain": 0.6},      # Minimal bass
+                    "low_mid": {"freq": 300, "gain": 3.0},       # Very strong mids
+                    "mid": {"freq": 1000, "gain": 0.0},          # Neutral
+                    "high_mid": {"freq": 4000, "gain": 2.5},     # Very bright highs
+                    "high_shelf": {"freq": 8000, "gain": 2.5}    # Very clear highs
+                },
+                "compression": {
+                    "ratio": 1.8,                                # Very gentle compression
+                    "threshold": -26.0,                          # Very soft threshold
+                    "attack": 0.025,                             # Very slow attack
+                    "release": 0.5                               # Very slow release
+                },
+                "stereo_width": 1.0,                             # Mono/centered
+                "target_lufs": -9.5                              # -9.5 LUFS
+            },
+            "Soul": {
+                "eq_curve": {
+                    "low_shelf": {"freq": 80, "gain": 1.2},      # Gentle bass
+                    "low_mid": {"freq": 300, "gain": 2.5},       # Warm mids
+                    "mid": {"freq": 1000, "gain": 0.0},          # Neutral
+                    "high_mid": {"freq": 4000, "gain": 1.8},     # Bright highs
+                    "high_shelf": {"freq": 8000, "gain": 1.8}    # Airy highs
+                },
+                "compression": {
+                    "ratio": 2.2,                                # Gentle compression
+                    "threshold": -23.0,                          # Soft threshold
+                    "attack": 0.015,                             # Slow attack
+                    "release": 0.2                               # Slow release
+                },
+                "stereo_width": 1.2,                             # Moderate stereo
+                "target_lufs": -8.8                              # -8.8 LUFS
+            },
+            "Content Creator": {
+                "eq_curve": {
+                    "low_shelf": {"freq": 80, "gain": 1.5},      # Moderate bass
+                    "low_mid": {"freq": 300, "gain": 2.0},       # Warm mids
+                    "mid": {"freq": 1000, "gain": 0.0},          # Neutral
+                    "high_mid": {"freq": 4000, "gain": 1.5},     # Clear highs
+                    "high_shelf": {"freq": 8000, "gain": 1.5}    # Bright highs
+                },
+                "compression": {
+                    "ratio": 3.0,                                # Moderate compression
+                    "threshold": -20.0,                          # Soft threshold
+                    "attack": 0.005,                             # Moderate attack
+                    "release": 0.25                              # Slow release
+                },
+                "stereo_width": 1.2,                             # Moderate stereo
+                "target_lufs": -8.5                              # -8.5 LUFS
+            },
+            "Pop": {
+                "eq_curve": {
+                    "low_shelf": {"freq": 80, "gain": 1.5},      # Moderate bass
+                    "low_mid": {"freq": 300, "gain": 1.0},       # Balanced mids
+                    "mid": {"freq": 1000, "gain": 0.0},          # Neutral
+                    "high_mid": {"freq": 4000, "gain": 1.2},     # Bright highs
+                    "high_shelf": {"freq": 8000, "gain": 1.2}    # Airy highs
+                },
+                "compression": {
+                    "ratio": 3.0,                                # Moderate compression
+                    "threshold": -20.0,                          # Soft threshold
+                    "attack": 0.003,                             # Fast attack
+                    "release": 0.25                              # Slow release
+                },
+                "stereo_width": 1.3,                             # Wide stereo
+                "target_lufs": -8.0                              # -8.0 LUFS
+            },
+            "Jazz": {
+                "eq_curve": {
+                    "low_shelf": {"freq": 80, "gain": 1.0},      # Gentle bass
+                    "low_mid": {"freq": 300, "gain": 1.8},       # Warm mids
+                    "mid": {"freq": 1000, "gain": 0.0},          # Neutral
+                    "high_mid": {"freq": 4000, "gain": 2.0},     # Bright highs
+                    "high_shelf": {"freq": 8000, "gain": 2.0}    # Airy highs
+                },
+                "compression": {
+                    "ratio": 2.0,                                # Gentle compression
+                    "threshold": -25.0,                          # Very soft threshold
+                    "attack": 0.02,                              # Slow attack
+                    "release": 0.4                               # Very slow release
+                },
+                "stereo_width": 1.1,                             # Natural stereo
+                "target_lufs": -9.0                              # -9.0 LUFS
+            },
+            "CrysGarage": {
+                "eq_curve": {
+                    "low_shelf": {"freq": 80, "gain": 3.2},      # Strong bass
+                    "low_mid": {"freq": 300, "gain": 2.2},       # Warm mids
+                    "mid": {"freq": 1000, "gain": 0.0},          # Neutral
+                    "high_mid": {"freq": 4000, "gain": 1.5},     # Bright highs
+                    "high_shelf": {"freq": 8000, "gain": 1.5}    # Airy highs
+                },
+                "compression": {
+                    "ratio": 4.5,                                # Moderate compression
+                    "threshold": -16.0,                          # Moderate threshold
+                    "attack": 0.001,                             # Fast attack
+                    "release": 0.15                              # Moderate release
+                },
+                "stereo_width": 1.3,                             # Wide stereo
+                "target_lufs": -7.8                              # -7.8 LUFS
+            },
             "Gospel": {
                 "eq_curve": {
                     "low_shelf": {"freq": 100, "gain": 1.5},
