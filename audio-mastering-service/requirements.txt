@@ -1,37 +1,30 @@
-# FastAPI and web framework
+# Audio Mastering Service Dependencies
+# Core FastAPI and web framework
 fastapi==0.104.1
 uvicorn[standard]==0.24.0
-pydantic==2.5.0
-
-# Audio processing
-librosa==0.10.1
-soundfile==0.12.1
-# Use a NumPy version with prebuilt wheels for Windows/Python 3.12
-numpy==1.26.4
-scipy==1.11.4
-
-# HTTP client
-aiohttp==3.9.1
-aiofiles==23.2.1
-
-# Storage (optional - install if using S3)
-boto3==1.34.0
-botocore==1.34.0
-
-# Machine Learning (optional - install if using advanced ML features)
-# Heavy ML frameworks are optional for local run; comment out to avoid large installs
-# tensorflow==2.15.0
-# torch==2.1.1
-# torchaudio==2.1.1
-
-# Utilities
 python-multipart==0.0.6
-python-dotenv==1.0.0
 
-# Development dependencies
-pytest==7.4.3
-pytest-asyncio==0.21.1
-black==23.11.0
-flake8==6.1.0
+# Audio processing libraries
+numpy>=1.24.0
+librosa>=0.10.0
+soundfile>=0.12.0
+pyloudnorm>=0.1.1
 
+# HTTP and file handling
+aiohttp>=3.8.0
+aiofiles>=23.0.0
 
+# DevOps and monitoring tools
+supervisor>=4.2.0
+psutil>=5.9.0
+structlog>=23.0.0
+sentry-sdk[fastapi]>=1.40.0
+python-decouple>=3.8
+dynaconf>=3.2.0
+
+# Optional S3 storage (install if using S3)
+# boto3>=1.26.0
+
+# Development and testing
+pytest>=7.0.0
+pytest-asyncio>=0.21.0

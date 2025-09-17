@@ -8,17 +8,30 @@ from fastapi.responses import StreamingResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Optional, Dict, Any
 import os
+import sentry_sdk
 from datetime import datetime
 
 from services.audio_processor import AudioProcessor
 from services.ml_mastering import MLMasteringEngine
 from services.storage_manager import StorageManager
 from services.ffmpeg_converter import FFmpegConverter
+from services.resource_monitor import resource_monitor
 from models.request_models import MasteringRequest, MasteringResponse
-from utils.logger import setup_logger
+from config.logging import configure_logging, get_logger, AudioProcessingLogger
+from config.settings import DEBUG, LOG_LEVEL, SENTRY_DSN, AUDIO_PRESETS, GENRE_SETTINGS
 
-# Setup logging
-logger = setup_logger(__name__)
+# Configure enhanced logging
+configure_logging(LOG_LEVEL)
+logger = get_logger(__name__)
+audio_logger = AudioProcessingLogger(logger)
+
+# Initialize Sentry for error tracking
+if SENTRY_DSN:
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        traces_sample_rate=0.1,
+        profiles_sample_rate=0.1,
+    )
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -114,8 +127,19 @@ async def master_audio(request: MasteringRequest, background_tasks: BackgroundTa
     Processes audio file with ML mastering and format conversion
     """
     try:
-        logger.info(f"Starting mastering request for user {request.user_id}")
-        logger.info(f"Request details: genre={request.genre}, tier={request.tier}, format={request.target_format}")
+        # Log processing start with structured logging
+        audio_logger.log_processing_start(
+            user_id=request.user_id,
+            file_name=request.file_url.split('/')[-1] if request.file_url else "unknown",
+            file_size=0,  # Will be updated after download
+            genre=str(request.genre),
+            tier=str(request.tier)
+        )
+        
+        # Check system resources before processing
+        resource_checks = resource_monitor.check_resource_limits()
+        if not resource_checks['memory_ok']:
+            raise HTTPException(status_code=503, detail="Insufficient system memory for processing")
         
         # Validate request
         if not request.file_url:
