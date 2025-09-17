@@ -540,7 +540,7 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
             </div>
             <div>
               <h1 className="text-3xl font-bold text-crys-gold">Professional Tier</h1>
-              <p className="text-crys-light-grey">48+ Professional Genres • Advanced Mastering</p>
+              <p className="text-crys-light-grey">47+ Professional Genres • Advanced Mastering</p>
             </div>
           </div>
           
@@ -609,7 +609,7 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
               <Upload className="w-16 h-16 text-crys-gold mx-auto mb-4" />
               <h2 className="text-2xl font-bold mb-4">Upload Your Audio</h2>
               <p className="text-crys-light-grey mb-6">
-                Upload your audio file to start professional mastering with 48+ genre presets
+                Upload your audio file to start professional mastering with 47+ genre presets
               </p>
               
               <div className="border-2 border-dashed border-crys-gold/30 rounded-lg p-8 hover:border-crys-gold/60 transition-colors">

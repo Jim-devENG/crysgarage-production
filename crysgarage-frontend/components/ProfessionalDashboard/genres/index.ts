@@ -1,4 +1,4 @@
-// Professional Tier Genres - Combined African + Advanced Genres
+// Professional Tier Genres - Combined African + Advanced Genres (47 total: 24 African + 23 Advanced)
 import { AFRICAN_GENRES, getAfricanGenreGradient } from './africanGenres';
 import { ADVANCED_GENRES, getAdvancedGenreGradient } from './advancedGenres';
 
@@ -16,10 +16,10 @@ export const PROFESSIONAL_GENRE_NAMES = [
   'Gengetone', 'Shrap', 'Singeli', 'Urban Benga', 'Raï N\'B', 'Raï-hop',
   'Gnawa Fusion', 'Afrotrap', 'Afro-Gospel', 'Urban Gospel', 'Kwela', 'New Benga',
   
-  // Advanced Genres (24)
+  // Advanced Genres (23 - Amapiano removed as it's already in African genres)
   'Trap', 'Drill', 'Dubstep', 'Gospel', 'R&B', 'Lofi Hip-Hop',
   'Hip-Hop', 'House', 'Techno', 'Highlife', 'Instrumentals', 'Beats',
-  'Amapiano', 'Trance', 'Drum & Bass', 'Reggae', 'Voice Over', 'Journalist',
+  'Trance', 'Drum & Bass', 'Reggae', 'Voice Over', 'Journalist',
   'Soul', 'Content Creator', 'Pop', 'Jazz', 'CrysGarage'
 ];
 
