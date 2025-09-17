@@ -836,10 +836,67 @@ async def upload_file(
             # Resolve genre to known presets to avoid key errors (handles case/aliases)
             def _resolve_genre_name(g: str) -> str:
                 gl = (g or "").strip().lower()
+                # West African genres
+                if gl in ("afrobeats", "afro beats"):
+                    return "Afrobeats"
+                if gl in ("alté", "alte", "alternative"):
+                    return "Alté"
+                if gl in ("hip-life", "hiplife", "hip life"):
+                    return "Hip-life"
+                if gl == "azonto":
+                    return "Azonto"
+                if gl in ("naija pop", "naijapop", "naija"):
+                    return "Naija Pop"
+                if gl in ("bongo flava", "bongoflava", "bongo"):
+                    return "Bongo Flava"
+                
+                # South African genres
+                if gl == "amapiano":
+                    return "Amapiano"
+                if gl == "kwaito":
+                    return "Kwaito"
+                if gl == "gqom":
+                    return "Gqom"
+                if gl in ("shangaan electro", "shangaan", "electro"):
+                    return "Shangaan Electro"
+                if gl == "kwela":
+                    return "Kwela"
+                
+                # Central/East African genres
+                if gl == "kuduro":
+                    return "Kuduro"
+                if gl == "ndombolo":
+                    return "Ndombolo"
+                if gl == "gengetone":
+                    return "Gengetone"
+                if gl == "shrap":
+                    return "Shrap"
+                if gl == "singeli":
+                    return "Singeli"
+                if gl in ("urban benga", "urbanbenga"):
+                    return "Urban Benga"
+                if gl in ("new benga", "newbenga"):
+                    return "New Benga"
+                
+                # North African genres
+                if gl in ("raï n'b", "rai n'b", "rai nb", "raï nb"):
+                    return "Raï N'B"
+                if gl in ("raï-hop", "rai-hop", "rai hop", "raï hop"):
+                    return "Raï-hop"
+                if gl in ("gnawa fusion", "gnawafusion"):
+                    return "Gnawa Fusion"
+                
+                # Fusion genres
+                if gl == "afrotrap":
+                    return "Afrotrap"
+                if gl in ("afro-gospel", "afrogospel"):
+                    return "Afro-Gospel"
+                if gl in ("urban gospel", "urbangospel"):
+                    return "Urban Gospel"
+                
+                # Legacy fallbacks
                 if "hip" in gl:
                     return "Hip-Hop"
-                if "afro" in gl:
-                    return "Afrobeats"
                 if gl in ("r&b", "rnb", "rnb/soul", "r and b", "r n b"):
                     return "R&B"
                 if "house" in gl:
@@ -858,7 +915,7 @@ async def upload_file(
                     return "Classical"
                 if "pop" in gl:
                     return "Pop"
-                return g.title() if g else "Pop"
+                return g.title() if g else "Afrobeats"
 
             resolved_genre = _resolve_genre_name(genre)
             # Allow client-provided target LUFS (low/medium/high), default -8 LUFS
