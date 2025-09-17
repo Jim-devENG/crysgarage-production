@@ -450,10 +450,9 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
         });
       }, 1000);
 
-      // Convert format for backend
-      let backendFormat = 'mp3';
-      if (downloadFormat === 'wav16') backendFormat = 'wav';
-      if (downloadFormat === 'wav24') backendFormat = 'wav';
+      // Convert format for backend (preserve discrete WAV depth options)
+      const backendFormat: 'mp3' | 'wav' | 'wav16' | 'wav24' =
+        downloadFormat === 'wav16' ? 'wav16' : downloadFormat === 'wav24' ? 'wav24' : downloadFormat;
 
       // Process audio with Python service for FINAL output (not preview)
       const levelLufs = volumeEnabled ? selectedLufs : -8;
@@ -480,10 +479,14 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
       // Combine stats and ML details in a single update to avoid overwriting
       setMasteredStats({
         loudness: result.lufs || -8,
-        peak: result.true_peak_dbfs || -1.5,
-        dynamicRange: result.dynamic_range || 8,
-        frequencyBalance: result.frequency_balance || 0.5,
-        stereoWidth: result.stereo_width || 1.0,
+        // @ts-ignore: backend may include extra fields
+        peak: (result as any)?.true_peak_dbfs ?? -1.5,
+        // @ts-ignore
+        dynamicRange: (result as any)?.dynamic_range ?? 8,
+        // @ts-ignore
+        frequencyBalance: (result as any)?.frequency_balance ?? 0.5,
+        // @ts-ignore
+        stereoWidth: (result as any)?.stereo_width ?? 1.0,
         // @ts-ignore
         mlSummary,
         // @ts-ignore
