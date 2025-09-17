@@ -1,0 +1,20 @@
+[Unit]
+Description=Uvicorn Audio Mastering FastAPI Service
+After=network.target
+
+[Service]
+User=nginx
+Group=nginx
+WorkingDirectory=/var/www/crysgarage-deploy/audio-mastering-service
+Environment="PATH=/var/www/crysgarage-deploy/audio-mastering-service/venv/bin"
+ExecStart=/var/www/crysgarage-deploy/audio-mastering-service/venv/bin/uvicorn main:app --host 0.0.0.0 --port 8002 --proxy-headers
+Restart=always
+RestartSec=3
+KillSignal=SIGQUIT
+TimeoutStopSec=20
+SyslogIdentifier=uvicorn-audio
+
+[Install]
+WantedBy=multi-user.target
+
+

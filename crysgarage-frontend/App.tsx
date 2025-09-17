@@ -3,7 +3,7 @@ import { AuthenticationProvider, useAuth } from './contexts/AuthenticationContex
 import { LandingPage } from './components/LandingPage';
 import { FreeTierDashboard } from './components/FreeTier';
 import FreeTierDashboardPython from './components/FreeTier/FreeTierDashboardPython';
-import ProfessionalTierDashboard from './components/ProfessionalTierDashboard';
+import ProfessionalTierDashboard from './components/ProfessionalTier/ProfessionalTierDashboard';
 import AdvancedTierDashboard from './components/AdvancedTierDashboard/index';
 import { Header } from './components/Header';
 import { ProcessingPage } from './components/ProcessingPage';
@@ -194,7 +194,9 @@ function AppContent() {
         )}
 
         {currentPage === 'professional' && (
-          <ProfessionalTierDashboard />
+          <ProfessionalTierDashboard 
+            onDownloadAttempt={handleDownloadAttempt}
+          />
         )}
 
         {currentPage === 'advanced' && (

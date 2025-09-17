@@ -143,7 +143,7 @@ class PythonAudioService {
       if (!this.baseURL || !this.baseURL.startsWith('http')) {
         this.baseURL = computePythonBaseUrl();
       }
-      const response = await axios.get(`${this.baseURL}/genres`);
+      const response = await axios.get(`${this.baseURL}/genres`, { timeout: 8000 });
       return response.data.genres;
     } catch (error) {
       console.error('Failed to get genre information:', error);
@@ -162,6 +162,16 @@ class PythonAudioService {
       // For free tier, return only 2 genres
       if (tier === 'free') {
         return ['Hip-Hop', 'Afrobeats'];
+      }
+      
+      // For professional tier, return all 24+ genres
+      if (tier === 'professional' || tier === 'pro') {
+        return [
+          'Hip-Hop', 'Afrobeats', 'Gospel', 'Pop', 'Rock', 'Electronic', 'Jazz', 'Classical',
+          'R&B', 'Reggae', 'Country', 'Blues', 'Funk', 'Soul', 'Disco', 'House',
+          'Techno', 'Trance', 'Dubstep', 'Ambient', 'Indie', 'Alternative', 'Folk', 'Acoustic',
+          'Latin', 'World', 'Experimental', 'Cinematic', 'Lo-Fi', 'Trap', 'Future Bass'
+        ];
       }
       
       // For other tiers, return all available genres
@@ -213,44 +223,62 @@ class PythonAudioService {
    */
   async uploadAndProcessAudio(
     file: File,
-    tier: 'free' | 'professional' | 'advanced' | 'one_on_one',
+    tier: 'free' | 'pro' | 'professional' | 'advanced' | 'one_on_one',
     genre: string,
     userId: string,
-    format: 'mp3' | 'wav' = 'mp3'
+    format: 'mp3' | 'wav' | 'wav16' | 'wav24' = 'mp3',
+    targetLufs?: number
   ): Promise<MasteringResponse> {
     try {
       if (isLocal) {
-        // Local dev path: upload to Laravel then call Python /master
+        // Local dev mirrors production: direct to Python upload-file
+        if (!this.baseURL || !this.baseURL.startsWith('http')) {
+          this.baseURL = computePythonBaseUrl();
+        }
         const formData = new FormData();
         formData.append('audio', file);
         formData.append('tier', tier);
         formData.append('genre', genre);
         formData.append('user_id', userId);
+        formData.append('is_preview', 'false');
+        formData.append('target_format', format.toUpperCase());
+        formData.append('target_sample_rate', '44100');
+        if (typeof targetLufs === 'number') {
+          formData.append('target_lufs', String(targetLufs));
+        }
+        if (format === 'mp3') {
+          formData.append('mp3_bitrate_kbps', '320');
+        } else if (format === 'wav' || format === 'wav24') {
+          formData.append('wav_bit_depth', '24');
+        } else if (format === 'wav16') {
+          formData.append('wav_bit_depth', '16');
+        }
 
-        console.log('Uploading file to Laravel backend...');
-        const uploadResponse = await axios.post(
-          `${LARAVEL_API_BASE}/api/upload-audio`,
-          formData
-        );
-
-        const { file_url } = uploadResponse.data;
-        console.log('File uploaded successfully:', file_url);
-
-        const masteringRequest: MasteringRequest = {
-          user_id: userId,
-          tier: tier.charAt(0).toUpperCase() + tier.slice(1) as any,
-          genre: genre as any,
-          target_format: (format.toUpperCase()) as any,
-          target_sample_rate: 44100 as any,
-          file_url,
-          target_lufs: -14.0,
-          mp3_bitrate_kbps: format === 'mp3' ? 320 : undefined,
-          wav_bit_depth: format === 'wav' ? 24 : undefined,
-        };
-
-        console.log('Processing with Python microservice...');
-        const result = await this.processAudio(masteringRequest);
-        return result;
+        console.log('Uploading file directly to Python for mastering (local)...');
+        let resp;
+        try {
+          resp = await axios.post(`${this.baseURL}/upload-file/`, formData, { timeout: 300000 });
+        } catch (e: any) {
+          if (e?.response?.status === 404) {
+            resp = await axios.post(`${this.baseURL}/upload-file`, formData, { timeout: 300000 });
+          } else {
+            throw e;
+          }
+        }
+        const masteredUrl: string = resp.data?.mastered_url || resp.data?.url;
+        if (!masteredUrl) {
+          throw new Error('Python service did not return mastered_url');
+        }
+        const lower = masteredUrl.toLowerCase();
+        const resolvedFormat = lower.endsWith('.wav') ? 'WAV' : lower.endsWith('.mp3') ? 'MP3' : (format.toUpperCase());
+        return {
+          status: 'done',
+          url: masteredUrl,
+          lufs: -8,
+          format: resolvedFormat,
+          duration: 0,
+          processing_time: 0,
+        } as any;
       } else {
         // Production path: Python-only. Try /upload-file/ then /upload-file (no fallback to Laravel)
         if (!this.baseURL || !this.baseURL.startsWith('http')) {
@@ -264,10 +292,15 @@ class PythonAudioService {
         formData.append('is_preview', 'false');
         formData.append('target_format', format.toUpperCase());
         formData.append('target_sample_rate', '44100');
+        if (typeof targetLufs === 'number') {
+          formData.append('target_lufs', String(targetLufs));
+        }
         if (format === 'mp3') {
           formData.append('mp3_bitrate_kbps', '320');
-        } else if (format === 'wav') {
+        } else if (format === 'wav' || format === 'wav24') {
           formData.append('wav_bit_depth', '24');
+        } else if (format === 'wav16') {
+          formData.append('wav_bit_depth', '16');
         }
 
         console.log('Uploading file directly to Python for mastering (prod)...');

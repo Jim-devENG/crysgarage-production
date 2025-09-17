@@ -4,12 +4,10 @@ Handles file uploads to S3 or local storage
 """
 
 import os
-import tempfile
 import asyncio
 import aiofiles
 from typing import Dict, Any, Optional
 import logging
-from pathlib import Path
 from datetime import datetime
 import hashlib
 import mimetypes
@@ -386,6 +384,6 @@ class StorageManager:
         try:
             stat = os.statvfs(self.local_storage_path)
             return stat.f_bavail * stat.f_frsize
-        except:
+        except Exception:
             return 0
 

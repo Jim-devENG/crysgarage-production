@@ -57,6 +57,13 @@ ml_engine = MLMasteringEngine()
 storage_manager = StorageManager()
 ffmpeg_converter = FFmpegConverter()
 
+# Optional noise reduction
+try:
+    import noisereduce as nr  # type: ignore
+    _NR_AVAILABLE = True
+except Exception:
+    _NR_AVAILABLE = False
+
 @app.get("/")
 async def root():
     """Health check endpoint"""
@@ -154,6 +161,34 @@ async def master_audio(request: MasteringRequest, background_tasks: BackgroundTa
         except Exception as e:
             logger.error(f"Failed to download file: {e}")
             raise HTTPException(status_code=500, detail=f"Failed to download file: {str(e)}")
+
+        # Measure original loudness for A/B playback normalization hints
+        try:
+            original_meta = await audio_processor.get_audio_metadata(input_file_path)
+            original_lufs = float(original_meta.get("lufs")) if original_meta.get("lufs") is not None else None
+        except Exception:
+            original_meta = {}
+            original_lufs = None
+
+        # Optional: light noise reduction pre-processing to improve ML robustness
+        try:
+            if _NR_AVAILABLE:
+                import soundfile as sf
+                import numpy as np
+                y, sr = sf.read(input_file_path, always_2d=False)
+                # Convert to mono for reduction, then keep shape
+                if y.ndim > 1:
+                    y_mono = np.mean(y, axis=1)
+                else:
+                    y_mono = y
+                y_denoised = nr.reduce_noise(y=y_mono, sr=sr, prop_decrease=0.75)
+                # Write a temp denoised file
+                denoised_path = input_file_path.replace("temp_", "den_", 1)
+                sf.write(denoised_path, y_denoised, sr)
+                input_file_path = denoised_path
+                logger.info("Applied noise reduction pre-processing")
+        except Exception as e:
+            logger.warning(f"Noise reduction skipped: {e}")
         
         # Resolve genre name to known presets (case/alias tolerant)
         def _resolve_genre(g: str) -> str:
@@ -182,7 +217,13 @@ async def master_audio(request: MasteringRequest, background_tasks: BackgroundTa
         # Process audio with ML mastering
         logger.info(f"Applying ML mastering for genre: {resolved_genre} (requested: {request.genre}), tier: {request.tier}")
         # Global LUFS policy: force all masters to -8 LUFS
-        effective_target_lufs = -8.0
+        # Allow client to request low/medium/high targets for A/B level matching
+        # Fallback to -8 LUFS if not provided
+        try:
+            client_target = float(getattr(request, 'target_lufs') or -8.0)
+        except Exception:
+            client_target = -8.0
+        effective_target_lufs = client_target
         try:
             mastered_file_path = await ml_engine.process_audio(
                 input_file_path=input_file_path,
@@ -198,9 +239,16 @@ async def master_audio(request: MasteringRequest, background_tasks: BackgroundTa
         # Convert to target format
         logger.info(f"Converting to format: {request.target_format}, sample rate: {request.target_sample_rate}")
         # Determine conversion params from request.applied format desires
-        desired_format = request.target_format.value if hasattr(request.target_format, 'value') else request.target_format
+        raw_format = request.target_format.value if hasattr(request.target_format, 'value') else request.target_format
+        # Handle new format options: wav16, wav24
+        if str(raw_format).upper() in ["WAV16", "WAV24"]:
+            desired_format = "WAV"
+            wav_bit_depth = 16 if "16" in str(raw_format).upper() else 24
+        else:
+            desired_format = raw_format
+            wav_bit_depth = request.wav_bit_depth if request.wav_bit_depth else (24 if str(desired_format).upper() == 'WAV' else None)
+        
         desired_sr = request.target_sample_rate.value if hasattr(request.target_sample_rate, 'value') else request.target_sample_rate
-        wav_bit_depth = request.wav_bit_depth if request.wav_bit_depth else (24 if str(desired_format).upper() == 'WAV' else None)
         mp3_bitrate = request.mp3_bitrate_kbps if request.mp3_bitrate_kbps else (320 if str(desired_format).upper() == 'MP3' else None)
 
         final_file_path = await ffmpeg_converter.convert_audio(
@@ -233,7 +281,7 @@ async def master_audio(request: MasteringRequest, background_tasks: BackgroundTa
                 y, sr = librosa.load(final_file_path, sr=None, mono=True)
                 peak = float(np.max(np.abs(y)) + 1e-12)
                 peak_dbfs = 20 * np.log10(peak)
-                ceiling_dbfs = -1.5  # true-peak safety margin
+                ceiling_dbfs = -3.0  # extra headroom to avoid buzz/near-clipping perception
                 if peak_dbfs > ceiling_dbfs:
                     safety_gain_db = ceiling_dbfs - peak_dbfs
                     safe_path = await ffmpeg_converter.apply_gain(
@@ -266,11 +314,23 @@ async def master_audio(request: MasteringRequest, background_tasks: BackgroundTa
             {"area": "genre", "action": f"Applied {resolved_genre} tonal curve", "reason": "Match genre character"}
         ]
 
+        # Recommend A/B playback normalization so mastered doesn't feel "extra" vs original
+        try:
+            # If we have original LUFS, suggest attenuating mastered playback to match original perception
+            # Positive value means "turn mastered down by X dB" for A/B level matching
+            recommended_playback_attenuation_db = None
+            if original_lufs is not None:
+                recommended_playback_attenuation_db = max(0.0, effective_target_lufs - original_lufs)
+        except Exception:
+            recommended_playback_attenuation_db = None
+
         applied_params = {
             "target_lufs": effective_target_lufs,
             "target_format": request.target_format.value if hasattr(request.target_format, 'value') else request.target_format,
             "target_sample_rate": request.target_sample_rate.value if hasattr(request.target_sample_rate, 'value') else request.target_sample_rate,
-            "resolved_genre": resolved_genre
+            "resolved_genre": resolved_genre,
+            "original_lufs": original_lufs,
+            "recommended_playback_attenuation_db": recommended_playback_attenuation_db
         }
         
         # Cleanup temporary files
@@ -642,6 +702,12 @@ async def get_tier_info():
             "sample_rates": [44100, 48000, 96000],
             "processing_priority": "medium"
         },
+        "Professional": {
+            "max_file_size_mb": 200,
+            "formats": ["WAV", "MP3", "FLAC", "AIFF"],
+            "sample_rates": [44100, 48000, 96000],
+            "processing_priority": "medium"
+        },
         "Advanced": {
             "max_file_size_mb": 500,
             "formats": ["WAV", "MP3", "FLAC", "AIFF", "AAC", "OGG"],
@@ -764,21 +830,50 @@ async def upload_file(
         else:
             # Full mastering process with format handling (production fallback path)
             logger.info(f"Starting full mastering process (upload-file) for: {genre}")
-            effective_target_lufs = -8.0
+            # Allow client-provided target LUFS (low/medium/high), default -8 LUFS
+            try:
+                effective_target_lufs = float(target_lufs) if target_lufs is not None else -8.0
+            except Exception:
+                effective_target_lufs = -8.0
 
             # Step 1: Mastering
+            try:
+                if _NR_AVAILABLE:
+                    import soundfile as sf
+                    import numpy as np
+                    y, sr = sf.read(temp_file_path, always_2d=False)
+                    if y.ndim > 1:
+                        y_mono = np.mean(y, axis=1)
+                    else:
+                        y_mono = y
+                    y_denoised = nr.reduce_noise(y=y_mono, sr=sr, prop_decrease=0.75)
+                    den_path = temp_file_path.replace("temp_", "den_", 1)
+                    sf.write(den_path, y_denoised, sr)
+                    temp_in_path = den_path
+                else:
+                    temp_in_path = temp_file_path
+            except Exception:
+                temp_in_path = temp_file_path
+
             mastered_file_path = await ml_engine.process_audio(
-                input_file_path=temp_file_path,
+                input_file_path=temp_in_path,
                 tier=tier,
                 genre=genre,
                 target_lufs=effective_target_lufs
             )
 
             # Step 2: Conversion based on provided params (defaults: WAV 44100/24-bit or MP3 320kbps)
-            desired_format = (target_format or "MP3").upper()
+            # Handle new format options: wav16, wav24
+            raw_format = (target_format or "MP3").upper()
+            if raw_format in ["WAV16", "WAV24"]:
+                desired_format = "WAV"
+                desired_wav_bit_depth = 16 if "16" in raw_format else 24
+            else:
+                desired_format = raw_format
+                desired_wav_bit_depth = int(wav_bit_depth) if wav_bit_depth else (24 if desired_format == "WAV" else None)
+            
             desired_sr = int(target_sample_rate or 44100)
             desired_mp3_bitrate = int(mp3_bitrate_kbps) if mp3_bitrate_kbps else (320 if desired_format == "MP3" else None)
-            desired_wav_bit_depth = int(wav_bit_depth) if wav_bit_depth else (24 if desired_format == "WAV" else None)
             
             logger.info(f"Final conversion params - format: {desired_format}, sample_rate: {desired_sr}, mp3_bitrate: {desired_mp3_bitrate}, wav_bit_depth: {desired_wav_bit_depth}")
 
