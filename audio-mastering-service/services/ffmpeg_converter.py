@@ -74,7 +74,7 @@ class FFmpegConverter:
             
             # Create output file path
             input_name = Path(input_path).stem
-            format_info = self.supported_formats[output_format]
+            format_info = self.supported_formats[output_format]  # used for extension only
             output_path = os.path.join(
                 self.temp_dir,
                 f"{input_name}_converted{format_info['ext']}"
@@ -175,32 +175,54 @@ class FFmpegConverter:
         try:
             logger.info(f"Executing FFmpeg command: {' '.join(cmd)}")
             
-            # Run FFmpeg in subprocess
-            process = await asyncio.create_subprocess_exec(
-                *cmd,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
+            # Use asyncio.get_event_loop().run_in_executor to run subprocess in thread pool
+            # This avoids the NotImplementedError on Windows
+            loop = asyncio.get_event_loop()
+            result = await loop.run_in_executor(
+                None, 
+                self._run_ffmpeg_sync, 
+                cmd
             )
             
-            # Wait for completion with timeout
-            stdout, stderr = await asyncio.wait_for(
-                process.communicate(),
-                timeout=300  # 5 minute timeout
-            )
-            
-            if process.returncode != 0:
-                error_msg = stderr.decode() if stderr else "Unknown FFmpeg error"
+            if result['returncode'] != 0:
+                error_msg = result['stderr'] if result['stderr'] else "Unknown FFmpeg error"
                 logger.error(f"FFmpeg failed: {error_msg}")
                 raise Exception(f"FFmpeg conversion failed: {error_msg}")
             
             logger.info("FFmpeg conversion completed successfully")
             
-        except asyncio.TimeoutError:
-            logger.error("FFmpeg conversion timed out")
-            raise Exception("Audio conversion timed out")
         except Exception as e:
             logger.error(f"FFmpeg execution failed: {e}")
             raise
+    
+    def _run_ffmpeg_sync(self, cmd: list) -> dict:
+        """Run FFmpeg command synchronously in thread pool"""
+        try:
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=300  # 5 minute timeout
+            )
+            
+            return {
+                'returncode': result.returncode,
+                'stdout': result.stdout,
+                'stderr': result.stderr
+            }
+            
+        except subprocess.TimeoutExpired as e:
+            return {
+                'returncode': -1,
+                'stdout': '',
+                'stderr': f"FFmpeg conversion timed out: {e}"
+            }
+        except Exception as e:
+            return {
+                'returncode': -1,
+                'stdout': '',
+                'stderr': f"FFmpeg execution failed: {e}"
+            }
 
     async def apply_gain(
         self,
@@ -246,22 +268,19 @@ class FFmpegConverter:
                 file_path
             ]
             
-            process = await asyncio.create_subprocess_exec(
-                *cmd,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
+            # Use the same thread pool approach to avoid Windows subprocess issues
+            loop = asyncio.get_event_loop()
+            result = await loop.run_in_executor(
+                None, 
+                self._run_ffprobe_sync, 
+                cmd
             )
             
-            stdout, stderr = await asyncio.wait_for(
-                process.communicate(),
-                timeout=30
-            )
-            
-            if process.returncode != 0:
-                raise Exception(f"FFprobe failed: {stderr.decode()}")
+            if result['returncode'] != 0:
+                raise Exception(f"FFprobe failed: {result['stderr']}")
             
             import json
-            info = json.loads(stdout.decode())
+            info = json.loads(result['stdout'])
             
             # Extract relevant information
             audio_stream = None
@@ -291,6 +310,35 @@ class FFmpegConverter:
                 'codec': 'unknown',
                 'bit_rate': 0,
                 'file_size': 0
+            }
+    
+    def _run_ffprobe_sync(self, cmd: list) -> dict:
+        """Run FFprobe command synchronously in thread pool"""
+        try:
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=30
+            )
+            
+            return {
+                'returncode': result.returncode,
+                'stdout': result.stdout,
+                'stderr': result.stderr
+            }
+            
+        except subprocess.TimeoutExpired as e:
+            return {
+                'returncode': -1,
+                'stdout': '',
+                'stderr': f"FFprobe timed out: {e}"
+            }
+        except Exception as e:
+            return {
+                'returncode': -1,
+                'stdout': '',
+                'stderr': f"FFprobe execution failed: {e}"
             }
     
     def get_supported_formats(self) -> list:

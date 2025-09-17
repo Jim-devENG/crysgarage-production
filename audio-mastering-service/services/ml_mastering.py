@@ -8,10 +8,9 @@ import tempfile
 import numpy as np
 import librosa
 import soundfile as sf
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 import logging
 from pathlib import Path
-import json
 
 logger = logging.getLogger(__name__)
 
@@ -172,6 +171,398 @@ class MLMasteringEngine:
                 },
                 "stereo_width": 1.0,
                 "target_lufs": -14.0
+            },
+            # Professional Tier Genres (24+ total)
+            "R&B": {
+                "eq_curve": {
+                    "low_shelf": {"freq": 80, "gain": 3.0},
+                    "low_mid": {"freq": 250, "gain": 2.0},
+                    "mid": {"freq": 1000, "gain": 1.0},
+                    "high_mid": {"freq": 4000, "gain": 2.5},
+                    "high_shelf": {"freq": 8000, "gain": 3.0}
+                },
+                "compression": {
+                    "ratio": 2.5,
+                    "threshold": -10.0,
+                    "attack": 0.005,
+                    "release": 0.15
+                },
+                "stereo_width": 1.2,
+                "target_lufs": -8.0
+            },
+            "Reggae": {
+                "eq_curve": {
+                    "low_shelf": {"freq": 60, "gain": 4.0},
+                    "low_mid": {"freq": 200, "gain": 3.0},
+                    "mid": {"freq": 800, "gain": 2.0},
+                    "high_mid": {"freq": 3000, "gain": 1.5},
+                    "high_shelf": {"freq": 10000, "gain": 2.0}
+                },
+                "compression": {
+                    "ratio": 2.0,
+                    "threshold": -12.0,
+                    "attack": 0.01,
+                    "release": 0.2
+                },
+                "stereo_width": 1.1,
+                "target_lufs": -9.5
+            },
+            "Country": {
+                "eq_curve": {
+                    "low_shelf": {"freq": 100, "gain": 1.5},
+                    "low_mid": {"freq": 300, "gain": 1.0},
+                    "mid": {"freq": 1200, "gain": 0.5},
+                    "high_mid": {"freq": 5000, "gain": 1.5},
+                    "high_shelf": {"freq": 8000, "gain": 2.0}
+                },
+                "compression": {
+                    "ratio": 2.0,
+                    "threshold": -8.0,
+                    "attack": 0.01,
+                    "release": 0.2
+                },
+                "stereo_width": 1.0,
+                "target_lufs": -10.0
+            },
+            "Blues": {
+                "eq_curve": {
+                    "low_shelf": {"freq": 80, "gain": 2.0},
+                    "low_mid": {"freq": 250, "gain": 1.5},
+                    "mid": {"freq": 1000, "gain": 0.5},
+                    "high_mid": {"freq": 4000, "gain": 1.0},
+                    "high_shelf": {"freq": 8000, "gain": 1.5}
+                },
+                "compression": {
+                    "ratio": 1.8,
+                    "threshold": -6.0,
+                    "attack": 0.02,
+                    "release": 0.3
+                },
+                "stereo_width": 1.0,
+                "target_lufs": -11.0
+            },
+            "Funk": {
+                "eq_curve": {
+                    "low_shelf": {"freq": 60, "gain": 3.5},
+                    "low_mid": {"freq": 200, "gain": 2.5},
+                    "mid": {"freq": 800, "gain": 1.0},
+                    "high_mid": {"freq": 3000, "gain": 2.0},
+                    "high_shelf": {"freq": 8000, "gain": 2.5}
+                },
+                "compression": {
+                    "ratio": 3.0,
+                    "threshold": -10.0,
+                    "attack": 0.005,
+                    "release": 0.1
+                },
+                "stereo_width": 1.3,
+                "target_lufs": -8.5
+            },
+            "Soul": {
+                "eq_curve": {
+                    "low_shelf": {"freq": 80, "gain": 2.5},
+                    "low_mid": {"freq": 250, "gain": 2.0},
+                    "mid": {"freq": 1000, "gain": 1.5},
+                    "high_mid": {"freq": 4000, "gain": 2.0},
+                    "high_shelf": {"freq": 8000, "gain": 2.5}
+                },
+                "compression": {
+                    "ratio": 2.2,
+                    "threshold": -8.0,
+                    "attack": 0.01,
+                    "release": 0.2
+                },
+                "stereo_width": 1.1,
+                "target_lufs": -9.0
+            },
+            "Disco": {
+                "eq_curve": {
+                    "low_shelf": {"freq": 60, "gain": 4.0},
+                    "low_mid": {"freq": 200, "gain": 3.0},
+                    "mid": {"freq": 800, "gain": 1.5},
+                    "high_mid": {"freq": 3000, "gain": 2.5},
+                    "high_shelf": {"freq": 8000, "gain": 3.0}
+                },
+                "compression": {
+                    "ratio": 3.5,
+                    "threshold": -12.0,
+                    "attack": 0.002,
+                    "release": 0.08
+                },
+                "stereo_width": 1.4,
+                "target_lufs": -7.5
+            },
+            "House": {
+                "eq_curve": {
+                    "low_shelf": {"freq": 40, "gain": 4.5},
+                    "low_mid": {"freq": 150, "gain": 2.5},
+                    "mid": {"freq": 600, "gain": 0.5},
+                    "high_mid": {"freq": 2500, "gain": 2.0},
+                    "high_shelf": {"freq": 8000, "gain": 3.0}
+                },
+                "compression": {
+                    "ratio": 4.5,
+                    "threshold": -15.0,
+                    "attack": 0.001,
+                    "release": 0.05
+                },
+                "stereo_width": 1.5,
+                "target_lufs": -6.5
+            },
+            "Techno": {
+                "eq_curve": {
+                    "low_shelf": {"freq": 30, "gain": 5.0},
+                    "low_mid": {"freq": 120, "gain": 3.0},
+                    "mid": {"freq": 500, "gain": 0.0},
+                    "high_mid": {"freq": 2000, "gain": 1.5},
+                    "high_shelf": {"freq": 8000, "gain": 2.5}
+                },
+                "compression": {
+                    "ratio": 5.0,
+                    "threshold": -18.0,
+                    "attack": 0.001,
+                    "release": 0.03
+                },
+                "stereo_width": 1.6,
+                "target_lufs": -6.0
+            },
+            "Trance": {
+                "eq_curve": {
+                    "low_shelf": {"freq": 40, "gain": 3.5},
+                    "low_mid": {"freq": 150, "gain": 2.0},
+                    "mid": {"freq": 600, "gain": 1.0},
+                    "high_mid": {"freq": 2500, "gain": 2.5},
+                    "high_shelf": {"freq": 10000, "gain": 3.5}
+                },
+                "compression": {
+                    "ratio": 4.0,
+                    "threshold": -12.0,
+                    "attack": 0.002,
+                    "release": 0.06
+                },
+                "stereo_width": 1.5,
+                "target_lufs": -7.0
+            },
+            "Dubstep": {
+                "eq_curve": {
+                    "low_shelf": {"freq": 30, "gain": 6.0},
+                    "low_mid": {"freq": 100, "gain": 4.0},
+                    "mid": {"freq": 400, "gain": -1.0},
+                    "high_mid": {"freq": 2000, "gain": 2.0},
+                    "high_shelf": {"freq": 8000, "gain": 3.0}
+                },
+                "compression": {
+                    "ratio": 6.0,
+                    "threshold": -20.0,
+                    "attack": 0.001,
+                    "release": 0.02
+                },
+                "stereo_width": 1.7,
+                "target_lufs": -5.5
+            },
+            "Ambient": {
+                "eq_curve": {
+                    "low_shelf": {"freq": 100, "gain": 0.5},
+                    "low_mid": {"freq": 300, "gain": 0.0},
+                    "mid": {"freq": 1000, "gain": 0.0},
+                    "high_mid": {"freq": 5000, "gain": 0.5},
+                    "high_shelf": {"freq": 12000, "gain": 1.0}
+                },
+                "compression": {
+                    "ratio": 1.3,
+                    "threshold": -4.0,
+                    "attack": 0.03,
+                    "release": 0.4
+                },
+                "stereo_width": 1.2,
+                "target_lufs": -13.0
+            },
+            "Indie": {
+                "eq_curve": {
+                    "low_shelf": {"freq": 80, "gain": 1.0},
+                    "low_mid": {"freq": 250, "gain": 0.5},
+                    "mid": {"freq": 1000, "gain": 0.0},
+                    "high_mid": {"freq": 4000, "gain": 1.0},
+                    "high_shelf": {"freq": 8000, "gain": 1.5}
+                },
+                "compression": {
+                    "ratio": 1.8,
+                    "threshold": -8.0,
+                    "attack": 0.01,
+                    "release": 0.25
+                },
+                "stereo_width": 1.0,
+                "target_lufs": -10.5
+            },
+            "Alternative": {
+                "eq_curve": {
+                    "low_shelf": {"freq": 60, "gain": 2.0},
+                    "low_mid": {"freq": 200, "gain": 1.0},
+                    "mid": {"freq": 800, "gain": 0.5},
+                    "high_mid": {"freq": 3000, "gain": 1.5},
+                    "high_shelf": {"freq": 6000, "gain": 2.0}
+                },
+                "compression": {
+                    "ratio": 2.5,
+                    "threshold": -10.0,
+                    "attack": 0.005,
+                    "release": 0.12
+                },
+                "stereo_width": 1.1,
+                "target_lufs": -9.0
+            },
+            "Folk": {
+                "eq_curve": {
+                    "low_shelf": {"freq": 100, "gain": 0.5},
+                    "low_mid": {"freq": 300, "gain": 0.0},
+                    "mid": {"freq": 1200, "gain": 0.5},
+                    "high_mid": {"freq": 5000, "gain": 1.0},
+                    "high_shelf": {"freq": 10000, "gain": 1.5}
+                },
+                "compression": {
+                    "ratio": 1.5,
+                    "threshold": -6.0,
+                    "attack": 0.02,
+                    "release": 0.3
+                },
+                "stereo_width": 1.0,
+                "target_lufs": -12.0
+            },
+            "Acoustic": {
+                "eq_curve": {
+                    "low_shelf": {"freq": 120, "gain": 0.0},
+                    "low_mid": {"freq": 400, "gain": 0.0},
+                    "mid": {"freq": 1000, "gain": 0.0},
+                    "high_mid": {"freq": 5000, "gain": 0.5},
+                    "high_shelf": {"freq": 10000, "gain": 1.0}
+                },
+                "compression": {
+                    "ratio": 1.3,
+                    "threshold": -4.0,
+                    "attack": 0.03,
+                    "release": 0.4
+                },
+                "stereo_width": 1.0,
+                "target_lufs": -13.0
+            },
+            "Latin": {
+                "eq_curve": {
+                    "low_shelf": {"freq": 60, "gain": 3.0},
+                    "low_mid": {"freq": 200, "gain": 2.5},
+                    "mid": {"freq": 800, "gain": 1.5},
+                    "high_mid": {"freq": 3000, "gain": 2.0},
+                    "high_shelf": {"freq": 8000, "gain": 2.5}
+                },
+                "compression": {
+                    "ratio": 2.8,
+                    "threshold": -10.0,
+                    "attack": 0.005,
+                    "release": 0.1
+                },
+                "stereo_width": 1.3,
+                "target_lufs": -8.5
+            },
+            "World": {
+                "eq_curve": {
+                    "low_shelf": {"freq": 80, "gain": 1.5},
+                    "low_mid": {"freq": 250, "gain": 1.0},
+                    "mid": {"freq": 1000, "gain": 0.5},
+                    "high_mid": {"freq": 4000, "gain": 1.5},
+                    "high_shelf": {"freq": 8000, "gain": 2.0}
+                },
+                "compression": {
+                    "ratio": 2.0,
+                    "threshold": -8.0,
+                    "attack": 0.01,
+                    "release": 0.2
+                },
+                "stereo_width": 1.2,
+                "target_lufs": -10.0
+            },
+            "Experimental": {
+                "eq_curve": {
+                    "low_shelf": {"freq": 40, "gain": 2.0},
+                    "low_mid": {"freq": 150, "gain": 1.0},
+                    "mid": {"freq": 600, "gain": 0.0},
+                    "high_mid": {"freq": 2500, "gain": 1.0},
+                    "high_shelf": {"freq": 12000, "gain": 2.0}
+                },
+                "compression": {
+                    "ratio": 3.0,
+                    "threshold": -12.0,
+                    "attack": 0.005,
+                    "release": 0.15
+                },
+                "stereo_width": 1.4,
+                "target_lufs": -9.5
+            },
+            "Cinematic": {
+                "eq_curve": {
+                    "low_shelf": {"freq": 60, "gain": 2.5},
+                    "low_mid": {"freq": 200, "gain": 1.5},
+                    "mid": {"freq": 800, "gain": 0.5},
+                    "high_mid": {"freq": 3000, "gain": 1.5},
+                    "high_shelf": {"freq": 10000, "gain": 2.5}
+                },
+                "compression": {
+                    "ratio": 2.2,
+                    "threshold": -8.0,
+                    "attack": 0.01,
+                    "release": 0.2
+                },
+                "stereo_width": 1.3,
+                "target_lufs": -9.5
+            },
+            "Lo-Fi": {
+                "eq_curve": {
+                    "low_shelf": {"freq": 100, "gain": 1.0},
+                    "low_mid": {"freq": 300, "gain": 0.5},
+                    "mid": {"freq": 1000, "gain": -0.5},
+                    "high_mid": {"freq": 4000, "gain": -1.0},
+                    "high_shelf": {"freq": 8000, "gain": 0.5}
+                },
+                "compression": {
+                    "ratio": 1.8,
+                    "threshold": -6.0,
+                    "attack": 0.02,
+                    "release": 0.3
+                },
+                "stereo_width": 0.9,
+                "target_lufs": -11.0
+            },
+            "Trap": {
+                "eq_curve": {
+                    "low_shelf": {"freq": 30, "gain": 5.5},
+                    "low_mid": {"freq": 100, "gain": 3.5},
+                    "mid": {"freq": 400, "gain": -0.5},
+                    "high_mid": {"freq": 2000, "gain": 2.5},
+                    "high_shelf": {"freq": 8000, "gain": 3.5}
+                },
+                "compression": {
+                    "ratio": 5.5,
+                    "threshold": -18.0,
+                    "attack": 0.001,
+                    "release": 0.02
+                },
+                "stereo_width": 1.6,
+                "target_lufs": -5.0
+            },
+            "Future Bass": {
+                "eq_curve": {
+                    "low_shelf": {"freq": 40, "gain": 4.0},
+                    "low_mid": {"freq": 150, "gain": 2.5},
+                    "mid": {"freq": 600, "gain": 0.5},
+                    "high_mid": {"freq": 2500, "gain": 2.0},
+                    "high_shelf": {"freq": 10000, "gain": 3.0}
+                },
+                "compression": {
+                    "ratio": 4.5,
+                    "threshold": -15.0,
+                    "attack": 0.001,
+                    "release": 0.04
+                },
+                "stereo_width": 1.5,
+                "target_lufs": -6.5
             }
         }
     
@@ -193,6 +584,20 @@ class MLMasteringEngine:
                 "compression_ratio_max": 2.0
             },
             "Professional": {
+                "processing_quality": "standard",
+                "max_processing_time": 60,
+                "enable_advanced_features": True,
+                "enable_stereo_widening": True,
+                "enable_harmonic_exciter": False,
+                "enable_multiband_compression": True,
+                "max_sample_rate": 48000,
+                "max_bit_depth": 24,
+                "available_formats": ["wav", "mp3", "flac"],
+                "processing_priority": "medium",
+                "eq_bands": 5,
+                "compression_ratio_max": 3.0
+            },
+            "Pro": {
                 "processing_quality": "standard",
                 "max_processing_time": 60,
                 "enable_advanced_features": True,
@@ -257,16 +662,23 @@ class MLMasteringEngine:
         """
         try:
             logger.info(f"Starting ML mastering for genre: {genre}, tier: {tier}")
+            logger.info(f"Input file path: {input_file_path}")
+            
+            # Check if file exists
+            if not os.path.exists(input_file_path):
+                raise FileNotFoundError(f"Input file not found: {input_file_path}")
             
             # Load audio file
+            logger.info("Loading audio file with librosa...")
             audio_data, sample_rate = librosa.load(input_file_path, sr=None)
+            logger.info(f"Audio loaded: shape={audio_data.shape}, sample_rate={sample_rate}")
             
             # Ensure stereo
             if audio_data.ndim == 1:
                 audio_data = np.stack([audio_data, audio_data])
             
             # Get genre preset and tier configuration
-            preset = self.genre_presets.get(genre, self.genre_presets["Pop"])
+            preset = self.genre_presets.get(genre, self.genre_presets["Pop"])  # kept for logging/consistency
             tier_config = self.tier_settings.get(tier, self.tier_settings["Free"])
             
             logger.info(f"Processing with tier: {tier}, quality: {tier_config['processing_quality']}")
@@ -722,7 +1134,7 @@ class MLMasteringEngine:
             rms = np.sqrt(np.mean(audio_data**2))
             lufs = 20 * np.log10(rms + 1e-10) - 0.691
             return float(lufs)
-        except:
+        except Exception:
             return -14.0
     
     async def preview_genre_effects(

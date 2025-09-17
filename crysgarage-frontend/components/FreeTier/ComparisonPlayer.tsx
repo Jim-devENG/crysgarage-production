@@ -28,6 +28,7 @@ interface ComparisonPlayerProps {
   appliedParams?: Record<string, any>;
   originalLufs?: number;
   masteredLufs?: number;
+  recommendedAttenuationDb?: number;
 }
 
 const ComparisonPlayer: React.FC<ComparisonPlayerProps> = ({
@@ -40,7 +41,8 @@ const ComparisonPlayer: React.FC<ComparisonPlayerProps> = ({
   mlSummary = [],
   appliedParams,
   originalLufs,
-  masteredLufs
+  masteredLufs,
+  recommendedAttenuationDb
 }) => {
   // Audio refs
   const originalAudioRef = useRef<HTMLAudioElement>(null);
@@ -63,6 +65,105 @@ const ComparisonPlayer: React.FC<ComparisonPlayerProps> = ({
   // Download state
   const [isDownloading, setIsDownloading] = useState(false);
 
+  // Level matching: apply base gain to mastered playback so A/B is fair
+  const [masteredBaseGain, setMasteredBaseGain] = useState(1);
+
+  // Single-transport A/B switching
+  const [activeSource, setActiveSource] = useState<'original' | 'mastered'>('original');
+  const isPlaying = activeSource === 'original' ? isPlayingOriginal : isPlayingMastered;
+
+  const activeRef = activeSource === 'original' ? originalAudioRef : masteredAudioRef;
+  const inactiveRef = activeSource === 'original' ? masteredAudioRef : originalAudioRef;
+
+  const activeProgress = activeSource === 'original' ? originalProgress : masteredProgress;
+  const activeDuration = activeSource === 'original' ? originalDuration : masteredDuration;
+
+  // Looping around highest peak (24s window)
+  const [loopStart, setLoopStart] = useState<number | null>(null);
+  const [loopEnd, setLoopEnd] = useState<number | null>(null);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const isSwitchSeekingRef = useRef<boolean>(false);
+  // Disable peak-looping per request: always play from the beginning
+  const enablePeakLoop = false;
+
+  // Analyze original audio buffer to find highest peak and compute loop window
+  useEffect(() => {
+    if (!enablePeakLoop) { setLoopStart(null); setLoopEnd(null); return; }
+    let cancelled = false;
+    const analyze = async () => {
+      try {
+        if (!originalFile?.url) return;
+        if (!audioCtxRef.current) {
+          audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+        }
+        const resp = await fetch(originalFile.url);
+        const buf = await resp.arrayBuffer();
+        const audioBuffer = await audioCtxRef.current.decodeAudioData(buf);
+        let maxVal = 0;
+        let maxIndex = 0;
+        const length = audioBuffer.length;
+        const channels = audioBuffer.numberOfChannels;
+        for (let ch = 0; ch < channels; ch++) {
+          const data = audioBuffer.getChannelData(ch);
+          for (let i = 0; i < length; i++) {
+            const v = Math.abs(data[i]);
+            if (v > maxVal) {
+              maxVal = v;
+              maxIndex = i;
+            }
+          }
+        }
+        const sr = audioBuffer.sampleRate;
+        const peakTime = maxIndex / sr;
+        const duration = audioBuffer.duration;
+        const start = Math.max(0, peakTime - 12);
+        const end = Math.min(duration, start + 24);
+        if (!cancelled) {
+          setLoopStart(start);
+          setLoopEnd(end);
+        }
+      } catch {}
+    };
+    analyze();
+    return () => { cancelled = true; };
+  }, [originalFile?.url]);
+
+  // Enforce loop on timeupdate for both elements
+  useEffect(() => {
+    const applyLoopHandler = (el: HTMLAudioElement | null) => {
+      if (!el) return () => {};
+      const onTime = () => {
+        if (isSwitchSeekingRef.current) return;
+        if (enablePeakLoop && loopStart != null && loopEnd != null) {
+          if (el.currentTime < loopStart && !el.paused) {
+            try { el.currentTime = loopStart; } catch {}
+          } else if (el.currentTime >= loopEnd && !el.paused) {
+            try { el.currentTime = loopStart; el.play(); } catch {}
+          }
+        }
+      };
+      el.addEventListener('timeupdate', onTime);
+      return () => { el.removeEventListener('timeupdate', onTime); };
+    };
+    const off1 = applyLoopHandler(originalAudioRef.current);
+    const off2 = applyLoopHandler(masteredAudioRef.current);
+    return () => { off1 && off1(); off2 && off2(); };
+  }, [loopStart, loopEnd, originalAudioRef.current, masteredAudioRef.current]);
+
+  useEffect(() => {
+    // Prefer backend recommendation; else derive from LUFS if available
+    let attenuationDb = 0;
+    if (typeof recommendedAttenuationDb === 'number') {
+      attenuationDb = Math.max(0, recommendedAttenuationDb);
+    } else if (typeof masteredLufs === 'number' && typeof originalLufs === 'number') {
+      attenuationDb = Math.max(0, masteredLufs - originalLufs);
+    } else {
+      attenuationDb = 0;
+    }
+    const gain = Math.pow(10, -attenuationDb / 20);
+    setMasteredBaseGain(gain);
+  }, [recommendedAttenuationDb, originalLufs, masteredLufs]);
+
   // Sync element properties that are not valid JSX attributes
   useEffect(() => {
     if (originalAudioRef.current) {
@@ -73,10 +174,10 @@ const ComparisonPlayer: React.FC<ComparisonPlayerProps> = ({
 
   useEffect(() => {
     if (masteredAudioRef.current) {
-      try { masteredAudioRef.current.volume = masteredMuted ? 0 : masteredVolume; } catch {}
+      try { masteredAudioRef.current.volume = (masteredMuted ? 0 : masteredVolume) * masteredBaseGain; } catch {}
       try { masteredAudioRef.current.muted = masteredMuted; } catch {}
     }
-  }, [masteredVolume, masteredMuted]);
+  }, [masteredVolume, masteredMuted, masteredBaseGain]);
 
   // Format time helper
   const formatTime = (seconds: number) => {
@@ -123,6 +224,91 @@ const ComparisonPlayer: React.FC<ComparisonPlayerProps> = ({
       }
       masteredAudioRef.current.play();
       setIsPlayingMastered(true);
+    }
+  };
+
+  // Central transport: play/pause active
+  const handlePlayPause = () => {
+    const audio = activeRef.current;
+    if (!audio) return;
+    if (isPlaying) {
+      audio.pause();
+      if (activeSource === 'original') setIsPlayingOriginal(false); else setIsPlayingMastered(false);
+    } else {
+      // ensure inactive is paused
+      if (inactiveRef.current) {
+        try { inactiveRef.current.pause(); } catch {}
+      }
+      audio.play();
+      if (activeSource === 'original') setIsPlayingOriginal(true); else setIsPlayingMastered(true);
+    }
+  };
+
+  // Switch A/B while maintaining playhead and play state
+  const handleSwitchSource = (next: 'original' | 'mastered') => {
+    if (next === activeSource) return;
+    const fromRef = activeRef.current;
+    const toRef = inactiveRef.current;
+    if (!toRef) {
+      setActiveSource(next);
+      return;
+    }
+    const wasPlaying = isPlaying;
+    const currentTime = fromRef ? fromRef.currentTime : 0;
+    try { if (fromRef) fromRef.pause(); } catch {}
+
+    const startTarget = async () => {
+      isSwitchSeekingRef.current = true;
+      const seekTo = Math.max(0, Math.min(currentTime, toRef.duration || currentTime));
+      try {
+        if ('fastSeek' in toRef && typeof (toRef as any).fastSeek === 'function') {
+          (toRef as any).fastSeek(seekTo);
+        } else {
+          toRef.currentTime = seekTo;
+        }
+      } catch {}
+
+      // Wait for 'seeked' to ensure position is applied before play
+      await new Promise<void>((resolve) => {
+        let settled = false;
+        const onSeeked = () => {
+          if (settled) return;
+          settled = true;
+          toRef.removeEventListener('seeked', onSeeked);
+          resolve();
+        };
+        toRef.addEventListener('seeked', onSeeked, { once: true });
+        // Fallback timeout in case 'seeked' fires too early or not at all
+        setTimeout(() => {
+          if (settled) return;
+          settled = true;
+          toRef.removeEventListener('seeked', onSeeked);
+          resolve();
+        }, 150);
+      });
+
+      setActiveSource(next);
+      if (wasPlaying) {
+        try { await toRef.play(); } catch {}
+        if (next === 'original') { setIsPlayingOriginal(true); setIsPlayingMastered(false); }
+        else { setIsPlayingMastered(true); setIsPlayingOriginal(false); }
+      } else {
+        if (next === 'original') { setIsPlayingOriginal(false); setIsPlayingMastered(false); }
+        else { setIsPlayingMastered(false); setIsPlayingOriginal(false); }
+      }
+      // Slight delay to avoid loop enforcement during seek/play race
+      setTimeout(() => { isSwitchSeekingRef.current = false; }, 150);
+    };
+
+    // If metadata not loaded yet, wait until we can safely seek
+    if (toRef.readyState >= 2) { // HAVE_CURRENT_DATA or more
+      startTarget();
+    } else {
+      const onCanPlay = () => {
+        toRef.removeEventListener('canplay', onCanPlay);
+        startTarget();
+      };
+      toRef.addEventListener('canplay', onCanPlay, { once: true });
     }
   };
 
@@ -211,7 +397,43 @@ const ComparisonPlayer: React.FC<ComparisonPlayerProps> = ({
         )}
       </div>
 
-      {/* Audio Players - Force side-by-side layout */}
+      {/* Unified Transport + A/B Switch */}
+      <div className="bg-gradient-to-br from-gray-800 to-gray-700 rounded-lg p-6 border border-gray-600 mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <div className="inline-flex bg-gray-700 rounded-md overflow-hidden">
+            <button
+              className={`px-4 py-2 text-sm ${activeSource==='original' ? 'bg-blue-500 text-white' : 'text-gray-300 hover:bg-gray-600'}`}
+              onClick={() => handleSwitchSource('original')}
+              disabled={!originalFile}
+            >Original</button>
+            <button
+              className={`px-4 py-2 text-sm ${activeSource==='mastered' ? 'bg-amber-500 text-black' : 'text-gray-300 hover:bg-gray-600'}`}
+              onClick={() => handleSwitchSource('mastered')}
+              disabled={!masteredAudioUrl}
+            >Mastered</button>
+          </div>
+          <button
+            onClick={handlePlayPause}
+            className={`rounded-full p-4 ${activeSource==='original' ? 'bg-blue-500 text-white' : 'bg-amber-500 text-black'}`}
+            disabled={(activeSource==='original' && !originalFile) || (activeSource==='mastered' && !masteredAudioUrl)}
+          >{isPlaying ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6" />}</button>
+        </div>
+        {/* Unified Progress */}
+        <div className="space-y-2">
+          <div className="w-full bg-gray-600 rounded-full h-2">
+            <div
+              className={`${activeSource==='original' ? 'bg-blue-500' : 'bg-amber-500'} h-2 rounded-full transition-all duration-100`}
+              style={{ width: `${activeDuration ? (activeProgress / activeDuration) * 100 : 0}%` }}
+            />
+          </div>
+          <div className="flex justify-between text-sm text-gray-400">
+            <span>{formatTime(activeProgress)}</span>
+            <span>{formatTime(activeDuration)}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Audio Players - keep for metadata and volume; hide per-player transports */}
       <div className="grid grid-cols-2 gap-6">
         {/* Original Audio */}
         <div className="bg-gradient-to-br from-gray-800 to-gray-700 rounded-lg p-6 border border-gray-600">
@@ -230,22 +452,12 @@ const ComparisonPlayer: React.FC<ComparisonPlayerProps> = ({
             <audio
               ref={originalAudioRef}
               src={originalFile.url}
-              preload="metadata"
+              preload="auto"
             />
           )}
 
-          {/* Playback Controls */}
-          <div className="space-y-4">
-            {/* Play/Pause Button */}
-            <div className="flex items-center justify-center">
-              <button
-                onClick={handleOriginalPlayPause}
-                disabled={!originalFile}
-                className="bg-blue-500 hover:bg-blue-600 disabled:bg-gray-600 disabled:cursor-not-allowed text-white p-4 rounded-full transition-colors"
-              >
-                {isPlayingOriginal ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6" />}
-              </button>
-            </div>
+          {/* Playback Controls (hidden; controlled by unified transport) */}
+          <div className="space-y-4 hidden">
 
             {/* Progress Bar */}
             <div className="space-y-2">
@@ -322,22 +534,12 @@ const ComparisonPlayer: React.FC<ComparisonPlayerProps> = ({
             <audio
               ref={masteredAudioRef}
               src={masteredAudioUrl}
-              preload="metadata"
+              preload="auto"
             />
           )}
 
-          {/* Playback Controls */}
-          <div className="space-y-4">
-            {/* Play/Pause Button */}
-            <div className="flex items-center justify-center">
-              <button
-                onClick={handleMasteredPlayPause}
-                disabled={!masteredAudioUrl}
-                className="bg-amber-500 hover:bg-amber-600 disabled:bg-gray-600 disabled:cursor-not-allowed text-white p-4 rounded-full transition-colors"
-              >
-                {isPlayingMastered ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6" />}
-              </button>
-            </div>
+          {/* Playback Controls (hidden; controlled by unified transport) */}
+          <div className="space-y-4 hidden">
 
             {/* Progress Bar */}
             <div className="space-y-2">

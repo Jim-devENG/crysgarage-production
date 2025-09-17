@@ -1,11 +1,8 @@
 from fastapi import FastAPI, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
-import json
 import logging
 from typing import Dict, Any
-import tempfile
-import os
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)

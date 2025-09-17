@@ -7,7 +7,6 @@ Standalone Python script that works without complex dependencies
 import json
 import logging
 from http.server import HTTPServer, BaseHTTPRequestHandler
-from urllib.parse import urlparse, parse_qs
 import time
 
 # Configure logging

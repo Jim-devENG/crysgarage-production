@@ -5,9 +5,7 @@ Test script for the Audio Mastering Microservice
 
 import asyncio
 import aiohttp
-import json
 import sys
-from pathlib import Path
 
 BASE_URL = "http://localhost:8000"
 
@@ -38,7 +36,7 @@ async def test_formats():
             async with session.get(f"{BASE_URL}/formats") as response:
                 if response.status == 200:
                     data = await response.json()
-                    print(f"✅ Formats endpoint working")
+                    print("✅ Formats endpoint working")
                     print(f"   Supported formats: {', '.join(data['output_formats'])}")
                     print(f"   Sample rates: {data['sample_rates']}")
                     return True
@@ -73,7 +71,7 @@ async def test_mastering():
             ) as response:
                 if response.status == 200:
                     data = await response.json()
-                    print(f"✅ Mastering test passed")
+                    print("✅ Mastering test passed")
                     print(f"   Status: {data['status']}")
                     print(f"   URL: {data.get('url', 'N/A')}")
                     print(f"   Format: {data.get('format', 'N/A')}")
@@ -100,7 +98,7 @@ async def test_tiers():
             async with session.get(f"{BASE_URL}/tiers") as response:
                 if response.status == 200:
                     data = await response.json()
-                    print(f"✅ Tiers endpoint working")
+                    print("✅ Tiers endpoint working")
                     for tier, info in data.items():
                         print(f"   {tier}: {info['formats']} formats, {info['sample_rates']} sample rates")
                     return True

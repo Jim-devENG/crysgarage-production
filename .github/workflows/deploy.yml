@@ -219,6 +219,26 @@ WARM
           else
             echo "✔ /upload-file reachable (HTTP $UPLOAD_CODE / $UPLOAD_CODE_SLASH)"
           fi
+
+          # Ensure service is publicly reachable via Nginx (auto-heal if needed)
+          echo "Checking public /api/python/tiers..."
+          for i in 1 2 3 4 5; do
+            CODE=$(curl -s -o /dev/null -w "%{http_code}" https://crysgarage.studio/api/python/tiers || true)
+            if [ "$CODE" = "200" ]; then
+              echo "✔ Public /api/python/tiers is responding"
+              break
+            fi
+            echo "Attempt $i: /api/python/tiers returned $CODE, restarting uvicorn and retrying..."
+            pkill -f "uvicorn main:app" 2>/dev/null || true
+            nohup ./venv/bin/uvicorn main:app --host 0.0.0.0 --port 8002 --proxy-headers >/var/log/uvicorn.log 2>&1 &
+            sleep 3
+          done
+          CODE=$(curl -s -o /dev/null -w "%{http_code}" https://crysgarage.studio/api/python/tiers || true)
+          if [ "$CODE" != "200" ]; then
+            echo "❌ Public /api/python/tiers still failing (HTTP $CODE). Recent uvicorn logs:";
+            tail -n 200 /var/log/uvicorn.log || true;
+            exit 1;
+          fi
         else
           echo "Warning: /var/www/crysgarage-deploy/audio-mastering-service not found; attempting to create from repo"
           cd /var/www/crysgarage-deploy

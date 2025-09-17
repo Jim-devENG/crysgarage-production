@@ -5,13 +5,11 @@ Handles file downloads, audio analysis, and metadata extraction
 
 import os
 import tempfile
-import asyncio
 import aiohttp
 import aiofiles
 import librosa
-import soundfile as sf
 import numpy as np
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 import logging
 from pathlib import Path
 
