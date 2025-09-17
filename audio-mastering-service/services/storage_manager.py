@@ -51,12 +51,13 @@ class StorageManager:
         else:
             self.s3_client = None
             
-        # Start cleanup task
-        self._start_cleanup_task()
+        # Cleanup task will be started when FastAPI app starts
+        self._cleanup_task = None
     
-    def _start_cleanup_task(self):
-        """Start background cleanup task"""
-        asyncio.create_task(self._cleanup_old_files())
+    def start_cleanup_task(self):
+        """Start background cleanup task - call this after FastAPI app starts"""
+        if self._cleanup_task is None:
+            self._cleanup_task = asyncio.create_task(self._cleanup_old_files())
     
     async def _cleanup_old_files(self):
         """Background task to clean up old files"""
