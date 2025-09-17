@@ -678,7 +678,7 @@ class MLMasteringEngine:
                 audio_data = np.stack([audio_data, audio_data])
             
             # Get genre preset and tier configuration
-            preset = self.genre_presets.get(genre, self.genre_presets["Pop"])  # kept for logging/consistency
+            # preset = self.genre_presets.get(genre, self.genre_presets["Pop"])  # not used
             tier_config = self.tier_settings.get(tier, self.tier_settings["Free"])
             
             logger.info(f"Processing with tier: {tier}, quality: {tier_config['processing_quality']}")

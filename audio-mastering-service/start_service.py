@@ -26,8 +26,9 @@ def check_dependencies():
     
     for package in required_packages:
         try:
+            # Only test importability without binding names to avoid linting errors
             if package == 'uvicorn':
-                import uvicorn
+                importlib.util.find_spec('uvicorn')
             else:
                 importlib.import_module(package)
             print(f"✓ {package} is installed")

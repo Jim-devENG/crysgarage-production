@@ -115,7 +115,7 @@ class FFmpegConverter:
     ) -> list:
         """Build FFmpeg command for audio conversion"""
         
-        format_info = self.supported_formats[output_format]
+        # format_info = self.supported_formats[output_format]  # not used
         
         # Base command
         cmd = [
