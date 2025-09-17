@@ -226,17 +226,229 @@ class MLMasteringEngine:
                 "stereo_width": 1.1,                             # Natural stage
                 "target_lufs": -10.0                             # -10 LUFS
             },
-                    "high_mid": {"freq": 3000, "gain": 4.0},     # Bright mids
-                    "high_shelf": {"freq": 10000, "gain": 3.0}   # Crisp highs
+            # Central/East African Genres
+            "Kuduro": {
+                "eq_curve": {
+                    "low_shelf": {"freq": 80, "gain": 2.5},      # Low punch
+                    "low_mid": {"freq": 300, "gain": 0.5},       # Club energy
+                    "mid": {"freq": 1000, "gain": 0.0},          # Neutral
+                    "high_mid": {"freq": 4000, "gain": 1.0},     # Crisp highs
+                    "high_shelf": {"freq": 8000, "gain": 1.5}    # Saturation drive
                 },
                 "compression": {
-                    "ratio": 2.0,                                # Light compression
-                    "threshold": -15.0,                          # Lower threshold
-                    "attack": 0.01,                              # Slower attack
-                    "release": 0.2                               # Slower release
+                    "ratio": 3.0,                                # Aggressive
+                    "threshold": -12.0,                          # Hard threshold
+                    "attack": 0.003,                             # Fast attack
+                    "release": 0.1                               # Fast release
                 },
-                "stereo_width": 1.0,                             # Natural stereo
-                "target_lufs": -9.0                              # Moderate loudness
+                "stereo_width": 1.4,                             # Club widen
+                "target_lufs": -7.5                              # -7.5 LUFS
+            },
+            "Ndombolo": {
+                "eq_curve": {
+                    "low_shelf": {"freq": 80, "gain": 2.0},      # +2dB bass
+                    "low_mid": {"freq": 300, "gain": 1.0},       # Lively mids for guitars
+                    "mid": {"freq": 1000, "gain": 0.0},          # Neutral
+                    "high_mid": {"freq": 4000, "gain": 1.0},     # Natural wide
+                    "high_shelf": {"freq": 8000, "gain": 1.0}    # Exciter for sparkle
+                },
+                "compression": {
+                    "ratio": 2.0,                                # Gentle
+                    "threshold": -15.0,                          # Soft threshold
+                    "attack": 0.01,                              # Slow attack
+                    "release": 0.2                               # Slow release
+                },
+                "stereo_width": 1.2,                             # Natural wide
+                "target_lufs": -9.0                              # -9 LUFS
+            },
+            "Gengetone": {
+                "eq_curve": {
+                    "low_shelf": {"freq": 80, "gain": 2.0},      # Heavy low-end +2dB
+                    "low_mid": {"freq": 300, "gain": 0.5},       # Vocal brightness
+                    "mid": {"freq": 1000, "gain": 0.0},          # Neutral
+                    "high_mid": {"freq": 4000, "gain": 1.0},     # Centered vocals
+                    "high_shelf": {"freq": 8000, "gain": 1.0}    # Saturation
+                },
+                "compression": {
+                    "ratio": 4.0,                                # Hard rap style
+                    "threshold": -10.0,                          # Hard threshold
+                    "attack": 0.002,                             # Very fast attack
+                    "release": 0.1                               # Fast release
+                },
+                "stereo_width": 1.0,                             # Centered vocals
+                "target_lufs": -8.0                              # -8 LUFS
+            },
+            "Shrap": {
+                "eq_curve": {
+                    "low_shelf": {"freq": 40, "gain": 3.0},      # Deep sub boost
+                    "low_mid": {"freq": 200, "gain": -1.0},      # Modern trap
+                    "mid": {"freq": 1000, "gain": 0.0},          # Neutral
+                    "high_mid": {"freq": 4000, "gain": 1.0},     # Wide stereo synths
+                    "high_shelf": {"freq": 8000, "gain": 2.0}    # Sparkle highs, exciter
+                },
+                "compression": {
+                    "ratio": 3.5,                                # Modern trap (hard knee)
+                    "threshold": -8.0,                           # Hard threshold
+                    "attack": 0.001,                             # Very fast attack
+                    "release": 0.05                              # Very fast release
+                },
+                "stereo_width": 1.5,                             # Wide stereo synths
+                "target_lufs": -7.5                              # -7.5 LUFS
+            },
+            "Singeli": {
+                "eq_curve": {
+                    "low_shelf": {"freq": 60, "gain": 2.0},      # Tame harsh highs
+                    "low_mid": {"freq": 300, "gain": -0.5},      # Lift subs
+                    "mid": {"freq": 1000, "gain": 0.0},          # Neutral
+                    "high_mid": {"freq": 4000, "gain": 1.0},     # Widen percussion
+                    "high_shelf": {"freq": 8000, "gain": 0.5}    # Transient control
+                },
+                "compression": {
+                    "ratio": 4.0,                                # Tight (fast attack)
+                    "threshold": -8.0,                           # Hard threshold
+                    "attack": 0.001,                             # Very fast attack
+                    "release": 0.05                              # Very fast release
+                },
+                "stereo_width": 1.3,                             # Widen percussion
+                "target_lufs": -7.0                              # -7 LUFS
+            },
+            "Urban Benga": {
+                "eq_curve": {
+                    "low_shelf": {"freq": 80, "gain": 1.5},      # Guitar clarity (2-4kHz)
+                    "low_mid": {"freq": 300, "gain": 0.5},       # Smooth lows
+                    "mid": {"freq": 1000, "gain": 0.0},          # Neutral
+                    "high_mid": {"freq": 4000, "gain": 1.0},     # Warm stereo spread
+                    "high_shelf": {"freq": 8000, "gain": 1.0}    # Tape shimmer
+                },
+                "compression": {
+                    "ratio": 2.0,                                # Soft
+                    "threshold": -15.0,                          # Soft threshold
+                    "attack": 0.01,                              # Slow attack
+                    "release": 0.2                               # Slow release
+                },
+                "stereo_width": 1.2,                             # Warm stereo spread
+                "target_lufs": -9.0                              # -9 LUFS
+            },
+            "New Benga": {
+                "eq_curve": {
+                    "low_shelf": {"freq": 80, "gain": 1.8},      # Guitar clarity
+                    "low_mid": {"freq": 300, "gain": 0.5},       # Low punch
+                    "mid": {"freq": 1000, "gain": 0.0},          # Neutral
+                    "high_mid": {"freq": 4000, "gain": 1.0},     # Wide but centered kick
+                    "high_shelf": {"freq": 8000, "gain": 1.0}    # Gentle exciter
+                },
+                "compression": {
+                    "ratio": 2.0,                                # Transparent
+                    "threshold": -15.0,                          # Soft threshold
+                    "attack": 0.01,                              # Slow attack
+                    "release": 0.2                               # Slow release
+                },
+                "stereo_width": 1.1,                             # Wide but centered kick
+                "target_lufs": -9.0                              # -9 LUFS
+            },
+            # North African Genres
+            "Raï N'B": {
+                "eq_curve": {
+                    "low_shelf": {"freq": 80, "gain": 1.5},      # Silky top-end
+                    "low_mid": {"freq": 300, "gain": 0.5},       # Warm mids
+                    "mid": {"freq": 1000, "gain": 0.0},          # Neutral
+                    "high_mid": {"freq": 4000, "gain": 1.0},     # Wide reverb tail
+                    "high_shelf": {"freq": 8000, "gain": 1.5}    # Harmonic exciter
+                },
+                "compression": {
+                    "ratio": 2.0,                                # R&B smooth
+                    "threshold": -12.0,                          # Moderate threshold
+                    "attack": 0.005,                             # Smooth attack
+                    "release": 0.15                              # Smooth release
+                },
+                "stereo_width": 1.3,                             # Wide reverb tail
+                "target_lufs": -9.5                              # -9.5 LUFS
+            },
+            "Raï-hop": {
+                "eq_curve": {
+                    "low_shelf": {"freq": 80, "gain": 2.0},      # Strong kick
+                    "low_mid": {"freq": 300, "gain": 0.5},       # Vocal clarity
+                    "mid": {"freq": 1000, "gain": 0.0},          # Neutral
+                    "high_mid": {"freq": 4000, "gain": 1.0},     # Moderate wide
+                    "high_shelf": {"freq": 8000, "gain": 1.0}    # Analog saturation
+                },
+                "compression": {
+                    "ratio": 3.0,                                # Hip hop style
+                    "threshold": -10.0,                          # Hard threshold
+                    "attack": 0.003,                             # Fast attack
+                    "release": 0.1                               # Fast release
+                },
+                "stereo_width": 1.2,                             # Moderate wide
+                "target_lufs": -8.5                              # -8.5 LUFS
+            },
+            "Gnawa Fusion": {
+                "eq_curve": {
+                    "low_shelf": {"freq": 80, "gain": 1.5},      # Highlight percussive lows
+                    "low_mid": {"freq": 300, "gain": 0.5},       # Airy highs
+                    "mid": {"freq": 1000, "gain": 0.0},          # Neutral
+                    "high_mid": {"freq": 4000, "gain": 1.0},     # Wide instruments
+                    "high_shelf": {"freq": 8000, "gain": 1.5}    # Reverb depth
+                },
+                "compression": {
+                    "ratio": 2.0,                                # Gentle glue
+                    "threshold": -15.0,                          # Soft threshold
+                    "attack": 0.01,                              # Slow attack
+                    "release": 0.2                               # Slow release
+                },
+                "stereo_width": 1.4,                             # Wide instruments
+                "target_lufs": -9.0                              # -9 LUFS
+            },
+            # Fusion Genres
+            "Afrotrap": {
+                "eq_curve": {
+                    "low_shelf": {"freq": 40, "gain": 3.0},      # Hard-hitting sub +3dB
+                    "low_mid": {"freq": 200, "gain": -1.0},      # Bright hats
+                    "mid": {"freq": 1000, "gain": 0.0},          # Neutral
+                    "high_mid": {"freq": 4000, "gain": 1.0},     # Wide synths
+                    "high_shelf": {"freq": 8000, "gain": 2.0}    # Exciter edge
+                },
+                "compression": {
+                    "ratio": 3.5,                                # Hard knee
+                    "threshold": -8.0,                           # Hard threshold
+                    "attack": 0.001,                             # Very fast attack
+                    "release": 0.05                              # Very fast release
+                },
+                "stereo_width": 1.5,                             # Wide synths
+                "target_lufs": -7.5                              # -7.5 LUFS
+            },
+            "Afro-Gospel": {
+                "eq_curve": {
+                    "low_shelf": {"freq": 80, "gain": 1.5},      # Balance lows
+                    "low_mid": {"freq": 300, "gain": 0.5},       # Vocal sparkle
+                    "mid": {"freq": 1000, "gain": 0.0},          # Neutral
+                    "high_mid": {"freq": 4000, "gain": 1.0},     # Open wide
+                    "high_shelf": {"freq": 8000, "gain": 1.0}    # Subtle warmth
+                },
+                "compression": {
+                    "ratio": 1.5,                                # Light transparent
+                    "threshold": -18.0,                          # Very soft threshold
+                    "attack": 0.01,                              # Slow attack
+                    "release": 0.3                               # Slow release
+                },
+                "stereo_width": 1.3,                             # Open wide
+                "target_lufs": -9.5                              # -9.5 LUFS
+            },
+            "Urban Gospel": {
+                "eq_curve": {
+                    "low_shelf": {"freq": 80, "gain": 1.5},      # Mid clarity for choirs
+                    "low_mid": {"freq": 300, "gain": 0.5},       # Top sparkle
+                    "mid": {"freq": 1000, "gain": 0.0},          # Neutral
+                    "high_mid": {"freq": 4000, "gain": 1.0},     # Wide stereo chorus
+                    "high_shelf": {"freq": 8000, "gain": 1.5}    # Reverb shine
+                },
+                "compression": {
+                    "ratio": 2.0,                                # Smooth
+                    "threshold": -12.0,                          # Moderate threshold
+                    "attack": 0.005,                             # Smooth attack
+                    "release": 0.15                              # Smooth release
+                },
+                "stereo_width": 1.4,                             # Wide stereo chorus
+                "target_lufs": -9.0                              # -9 LUFS
             },
             "Gospel": {
                 "eq_curve": {
