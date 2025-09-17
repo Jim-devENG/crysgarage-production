@@ -1407,28 +1407,31 @@ class MLMasteringEngine:
             # Apply mastering chain based on tier
             processed_audio = audio_data.copy()
             
-            # 1. EQ Processing (tier-specific bands)
+            # 1. Pitch Shifting (A440 to A444.0 Hz - 15.67 cents up)
+            processed_audio = self._apply_pitch_shift(processed_audio, sample_rate)
+            
+            # 2. EQ Processing (tier-specific bands)
             processed_audio = self._apply_tier_based_eq(processed_audio, sample_rate, genre, tier_config)
             
-            # 2. Compression (tier-specific settings)
+            # 3. Compression (tier-specific settings)
             processed_audio = self._apply_tier_based_compression(processed_audio, sample_rate, genre, tier_config)
             
-            # 3. Multiband Compression (Professional+ tiers)
+            # 4. Multiband Compression (Professional+ tiers)
             if tier_config["enable_multiband_compression"]:
                 processed_audio = self._apply_multiband_compression(processed_audio, sample_rate, tier_config)
             
-            # 4. Stereo Widening (Professional+ tiers)
+            # 5. Stereo Widening (Professional+ tiers)
             if tier_config["enable_stereo_widening"]:
                 processed_audio = self._apply_stereo_widening(processed_audio, genre, tier_config)
             
-            # 5. Harmonic Exciter (Advanced+ tiers)
+            # 6. Harmonic Exciter (Advanced+ tiers)
             if tier_config["enable_harmonic_exciter"]:
                 processed_audio = self._apply_harmonic_exciter(processed_audio, sample_rate, tier_config)
             
-            # 6. Limiting
+            # 7. Limiting
             processed_audio = self._apply_limiting(processed_audio, sample_rate, tier_config)
             
-            # 7. LUFS Normalization
+            # 8. LUFS Normalization
             processed_audio = self._normalize_lufs(processed_audio, sample_rate, target_lufs)
             
             # Save processed audio
@@ -2149,6 +2152,51 @@ class MLMasteringEngine:
             
         except Exception as e:
             logger.error(f"Afrobeats processing failed: {e}")
+            return audio_data
+
+    def _apply_pitch_shift(self, audio_data: np.ndarray, sample_rate: int) -> np.ndarray:
+        """
+        Apply pitch shifting from A440 Hz to A444.0 Hz (15.67 cents up)
+        This fine-tunes all audio to the higher tuning standard
+        """
+        try:
+            logger.info("Applying pitch shift: A440 Hz → A444.0 Hz (+15.67 cents)")
+            
+            # Calculate pitch shift in cents: 1200 * log2(444/440)
+            pitch_shift_cents = 1200 * np.log2(444.0 / 440.0)
+            logger.info(f"Pitch shift: {pitch_shift_cents:.2f} cents")
+            
+            # Convert cents to semitones (1 semitone = 100 cents)
+            pitch_shift_semitones = pitch_shift_cents / 100.0
+            
+            # Apply pitch shifting using librosa
+            if audio_data.ndim == 2:  # Stereo
+                # Process each channel separately
+                left_channel = librosa.effects.pitch_shift(
+                    audio_data[0], 
+                    sr=sample_rate, 
+                    n_steps=pitch_shift_semitones
+                )
+                right_channel = librosa.effects.pitch_shift(
+                    audio_data[1], 
+                    sr=sample_rate, 
+                    n_steps=pitch_shift_semitones
+                )
+                processed = np.stack([left_channel, right_channel])
+            else:  # Mono
+                processed = librosa.effects.pitch_shift(
+                    audio_data, 
+                    sr=sample_rate, 
+                    n_steps=pitch_shift_semitones
+                )
+                processed = np.expand_dims(processed, axis=0)
+            
+            logger.info(f"Pitch shift completed: {pitch_shift_semitones:.4f} semitones")
+            return processed
+            
+        except Exception as e:
+            logger.error(f"Pitch shifting failed: {e}")
+            logger.warning("Continuing without pitch shift")
             return audio_data
 
     def _apply_default_processing(self, audio_data: np.ndarray, sample_rate: int) -> np.ndarray:
