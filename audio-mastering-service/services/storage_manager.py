@@ -8,9 +8,10 @@ import asyncio
 import aiofiles
 from typing import Dict, Any, Optional
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 import hashlib
 import mimetypes
+import time
 
 # Optional S3 imports (install boto3 if using S3)
 try:
@@ -25,7 +26,7 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 class StorageManager:
-    """Manages file storage (S3 or local)"""
+    """Manages file storage (S3 or local) with automatic cleanup"""
     
     def __init__(self):
         self.storage_type = os.getenv('STORAGE_TYPE', 'local')  # 'local' or 's3'
@@ -33,6 +34,10 @@ class StorageManager:
         self.s3_bucket = os.getenv('S3_BUCKET', 'crysgarage-mastered-audio')
         self.s3_region = os.getenv('S3_REGION', 'us-east-1')
         self.base_url = os.getenv('BASE_URL', 'http://localhost:8000')
+        
+        # File cleanup settings
+        self.cleanup_delay_minutes = int(os.getenv('FILE_CLEANUP_DELAY_MINUTES', '5'))
+        self.file_timestamps = {}  # Track when files were created for cleanup
         
         # Initialize storage
         self._initialize_storage()
@@ -45,6 +50,39 @@ class StorageManager:
             )
         else:
             self.s3_client = None
+            
+        # Start cleanup task
+        self._start_cleanup_task()
+    
+    def _start_cleanup_task(self):
+        """Start background cleanup task"""
+        asyncio.create_task(self._cleanup_old_files())
+    
+    async def _cleanup_old_files(self):
+        """Background task to clean up old files"""
+        while True:
+            try:
+                await asyncio.sleep(60)  # Check every minute
+                current_time = time.time()
+                files_to_delete = []
+                
+                # Check files that are older than cleanup_delay_minutes
+                for file_url, timestamp in self.file_timestamps.items():
+                    if current_time - timestamp > (self.cleanup_delay_minutes * 60):
+                        files_to_delete.append(file_url)
+                
+                # Delete old files
+                for file_url in files_to_delete:
+                    try:
+                        await self.delete_file(file_url)
+                        logger.info(f"Auto-deleted old file: {file_url}")
+                        del self.file_timestamps[file_url]
+                    except Exception as e:
+                        logger.error(f"Failed to auto-delete file {file_url}: {e}")
+                        
+            except Exception as e:
+                logger.error(f"Cleanup task error: {e}")
+                await asyncio.sleep(60)  # Wait before retrying
     
     def is_available(self) -> bool:
         """Check if storage service is available"""
@@ -106,7 +144,9 @@ class StorageManager:
             else:
                 url = await self._upload_to_local(file_path, filename, metadata)
             
-            logger.info(f"File uploaded successfully: {url}")
+            # Track file timestamp for cleanup
+            self.file_timestamps[url] = time.time()
+            logger.info(f"File uploaded successfully: {url} (will auto-delete in {self.cleanup_delay_minutes} minutes)")
             return url
             
         except Exception as e:
@@ -203,6 +243,9 @@ class StorageManager:
                 success = await self._delete_from_local(file_url)
             
             if success:
+                # Remove from tracking dictionary
+                if file_url in self.file_timestamps:
+                    del self.file_timestamps[file_url]
                 logger.info(f"File deleted successfully: {file_url}")
             else:
                 logger.warning(f"File deletion failed: {file_url}")
@@ -338,9 +381,22 @@ class StorageManager:
         """Get storage statistics"""
         try:
             if self.storage_type == 's3':
-                return self._get_s3_stats()
+                stats = self._get_s3_stats()
             else:
-                return self._get_local_stats()
+                stats = self._get_local_stats()
+            
+            # Add cleanup information
+            stats.update({
+                "cleanup_enabled": True,
+                "cleanup_delay_minutes": self.cleanup_delay_minutes,
+                "tracked_files": len(self.file_timestamps),
+                "files_scheduled_for_cleanup": len([
+                    url for url, timestamp in self.file_timestamps.items()
+                    if time.time() - timestamp > (self.cleanup_delay_minutes * 60)
+                ])
+            })
+            
+            return stats
         except Exception as e:
             logger.error(f"Failed to get storage stats: {e}")
             return {}

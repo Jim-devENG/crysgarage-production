@@ -630,6 +630,7 @@ async def proxy_download(file_url: str):
     """Server-side proxy to download a remote file and stream it as an attachment to avoid CORS.
     Uses an async generator and forwards Content-Length/Content-Type when available to prevent
     incomplete chunked encoding issues on some browsers.
+    Files are automatically deleted after 5 minutes of creation.
     """
     try:
         import aiohttp
@@ -685,6 +686,19 @@ async def proxy_download(file_url: str):
     except Exception as e:
         logger.error(f"Proxy download failed: {e}")
         raise HTTPException(status_code=500, detail="Proxy download failed")
+
+@app.get("/storage-stats")
+async def get_storage_stats():
+    """Get storage statistics including cleanup information"""
+    try:
+        stats = storage_manager.get_storage_stats()
+        return {
+            "status": "success",
+            "data": stats
+        }
+    except Exception as e:
+        logger.error(f"Failed to get storage stats: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to get storage stats: {str(e)}")
 
 @app.get("/tiers")
 async def get_tier_info():
