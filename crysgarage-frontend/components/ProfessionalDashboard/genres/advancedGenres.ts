@@ -108,15 +108,6 @@ export const ADVANCED_GENRES = {
     description: "Beat production",
     color: "bg-green-600"
   },
-  "Amapiano": {
-    gain: 1.7,
-    compression: { threshold: -19, ratio: 3.5, attack: 0.003, release: 0.18 },
-    eq: { low: 2.2, mid: 1.8, high: 1.5 },
-    truePeak: -0.2,
-    targetLufs: -8.0,
-    description: "South African house style",
-    color: "bg-purple-500"
-  },
   "Trance": {
     gain: 1.8,
     compression: { threshold: -18, ratio: 4, attack: 0.002, release: 0.2 },
@@ -223,7 +214,6 @@ export const getAdvancedGenreGradient = (genreId: string): string => {
     "Highlife": 'from-green-500 to-green-700',
     "Instrumentals": 'from-green-400 to-green-600',
     "Beats": 'from-green-600 to-green-800',
-    "Amapiano": 'from-purple-500 to-purple-700',
     "Trance": 'from-purple-400 to-purple-600',
     "Drum & Bass": 'from-purple-600 to-purple-800',
     "Reggae": 'from-yellow-500 to-yellow-700',
