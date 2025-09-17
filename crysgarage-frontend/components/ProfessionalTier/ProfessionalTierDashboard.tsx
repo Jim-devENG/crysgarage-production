@@ -311,13 +311,12 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
       const proTierInfo = tierData.pro || tierData.professional;
       setTierInfo(proTierInfo);
 
-      // Use fixed order from previous design (24 primary genres)
+      // New African music genres (24 genres distributed across 7 colors)
       const fixedOrder = [
-        'Hip-Hop','Afrobeats','R&B','Trap','Future Bass',
-        'Electronic','House','Techno','Trance','Dubstep',
-        'Pop','Rock','Alternative','Indie','Disco',
-        'Gospel','Jazz','Classical','Acoustic',
-        'Reggae','Latin','World','Folk','Cinematic'
+        'Afrobeats','Alté','Hip-life','Azonto','Naija Pop','Bongo Flava',
+        'Amapiano','Kwaito','Gqom','Shangaan Electro','Kuduro','Ndombolo',
+        'Gengetone','Shrap','Singeli','Urban Benga','Raï N\'B','Raï-hop',
+        'Gnawa Fusion','Afrotrap','Afro-Gospel','Urban Gospel','Kwela','New Benga'
       ];
 
       // Create genre objects for UI with rainbow colors in fixed order
@@ -350,13 +349,30 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
 
   const getGenreDescription = (name: string): string => {
     const descriptions: Record<string, string> = {
-      'Hip-Hop': 'Bass-Driven & Punchy',
-      'Afrobeats': 'Rhythmic & Energetic',
-      'Gospel': 'Spiritual & Uplifting',
-      'Pop': 'Catchy & Commercial',
-      'Rock': 'Powerful & Aggressive',
-      'Electronic': 'Synthetic & Modern',
-      'Jazz': 'Smooth & Sophisticated',
+      'Afrobeats': 'West African pop blend',
+      'Alté': 'Nigerian alternative fusion',
+      'Hip-life': 'Ghanaian highlife & hip hop',
+      'Azonto': 'Ghanaian dance-driven upbeat',
+      'Naija Pop': 'Nigerian mainstream urban',
+      'Bongo Flava': 'Tanzanian Afro-pop',
+      'Amapiano': 'South African house jazz',
+      'Kwaito': 'South African township sound',
+      'Gqom': 'Hard electronic from Durban',
+      'Shangaan Electro': 'Fast Tsonga electronic',
+      'Kuduro': 'Angolan energetic electronic',
+      'Ndombolo': 'Congolese dance music',
+      'Gengetone': 'Kenyan street-style rap',
+      'Shrap': 'Kenyan trap with Sheng',
+      'Singeli': 'Ultra-fast Tanzanian electronic',
+      'Urban Benga': 'Modern Kenyan benga',
+      'Raï N\'B': 'North African raï & R&B',
+      'Raï-hop': 'Raï blended with hip hop',
+      'Gnawa Fusion': 'Moroccan spiritual fusion',
+      'Afrotrap': 'African rhythms & French trap',
+      'Afro-Gospel': 'Gospel with Afro elements',
+      'Urban Gospel': 'Contemporary gospel urban',
+      'Kwela': 'South African jazzy street',
+      'New Benga': 'Updated Kenyan benga',
       'Classical': 'Elegant & Timeless',
       'R&B': 'Smooth & Soulful',
       'Reggae': 'Laid-back & Groovy',
