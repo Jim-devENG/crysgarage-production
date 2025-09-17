@@ -258,10 +258,10 @@ class PythonAudioService {
         console.log('Uploading file directly to Python for mastering (local)...');
         let resp;
         try {
-          resp = await axios.post(`${this.baseURL}/upload-file/`, formData, { timeout: 300000 });
+          resp = await axios.post(`${this.baseURL}/upload-file/`, formData, { timeout: 600000 });
         } catch (e: any) {
           if (e?.response?.status === 404) {
-            resp = await axios.post(`${this.baseURL}/upload-file`, formData, { timeout: 300000 });
+            resp = await axios.post(`${this.baseURL}/upload-file`, formData, { timeout: 600000 });
           } else {
             throw e;
           }
@@ -307,10 +307,10 @@ class PythonAudioService {
         console.log('Uploading file directly to Python for mastering (prod)...');
         let resp;
         try {
-          resp = await axios.post(`${this.baseURL}/upload-file/`, formData, { timeout: 300000 });
+          resp = await axios.post(`${this.baseURL}/upload-file/`, formData, { timeout: 600000 });
         } catch (e: any) {
           if (e?.response?.status === 404) {
-            resp = await axios.post(`${this.baseURL}/upload-file`, formData, { timeout: 300000 });
+            resp = await axios.post(`${this.baseURL}/upload-file`, formData, { timeout: 600000 });
           } else {
             throw e;
           }
