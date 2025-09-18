@@ -23,11 +23,6 @@ class AudioProcessor:
         self.temp_dir = tempfile.gettempdir()
         self.max_file_size = 500 * 1024 * 1024  # 500MB max file size
         
-        # Pitch correction settings: 440 Hz to 444.0 Hz
-        self.standard_tuning = 440.0  # Hz
-        self.target_tuning = 444.0    # Hz
-        self.pitch_shift_cents = 1200 * math.log2(self.target_tuning / self.standard_tuning)  # ~15.67 cents
-        self.pitch_shift_ratio = self.target_tuning / self.standard_tuning  # ~1.009091
         
     def is_available(self) -> bool:
         """Check if audio processing service is available"""
@@ -40,37 +35,6 @@ class AudioProcessor:
             logger.error(f"Audio processor not available: {e}")
             return False
     
-    def apply_pitch_correction(self, audio_data: np.ndarray, sample_rate: int) -> np.ndarray:
-        """
-        Apply smooth pitch correction from 440 Hz to 444.0 Hz tuning
-        
-        Args:
-            audio_data: Input audio data as numpy array
-            sample_rate: Sample rate of the audio
-            
-        Returns:
-            np.ndarray: Pitch-corrected audio data
-        """
-        try:
-            logger.info(f"Applying pitch correction: {self.pitch_shift_cents:.2f} cents ({self.standard_tuning} Hz → {self.target_tuning} Hz)")
-            
-            # Use librosa's pitch shifting with smooth parameters
-            # The pitch_shift function uses phase vocoder for smooth pitch shifting
-            corrected_audio = librosa.effects.pitch_shift(
-                y=audio_data,
-                sr=sample_rate,
-                n_steps=self.pitch_shift_cents / 100,  # Convert cents to semitones (100 cents = 1 semitone)
-                bins_per_octave=12,  # Standard 12-tone equal temperament
-                res_type='kaiser_best'  # High quality resampling
-            )
-            
-            logger.info("Pitch correction applied successfully")
-            return corrected_audio
-            
-        except Exception as e:
-            logger.error(f"Failed to apply pitch correction: {e}")
-            # Return original audio if pitch correction fails
-            return audio_data
     
     async def download_file(self, file_url: str) -> str:
         """

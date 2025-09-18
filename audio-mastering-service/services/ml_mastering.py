@@ -12,6 +12,7 @@ from typing import Dict, Any
 import logging
 from pathlib import Path
 import math
+from .pitch_correction import PitchCorrection
 
 logger = logging.getLogger(__name__)
 
@@ -22,12 +23,8 @@ class MLMasteringEngine:
         self.temp_dir = tempfile.gettempdir()
         self.genre_presets = self._load_genre_presets()
         self.tier_settings = self._load_tier_settings()
+        self.pitch_corrector = PitchCorrection()
         
-        # Pitch correction settings: 440 Hz to 444.0 Hz
-        self.standard_tuning = 440.0  # Hz
-        self.target_tuning = 444.0    # Hz
-        self.pitch_shift_cents = 1200 * math.log2(self.target_tuning / self.standard_tuning)  # ~15.67 cents
-        self.pitch_shift_ratio = self.target_tuning / self.standard_tuning  # ~1.009091
         
     def is_available(self) -> bool:
         """Check if ML mastering engine is available"""
@@ -39,52 +36,6 @@ class MLMasteringEngine:
         except Exception as e:
             logger.error(f"ML mastering engine not available: {e}")
             return False
-    
-    def _apply_pitch_correction(self, audio_data: np.ndarray, sample_rate: int) -> np.ndarray:
-        """
-        Apply smooth pitch correction from 440 Hz to 444.0 Hz tuning
-        
-        Args:
-            audio_data: Input audio data as numpy array
-            sample_rate: Sample rate of the audio
-            
-        Returns:
-            np.ndarray: Pitch-corrected audio data
-        """
-        try:
-            logger.info(f"Applying pitch correction: {self.pitch_shift_cents:.2f} cents ({self.standard_tuning} Hz → {self.target_tuning} Hz)")
-            
-            # Handle stereo audio
-            if audio_data.ndim == 2:
-                # Process each channel separately for better quality
-                corrected_channels = []
-                for channel in range(audio_data.shape[0]):
-                    corrected_channel = librosa.effects.pitch_shift(
-                        y=audio_data[channel],
-                        sr=sample_rate,
-                        n_steps=self.pitch_shift_cents / 100,  # Convert cents to semitones
-                        bins_per_octave=12,  # Standard 12-tone equal temperament
-                        res_type='kaiser_best'  # High quality resampling
-                    )
-                    corrected_channels.append(corrected_channel)
-                corrected_audio = np.array(corrected_channels)
-            else:
-                # Mono audio
-                corrected_audio = librosa.effects.pitch_shift(
-                    y=audio_data,
-                    sr=sample_rate,
-                    n_steps=self.pitch_shift_cents / 100,  # Convert cents to semitones
-                    bins_per_octave=12,  # Standard 12-tone equal temperament
-                    res_type='kaiser_best'  # High quality resampling
-                )
-            
-            logger.info("Pitch correction applied successfully")
-            return corrected_audio
-            
-        except Exception as e:
-            logger.error(f"Failed to apply pitch correction: {e}")
-            # Return original audio if pitch correction fails
-            return audio_data
     
     def _load_genre_presets(self) -> Dict[str, Dict[str, Any]]:
         """Load genre-specific mastering presets"""
@@ -1464,7 +1415,7 @@ class MLMasteringEngine:
             # Apply mastering chain based on tier
             processed_audio = audio_data.copy()
             
-            # 1. Pitch Shifting (A440 to A444.0 Hz - 15.67 cents up)
+            # 1. Pitch Correction (Fine-tune all audio to 444.0 Hz)
             processed_audio = self._apply_pitch_shift(processed_audio, sample_rate)
             
             # 2. EQ Processing (tier-specific bands)
@@ -2308,47 +2259,31 @@ class MLMasteringEngine:
 
     def _apply_pitch_shift(self, audio_data: np.ndarray, sample_rate: int) -> np.ndarray:
         """
-        Apply pitch shifting from A440 Hz to A444.0 Hz (15.67 cents up)
-        This fine-tunes all audio to the higher tuning standard
+        Apply pitch correction to tune all audio to 444.0 Hz
+        Uses the dedicated PitchCorrection service for smooth, high-quality tuning
         """
         try:
-            logger.info("Applying pitch shift: A440 Hz → A444.0 Hz (+15.67 cents)")
+            logger.info("Applying pitch correction to 444.0 Hz using dedicated service")
             
-            # Calculate pitch shift in cents: 1200 * log2(444/440)
-            pitch_shift_cents = 1200 * np.log2(444.0 / 440.0)
-            logger.info(f"Pitch shift: {pitch_shift_cents:.2f} cents")
-            
-            # Convert cents to semitones (1 semitone = 100 cents)
-            pitch_shift_semitones = pitch_shift_cents / 100.0
-            
-            # Apply pitch shifting using librosa
+            # Handle stereo audio by processing each channel
             if audio_data.ndim == 2:  # Stereo
-                # Process each channel separately
-                left_channel = librosa.effects.pitch_shift(
-                    audio_data[0], 
-                    sr=sample_rate, 
-                    n_steps=pitch_shift_semitones
-                )
-                right_channel = librosa.effects.pitch_shift(
-                    audio_data[1], 
-                    sr=sample_rate, 
-                    n_steps=pitch_shift_semitones
-                )
-                processed = np.stack([left_channel, right_channel])
+                left_corrected, left_info = self.pitch_corrector.correct_pitch(audio_data[0], sample_rate)
+                right_corrected, right_info = self.pitch_corrector.correct_pitch(audio_data[1], sample_rate)
+                
+                processed = np.stack([left_corrected, right_corrected])
+                
+                logger.info(f"Pitch correction completed - Left: {left_info['cents_shift']:+.1f} cents, Right: {right_info['cents_shift']:+.1f} cents")
             else:  # Mono
-                processed = librosa.effects.pitch_shift(
-                    audio_data, 
-                    sr=sample_rate, 
-                    n_steps=pitch_shift_semitones
-                )
+                processed, info = self.pitch_corrector.correct_pitch(audio_data, sample_rate)
                 processed = np.expand_dims(processed, axis=0)
+                
+                logger.info(f"Pitch correction completed: {info['cents_shift']:+.1f} cents")
             
-            logger.info(f"Pitch shift completed: {pitch_shift_semitones:.4f} semitones")
             return processed
             
         except Exception as e:
-            logger.error(f"Pitch shifting failed: {e}")
-            logger.warning("Continuing without pitch shift")
+            logger.error(f"Pitch correction failed: {e}")
+            logger.warning("Continuing without pitch correction")
             return audio_data
 
     def _apply_default_processing(self, audio_data: np.ndarray, sample_rate: int) -> np.ndarray:
