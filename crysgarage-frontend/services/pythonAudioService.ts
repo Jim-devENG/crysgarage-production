@@ -16,7 +16,7 @@ const computePythonBaseUrl = (): string => {
   }
   const { hostname, origin } = window.location;
   if (hostname === 'localhost' || hostname === '127.0.0.1') {
-    return 'http://localhost:8002';
+    return 'http://localhost:8000';
   }
   return `${origin}/api/python`;
 };
