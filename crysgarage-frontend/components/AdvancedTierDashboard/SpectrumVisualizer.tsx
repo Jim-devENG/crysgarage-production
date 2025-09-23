@@ -26,7 +26,7 @@ const SpectrumVisualizer: React.FC<SpectrumVisualizerProps> = ({ analyser, width
       if (!bufferRef.current || bufferRef.current.length !== bins) {
         bufferRef.current = new Uint8Array(bins);
       }
-      analyser.getByteFrequencyData(bufferRef.current);
+      analyser.getByteFrequencyData(bufferRef.current as any);
 
       // Clear
       ctx.clearRect(0, 0, canvas.width, canvas.height);
