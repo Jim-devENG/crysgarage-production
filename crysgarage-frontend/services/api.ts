@@ -276,6 +276,16 @@ export const authAPI = {
       }
       
       const { user, token } = response.data;
+      // One-time free credit grant for first-time accounts (frontend safeguard)
+      try {
+        const grantedKey = 'first_free_credit_granted';
+        const hasGranted = localStorage.getItem(grantedKey) === '1';
+        if (!hasGranted && (user.credits == null || user.credits <= 0)) {
+          user.credits = 2; // 2 free credits to try Professional
+          localStorage.setItem('crysgarage_user', JSON.stringify(user));
+          localStorage.setItem(grantedKey, '1');
+        }
+      } catch {}
       localStorage.setItem('crysgarage_token', token);
       return { user, token };
     } catch (error) {
@@ -292,6 +302,17 @@ export const authAPI = {
             exp: Date.now() + (24 * 60 * 60 * 1000)
           }));
           
+          // One-time free credit grant for first-time accounts (mock path)
+          try {
+            const grantedKey = 'first_free_credit_granted';
+            const hasGranted = localStorage.getItem(grantedKey) === '1';
+            if (!hasGranted && (user.credits == null || user.credits <= 0)) {
+              user.credits = 2;
+              localStorage.setItem('crysgarage_user', JSON.stringify(user));
+              localStorage.setItem(grantedKey, '1');
+            }
+          } catch {}
+
           localStorage.setItem('crysgarage_token', mockToken);
           return { user, token: mockToken };
         }
@@ -314,6 +335,14 @@ export const authAPI = {
       }
       
       const { user, token } = response.data;
+      // Grant one-time free credits on signup if backend didn't
+      try {
+        const grantedKey = 'first_free_credit_granted';
+        if (user.credits == null || user.credits <= 0) {
+          user.credits = 2;
+        }
+        localStorage.setItem(grantedKey, '1');
+      } catch {}
       localStorage.setItem('crysgarage_token', token);
       return { user, token };
     } catch (error) {
@@ -325,7 +354,7 @@ export const authAPI = {
         name: name,
         email: email,
         tier: 'free',
-        credits: 3,
+        credits: 2, // free credits for first-time Professional try
         join_date: new Date().toISOString().split('T')[0],
         total_tracks: 0,
         total_spent: 0
@@ -339,6 +368,7 @@ export const authAPI = {
       
       localStorage.setItem('crysgarage_token', mockToken);
       localStorage.setItem('crysgarage_user', JSON.stringify(mockUser));
+      try { localStorage.setItem('first_free_credit_granted', '1'); } catch {}
       
       return { user: mockUser, token: mockToken };
     }

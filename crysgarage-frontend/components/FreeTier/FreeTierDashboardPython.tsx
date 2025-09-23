@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Upload, Play, Pause, Download, Activity, Music, ArrowLeft, CreditCard, DollarSign, Loader2 } from 'lucide-react';
 import DownloadStep from './DownloadStep';
 import ComparisonPlayer from './ComparisonPlayer';
@@ -69,6 +69,28 @@ const FreeTierDashboardPython: React.FC<FreeTierDashboardProps> = ({ onDownloadA
   const [tierInfo, setTierInfo] = useState<TierInfo | null>(null);
   const [isLoadingGenres, setIsLoadingGenres] = useState(false);
   const [downloadFormat, setDownloadFormat] = useState<'mp3' | 'wav'>('mp3');
+  const processingSteps = useMemo(
+    () => [
+      'EQ Processing',
+      'Compression',
+      'Limiting',
+      'Comprehensive Normalization',
+      'LUFS Normalization',
+      'Peak Normalization',
+      'Soft Limiting'
+    ],
+    []
+  );
+  const [processingStepIndex, setProcessingStepIndex] = useState<number>(0);
+  const progressIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  useEffect(() => {
+    if (!isProcessing) return;
+    setProcessingStepIndex(0);
+    const interval = setInterval(() => {
+      setProcessingStepIndex((idx) => (idx + 1) % processingSteps.length);
+    }, 1500);
+    return () => clearInterval(interval);
+  }, [isProcessing, processingSteps]);
 
   // Audio refs
   const originalAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -256,7 +278,11 @@ const FreeTierDashboardPython: React.FC<FreeTierDashboardProps> = ({ onDownloadA
 
   // Load tier information and available genres on component mount
   useEffect(() => {
-    loadTierInformation();
+    loadTierInformation().catch((e) => {
+      console.error('Tier load failed:', e);
+      setIsLoadingGenres(false);
+      setError('Failed to load genres');
+    });
   }, []);
 
   const loadTierInformation = async () => {
@@ -271,13 +297,20 @@ const FreeTierDashboardPython: React.FC<FreeTierDashboardProps> = ({ onDownloadA
       // Get available genres for free tier
       const genreNames = await pythonAudioService.getAvailableGenresForTier('free');
       
-      // Create genre objects for UI
-      const genres: Genre[] = genreNames.map((name, index) => ({
-        id: name.toLowerCase().replace(/\s+/g, '_'),
-        name,
-        color: index === 0 ? 'bg-orange-500' : 'bg-red-500',
-        description: index === 0 ? 'Bass-Driven & Punchy' : 'Rhythmic & Energetic'
-      }));
+      // Create genre objects for UI with playful display names
+      const displayNameById: Record<string, string> = {
+        'hip-hop': 'Chill Vibes',
+        'afrobeats': 'Party Bounce',
+      };
+      const genres: Genre[] = genreNames.map((originalName, index) => {
+        const id = originalName.toLowerCase().replace(/\s+/g, '_');
+        return {
+          id,
+          name: displayNameById[id] || originalName,
+          color: index === 0 ? 'bg-orange-500' : 'bg-red-500',
+          description: index === 0 ? 'Bass-Driven & Punchy' : 'Rhythmic & Energetic'
+        };
+      });
       
       setAvailableGenres(genres);
       console.log('Loaded free tier genres:', genres);
@@ -288,8 +321,8 @@ const FreeTierDashboardPython: React.FC<FreeTierDashboardProps> = ({ onDownloadA
       
       // Fallback genres
       setAvailableGenres([
-        { id: 'hip-hop', name: 'Hip-Hop', color: 'bg-orange-500', description: 'Bass-Driven & Punchy' },
-        { id: 'afrobeats', name: 'Afrobeats', color: 'bg-red-500', description: 'Rhythmic & Energetic' }
+        { id: 'hip-hop', name: 'Chill Vibes', color: 'bg-orange-500', description: 'Bass-Driven & Punchy' },
+        { id: 'amapiano', name: 'Party Bounce', color: 'bg-red-500', description: 'Rhythmic & Energetic' }
       ]);
     } finally {
       setIsLoadingGenres(false);
@@ -302,9 +335,9 @@ const FreeTierDashboardPython: React.FC<FreeTierDashboardProps> = ({ onDownloadA
       setError(null);
       
       // Validate file size (free tier limit)
-      const maxSize = 50 * 1024 * 1024; // 50MB for free tier
+      const maxSize = 100 * 1024 * 1024; // 100MB for free tier
       if (file.size > maxSize) {
-        setError('File too large. Free tier supports files up to 50MB.');
+        setError('File too large. Free tier supports files up to 100MB.');
         return;
       }
 
@@ -544,10 +577,16 @@ const FreeTierDashboardPython: React.FC<FreeTierDashboardProps> = ({ onDownloadA
       console.log('Selected genre:', selectedGenre.name);
       
       // Simulate progress updates
-      const progressInterval = setInterval(() => {
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current);
+      }
+      progressIntervalRef.current = setInterval(() => {
         setProcessingProgress(prev => {
           if (prev >= 90) {
-            clearInterval(progressInterval);
+            if (progressIntervalRef.current) {
+              clearInterval(progressIntervalRef.current);
+              progressIntervalRef.current = null;
+            }
             return prev;
           }
           return prev + Math.random() * 10;
@@ -563,7 +602,10 @@ const FreeTierDashboardPython: React.FC<FreeTierDashboardProps> = ({ onDownloadA
         downloadFormat
       );
 
-      clearInterval(progressInterval);
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current);
+        progressIntervalRef.current = null;
+      }
       setProcessingProgress(100);
 
       console.log('Final processing completed:', result);
@@ -587,6 +629,16 @@ const FreeTierDashboardPython: React.FC<FreeTierDashboardProps> = ({ onDownloadA
         appliedParams
       } as any);
 
+      // Stop any playing audio when processing completes and moving to download tab
+      if (originalAudioRef.current) {
+        originalAudioRef.current.pause();
+        setIsPlayingOriginal(false);
+      }
+      if (masteredAudioRef.current) {
+        masteredAudioRef.current.pause();
+        setIsPlayingMastered(false);
+      }
+
       // Move to download tab
       setActiveTab('download');
       
@@ -594,7 +646,12 @@ const FreeTierDashboardPython: React.FC<FreeTierDashboardProps> = ({ onDownloadA
       console.error('Python processing failed:', error);
       setError(error.message || 'Failed to process audio');
     } finally {
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current);
+        progressIntervalRef.current = null;
+      }
       setIsProcessing(false);
+      setProcessingProgress(0);
     }
   };
 
@@ -791,7 +848,7 @@ const FreeTierDashboardPython: React.FC<FreeTierDashboardProps> = ({ onDownloadA
                   >
                     <div className="text-crys-light-grey mb-4">
                       <p className="text-lg">Click to upload or drag and drop</p>
-                      <p className="text-sm">MP3, WAV, FLAC up to 50MB</p>
+                      <p className="text-sm">MP3, WAV, FLAC up to 100MB</p>
                     </div>
                     <button className="bg-crys-gold hover:bg-crys-gold/90 text-crys-black px-6 py-3 rounded-lg font-medium transition-colors">
                       Choose File
@@ -922,9 +979,14 @@ const FreeTierDashboardPython: React.FC<FreeTierDashboardProps> = ({ onDownloadA
                           style={{ width: `${processingProgress}%` }}
                         />
                       </div>
-                      <p className="text-crys-light-grey text-sm mt-2">
-                        {Math.round(processingProgress)}% complete
-                      </p>
+                      <div className="flex items-center justify-between mt-2 text-sm">
+                        <p className="text-crys-light-grey">
+                          {Math.round(processingProgress)}% complete
+                        </p>
+                        <p className="text-crys-gold font-medium">
+                          {processingSteps[processingStepIndex]}
+                        </p>
+                      </div>
                     </div>
                   )}
                 </div>

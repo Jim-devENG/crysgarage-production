@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Play, Pause, Volume2, VolumeX, RotateCcw } from 'lucide-react';
+import { Play, Pause, RotateCcw } from 'lucide-react';
 
 interface AudioFile {
   id: string;
@@ -22,13 +22,15 @@ interface ComparisonPlayerProps {
   selectedGenre: Genre | null;
   onBack: () => void;
   onNewUpload: () => void;
-  onDownload: () => Promise<void>;
+  onDownload: (format?: string, sampleRate?: number) => Promise<void>;
   // Optional ML info
   mlSummary?: Array<{ area: string; action: string; reason?: string }>;
   appliedParams?: Record<string, any>;
   originalLufs?: number;
   masteredLufs?: number;
   recommendedAttenuationDb?: number;
+  // Professional tier options
+  showFormatOptions?: boolean;
 }
 
 const ComparisonPlayer: React.FC<ComparisonPlayerProps> = ({
@@ -42,7 +44,8 @@ const ComparisonPlayer: React.FC<ComparisonPlayerProps> = ({
   appliedParams,
   originalLufs,
   masteredLufs,
-  recommendedAttenuationDb
+  recommendedAttenuationDb,
+  showFormatOptions = false
 }) => {
   // Audio refs
   const originalAudioRef = useRef<HTMLAudioElement>(null);
@@ -51,8 +54,6 @@ const ComparisonPlayer: React.FC<ComparisonPlayerProps> = ({
   // Playback states
   const [isPlayingOriginal, setIsPlayingOriginal] = useState(false);
   const [isPlayingMastered, setIsPlayingMastered] = useState(false);
-  const [originalVolume, setOriginalVolume] = useState(1);
-  const [masteredVolume, setMasteredVolume] = useState(1);
   const [originalMuted, setOriginalMuted] = useState(false);
   const [masteredMuted, setMasteredMuted] = useState(false);
   
@@ -64,6 +65,11 @@ const ComparisonPlayer: React.FC<ComparisonPlayerProps> = ({
   
   // Download state
   const [isDownloading, setIsDownloading] = useState(false);
+  
+  // Format and sample rate options (for professional tier)
+  const [selectedFormat, setSelectedFormat] = useState('WAV');
+  const [selectedSampleRate, setSelectedSampleRate] = useState(44100);
+
 
   // Level matching: apply base gain to mastered playback so A/B is fair
   const [masteredBaseGain, setMasteredBaseGain] = useState(1);
@@ -167,17 +173,17 @@ const ComparisonPlayer: React.FC<ComparisonPlayerProps> = ({
   // Sync element properties that are not valid JSX attributes
   useEffect(() => {
     if (originalAudioRef.current) {
-      try { originalAudioRef.current.volume = originalMuted ? 0 : originalVolume; } catch {}
+      try { originalAudioRef.current.volume = originalMuted ? 0 : 1; } catch {}
       try { originalAudioRef.current.muted = originalMuted; } catch {}
     }
-  }, [originalVolume, originalMuted]);
+  }, [originalMuted]);
 
   useEffect(() => {
     if (masteredAudioRef.current) {
-      try { masteredAudioRef.current.volume = (masteredMuted ? 0 : masteredVolume) * masteredBaseGain; } catch {}
+      try { masteredAudioRef.current.volume = (masteredMuted ? 0 : 1) * masteredBaseGain; } catch {}
       try { masteredAudioRef.current.muted = masteredMuted; } catch {}
     }
-  }, [masteredVolume, masteredMuted, masteredBaseGain]);
+  }, [masteredMuted, masteredBaseGain]);
 
   // Format time helper
   const formatTime = (seconds: number) => {
@@ -316,7 +322,11 @@ const ComparisonPlayer: React.FC<ComparisonPlayerProps> = ({
   const handleDownload = async () => {
     setIsDownloading(true);
     try {
-      await onDownload();
+      if (showFormatOptions) {
+        await onDownload(selectedFormat, selectedSampleRate);
+      } else {
+        await onDownload();
+      }
     } catch (error) {
       console.error('Download failed:', error);
     } finally {
@@ -387,7 +397,7 @@ const ComparisonPlayer: React.FC<ComparisonPlayerProps> = ({
       {/* Header */}
       <div className="text-center">
         <h1 className="text-3xl font-bold text-amber-400 mb-2">Audio Comparison</h1>
-        <p className="text-gray-400">Compare your original audio with the AI-mastered version</p>
+        <p className="text-gray-400">Compare your original audio with the Crysgarage Mastering Engine version</p>
         {selectedGenre && (
           <div className="mt-4 inline-flex items-center gap-2 bg-gradient-to-r from-amber-500/20 to-yellow-400/20 border border-amber-500/30 rounded-lg px-4 py-2">
             <span className="text-sm text-amber-400 font-medium">
@@ -402,7 +412,7 @@ const ComparisonPlayer: React.FC<ComparisonPlayerProps> = ({
         <div className="flex items-center justify-between mb-4">
           <div className="inline-flex bg-gray-700 rounded-md overflow-hidden">
             <button
-              className={`px-4 py-2 text-sm ${activeSource==='original' ? 'bg-blue-500 text-white' : 'text-gray-300 hover:bg-gray-600'}`}
+              className={`px-4 py-2 text-sm ${activeSource==='original' ? 'bg-gray-900 text-white' : 'text-gray-300 hover:bg-gray-600'}`}
               onClick={() => handleSwitchSource('original')}
               disabled={!originalFile}
             >Original</button>
@@ -414,7 +424,7 @@ const ComparisonPlayer: React.FC<ComparisonPlayerProps> = ({
           </div>
           <button
             onClick={handlePlayPause}
-            className={`rounded-full p-4 ${activeSource==='original' ? 'bg-blue-500 text-white' : 'bg-amber-500 text-black'}`}
+            className={`rounded-full p-4 ${activeSource==='original' ? 'bg-gray-900 text-white' : 'bg-amber-500 text-black'}`}
             disabled={(activeSource==='original' && !originalFile) || (activeSource==='mastered' && !masteredAudioUrl)}
           >{isPlaying ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6" />}</button>
         </div>
@@ -422,7 +432,7 @@ const ComparisonPlayer: React.FC<ComparisonPlayerProps> = ({
         <div className="space-y-2">
           <div className="w-full bg-gray-600 rounded-full h-2">
             <div
-              className={`${activeSource==='original' ? 'bg-blue-500' : 'bg-amber-500'} h-2 rounded-full transition-all duration-100`}
+              className={`${activeSource==='original' ? 'bg-gray-900' : 'bg-amber-500'} h-2 rounded-full transition-all duration-100`}
               style={{ width: `${activeDuration ? (activeProgress / activeDuration) * 100 : 0}%` }}
             />
           </div>
@@ -439,7 +449,7 @@ const ComparisonPlayer: React.FC<ComparisonPlayerProps> = ({
         <div className="bg-gradient-to-br from-gray-800 to-gray-700 rounded-lg p-6 border border-gray-600">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-              <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+              <div className="w-3 h-3 bg-gray-900 rounded-full"></div>
               Original Audio
             </h3>
             <div className="text-sm text-gray-400">
@@ -463,7 +473,7 @@ const ComparisonPlayer: React.FC<ComparisonPlayerProps> = ({
             <div className="space-y-2">
               <div className="w-full bg-gray-600 rounded-full h-2">
                 <div
-                  className="bg-blue-500 h-2 rounded-full transition-all duration-100"
+                  className="bg-gray-900 h-2 rounded-full transition-all duration-100"
                   style={{ width: `${originalDuration ? (originalProgress / originalDuration) * 100 : 0}%` }}
                 />
               </div>
@@ -473,30 +483,6 @@ const ComparisonPlayer: React.FC<ComparisonPlayerProps> = ({
               </div>
             </div>
 
-            {/* Volume Control */}
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => setOriginalMuted(!originalMuted)}
-                className="text-gray-400 hover:text-white transition-colors"
-              >
-                {originalMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-              </button>
-              <input
-                type="range"
-                min="0"
-                max="1"
-                step="0.1"
-                value={originalMuted ? 0 : originalVolume}
-                onChange={(e) => {
-                  setOriginalVolume(parseFloat(e.target.value));
-                  setOriginalMuted(false);
-                }}
-                className="flex-1"
-              />
-              <span className="text-sm text-gray-400 w-8">
-                {Math.round((originalMuted ? 0 : originalVolume) * 100)}%
-              </span>
-            </div>
           </div>
 
           {/* File Info */}
@@ -525,7 +511,7 @@ const ComparisonPlayer: React.FC<ComparisonPlayerProps> = ({
               Mastered Audio
             </h3>
             <div className="text-sm text-amber-400 font-medium">
-              AI Enhanced
+              Crysgarage Mastering Engine
             </div>
           </div>
 
@@ -555,37 +541,13 @@ const ComparisonPlayer: React.FC<ComparisonPlayerProps> = ({
               </div>
             </div>
 
-            {/* Volume Control */}
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => setMasteredMuted(!masteredMuted)}
-                className="text-gray-400 hover:text-white transition-colors"
-              >
-                {masteredMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-              </button>
-              <input
-                type="range"
-                min="0"
-                max="1"
-                step="0.1"
-                value={masteredMuted ? 0 : masteredVolume}
-                onChange={(e) => {
-                  setMasteredVolume(parseFloat(e.target.value));
-                  setMasteredMuted(false);
-                }}
-                className="flex-1"
-              />
-              <span className="text-sm text-gray-400 w-8">
-                {Math.round((masteredMuted ? 0 : masteredVolume) * 100)}%
-              </span>
-            </div>
           </div>
 
           {/* File Info */}
           <div className="mt-4 pt-4 border-t border-gray-600">
             <div className="text-sm text-gray-400 space-y-1">
               <div>Genre: {selectedGenre?.name || 'None'}</div>
-              <div>Processing: AI Mastered</div>
+              <div>Processing: Crysgarage Mastering Engine</div>
               <div>Status: Ready for Download</div>
             </div>
             {/* Mastered analysis */}
@@ -599,14 +561,14 @@ const ComparisonPlayer: React.FC<ComparisonPlayerProps> = ({
       </div>
 
       {/* Comparison Tips */}
-      <div className="bg-gradient-to-r from-blue-500/10 to-amber-500/10 border border-blue-500/20 rounded-lg p-6">
+      <div className="bg-gradient-to-r from-gray-800/50 to-amber-500/10 border border-amber-500/20 rounded-lg p-6">
         <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
           <RotateCcw className="w-5 h-5" />
           Comparison Tips
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
           <div className="space-y-2">
-            <h4 className="font-medium text-blue-400">Original Audio</h4>
+            <h4 className="font-medium text-gray-300">Original Audio</h4>
             <ul className="text-gray-300 space-y-1">
               <li>• Raw, unprocessed sound</li>
               <li>• Natural dynamics</li>
@@ -616,7 +578,7 @@ const ComparisonPlayer: React.FC<ComparisonPlayerProps> = ({
           <div className="space-y-2">
             <h4 className="font-medium text-amber-400">Mastered Audio</h4>
             <ul className="text-gray-300 space-y-1">
-              <li>• AI-enhanced with {selectedGenre?.name} preset</li>
+              <li>• Mastered by Crysgarage Mastering Engine with {selectedGenre?.name} preset</li>
               <li>• Optimized loudness and clarity</li>
               <li>• Professional-grade processing</li>
             </ul>
@@ -648,19 +610,79 @@ const ComparisonPlayer: React.FC<ComparisonPlayerProps> = ({
         </div>
       )}
 
+      {/* Format and Sample Rate Options (Professional Tier) */}
+      {showFormatOptions && (
+        <div className="bg-gradient-to-br from-gray-800 to-gray-700 rounded-lg p-6 border border-amber-500/20 space-y-4">
+          <h3 className="text-lg font-semibold text-amber-400 mb-4 flex items-center gap-2">
+            <div className="w-2 h-2 bg-amber-500 rounded-full"></div>
+            Download Options
+          </h3>
+          
+          {/* Format Selection */}
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">Format</label>
+            <div className="grid grid-cols-2 gap-2">
+              {['WAV', 'MP3'].map((format) => (
+                <button
+                  key={format}
+                  onClick={() => setSelectedFormat(format)}
+                  className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    selectedFormat === format
+                      ? 'bg-amber-500 text-black'
+                      : 'bg-gray-700 text-gray-300 hover:bg-amber-500/20'
+                  }`}
+                >
+                  {format}
+                </button>
+              ))}
+            </div>
+          </div>
+          
+          {/* Sample Rate Selection */}
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">Sample Rate</label>
+            <div className="grid grid-cols-2 gap-2">
+              {[44100, 48000].map((rate) => (
+                <button
+                  key={rate}
+                  onClick={() => setSelectedSampleRate(rate)}
+                  className={`px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
+                    selectedSampleRate === rate
+                      ? 'bg-amber-500 text-black'
+                      : 'bg-gray-700 text-gray-300 hover:bg-amber-500/20'
+                  }`}
+                >
+                  {rate / 1000}kHz
+                </button>
+              ))}
+            </div>
+          </div>
+          
+          {/* Selected Options Display */}
+          <div className="text-center text-sm text-amber-400 font-medium">
+            Selected: {selectedFormat} • {selectedSampleRate / 1000}kHz
+          </div>
+        </div>
+      )}
+
       {/* Download Section */}
       <div className="text-center space-y-4">
         <button
           onClick={handleDownload}
           disabled={!masteredAudioUrl || isDownloading}
-          className="bg-amber-500 hover:bg-amber-600 disabled:bg-gray-600 disabled:cursor-not-allowed text-black px-8 py-4 rounded-lg font-semibold transition-colors flex items-center gap-3 mx-auto text-lg"
+          className="bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 disabled:bg-gray-600 disabled:cursor-not-allowed text-black px-8 py-4 rounded-lg font-semibold transition-all duration-200 flex items-center gap-3 mx-auto text-lg shadow-lg hover:shadow-amber-500/25"
         >
           <Play className="w-6 h-6" />
-          {isDownloading ? 'Preparing Download...' : 'Download Mastered Audio - $2.99'}
+          {isDownloading 
+            ? 'Preparing Download...' 
+            : showFormatOptions 
+              ? `Download ${selectedFormat} (${selectedSampleRate / 1000}kHz)` 
+              : 'Download Mastered Audio - $2.99'
+          }
         </button>
         
-        <p className="text-sm text-gray-400">
-          Download your AI-mastered audio with the {selectedGenre?.name} preset applied
+        <p className="text-sm text-amber-400">
+          Download your mastered audio (Crysgarage Mastering Engine) with the {selectedGenre?.name} preset applied
         </p>
       </div>
 

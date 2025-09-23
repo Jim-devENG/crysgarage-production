@@ -6,13 +6,12 @@ Handles AI-powered audio mastering with genre-specific presets
 import os
 import tempfile
 import numpy as np
-import librosa
 import soundfile as sf
 from typing import Dict, Any
 import logging
 from pathlib import Path
 import math
-from .pitch_correction import PitchCorrection
+from .genre_presets import get_genre_presets
 
 logger = logging.getLogger(__name__)
 
@@ -21,1275 +20,109 @@ class MLMasteringEngine:
     
     def __init__(self):
         self.temp_dir = tempfile.gettempdir()
-        self.genre_presets = self._load_genre_presets()
+        self.genre_presets = get_genre_presets()  # Import from separate file
         self.tier_settings = self._load_tier_settings()
-        self.pitch_corrector = PitchCorrection()
         
-        
+    def _load_audio(self, input_file_path: str) -> tuple:
+        """Load audio from disk and return array shaped as [channels, samples].
+
+        - Preserves original sample rate (sr=None)
+        - Preserves stereo if present; duplicates mono to stereo
+        - Ensures float32 data and finite values
+        """
+        try:
+            # Use soundfile to avoid librosa/numba/llvmlite on Windows
+            data, sample_rate = sf.read(input_file_path, always_2d=True)  # shape: (n_samples, n_channels)
+
+            if data is None or data.size == 0:
+                raise ValueError("Failed to load audio: empty result")
+
+            # Ensure float32
+            data = np.asarray(data, dtype=np.float32)
+            data = np.nan_to_num(data, nan=0.0, posinf=0.0, neginf=0.0)
+
+            # Ensure stereo: (n, ch) -> (2, n)
+            if data.shape[1] == 1:
+                mono = data[:, 0]
+                audio_stereo = np.stack([mono, mono], axis=0)  # (2, n)
+            else:
+                # transpose to (channels, samples)
+                audio_stereo = data.T  # (ch, n)
+
+            # Clip to [-1, 1] if needed
+            peak = float(np.max(np.abs(audio_stereo)))
+            if peak > 1.0:
+                audio_stereo = audio_stereo / peak
+
+            return audio_stereo, sample_rate
+        except Exception as e:
+            logger.error(f"_load_audio failed: {e}")
+            raise
+
+    def _get_tier_config(self, tier: str) -> Dict[str, Any]:
+        """Return normalized tier configuration.
+
+        Accepts common aliases and casing: free/pro/advanced, etc.
+        """
+        try:
+            normalized = (tier or "Free").strip().lower()
+            if normalized in ["free", "basic"]:
+                key = "Free"
+            elif normalized in ["pro", "professional", "prof"]:
+                key = "Professional"
+            elif normalized in ["adv", "advanced", "premium"]:
+                key = "Advanced"
+            else:
+                key = "Free"
+
+            return self.tier_settings.get(key, self.tier_settings["Free"])
+        except Exception as e:
+            logger.error(f"_get_tier_config failed: {e}")
+            return self.tier_settings["Free"]
+
+    def _get_effective_target_lufs(self, genre: str, fallback_target: float) -> float:
+        """Get genre-based target LUFS, clamped to current safety window when needed."""
+        try:
+            # Normalize genre name for case-insensitive lookup
+            # Handle special characters and common variations
+            if not genre:
+                normalized_genre = "Pop"
+            else:
+                # Handle common variations
+                genre_lower = genre.lower().strip()
+                if genre_lower in ["r-b", "r&b", "rnb", "r and b"]:
+                    normalized_genre = "R&B"
+                elif genre_lower in ["hip-hop", "hiphop", "hip hop"]:
+                    normalized_genre = "Hip Hop"
+                elif genre_lower in ["drum-bass", "drum & bass", "dnb"]:
+                    normalized_genre = "Drum & Bass"
+                else:
+                    normalized_genre = genre.title()
+            genre_info = self.get_genre_information()
+            genre_target = genre_info.get(normalized_genre, {}).get("target_lufs", fallback_target)
+
+            # Current system enforces a -7 to -9 LUFS window later. Keep within a sane range here.
+            # Do not over-constrain; just guard extremes.
+            if not isinstance(genre_target, (int, float)):
+                genre_target = fallback_target
+
+            # Soft clamp to avoid extreme values
+            genre_target = float(max(-23.0, min(0.0, genre_target)))
+            return genre_target
+        except Exception as e:
+            logger.error(f"_get_effective_target_lufs failed: {e}")
+            return fallback_target
+
     def is_available(self) -> bool:
         """Check if ML mastering engine is available"""
         try:
             # Test basic functionality
             test_audio = np.random.randn(1000)
-            self._apply_eq(test_audio, 22050, "Pop")
+            self._apply_simple_eq(test_audio, 22050, 1000, 1.0, "peak")
             return True
         except Exception as e:
             logger.error(f"ML mastering engine not available: {e}")
             return False
-    
-    def _load_genre_presets(self) -> Dict[str, Dict[str, Any]]:
-        """Load genre-specific mastering presets"""
-        return {
-            # West African Genres
-            "Afrobeats": {
-                "eq_curve": {
-                    "low_shelf": {"freq": 100, "gain": 2.0},     # +2dB at 100Hz
-                    "low_mid": {"freq": 300, "gain": -0.5},      # Slight dip at 300Hz
-                    "mid": {"freq": 1000, "gain": 0.0},          # Neutral mids
-                    "high_mid": {"freq": 4000, "gain": 1.0},     # Wide mids
-                    "high_shelf": {"freq": 8000, "gain": 1.5}    # Tape warmth
-                },
-                "compression": {
-                    "ratio": 2.0,                                # Smooth 2:1
-                    "threshold": -18.0,                          # Gentle threshold
-                    "attack": 0.003,                             # Smooth attack
-                    "release": 0.2                               # Smooth release
-                },
-                "stereo_width": 1.3,                             # Wide mids
-                "target_lufs": -9.0                              # -9 LUFS
-            },
-            "Alté": {
-                "eq_curve": {
-                    "low_shelf": {"freq": 80, "gain": 0.5},      # Soften low mids
-                    "low_mid": {"freq": 300, "gain": -1.0},      # Soften low mids
-                    "mid": {"freq": 1000, "gain": 0.0},          # Neutral
-                    "high_mid": {"freq": 4000, "gain": 1.0},     # Airy
-                    "high_shelf": {"freq": 12000, "gain": 3.0}   # Airy highs +3dB
-                },
-                "compression": {
-                    "ratio": 2.5,                                # Light compression
-                    "threshold": -20.0,                          # Light threshold
-                    "attack": 0.005,                             # Light attack
-                    "release": 0.25                              # Light release
-                },
-                "stereo_width": 1.4,                             # Experimental widen
-                "target_lufs": -11.0                             # -11 LUFS
-            },
-            "Hip-life": {
-                "eq_curve": {
-                    "low_shelf": {"freq": 70, "gain": 2.5},      # Push 60-80Hz kick
-                    "low_mid": {"freq": 300, "gain": 1.0},       # Brighten vocals
-                    "mid": {"freq": 1000, "gain": 0.0},          # Neutral
-                    "high_mid": {"freq": 4000, "gain": 1.5},     # Vocal clarity
-                    "high_shelf": {"freq": 8000, "gain": 1.5}    # Brighten vocals
-                },
-                "compression": {
-                    "ratio": 3.0,                                # Punchy 3:1
-                    "threshold": -16.0,                          # Punchy threshold
-                    "attack": 0.002,                             # Fast attack
-                    "release": 0.15                              # Punchy release
-                },
-                "stereo_width": 1.2,                             # Balanced
-                "target_lufs": -9.0                              # -9 LUFS
-            },
-            "Azonto": {
-                "eq_curve": {
-                    "low_shelf": {"freq": 100, "gain": 2.0},     # Boost 100Hz
-                    "low_mid": {"freq": 300, "gain": 0.5},       # Dance punch
-                    "mid": {"freq": 1000, "gain": 0.0},          # Neutral
-                    "high_mid": {"freq": 4000, "gain": 1.0},     # Dance energy
-                    "high_shelf": {"freq": 8000, "gain": 2.0}    # Boost 8kHz
-                },
-                "compression": {
-                    "ratio": 3.5,                                # Dance-punchy
-                    "threshold": -15.0,                          # Dance threshold
-                    "attack": 0.001,                             # Fast attack
-                    "release": 0.12                              # Dance release
-                },
-                "stereo_width": 1.5,                             # Extra widen for dance
-                "target_lufs": -8.0                              # -8 LUFS
-            },
-            "Naija Pop": {
-                "eq_curve": {
-                    "low_shelf": {"freq": 80, "gain": 1.8},      # Balance low punch
-                    "low_mid": {"freq": 300, "gain": 1.0},       # Modern clean
-                    "mid": {"freq": 1000, "gain": 0.0},          # Neutral
-                    "high_mid": {"freq": 4000, "gain": 1.0},     # Pop sheen
-                    "high_shelf": {"freq": 8000, "gain": 1.8}    # High sparkle
-                },
-                "compression": {
-                    "ratio": 2.8,                                # Modern clean
-                    "threshold": -17.0,                          # Clean threshold
-                    "attack": 0.002,                             # Clean attack
-                    "release": 0.18                              # Clean release
-                },
-                "stereo_width": 1.3,                             # Wide
-                "target_lufs": -8.5                              # -8.5 LUFS
-            },
-            "Bongo Flava": {
-                "eq_curve": {
-                    "low_shelf": {"freq": 80, "gain": 2.0},      # +2dB lows
-                    "low_mid": {"freq": 300, "gain": 0.8},       # Smooth vocal glue
-                    "mid": {"freq": 1000, "gain": 0.0},          # Neutral
-                    "high_mid": {"freq": 4000, "gain": 1.0},     # Vocal clarity
-                    "high_shelf": {"freq": 8000, "gain": 1.5}    # Silky highs
-                },
-                "compression": {
-                    "ratio": 2.5,                                # Smooth vocal glue
-                    "threshold": -19.0,                          # Smooth threshold
-                    "attack": 0.003,                             # Smooth attack
-                    "release": 0.2                               # Smooth release
-                },
-                "stereo_width": 1.1,                             # Centered vocals
-                "target_lufs": -9.0                              # -9 LUFS
-            },
-            
-            # South African Genres
-            "Amapiano": {
-                "eq_curve": {
-                    "low_shelf": {"freq": 50, "gain": 2.5},      # Boost sub 40-60Hz
-                    "low_mid": {"freq": 300, "gain": -0.8},      # Control mids
-                    "mid": {"freq": 1000, "gain": 0.0},          # Neutral
-                    "high_mid": {"freq": 4000, "gain": 1.0},     # Transient clarity
-                    "high_shelf": {"freq": 8000, "gain": 1.2}    # Wide low-pass reverb
-                },
-                "compression": {
-                    "ratio": 2.8,                                # Soft pumping
-                    "threshold": -17.0,                          # Soft threshold
-                    "attack": 0.002,                             # Soft attack
-                    "release": 0.2                               # Soft release
-                },
-                "stereo_width": 1.4,                             # Wide low-pass reverb
-                "target_lufs": -8.0                              # -8 LUFS
-            },
-            "Kwaito": {
-                "eq_curve": {
-                    "low_shelf": {"freq": 80, "gain": 2.2},      # Emphasize bassline
-                    "low_mid": {"freq": 300, "gain": 0.5},       # Groove tight
-                    "mid": {"freq": 1000, "gain": 0.0},          # Neutral
-                    "high_mid": {"freq": 4000, "gain": 0.8},     # Controlled
-                    "high_shelf": {"freq": 8000, "gain": 0.8}    # Subtle tape hiss vibe
-                },
-                "compression": {
-                    "ratio": 3.2,                                # Groove tight
-                    "threshold": -18.0,                          # Tight threshold
-                    "attack": 0.002,                             # Tight attack
-                    "release": 0.16                              # Tight release
-                },
-                "stereo_width": 1.2,                             # Controlled widen
-                "target_lufs": -9.0                              # -9 LUFS
-            },
-            "Gqom": {
-                "eq_curve": {
-                    "low_shelf": {"freq": 40, "gain": 3.0},      # Deep subs +3dB
-                    "low_mid": {"freq": 200, "gain": -1.5},      # Cut 200Hz mud
-                    "mid": {"freq": 1000, "gain": 0.0},          # Neutral
-                    "high_mid": {"freq": 4000, "gain": 1.0},     # Wide highs
-                    "high_shelf": {"freq": 8000, "gain": 1.0}    # Distortion edge
-                },
-                "compression": {
-                    "ratio": 4.5,                                # Heavy sidechain
-                    "threshold": -14.0,                          # Heavy threshold
-                    "attack": 0.001,                             # Heavy attack
-                    "release": 0.08                              # Heavy release
-                },
-                "stereo_width": 1.0,                             # Mono bass, wide highs
-                "target_lufs": -7.5                              # -7.5 LUFS
-            },
-            "Shangaan Electro": {
-                "eq_curve": {
-                    "low_shelf": {"freq": 80, "gain": 1.5},      # Moderate lows
-                    "low_mid": {"freq": 300, "gain": 0.2},       # Tight fast
-                    "mid": {"freq": 1000, "gain": 0.0},          # Neutral
-                    "high_mid": {"freq": 4000, "gain": 1.0},     # Transient sharpener
-                    "high_shelf": {"freq": 12000, "gain": 2.5}   # Boost highs 10-14kHz
-                },
-                "compression": {
-                    "ratio": 5.0,                                # Tight fast attack
-                    "threshold": -13.0,                          # Fast threshold
-                    "attack": 0.001,                             # Fast attack
-                    "release": 0.06                              # Fast release
-                },
-                "stereo_width": 1.6,                             # Extra wide
-                "target_lufs": -7.0                              # -7 LUFS
-            },
-            "Kwela": {
-                "eq_curve": {
-                    "low_shelf": {"freq": 80, "gain": 1.0},      # Moderate lows
-                    "low_mid": {"freq": 300, "gain": 0.0},       # Natural
-                    "mid": {"freq": 2000, "gain": 2.0},          # Emphasize midrange pennywhistle
-                    "high_mid": {"freq": 4000, "gain": 1.5},     # Pennywhistle clarity
-                    "high_shelf": {"freq": 8000, "gain": 1.5}    # Tape warmth
-                },
-                "compression": {
-                    "ratio": 2.2,                                # Soft glue
-                    "threshold": -22.0,                          # Soft threshold
-                    "attack": 0.008,                             # Soft attack
-                    "release": 0.3                               # Soft release
-                },
-                "stereo_width": 1.1,                             # Natural stage
-                "target_lufs": -10.0                             # -10 LUFS
-            },
-            # Central/East African Genres
-            "Kuduro": {
-                "eq_curve": {
-                    "low_shelf": {"freq": 80, "gain": 2.5},      # Low punch
-                    "low_mid": {"freq": 300, "gain": 0.5},       # Club energy
-                    "mid": {"freq": 1000, "gain": 0.0},          # Neutral
-                    "high_mid": {"freq": 4000, "gain": 1.0},     # Crisp highs
-                    "high_shelf": {"freq": 8000, "gain": 1.5}    # Saturation drive
-                },
-                "compression": {
-                    "ratio": 3.0,                                # Aggressive
-                    "threshold": -12.0,                          # Hard threshold
-                    "attack": 0.003,                             # Fast attack
-                    "release": 0.1                               # Fast release
-                },
-                "stereo_width": 1.4,                             # Club widen
-                "target_lufs": -7.5                              # -7.5 LUFS
-            },
-            "Ndombolo": {
-                "eq_curve": {
-                    "low_shelf": {"freq": 80, "gain": 2.0},      # +2dB bass
-                    "low_mid": {"freq": 300, "gain": 1.0},       # Lively mids for guitars
-                    "mid": {"freq": 1000, "gain": 0.0},          # Neutral
-                    "high_mid": {"freq": 4000, "gain": 1.0},     # Natural wide
-                    "high_shelf": {"freq": 8000, "gain": 1.0}    # Exciter for sparkle
-                },
-                "compression": {
-                    "ratio": 2.0,                                # Gentle
-                    "threshold": -15.0,                          # Soft threshold
-                    "attack": 0.01,                              # Slow attack
-                    "release": 0.2                               # Slow release
-                },
-                "stereo_width": 1.2,                             # Natural wide
-                "target_lufs": -9.0                              # -9 LUFS
-            },
-            "Gengetone": {
-                "eq_curve": {
-                    "low_shelf": {"freq": 80, "gain": 2.0},      # Heavy low-end +2dB
-                    "low_mid": {"freq": 300, "gain": 0.5},       # Vocal brightness
-                    "mid": {"freq": 1000, "gain": 0.0},          # Neutral
-                    "high_mid": {"freq": 4000, "gain": 1.0},     # Centered vocals
-                    "high_shelf": {"freq": 8000, "gain": 1.0}    # Saturation
-                },
-                "compression": {
-                    "ratio": 4.0,                                # Hard rap style
-                    "threshold": -10.0,                          # Hard threshold
-                    "attack": 0.002,                             # Very fast attack
-                    "release": 0.1                               # Fast release
-                },
-                "stereo_width": 1.0,                             # Centered vocals
-                "target_lufs": -8.0                              # -8 LUFS
-            },
-            "Shrap": {
-                "eq_curve": {
-                    "low_shelf": {"freq": 40, "gain": 3.0},      # Deep sub boost
-                    "low_mid": {"freq": 200, "gain": -1.0},      # Modern trap
-                    "mid": {"freq": 1000, "gain": 0.0},          # Neutral
-                    "high_mid": {"freq": 4000, "gain": 1.0},     # Wide stereo synths
-                    "high_shelf": {"freq": 8000, "gain": 2.0}    # Sparkle highs, exciter
-                },
-                "compression": {
-                    "ratio": 3.5,                                # Modern trap (hard knee)
-                    "threshold": -8.0,                           # Hard threshold
-                    "attack": 0.001,                             # Very fast attack
-                    "release": 0.05                              # Very fast release
-                },
-                "stereo_width": 1.5,                             # Wide stereo synths
-                "target_lufs": -7.5                              # -7.5 LUFS
-            },
-            "Singeli": {
-                "eq_curve": {
-                    "low_shelf": {"freq": 60, "gain": 2.0},      # Tame harsh highs
-                    "low_mid": {"freq": 300, "gain": -0.5},      # Lift subs
-                    "mid": {"freq": 1000, "gain": 0.0},          # Neutral
-                    "high_mid": {"freq": 4000, "gain": 1.0},     # Widen percussion
-                    "high_shelf": {"freq": 8000, "gain": 0.5}    # Transient control
-                },
-                "compression": {
-                    "ratio": 4.0,                                # Tight (fast attack)
-                    "threshold": -8.0,                           # Hard threshold
-                    "attack": 0.001,                             # Very fast attack
-                    "release": 0.05                              # Very fast release
-                },
-                "stereo_width": 1.3,                             # Widen percussion
-                "target_lufs": -7.0                              # -7 LUFS
-            },
-            "Urban Benga": {
-                "eq_curve": {
-                    "low_shelf": {"freq": 80, "gain": 1.5},      # Guitar clarity (2-4kHz)
-                    "low_mid": {"freq": 300, "gain": 0.5},       # Smooth lows
-                    "mid": {"freq": 1000, "gain": 0.0},          # Neutral
-                    "high_mid": {"freq": 4000, "gain": 1.0},     # Warm stereo spread
-                    "high_shelf": {"freq": 8000, "gain": 1.0}    # Tape shimmer
-                },
-                "compression": {
-                    "ratio": 2.0,                                # Soft
-                    "threshold": -15.0,                          # Soft threshold
-                    "attack": 0.01,                              # Slow attack
-                    "release": 0.2                               # Slow release
-                },
-                "stereo_width": 1.2,                             # Warm stereo spread
-                "target_lufs": -9.0                              # -9 LUFS
-            },
-            "New Benga": {
-                "eq_curve": {
-                    "low_shelf": {"freq": 80, "gain": 1.8},      # Guitar clarity
-                    "low_mid": {"freq": 300, "gain": 0.5},       # Low punch
-                    "mid": {"freq": 1000, "gain": 0.0},          # Neutral
-                    "high_mid": {"freq": 4000, "gain": 1.0},     # Wide but centered kick
-                    "high_shelf": {"freq": 8000, "gain": 1.0}    # Gentle exciter
-                },
-                "compression": {
-                    "ratio": 2.0,                                # Transparent
-                    "threshold": -15.0,                          # Soft threshold
-                    "attack": 0.01,                              # Slow attack
-                    "release": 0.2                               # Slow release
-                },
-                "stereo_width": 1.1,                             # Wide but centered kick
-                "target_lufs": -9.0                              # -9 LUFS
-            },
-            # North African Genres
-            "Raï N'B": {
-                "eq_curve": {
-                    "low_shelf": {"freq": 80, "gain": 1.5},      # Silky top-end
-                    "low_mid": {"freq": 300, "gain": 0.5},       # Warm mids
-                    "mid": {"freq": 1000, "gain": 0.0},          # Neutral
-                    "high_mid": {"freq": 4000, "gain": 1.0},     # Wide reverb tail
-                    "high_shelf": {"freq": 8000, "gain": 1.5}    # Harmonic exciter
-                },
-                "compression": {
-                    "ratio": 2.0,                                # R&B smooth
-                    "threshold": -12.0,                          # Moderate threshold
-                    "attack": 0.005,                             # Smooth attack
-                    "release": 0.15                              # Smooth release
-                },
-                "stereo_width": 1.3,                             # Wide reverb tail
-                "target_lufs": -9.5                              # -9.5 LUFS
-            },
-            "Raï-hop": {
-                "eq_curve": {
-                    "low_shelf": {"freq": 80, "gain": 2.0},      # Strong kick
-                    "low_mid": {"freq": 300, "gain": 0.5},       # Vocal clarity
-                    "mid": {"freq": 1000, "gain": 0.0},          # Neutral
-                    "high_mid": {"freq": 4000, "gain": 1.0},     # Moderate wide
-                    "high_shelf": {"freq": 8000, "gain": 1.0}    # Analog saturation
-                },
-                "compression": {
-                    "ratio": 3.0,                                # Hip hop style
-                    "threshold": -10.0,                          # Hard threshold
-                    "attack": 0.003,                             # Fast attack
-                    "release": 0.1                               # Fast release
-                },
-                "stereo_width": 1.2,                             # Moderate wide
-                "target_lufs": -8.5                              # -8.5 LUFS
-            },
-            "Gnawa Fusion": {
-                "eq_curve": {
-                    "low_shelf": {"freq": 80, "gain": 1.5},      # Highlight percussive lows
-                    "low_mid": {"freq": 300, "gain": 0.5},       # Airy highs
-                    "mid": {"freq": 1000, "gain": 0.0},          # Neutral
-                    "high_mid": {"freq": 4000, "gain": 1.0},     # Wide instruments
-                    "high_shelf": {"freq": 8000, "gain": 1.5}    # Reverb depth
-                },
-                "compression": {
-                    "ratio": 2.0,                                # Gentle glue
-                    "threshold": -15.0,                          # Soft threshold
-                    "attack": 0.01,                              # Slow attack
-                    "release": 0.2                               # Slow release
-                },
-                "stereo_width": 1.4,                             # Wide instruments
-                "target_lufs": -9.0                              # -9 LUFS
-            },
-            # Fusion Genres
-            "Afrotrap": {
-                "eq_curve": {
-                    "low_shelf": {"freq": 40, "gain": 3.0},      # Hard-hitting sub +3dB
-                    "low_mid": {"freq": 200, "gain": -1.0},      # Bright hats
-                    "mid": {"freq": 1000, "gain": 0.0},          # Neutral
-                    "high_mid": {"freq": 4000, "gain": 1.0},     # Wide synths
-                    "high_shelf": {"freq": 8000, "gain": 2.0}    # Exciter edge
-                },
-                "compression": {
-                    "ratio": 3.5,                                # Hard knee
-                    "threshold": -8.0,                           # Hard threshold
-                    "attack": 0.001,                             # Very fast attack
-                    "release": 0.05                              # Very fast release
-                },
-                "stereo_width": 1.5,                             # Wide synths
-                "target_lufs": -7.5                              # -7.5 LUFS
-            },
-            "Afro-Gospel": {
-                "eq_curve": {
-                    "low_shelf": {"freq": 80, "gain": 1.5},      # Balance lows
-                    "low_mid": {"freq": 300, "gain": 0.5},       # Vocal sparkle
-                    "mid": {"freq": 1000, "gain": 0.0},          # Neutral
-                    "high_mid": {"freq": 4000, "gain": 1.0},     # Open wide
-                    "high_shelf": {"freq": 8000, "gain": 1.0}    # Subtle warmth
-                },
-                "compression": {
-                    "ratio": 1.5,                                # Light transparent
-                    "threshold": -18.0,                          # Very soft threshold
-                    "attack": 0.01,                              # Slow attack
-                    "release": 0.3                               # Slow release
-                },
-                "stereo_width": 1.3,                             # Open wide
-                "target_lufs": -9.5                              # -9.5 LUFS
-            },
-            "Urban Gospel": {
-                "eq_curve": {
-                    "low_shelf": {"freq": 80, "gain": 1.5},      # Mid clarity for choirs
-                    "low_mid": {"freq": 300, "gain": 0.5},       # Top sparkle
-                    "mid": {"freq": 1000, "gain": 0.0},          # Neutral
-                    "high_mid": {"freq": 4000, "gain": 1.0},     # Wide stereo chorus
-                    "high_shelf": {"freq": 8000, "gain": 1.5}    # Reverb shine
-                },
-                "compression": {
-                    "ratio": 2.0,                                # Smooth
-                    "threshold": -12.0,                          # Moderate threshold
-                    "attack": 0.005,                             # Smooth attack
-                    "release": 0.15                              # Smooth release
-                },
-                "stereo_width": 1.4,                             # Wide stereo chorus
-                "target_lufs": -9.0                              # -9 LUFS
-            },
-            # Advanced Tier Genres (24 additional genres)
-            "Trap": {
-                "eq_curve": {
-                    "low_shelf": {"freq": 80, "gain": 3.5},      # Heavy bass
-                    "low_mid": {"freq": 300, "gain": 1.2},       # Mid punch
-                    "mid": {"freq": 1000, "gain": 0.0},          # Neutral
-                    "high_mid": {"freq": 4000, "gain": 0.6},     # High clarity
-                    "high_shelf": {"freq": 8000, "gain": 0.6}    # Crisp highs
-                },
-                "compression": {
-                    "ratio": 6.0,                                # Heavy compression
-                    "threshold": -14.0,                          # Hard threshold
-                    "attack": 0.001,                             # Very fast attack
-                    "release": 0.08                              # Fast release
-                },
-                "stereo_width": 1.2,                             # Wide stereo
-                "target_lufs": -7.2                              # -7.2 LUFS
-            },
-            "Drill": {
-                "eq_curve": {
-                    "low_shelf": {"freq": 80, "gain": 3.0},      # Heavy bass
-                    "low_mid": {"freq": 300, "gain": 1.8},       # Mid punch
-                    "mid": {"freq": 1000, "gain": 0.0},          # Neutral
-                    "high_mid": {"freq": 4000, "gain": 0.7},     # High clarity
-                    "high_shelf": {"freq": 8000, "gain": 0.7}    # Crisp highs
-                },
-                "compression": {
-                    "ratio": 5.0,                                # Heavy compression
-                    "threshold": -16.0,                          # Hard threshold
-                    "attack": 0.001,                             # Very fast attack
-                    "release": 0.1                               # Fast release
-                },
-                "stereo_width": 1.1,                             # Moderate stereo
-                "target_lufs": -7.5                              # -7.5 LUFS
-            },
-            "Dubstep": {
-                "eq_curve": {
-                    "low_shelf": {"freq": 40, "gain": 4.0},      # Deep bass
-                    "low_mid": {"freq": 200, "gain": 1.0},       # Mid control
-                    "mid": {"freq": 1000, "gain": 0.0},          # Neutral
-                    "high_mid": {"freq": 4000, "gain": 0.8},     # High clarity
-                    "high_shelf": {"freq": 8000, "gain": 0.8}    # Crisp highs
-                },
-                "compression": {
-                    "ratio": 8.0,                                # Very heavy compression
-                    "threshold": -12.0,                          # Very hard threshold
-                    "attack": 0.001,                             # Very fast attack
-                    "release": 0.05                              # Very fast release
-                },
-                "stereo_width": 1.3,                             # Wide stereo
-                "target_lufs": -7.0                              # -7.0 LUFS
-            },
-            "R&B": {
-                "eq_curve": {
-                    "low_shelf": {"freq": 80, "gain": 1.2},      # Gentle bass
-                    "low_mid": {"freq": 300, "gain": 2.5},       # Warm mids
-                    "mid": {"freq": 1000, "gain": 0.0},          # Neutral
-                    "high_mid": {"freq": 4000, "gain": 1.8},     # Bright highs
-                    "high_shelf": {"freq": 8000, "gain": 1.8}    # Airy highs
-                },
-                "compression": {
-                    "ratio": 2.2,                                # Gentle compression
-                    "threshold": -24.0,                          # Soft threshold
-                    "attack": 0.015,                             # Slow attack
-                    "release": 0.2                               # Slow release
-                },
-                "stereo_width": 1.2,                             # Moderate stereo
-                "target_lufs": -8.8                              # -8.8 LUFS
-            },
-            "Lofi Hip-Hop": {
-                "eq_curve": {
-                    "low_shelf": {"freq": 80, "gain": 0.8},      # Soft bass
-                    "low_mid": {"freq": 300, "gain": 1.5},       # Warm mids
-                    "mid": {"freq": 1000, "gain": 0.0},          # Neutral
-                    "high_mid": {"freq": 4000, "gain": 1.2},     # Soft highs
-                    "high_shelf": {"freq": 8000, "gain": 1.2}    # Airy highs
-                },
-                "compression": {
-                    "ratio": 1.8,                                # Very gentle compression
-                    "threshold": -26.0,                          # Very soft threshold
-                    "attack": 0.025,                             # Very slow attack
-                    "release": 0.3                               # Very slow release
-                },
-                "stereo_width": 1.0,                             # Natural stereo
-                "target_lufs": -9.0                              # -9.0 LUFS
-            },
-            "House": {
-                "eq_curve": {
-                    "low_shelf": {"freq": 80, "gain": 2.5},      # Strong bass
-                    "low_mid": {"freq": 300, "gain": 1.8},       # Warm mids
-                    "mid": {"freq": 1000, "gain": 0.0},          # Neutral
-                    "high_mid": {"freq": 4000, "gain": 1.0},     # Clear highs
-                    "high_shelf": {"freq": 8000, "gain": 1.0}    # Bright highs
-                },
-                "compression": {
-                    "ratio": 4.5,                                # Moderate compression
-                    "threshold": -17.0,                          # Moderate threshold
-                    "attack": 0.002,                             # Fast attack
-                    "release": 0.15                              # Moderate release
-                },
-                "stereo_width": 1.3,                             # Wide stereo
-                "target_lufs": -8.0                              # -8.0 LUFS
-            },
-            "Techno": {
-                "eq_curve": {
-                    "low_shelf": {"freq": 80, "gain": 3.2},      # Strong bass
-                    "low_mid": {"freq": 300, "gain": 1.6},       # Mid punch
-                    "mid": {"freq": 1000, "gain": 0.0},          # Neutral
-                    "high_mid": {"freq": 4000, "gain": 0.9},     # Clear highs
-                    "high_shelf": {"freq": 8000, "gain": 0.9}    # Bright highs
-                },
-                "compression": {
-                    "ratio": 5.5,                                # Heavy compression
-                    "threshold": -15.0,                          # Hard threshold
-                    "attack": 0.001,                             # Very fast attack
-                    "release": 0.08                              # Fast release
-                },
-                "stereo_width": 1.4,                             # Very wide stereo
-                "target_lufs": -7.5                              # -7.5 LUFS
-            },
-            "Highlife": {
-                "eq_curve": {
-                    "low_shelf": {"freq": 80, "gain": 1.8},      # Moderate bass
-                    "low_mid": {"freq": 300, "gain": 2.2},       # Warm mids
-                    "mid": {"freq": 1000, "gain": 0.0},          # Neutral
-                    "high_mid": {"freq": 4000, "gain": 1.2},     # Clear highs
-                    "high_shelf": {"freq": 8000, "gain": 1.2}    # Bright highs
-                },
-                "compression": {
-                    "ratio": 3.0,                                # Moderate compression
-                    "threshold": -20.0,                          # Soft threshold
-                    "attack": 0.005,                             # Moderate attack
-                    "release": 0.25                              # Slow release
-                },
-                "stereo_width": 1.2,                             # Moderate stereo
-                "target_lufs": -8.2                              # -8.2 LUFS
-            },
-            "Instrumentals": {
-                "eq_curve": {
-                    "low_shelf": {"freq": 80, "gain": 1.5},      # Moderate bass
-                    "low_mid": {"freq": 300, "gain": 2.0},       # Warm mids
-                    "mid": {"freq": 1000, "gain": 0.0},          # Neutral
-                    "high_mid": {"freq": 4000, "gain": 1.5},     # Clear highs
-                    "high_shelf": {"freq": 8000, "gain": 1.5}    # Bright highs
-                },
-                "compression": {
-                    "ratio": 2.8,                                # Gentle compression
-                    "threshold": -21.0,                          # Soft threshold
-                    "attack": 0.008,                             # Moderate attack
-                    "release": 0.25                              # Slow release
-                },
-                "stereo_width": 1.3,                             # Wide stereo
-                "target_lufs": -8.5                              # -8.5 LUFS
-            },
-            "Beats": {
-                "eq_curve": {
-                    "low_shelf": {"freq": 80, "gain": 2.2},      # Strong bass
-                    "low_mid": {"freq": 300, "gain": 1.8},       # Warm mids
-                    "mid": {"freq": 1000, "gain": 0.0},          # Neutral
-                    "high_mid": {"freq": 4000, "gain": 1.0},     # Clear highs
-                    "high_shelf": {"freq": 8000, "gain": 1.0}    # Bright highs
-                },
-                "compression": {
-                    "ratio": 3.5,                                # Moderate compression
-                    "threshold": -19.0,                          # Moderate threshold
-                    "attack": 0.003,                             # Fast attack
-                    "release": 0.2                               # Moderate release
-                },
-                "stereo_width": 1.2,                             # Moderate stereo
-                "target_lufs": -8.0                              # -8.0 LUFS
-            },
-            "Trance": {
-                "eq_curve": {
-                    "low_shelf": {"freq": 80, "gain": 2.0},      # Strong bass
-                    "low_mid": {"freq": 300, "gain": 1.5},       # Warm mids
-                    "mid": {"freq": 1000, "gain": 0.0},          # Neutral
-                    "high_mid": {"freq": 4000, "gain": 1.8},     # Bright highs
-                    "high_shelf": {"freq": 8000, "gain": 1.8}    # Airy highs
-                },
-                "compression": {
-                    "ratio": 4.0,                                # Moderate compression
-                    "threshold": -18.0,                          # Moderate threshold
-                    "attack": 0.002,                             # Fast attack
-                    "release": 0.2                               # Moderate release
-                },
-                "stereo_width": 1.4,                             # Very wide stereo
-                "target_lufs": -7.8                              # -7.8 LUFS
-            },
-            "Drum & Bass": {
-                "eq_curve": {
-                    "low_shelf": {"freq": 40, "gain": 3.8},      # Deep bass
-                    "low_mid": {"freq": 200, "gain": 1.4},       # Mid control
-                    "mid": {"freq": 1000, "gain": 0.0},          # Neutral
-                    "high_mid": {"freq": 4000, "gain": 1.0},     # Clear highs
-                    "high_shelf": {"freq": 8000, "gain": 1.0}    # Bright highs
-                },
-                "compression": {
-                    "ratio": 7.0,                                # Very heavy compression
-                    "threshold": -13.0,                          # Very hard threshold
-                    "attack": 0.001,                             # Very fast attack
-                    "release": 0.06                              # Very fast release
-                },
-                "stereo_width": 1.3,                             # Wide stereo
-                "target_lufs": -7.0                              # -7.0 LUFS
-            },
-            "Reggae": {
-                "eq_curve": {
-                    "low_shelf": {"freq": 80, "gain": 2.5},      # Strong bass
-                    "low_mid": {"freq": 300, "gain": 1.2},       # Warm mids
-                    "mid": {"freq": 1000, "gain": 0.0},          # Neutral
-                    "high_mid": {"freq": 4000, "gain": 0.6},     # Soft highs
-                    "high_shelf": {"freq": 8000, "gain": 0.6}    # Mellow highs
-                },
-                "compression": {
-                    "ratio": 2.8,                                # Gentle compression
-                    "threshold": -21.0,                          # Soft threshold
-                    "attack": 0.008,                             # Moderate attack
-                    "release": 0.3                               # Slow release
-                },
-                "stereo_width": 1.1,                             # Natural stereo
-                "target_lufs": -8.2                              # -8.2 LUFS
-            },
-            "Voice Over": {
-                "eq_curve": {
-                    "low_shelf": {"freq": 80, "gain": 0.8},      # Minimal bass
-                    "low_mid": {"freq": 300, "gain": 2.8},       # Strong mids
-                    "mid": {"freq": 1000, "gain": 0.0},          # Neutral
-                    "high_mid": {"freq": 4000, "gain": 2.2},     # Bright highs
-                    "high_shelf": {"freq": 8000, "gain": 2.2}    # Clear highs
-                },
-                "compression": {
-                    "ratio": 2.0,                                # Gentle compression
-                    "threshold": -25.0,                          # Very soft threshold
-                    "attack": 0.02,                              # Slow attack
-                    "release": 0.4                               # Very slow release
-                },
-                "stereo_width": 1.0,                             # Mono/centered
-                "target_lufs": -9.2                              # -9.2 LUFS
-            },
-            "Journalist": {
-                "eq_curve": {
-                    "low_shelf": {"freq": 80, "gain": 0.6},      # Minimal bass
-                    "low_mid": {"freq": 300, "gain": 3.0},       # Very strong mids
-                    "mid": {"freq": 1000, "gain": 0.0},          # Neutral
-                    "high_mid": {"freq": 4000, "gain": 2.5},     # Very bright highs
-                    "high_shelf": {"freq": 8000, "gain": 2.5}    # Very clear highs
-                },
-                "compression": {
-                    "ratio": 1.8,                                # Very gentle compression
-                    "threshold": -26.0,                          # Very soft threshold
-                    "attack": 0.025,                             # Very slow attack
-                    "release": 0.5                               # Very slow release
-                },
-                "stereo_width": 1.0,                             # Mono/centered
-                "target_lufs": -9.5                              # -9.5 LUFS
-            },
-            "Soul": {
-                "eq_curve": {
-                    "low_shelf": {"freq": 80, "gain": 1.2},      # Gentle bass
-                    "low_mid": {"freq": 300, "gain": 2.5},       # Warm mids
-                    "mid": {"freq": 1000, "gain": 0.0},          # Neutral
-                    "high_mid": {"freq": 4000, "gain": 1.8},     # Bright highs
-                    "high_shelf": {"freq": 8000, "gain": 1.8}    # Airy highs
-                },
-                "compression": {
-                    "ratio": 2.2,                                # Gentle compression
-                    "threshold": -23.0,                          # Soft threshold
-                    "attack": 0.015,                             # Slow attack
-                    "release": 0.2                               # Slow release
-                },
-                "stereo_width": 1.2,                             # Moderate stereo
-                "target_lufs": -8.8                              # -8.8 LUFS
-            },
-            "Content Creator": {
-                "eq_curve": {
-                    "low_shelf": {"freq": 80, "gain": 1.5},      # Moderate bass
-                    "low_mid": {"freq": 300, "gain": 2.0},       # Warm mids
-                    "mid": {"freq": 1000, "gain": 0.0},          # Neutral
-                    "high_mid": {"freq": 4000, "gain": 1.5},     # Clear highs
-                    "high_shelf": {"freq": 8000, "gain": 1.5}    # Bright highs
-                },
-                "compression": {
-                    "ratio": 3.0,                                # Moderate compression
-                    "threshold": -20.0,                          # Soft threshold
-                    "attack": 0.005,                             # Moderate attack
-                    "release": 0.25                              # Slow release
-                },
-                "stereo_width": 1.2,                             # Moderate stereo
-                "target_lufs": -8.5                              # -8.5 LUFS
-            },
-            "Pop": {
-                "eq_curve": {
-                    "low_shelf": {"freq": 80, "gain": 1.5},      # Moderate bass
-                    "low_mid": {"freq": 300, "gain": 1.0},       # Balanced mids
-                    "mid": {"freq": 1000, "gain": 0.0},          # Neutral
-                    "high_mid": {"freq": 4000, "gain": 1.2},     # Bright highs
-                    "high_shelf": {"freq": 8000, "gain": 1.2}    # Airy highs
-                },
-                "compression": {
-                    "ratio": 3.0,                                # Moderate compression
-                    "threshold": -20.0,                          # Soft threshold
-                    "attack": 0.003,                             # Fast attack
-                    "release": 0.25                              # Slow release
-                },
-                "stereo_width": 1.3,                             # Wide stereo
-                "target_lufs": -8.0                              # -8.0 LUFS
-            },
-            "Jazz": {
-                "eq_curve": {
-                    "low_shelf": {"freq": 80, "gain": 1.0},      # Gentle bass
-                    "low_mid": {"freq": 300, "gain": 1.8},       # Warm mids
-                    "mid": {"freq": 1000, "gain": 0.0},          # Neutral
-                    "high_mid": {"freq": 4000, "gain": 2.0},     # Bright highs
-                    "high_shelf": {"freq": 8000, "gain": 2.0}    # Airy highs
-                },
-                "compression": {
-                    "ratio": 2.0,                                # Gentle compression
-                    "threshold": -25.0,                          # Very soft threshold
-                    "attack": 0.02,                              # Slow attack
-                    "release": 0.4                               # Very slow release
-                },
-                "stereo_width": 1.1,                             # Natural stereo
-                "target_lufs": -9.0                              # -9.0 LUFS
-            },
-            "CrysGarage": {
-                "eq_curve": {
-                    "low_shelf": {"freq": 80, "gain": 3.2},      # Strong bass
-                    "low_mid": {"freq": 300, "gain": 2.2},       # Warm mids
-                    "mid": {"freq": 1000, "gain": 0.0},          # Neutral
-                    "high_mid": {"freq": 4000, "gain": 1.5},     # Bright highs
-                    "high_shelf": {"freq": 8000, "gain": 1.5}    # Airy highs
-                },
-                "compression": {
-                    "ratio": 4.5,                                # Moderate compression
-                    "threshold": -16.0,                          # Moderate threshold
-                    "attack": 0.001,                             # Fast attack
-                    "release": 0.15                              # Moderate release
-                },
-                "stereo_width": 1.3,                             # Wide stereo
-                "target_lufs": -7.8                              # -7.8 LUFS
-            },
-            "Gospel": {
-                "eq_curve": {
-                    "low_shelf": {"freq": 100, "gain": 1.5},
-                    "low_mid": {"freq": 300, "gain": 1.0},
-                    "mid": {"freq": 1200, "gain": 0.5},
-                    "high_mid": {"freq": 5000, "gain": 1.5},
-                    "high_shelf": {"freq": 12000, "gain": 2.0}
-                },
-                "compression": {
-                    "ratio": 2.0,
-                    "threshold": -8.0,
-                    "attack": 0.01,
-                    "release": 0.2
-                },
-                "stereo_width": 1.1,
-                "target_lufs": -10.0
-            },
-            "Pop": {
-                "eq_curve": {
-                    "low_shelf": {"freq": 80, "gain": 1.0},
-                    "low_mid": {"freq": 250, "gain": 0.5},
-                    "mid": {"freq": 1000, "gain": 0.0},
-                    "high_mid": {"freq": 4000, "gain": 1.0},
-                    "high_shelf": {"freq": 8000, "gain": 1.5}
-                },
-                "compression": {
-                    "ratio": 2.5,
-                    "threshold": -10.0,
-                    "attack": 0.005,
-                    "release": 0.1
-                },
-                "stereo_width": 1.0,
-                "target_lufs": -9.0
-            },
-            "Rock": {
-                "eq_curve": {
-                    "low_shelf": {"freq": 60, "gain": 2.5},
-                    "low_mid": {"freq": 200, "gain": 1.5},
-                    "mid": {"freq": 800, "gain": 0.5},
-                    "high_mid": {"freq": 3000, "gain": 1.0},
-                    "high_shelf": {"freq": 6000, "gain": 2.0}
-                },
-                "compression": {
-                    "ratio": 3.5,
-                    "threshold": -12.0,
-                    "attack": 0.002,
-                    "release": 0.08
-                },
-                "stereo_width": 1.1,
-                "target_lufs": -8.5
-            },
-            "Electronic": {
-                "eq_curve": {
-                    "low_shelf": {"freq": 40, "gain": 3.0},
-                    "low_mid": {"freq": 150, "gain": 2.0},
-                    "mid": {"freq": 600, "gain": 0.0},
-                    "high_mid": {"freq": 2500, "gain": 1.5},
-                    "high_shelf": {"freq": 8000, "gain": 2.5}
-                },
-                "compression": {
-                    "ratio": 4.0,
-                    "threshold": -15.0,
-                    "attack": 0.001,
-                    "release": 0.05
-                },
-                "stereo_width": 1.4,
-                "target_lufs": -6.0
-            },
-            "Jazz": {
-                "eq_curve": {
-                    "low_shelf": {"freq": 100, "gain": 0.5},
-                    "low_mid": {"freq": 300, "gain": 0.0},
-                    "mid": {"freq": 1000, "gain": 0.0},
-                    "high_mid": {"freq": 5000, "gain": 0.5},
-                    "high_shelf": {"freq": 10000, "gain": 1.0}
-                },
-                "compression": {
-                    "ratio": 1.5,
-                    "threshold": -6.0,
-                    "attack": 0.02,
-                    "release": 0.3
-                },
-                "stereo_width": 1.0,
-                "target_lufs": -12.0
-            },
-            "Classical": {
-                "eq_curve": {
-                    "low_shelf": {"freq": 120, "gain": 0.0},
-                    "low_mid": {"freq": 400, "gain": 0.0},
-                    "mid": {"freq": 1000, "gain": 0.0},
-                    "high_mid": {"freq": 5000, "gain": 0.0},
-                    "high_shelf": {"freq": 10000, "gain": 0.5}
-                },
-                "compression": {
-                    "ratio": 1.2,
-                    "threshold": -3.0,
-                    "attack": 0.05,
-                    "release": 0.5
-                },
-                "stereo_width": 1.0,
-                "target_lufs": -14.0
-            },
-            # Professional Tier Genres (24+ total)
-            "R&B": {
-                "eq_curve": {
-                    "low_shelf": {"freq": 80, "gain": 3.0},
-                    "low_mid": {"freq": 250, "gain": 2.0},
-                    "mid": {"freq": 1000, "gain": 1.0},
-                    "high_mid": {"freq": 4000, "gain": 2.5},
-                    "high_shelf": {"freq": 8000, "gain": 3.0}
-                },
-                "compression": {
-                    "ratio": 2.5,
-                    "threshold": -10.0,
-                    "attack": 0.005,
-                    "release": 0.15
-                },
-                "stereo_width": 1.2,
-                "target_lufs": -8.0
-            },
-            "Reggae": {
-                "eq_curve": {
-                    "low_shelf": {"freq": 60, "gain": 4.0},
-                    "low_mid": {"freq": 200, "gain": 3.0},
-                    "mid": {"freq": 800, "gain": 2.0},
-                    "high_mid": {"freq": 3000, "gain": 1.5},
-                    "high_shelf": {"freq": 10000, "gain": 2.0}
-                },
-                "compression": {
-                    "ratio": 2.0,
-                    "threshold": -12.0,
-                    "attack": 0.01,
-                    "release": 0.2
-                },
-                "stereo_width": 1.1,
-                "target_lufs": -9.5
-            },
-            "Country": {
-                "eq_curve": {
-                    "low_shelf": {"freq": 100, "gain": 1.5},
-                    "low_mid": {"freq": 300, "gain": 1.0},
-                    "mid": {"freq": 1200, "gain": 0.5},
-                    "high_mid": {"freq": 5000, "gain": 1.5},
-                    "high_shelf": {"freq": 8000, "gain": 2.0}
-                },
-                "compression": {
-                    "ratio": 2.0,
-                    "threshold": -8.0,
-                    "attack": 0.01,
-                    "release": 0.2
-                },
-                "stereo_width": 1.0,
-                "target_lufs": -10.0
-            },
-            "Blues": {
-                "eq_curve": {
-                    "low_shelf": {"freq": 80, "gain": 2.0},
-                    "low_mid": {"freq": 250, "gain": 1.5},
-                    "mid": {"freq": 1000, "gain": 0.5},
-                    "high_mid": {"freq": 4000, "gain": 1.0},
-                    "high_shelf": {"freq": 8000, "gain": 1.5}
-                },
-                "compression": {
-                    "ratio": 1.8,
-                    "threshold": -6.0,
-                    "attack": 0.02,
-                    "release": 0.3
-                },
-                "stereo_width": 1.0,
-                "target_lufs": -11.0
-            },
-            "Funk": {
-                "eq_curve": {
-                    "low_shelf": {"freq": 60, "gain": 3.5},
-                    "low_mid": {"freq": 200, "gain": 2.5},
-                    "mid": {"freq": 800, "gain": 1.0},
-                    "high_mid": {"freq": 3000, "gain": 2.0},
-                    "high_shelf": {"freq": 8000, "gain": 2.5}
-                },
-                "compression": {
-                    "ratio": 3.0,
-                    "threshold": -10.0,
-                    "attack": 0.005,
-                    "release": 0.1
-                },
-                "stereo_width": 1.3,
-                "target_lufs": -8.5
-            },
-            "Soul": {
-                "eq_curve": {
-                    "low_shelf": {"freq": 80, "gain": 2.5},
-                    "low_mid": {"freq": 250, "gain": 2.0},
-                    "mid": {"freq": 1000, "gain": 1.5},
-                    "high_mid": {"freq": 4000, "gain": 2.0},
-                    "high_shelf": {"freq": 8000, "gain": 2.5}
-                },
-                "compression": {
-                    "ratio": 2.2,
-                    "threshold": -8.0,
-                    "attack": 0.01,
-                    "release": 0.2
-                },
-                "stereo_width": 1.1,
-                "target_lufs": -9.0
-            },
-            "Disco": {
-                "eq_curve": {
-                    "low_shelf": {"freq": 60, "gain": 4.0},
-                    "low_mid": {"freq": 200, "gain": 3.0},
-                    "mid": {"freq": 800, "gain": 1.5},
-                    "high_mid": {"freq": 3000, "gain": 2.5},
-                    "high_shelf": {"freq": 8000, "gain": 3.0}
-                },
-                "compression": {
-                    "ratio": 3.5,
-                    "threshold": -12.0,
-                    "attack": 0.002,
-                    "release": 0.08
-                },
-                "stereo_width": 1.4,
-                "target_lufs": -7.5
-            },
-            "House": {
-                "eq_curve": {
-                    "low_shelf": {"freq": 40, "gain": 4.5},
-                    "low_mid": {"freq": 150, "gain": 2.5},
-                    "mid": {"freq": 600, "gain": 0.5},
-                    "high_mid": {"freq": 2500, "gain": 2.0},
-                    "high_shelf": {"freq": 8000, "gain": 3.0}
-                },
-                "compression": {
-                    "ratio": 4.5,
-                    "threshold": -15.0,
-                    "attack": 0.001,
-                    "release": 0.05
-                },
-                "stereo_width": 1.5,
-                "target_lufs": -6.5
-            },
-            "Techno": {
-                "eq_curve": {
-                    "low_shelf": {"freq": 30, "gain": 5.0},
-                    "low_mid": {"freq": 120, "gain": 3.0},
-                    "mid": {"freq": 500, "gain": 0.0},
-                    "high_mid": {"freq": 2000, "gain": 1.5},
-                    "high_shelf": {"freq": 8000, "gain": 2.5}
-                },
-                "compression": {
-                    "ratio": 5.0,
-                    "threshold": -18.0,
-                    "attack": 0.001,
-                    "release": 0.03
-                },
-                "stereo_width": 1.6,
-                "target_lufs": -6.0
-            },
-            "Trance": {
-                "eq_curve": {
-                    "low_shelf": {"freq": 40, "gain": 3.5},
-                    "low_mid": {"freq": 150, "gain": 2.0},
-                    "mid": {"freq": 600, "gain": 1.0},
-                    "high_mid": {"freq": 2500, "gain": 2.5},
-                    "high_shelf": {"freq": 10000, "gain": 3.5}
-                },
-                "compression": {
-                    "ratio": 4.0,
-                    "threshold": -12.0,
-                    "attack": 0.002,
-                    "release": 0.06
-                },
-                "stereo_width": 1.5,
-                "target_lufs": -7.0
-            },
-            "Dubstep": {
-                "eq_curve": {
-                    "low_shelf": {"freq": 30, "gain": 6.0},
-                    "low_mid": {"freq": 100, "gain": 4.0},
-                    "mid": {"freq": 400, "gain": -1.0},
-                    "high_mid": {"freq": 2000, "gain": 2.0},
-                    "high_shelf": {"freq": 8000, "gain": 3.0}
-                },
-                "compression": {
-                    "ratio": 6.0,
-                    "threshold": -20.0,
-                    "attack": 0.001,
-                    "release": 0.02
-                },
-                "stereo_width": 1.7,
-                "target_lufs": -5.5
-            },
-            "Ambient": {
-                "eq_curve": {
-                    "low_shelf": {"freq": 100, "gain": 0.5},
-                    "low_mid": {"freq": 300, "gain": 0.0},
-                    "mid": {"freq": 1000, "gain": 0.0},
-                    "high_mid": {"freq": 5000, "gain": 0.5},
-                    "high_shelf": {"freq": 12000, "gain": 1.0}
-                },
-                "compression": {
-                    "ratio": 1.3,
-                    "threshold": -4.0,
-                    "attack": 0.03,
-                    "release": 0.4
-                },
-                "stereo_width": 1.2,
-                "target_lufs": -13.0
-            },
-            "Indie": {
-                "eq_curve": {
-                    "low_shelf": {"freq": 80, "gain": 1.0},
-                    "low_mid": {"freq": 250, "gain": 0.5},
-                    "mid": {"freq": 1000, "gain": 0.0},
-                    "high_mid": {"freq": 4000, "gain": 1.0},
-                    "high_shelf": {"freq": 8000, "gain": 1.5}
-                },
-                "compression": {
-                    "ratio": 1.8,
-                    "threshold": -8.0,
-                    "attack": 0.01,
-                    "release": 0.25
-                },
-                "stereo_width": 1.0,
-                "target_lufs": -10.5
-            },
-            "Alternative": {
-                "eq_curve": {
-                    "low_shelf": {"freq": 60, "gain": 2.0},
-                    "low_mid": {"freq": 200, "gain": 1.0},
-                    "mid": {"freq": 800, "gain": 0.5},
-                    "high_mid": {"freq": 3000, "gain": 1.5},
-                    "high_shelf": {"freq": 6000, "gain": 2.0}
-                },
-                "compression": {
-                    "ratio": 2.5,
-                    "threshold": -10.0,
-                    "attack": 0.005,
-                    "release": 0.12
-                },
-                "stereo_width": 1.1,
-                "target_lufs": -9.0
-            },
-            "Folk": {
-                "eq_curve": {
-                    "low_shelf": {"freq": 100, "gain": 0.5},
-                    "low_mid": {"freq": 300, "gain": 0.0},
-                    "mid": {"freq": 1200, "gain": 0.5},
-                    "high_mid": {"freq": 5000, "gain": 1.0},
-                    "high_shelf": {"freq": 10000, "gain": 1.5}
-                },
-                "compression": {
-                    "ratio": 1.5,
-                    "threshold": -6.0,
-                    "attack": 0.02,
-                    "release": 0.3
-                },
-                "stereo_width": 1.0,
-                "target_lufs": -12.0
-            },
-            "Acoustic": {
-                "eq_curve": {
-                    "low_shelf": {"freq": 120, "gain": 0.0},
-                    "low_mid": {"freq": 400, "gain": 0.0},
-                    "mid": {"freq": 1000, "gain": 0.0},
-                    "high_mid": {"freq": 5000, "gain": 0.5},
-                    "high_shelf": {"freq": 10000, "gain": 1.0}
-                },
-                "compression": {
-                    "ratio": 1.3,
-                    "threshold": -4.0,
-                    "attack": 0.03,
-                    "release": 0.4
-                },
-                "stereo_width": 1.0,
-                "target_lufs": -13.0
-            },
-            "Latin": {
-                "eq_curve": {
-                    "low_shelf": {"freq": 60, "gain": 3.0},
-                    "low_mid": {"freq": 200, "gain": 2.5},
-                    "mid": {"freq": 800, "gain": 1.5},
-                    "high_mid": {"freq": 3000, "gain": 2.0},
-                    "high_shelf": {"freq": 8000, "gain": 2.5}
-                },
-                "compression": {
-                    "ratio": 2.8,
-                    "threshold": -10.0,
-                    "attack": 0.005,
-                    "release": 0.1
-                },
-                "stereo_width": 1.3,
-                "target_lufs": -8.5
-            },
-            "World": {
-                "eq_curve": {
-                    "low_shelf": {"freq": 80, "gain": 1.5},
-                    "low_mid": {"freq": 250, "gain": 1.0},
-                    "mid": {"freq": 1000, "gain": 0.5},
-                    "high_mid": {"freq": 4000, "gain": 1.5},
-                    "high_shelf": {"freq": 8000, "gain": 2.0}
-                },
-                "compression": {
-                    "ratio": 2.0,
-                    "threshold": -8.0,
-                    "attack": 0.01,
-                    "release": 0.2
-                },
-                "stereo_width": 1.2,
-                "target_lufs": -10.0
-            },
-            "Experimental": {
-                "eq_curve": {
-                    "low_shelf": {"freq": 40, "gain": 2.0},
-                    "low_mid": {"freq": 150, "gain": 1.0},
-                    "mid": {"freq": 600, "gain": 0.0},
-                    "high_mid": {"freq": 2500, "gain": 1.0},
-                    "high_shelf": {"freq": 12000, "gain": 2.0}
-                },
-                "compression": {
-                    "ratio": 3.0,
-                    "threshold": -12.0,
-                    "attack": 0.005,
-                    "release": 0.15
-                },
-                "stereo_width": 1.4,
-                "target_lufs": -9.5
-            },
-            "Cinematic": {
-                "eq_curve": {
-                    "low_shelf": {"freq": 60, "gain": 2.5},
-                    "low_mid": {"freq": 200, "gain": 1.5},
-                    "mid": {"freq": 800, "gain": 0.5},
-                    "high_mid": {"freq": 3000, "gain": 1.5},
-                    "high_shelf": {"freq": 10000, "gain": 2.5}
-                },
-                "compression": {
-                    "ratio": 2.2,
-                    "threshold": -8.0,
-                    "attack": 0.01,
-                    "release": 0.2
-                },
-                "stereo_width": 1.3,
-                "target_lufs": -9.5
-            },
-            "Lo-Fi": {
-                "eq_curve": {
-                    "low_shelf": {"freq": 100, "gain": 1.0},
-                    "low_mid": {"freq": 300, "gain": 0.5},
-                    "mid": {"freq": 1000, "gain": -0.5},
-                    "high_mid": {"freq": 4000, "gain": -1.0},
-                    "high_shelf": {"freq": 8000, "gain": 0.5}
-                },
-                "compression": {
-                    "ratio": 1.8,
-                    "threshold": -6.0,
-                    "attack": 0.02,
-                    "release": 0.3
-                },
-                "stereo_width": 0.9,
-                "target_lufs": -11.0
-            },
-            "Trap": {
-                "eq_curve": {
-                    "low_shelf": {"freq": 30, "gain": 5.5},
-                    "low_mid": {"freq": 100, "gain": 3.5},
-                    "mid": {"freq": 400, "gain": -0.5},
-                    "high_mid": {"freq": 2000, "gain": 2.5},
-                    "high_shelf": {"freq": 8000, "gain": 3.5}
-                },
-                "compression": {
-                    "ratio": 5.5,
-                    "threshold": -18.0,
-                    "attack": 0.001,
-                    "release": 0.02
-                },
-                "stereo_width": 1.6,
-                "target_lufs": -5.0
-            },
-            "Future Bass": {
-                "eq_curve": {
-                    "low_shelf": {"freq": 40, "gain": 4.0},
-                    "low_mid": {"freq": 150, "gain": 2.5},
-                    "mid": {"freq": 600, "gain": 0.5},
-                    "high_mid": {"freq": 2500, "gain": 2.0},
-                    "high_shelf": {"freq": 10000, "gain": 3.0}
-                },
-                "compression": {
-                    "ratio": 4.5,
-                    "threshold": -15.0,
-                    "attack": 0.001,
-                    "release": 0.04
-                },
-                "stereo_width": 1.5,
-                "target_lufs": -6.5
-            }
-        }
     
     def _load_tier_settings(self) -> Dict[str, Dict[str, Any]]:
         """Load tier-specific processing settings for studio page tiers"""
@@ -1298,7 +131,7 @@ class MLMasteringEngine:
                 "processing_quality": "basic",
                 "max_processing_time": 30,
                 "enable_advanced_features": False,
-                "enable_stereo_widening": False,
+                "enable_stereo_widening": True,
                 "enable_harmonic_exciter": False,
                 "enable_multiband_compression": False,
                 "max_sample_rate": 44100,
@@ -1312,21 +145,7 @@ class MLMasteringEngine:
                 "processing_quality": "standard",
                 "max_processing_time": 60,
                 "enable_advanced_features": True,
-                "enable_stereo_widening": True,
-                "enable_harmonic_exciter": False,
-                "enable_multiband_compression": True,
-                "max_sample_rate": 48000,
-                "max_bit_depth": 24,
-                "available_formats": ["wav", "mp3", "flac"],
-                "processing_priority": "medium",
-                "eq_bands": 5,
-                "compression_ratio_max": 3.0
-            },
-            "Pro": {
-                "processing_quality": "standard",
-                "max_processing_time": 60,
-                "enable_advanced_features": True,
-                "enable_stereo_widening": True,
+                "enable_stereo_widening": False,  # Preserve original stereo; no widening
                 "enable_harmonic_exciter": False,
                 "enable_multiband_compression": True,
                 "max_sample_rate": 48000,
@@ -1348,31 +167,120 @@ class MLMasteringEngine:
                 "available_formats": ["wav", "mp3", "flac", "aiff"],
                 "processing_priority": "high",
                 "eq_bands": 7,
-                "compression_ratio_max": 4.0
-            },
-            "one_on_one": {
-                "processing_quality": "expert",
-                "max_processing_time": 300,
-                "enable_advanced_features": True,
-                "enable_stereo_widening": True,
-                "enable_harmonic_exciter": True,
-                "enable_multiband_compression": True,
-                "max_sample_rate": 192000,
-                "max_bit_depth": 32,
-                "available_formats": ["wav", "mp3", "flac", "aiff", "aac", "ogg"],
-                "processing_priority": "highest",
-                "eq_bands": 10,
                 "compression_ratio_max": 5.0
             }
         }
-    
+
+    async def process_audio_advanced(
+            self,
+            input_file_path: str,
+            genre: str,
+            tier: str,
+            target_lufs: float = -14.0,
+            custom_effects: Dict[str, Any] = None
+        ) -> str:
+        """
+        Advanced tier processing with real-time customizable effects
+        
+        Args:
+            input_file_path: Path to input audio file
+            genre: Selected genre for EQ preset
+            tier: Processing tier
+            target_lufs: Target LUFS value
+            custom_effects: Real-time customizable effects
+                - compressor: {threshold, ratio, attack, release, enabled}
+                - stereo_widener: {width, enabled}
+                - loudness: {gain, enabled}
+                - limiter: {threshold, ceiling, enabled}
+        """
+        try:
+            logger.info(f"Processing with advanced customizable pipeline for {genre}")
+            
+            # Load audio
+            audio_data, sample_rate = self._load_audio(input_file_path)
+            logger.info(f"Loaded audio: {audio_data.shape}, {sample_rate}Hz")
+            
+            # Get tier configuration
+            tier_config = self._get_tier_config(tier)
+            
+            # Get effective target LUFS (genre-based or custom)
+            effective_target_lufs = self._get_effective_target_lufs(genre, target_lufs)
+            
+            # Start with original audio
+            processed_audio = audio_data.copy()
+            
+            # 1. Apply genre preset EQ (always from genre)
+            processed_audio = self._apply_genre_preset_eq(processed_audio, sample_rate, genre)
+            logger.info("Step 1: Applied genre preset EQ")
+            
+            # 2. Customizable Compression
+            if custom_effects and custom_effects.get("compressor", {}).get("enabled", True):
+                comp_settings = custom_effects["compressor"]
+                processed_audio = self._apply_custom_compression(
+                    processed_audio, 
+                    comp_settings.get("threshold", -16.0),
+                    comp_settings.get("ratio", 3.0),
+                    comp_settings.get("attack", 0.002),
+                    comp_settings.get("release", 0.15)
+                )
+                logger.info(f"Step 2: Applied custom compression - {comp_settings}")
+            else:
+                processed_audio = self._apply_standard_compression(processed_audio, sample_rate, tier_config)
+                logger.info("Step 2: Applied standard compression")
+            
+            # 3. Customizable Stereo Widening
+            if custom_effects and custom_effects.get("stereo_widener", {}).get("enabled", True):
+                stereo_settings = custom_effects["stereo_widener"]
+                width = stereo_settings.get("width", 1.5)
+                processed_audio = self._apply_custom_stereo_widening(processed_audio, width)
+                logger.info(f"Step 3: Applied custom stereo widening - width: {width}")
+            elif tier_config["enable_stereo_widening"]:
+                processed_audio = self._apply_standard_stereo_widening(processed_audio, tier_config)
+                logger.info("Step 3: Applied standard stereo widening")
+            
+            # 4. Customizable Limiting
+            if custom_effects and custom_effects.get("limiter", {}).get("enabled", True):
+                limiter_settings = custom_effects["limiter"]
+                threshold = limiter_settings.get("threshold", -3.0)
+                ceiling = limiter_settings.get("ceiling", -0.1)
+                processed_audio = self._apply_custom_limiting(processed_audio, threshold, ceiling)
+                logger.info(f"Step 4: Applied custom limiting - threshold: {threshold}, ceiling: {ceiling}")
+            else:
+                processed_audio = self._apply_standard_limiting(processed_audio, sample_rate)
+                logger.info("Step 4: Applied standard limiting")
+            
+            # 5. Customizable Loudness (before final normalization)
+            if custom_effects and custom_effects.get("loudness", {}).get("enabled", True):
+                loudness_settings = custom_effects["loudness"]
+                gain_db = loudness_settings.get("gain", 0.0)
+                processed_audio = self._apply_custom_loudness(processed_audio, gain_db)
+                logger.info(f"Step 5: Applied custom loudness - gain: {gain_db} dB")
+            
+            # 6. Comprehensive Normalization with Brick Wall Limiter (within -7 and -9 pegged)
+            processed_audio = self._apply_comprehensive_normalization_with_brick_wall(processed_audio, sample_rate, effective_target_lufs)
+            logger.info("Step 6: Applied comprehensive normalization with brick wall limiter")
+            
+            # 7. Final Loudness Safety Check
+            processed_audio = self._apply_final_loudness_safety(processed_audio, sample_rate, effective_target_lufs)
+            logger.info("Step 7: Applied final loudness safety check")
+            
+            # Save processed audio
+            output_path = self._save_processed_audio(processed_audio, sample_rate, input_file_path)
+            
+            logger.info(f"Advanced ML mastering completed: {output_path}")
+            return output_path
+            
+        except Exception as e:
+            logger.error(f"Advanced ML mastering failed: {e}")
+            raise
+
     async def process_audio(
-        self,
-        input_file_path: str,
-        genre: str,
-        tier: str,
-        target_lufs: float = -14.0
-    ) -> str:
+            self,
+            input_file_path: str,
+            genre: str,
+            tier: str,
+            target_lufs: float = -14.0
+        ) -> str:
         """
         Process audio with ML mastering
         
@@ -1393,54 +301,59 @@ class MLMasteringEngine:
             if not os.path.exists(input_file_path):
                 raise FileNotFoundError(f"Input file not found: {input_file_path}")
             
-            # Load audio file
-            logger.info("Loading audio file with librosa...")
-            audio_data, sample_rate = librosa.load(input_file_path, sr=None)
-            
-            # Apply pitch correction from 440 Hz to 444.0 Hz tuning
-            logger.info("Applying pitch correction (440 Hz → 444.0 Hz)...")
-            audio_data = self._apply_pitch_correction(audio_data, sample_rate)
+            # Load audio file (stereo-safe, no librosa)
+            logger.info("Loading audio file")
+            audio_data, sample_rate = self._load_audio(input_file_path)
             logger.info(f"Audio loaded: shape={audio_data.shape}, sample_rate={sample_rate}")
             
-            # Ensure stereo
-            if audio_data.ndim == 1:
-                audio_data = np.stack([audio_data, audio_data])
+            # audio_data is already (channels, samples) with stereo ensured
             
             # Get genre preset and tier configuration
-            # preset = self.genre_presets.get(genre, self.genre_presets["Pop"])  # not used
+            preset = self.genre_presets.get(genre, self.genre_presets["Pop"])
             tier_config = self.tier_settings.get(tier, self.tier_settings["Free"])
             
-            logger.info(f"Processing with tier: {tier}, quality: {tier_config['processing_quality']}")
+            # Debug logging
+            logger.info(f"Available genres: {list(self.genre_presets.keys())}")
+            logger.info(f"Requested genre: '{genre}'")
+            logger.info(f"Using preset: {preset is not None}")
+            if preset is None:
+                logger.warning(f"No preset found for genre '{genre}', using Pop preset")
             
-            # Apply mastering chain based on tier
+            # Use genre-based target LUFS
+            effective_target_lufs = target_lufs
+            
+            logger.info(f"Processing with tier: {tier}, quality: {tier_config['processing_quality']}")
+            logger.info(f"Target LUFS: {effective_target_lufs} dB")
+            
+            # Apply standard processing pipeline
             processed_audio = audio_data.copy()
             
-            # 1. Pitch Correction (Fine-tune all audio to 444.0 Hz)
-            processed_audio = self._apply_pitch_shift(processed_audio, sample_rate)
+            logger.info(f"Processing with standard pipeline for {genre}")
             
-            # 2. EQ Processing (tier-specific bands)
-            processed_audio = self._apply_tier_based_eq(processed_audio, sample_rate, genre, tier_config)
+            # 1. Apply genre preset EQ
+            processed_audio = self._apply_genre_preset_eq(processed_audio, sample_rate, genre)
+            logger.info("Step 1: Applied genre preset EQ")
             
-            # 3. Compression (tier-specific settings)
-            processed_audio = self._apply_tier_based_compression(processed_audio, sample_rate, genre, tier_config)
+            # 2. Compression
+            processed_audio = self._apply_standard_compression(processed_audio, sample_rate, tier_config)
+            logger.info("Step 2: Applied compression")
             
-            # 4. Multiband Compression (Professional+ tiers)
-            if tier_config["enable_multiband_compression"]:
-                processed_audio = self._apply_multiband_compression(processed_audio, sample_rate, tier_config)
-            
-            # 5. Stereo Widening (Professional+ tiers)
+            # 3. Stereo Widening (Professional+ tiers only)
             if tier_config["enable_stereo_widening"]:
-                processed_audio = self._apply_stereo_widening(processed_audio, genre, tier_config)
+                processed_audio = self._apply_standard_stereo_widening(processed_audio, tier_config)
+                logger.info("Step 3: Applied stereo widening")
             
-            # 6. Harmonic Exciter (Advanced+ tiers)
-            if tier_config["enable_harmonic_exciter"]:
-                processed_audio = self._apply_harmonic_exciter(processed_audio, sample_rate, tier_config)
+            # 4. Limiting
+            processed_audio = self._apply_standard_limiting(processed_audio, sample_rate)
+            logger.info("Step 4: Applied limiting")
             
-            # 7. Limiting
-            processed_audio = self._apply_limiting(processed_audio, sample_rate, tier_config)
+            # 5. Comprehensive Normalization with Brick Wall Limiter (within -7 and -9 pegged)
+            processed_audio = self._apply_comprehensive_normalization_with_brick_wall(processed_audio, sample_rate, effective_target_lufs)
+            logger.info("Step 5: Applied comprehensive normalization with brick wall limiter")
             
-            # 8. Comprehensive Normalization
-            processed_audio = self._apply_comprehensive_normalization(processed_audio, sample_rate, target_lufs)
+            # 6. Final Loudness Safety Check
+            processed_audio = self._apply_final_loudness_safety(processed_audio, sample_rate, effective_target_lufs)
+            logger.info("Step 6: Applied final loudness safety check")
             
             # Save processed audio
             output_path = self._save_processed_audio(processed_audio, sample_rate, input_file_path)
@@ -1451,863 +364,718 @@ class MLMasteringEngine:
         except Exception as e:
             logger.error(f"ML mastering failed: {e}")
             raise
-    
-    def _apply_tier_based_eq(self, audio_data: np.ndarray, sample_rate: int, genre: str, tier_config: Dict[str, Any]) -> np.ndarray:
-        """Apply EQ based on tier and genre preset"""
-        try:
-            preset = self.genre_presets.get(genre, self.genre_presets["Pop"])
-            eq_curve = preset["eq_curve"]
-            eq_bands = tier_config["eq_bands"]
-            
-            logger.info(f"Applying {eq_bands}-band EQ for {tier_config['processing_quality']} quality")
-            
-            # Apply EQ using tier-specific number of bands
-            processed = audio_data.copy()
-            
-            # Apply low shelf (all tiers)
-            low_shelf = eq_curve["low_shelf"]
-            if low_shelf["gain"] != 0:
-                processed = self._apply_simple_eq(processed, sample_rate, low_shelf["freq"], low_shelf["gain"], "low_shelf")
-            
-            # Apply high shelf (all tiers)
-            high_shelf = eq_curve["high_shelf"]
-            if high_shelf["gain"] != 0:
-                processed = self._apply_simple_eq(processed, sample_rate, high_shelf["freq"], high_shelf["gain"], "high_shelf")
-            
-            # Apply mid bands based on tier
-            if eq_bands >= 5:  # Professional+ tiers
-                # Apply low-mid
-                low_mid = eq_curve["low_mid"]
-                if low_mid["gain"] != 0:
-                    processed = self._apply_simple_eq(processed, sample_rate, low_mid["freq"], low_mid["gain"], "peak")
-                
-                # Apply mid
-                mid = eq_curve["mid"]
-                if mid["gain"] != 0:
-                    processed = self._apply_simple_eq(processed, sample_rate, mid["freq"], mid["gain"], "peak")
-                
-                # Apply high-mid
-                high_mid = eq_curve["high_mid"]
-                if high_mid["gain"] != 0:
-                    processed = self._apply_simple_eq(processed, sample_rate, high_mid["freq"], high_mid["gain"], "peak")
-            
-            if eq_bands >= 7:  # Advanced+ tiers
-                # Apply additional precision bands
-                processed = self._apply_precision_eq(processed, sample_rate, eq_curve)
-            
-            if eq_bands >= 10:  # One-on-One tier
-                # Apply expert-level EQ with maximum precision
-                processed = self._apply_expert_eq(processed, sample_rate, eq_curve)
-            
-            return processed
-            
-        except Exception as e:
-            logger.error(f"Tier-based EQ failed: {e}")
-            return audio_data
-    
-    def _apply_tier_based_compression(self, audio_data: np.ndarray, sample_rate: int, genre: str, tier_config: Dict[str, Any]) -> np.ndarray:
-        """Apply compression based on tier settings"""
-        try:
-            preset = self.genre_presets.get(genre, self.genre_presets["Pop"])
-            compression_settings = preset["compression"]
-            max_ratio = tier_config["compression_ratio_max"]
-            
-            # Limit compression ratio based on tier
-            ratio = min(compression_settings["ratio"], max_ratio)
-            
-            logger.info(f"Applying compression with ratio {ratio}:1 for {tier_config['processing_quality']} quality")
-            
-            # Apply compression with tier-appropriate settings
-            processed = self._apply_compression(audio_data, sample_rate, ratio, compression_settings["threshold"])
-            
-            return processed
-            
-        except Exception as e:
-            logger.error(f"Tier-based compression failed: {e}")
-            return audio_data
-    
-    def _apply_multiband_compression(self, audio_data: np.ndarray, sample_rate: int, tier_config: Dict[str, Any]) -> np.ndarray:
-        """Apply multiband compression for Professional+ tiers"""
-        try:
-            logger.info(f"Applying multiband compression for {tier_config['processing_quality']} quality")
-            
-            # Split into frequency bands
-            low_band, mid_band, high_band = self._split_frequency_bands(audio_data, sample_rate)
-            
-            # Apply different compression to each band
-            low_compressed = self._apply_compression(low_band, sample_rate, 2.0, -8.0)
-            mid_compressed = self._apply_compression(mid_band, sample_rate, 3.0, -10.0)
-            high_compressed = self._apply_compression(high_band, sample_rate, 1.5, -6.0)
-            
-            # Recombine bands
-            processed = self._recombine_frequency_bands(low_compressed, mid_compressed, high_compressed)
-            
-            return processed
-            
-        except Exception as e:
-            logger.error(f"Multiband compression failed: {e}")
-            return audio_data
-    
-    def _apply_harmonic_exciter(self, audio_data: np.ndarray, sample_rate: int, tier_config: Dict[str, Any]) -> np.ndarray:
-        """Apply harmonic exciter for Advanced+ tiers"""
-        try:
-            logger.info(f"Applying harmonic exciter for {tier_config['processing_quality']} quality")
-            
-            # Add subtle harmonic content
-            processed = audio_data.copy()
-            
-            # Generate harmonics
-            harmonics = self._generate_harmonics(processed, sample_rate)
-            
-            # Mix harmonics with original signal
-            processed = processed + (harmonics * 0.1)  # 10% harmonic content
-            
-            return processed
-            
-        except Exception as e:
-            logger.error(f"Harmonic exciter failed: {e}")
-            return audio_data
-    
-    def _split_frequency_bands(self, audio_data: np.ndarray, sample_rate: int) -> tuple:
-        """Split audio into low, mid, and high frequency bands"""
-        try:
-            # Define crossover frequencies
-            low_cutoff = 200
-            high_cutoff = 4000
-            
-            # Apply filters to split bands
-            low_band = self._apply_highpass_filter(audio_data, sample_rate, low_cutoff)
-            high_band = self._apply_lowpass_filter(audio_data, sample_rate, high_cutoff)
-            mid_band = audio_data - low_band - high_band
-            
-            return low_band, mid_band, high_band
-            
-        except Exception as e:
-            logger.error(f"Frequency band splitting failed: {e}")
-            return audio_data, audio_data, audio_data
-    
-    def _recombine_frequency_bands(self, low_band: np.ndarray, mid_band: np.ndarray, high_band: np.ndarray) -> np.ndarray:
-        """Recombine frequency bands"""
-        try:
-            return low_band + mid_band + high_band
-        except Exception as e:
-            logger.error(f"Frequency band recombination failed: {e}")
-            return low_band
-    
-    def _generate_harmonics(self, audio_data: np.ndarray, sample_rate: int) -> np.ndarray:
-        """Generate harmonic content for exciter effect"""
-        try:
-            # Generate second and third harmonics
-            harmonics = np.zeros_like(audio_data)
-            
-            # Add subtle harmonic distortion
-            harmonics = np.tanh(audio_data * 0.3) * 0.1
-            
-            return harmonics
-            
-        except Exception as e:
-            logger.error(f"Harmonic generation failed: {e}")
-            return np.zeros_like(audio_data)
-    
-    def _apply_precision_eq(self, audio_data: np.ndarray, sample_rate: int, eq_curve: Dict[str, Any]) -> np.ndarray:
-        """Apply precision EQ for Advanced+ tiers"""
-        try:
-            # Apply additional precision bands
-            processed = audio_data.copy()
-            
-            # Add precision mid bands
-            precision_bands = [500, 1500, 3000, 6000]
-            for freq in precision_bands:
-                if freq in eq_curve:
-                    processed = self._apply_simple_eq(processed, sample_rate, freq, eq_curve[freq]["gain"], "peak")
-            
-            return processed
-            
-        except Exception as e:
-            logger.error(f"Precision EQ failed: {e}")
-            return audio_data
-    
-    def _apply_expert_eq(self, audio_data: np.ndarray, sample_rate: int, eq_curve: Dict[str, Any]) -> np.ndarray:
-        """Apply expert-level EQ for One-on-One tier"""
-        try:
-            # Apply maximum precision EQ
-            processed = audio_data.copy()
-            
-            # Add expert-level precision bands
-            expert_bands = [250, 500, 750, 1000, 1500, 2000, 3000, 4000, 6000, 8000]
-            for freq in expert_bands:
-                if freq in eq_curve:
-                    processed = self._apply_simple_eq(processed, sample_rate, freq, eq_curve[freq]["gain"], "peak")
-            
-            return processed
-            
-        except Exception as e:
-            logger.error(f"Expert EQ failed: {e}")
-            return audio_data
-    
-    def get_tier_information(self) -> Dict[str, Any]:
-        """Get tier-specific processing information"""
-        try:
-            tier_info = {}
-            for tier, settings in self.tier_settings.items():
-                tier_info[tier] = {
-                    "processing_quality": settings["processing_quality"],
-                    "max_processing_time": settings["max_processing_time"],
-                    "available_formats": settings["available_formats"],
-                    "max_sample_rate": settings["max_sample_rate"],
-                    "max_bit_depth": settings["max_bit_depth"],
-                    "features": {
-                        "stereo_widening": settings["enable_stereo_widening"],
-                        "harmonic_exciter": settings["enable_harmonic_exciter"],
-                        "multiband_compression": settings["enable_multiband_compression"],
-                        "advanced_features": settings["enable_advanced_features"]
-                    },
-                    "processing_limits": {
-                        "eq_bands": settings["eq_bands"],
-                        "compression_ratio_max": settings["compression_ratio_max"]
-                    }
-                }
-            return tier_info
-            
-        except Exception as e:
-            logger.error(f"Failed to get tier information: {e}")
-            return {}
-    
-    def get_genre_information(self) -> Dict[str, Any]:
-        """Get genre-specific processing information"""
-        try:
-            genre_info = {}
-            for genre, preset in self.genre_presets.items():
-                genre_info[genre] = {
-                    "eq_curve": preset["eq_curve"],
-                    "compression": preset["compression"],
-                    "stereo_width": preset.get("stereo_width", 1.0),
-                    "target_lufs": preset.get("target_lufs", -14.0)
-                }
-            return genre_info
-            
-        except Exception as e:
-            logger.error(f"Failed to get genre information: {e}")
-            return {}
 
-    def _apply_eq(self, audio_data: np.ndarray, sample_rate: int, genre: str) -> np.ndarray:
-        """Apply EQ based on genre preset"""
+    def _apply_genre_preset_eq(self, audio_data: np.ndarray, sample_rate: int, genre: str) -> np.ndarray:
+        """Apply ONLY the genre preset EQ - no additional processing"""
         try:
-            preset = self.genre_presets.get(genre, self.genre_presets["Pop"])
+            # Normalize genre name for case-insensitive lookup
+            # Handle special characters and common variations
+            if not genre:
+                normalized_genre = "Pop"
+            else:
+                # Handle common variations
+                genre_lower = genre.lower().strip()
+                if genre_lower in ["r-b", "r&b", "rnb", "r and b"]:
+                    normalized_genre = "R&B"
+                elif genre_lower in ["hip-hop", "hiphop", "hip hop"]:
+                    normalized_genre = "Hip Hop"
+                elif genre_lower in ["drum-bass", "drum & bass", "dnb"]:
+                    normalized_genre = "Drum & Bass"
+                else:
+                    normalized_genre = genre.title()
+            preset = self.genre_presets.get(normalized_genre, self.genre_presets.get("Pop", {}))
+            
+            # Check if preset has eq_curve
+            if not preset or "eq_curve" not in preset:
+                logger.warning(f"No EQ curve found for genre {genre} (normalized: {normalized_genre}), using Pop preset")
+                preset = self.genre_presets.get("Pop", {})
+                if not preset or "eq_curve" not in preset:
+                    logger.error("No Pop preset found, returning original audio")
+                    return audio_data
+            
             eq_curve = preset["eq_curve"]
             
-            # Apply EQ using librosa (simplified implementation)
-            # In production, use proper EQ implementation
+            logger.info(f"Applying genre preset EQ for {genre}")
+            
             processed = audio_data.copy()
             
             # Apply low shelf
-            low_shelf = eq_curve["low_shelf"]
-            if low_shelf["gain"] != 0:
-                # Simplified low shelf implementation
-                processed = self._apply_simple_eq(processed, sample_rate, low_shelf["freq"], low_shelf["gain"], "low_shelf")
+            if "low_shelf" in eq_curve:
+                low_shelf = eq_curve["low_shelf"]
+                if low_shelf.get("gain", 0) != 0:
+                    processed = self._apply_simple_eq(processed, sample_rate, low_shelf.get("freq", 100), low_shelf.get("gain", 0), "low_shelf")
+            
+            # Apply low mid
+            if "low_mid" in eq_curve:
+                low_mid = eq_curve["low_mid"]
+                if low_mid.get("gain", 0) != 0:
+                    processed = self._apply_simple_eq(processed, sample_rate, low_mid.get("freq", 300), low_mid.get("gain", 0), "peak")
+            
+            # Apply mid
+            if "mid" in eq_curve:
+                mid = eq_curve["mid"]
+                if mid.get("gain", 0) != 0:
+                    processed = self._apply_simple_eq(processed, sample_rate, mid.get("freq", 1000), mid.get("gain", 0), "peak")
+            
+            # Apply high mid
+            if "high_mid" in eq_curve:
+                high_mid = eq_curve["high_mid"]
+                if high_mid.get("gain", 0) != 0:
+                    processed = self._apply_simple_eq(processed, sample_rate, high_mid.get("freq", 4000), high_mid.get("gain", 0), "peak")
             
             # Apply high shelf
-            high_shelf = eq_curve["high_shelf"]
-            if high_shelf["gain"] != 0:
-                processed = self._apply_simple_eq(processed, sample_rate, high_shelf["freq"], high_shelf["gain"], "high_shelf")
+            if "high_shelf" in eq_curve:
+                high_shelf = eq_curve["high_shelf"]
+                if high_shelf.get("gain", 0) != 0:
+                    processed = self._apply_simple_eq(processed, sample_rate, high_shelf.get("freq", 8000), high_shelf.get("gain", 0), "high_shelf")
             
             return processed
             
         except Exception as e:
-            logger.warning(f"EQ processing failed: {e}")
+            logger.error(f"Genre preset EQ failed: {e}")
             return audio_data
-    
-    def _apply_simple_eq(self, audio_data: np.ndarray, sample_rate: int, freq: float, gain: float, eq_type: str) -> np.ndarray:
-        """Apply simple EQ filter"""
+
+    def _apply_custom_compression(self, audio_data: np.ndarray, threshold: float, ratio: float, attack: float, release: float) -> np.ndarray:
+        """Apply custom compression with user-defined parameters"""
         try:
-            # Simplified EQ implementation using basic gain adjustment
-            # For production, use proper IIR/FIR filters
+            logger.info(f"Applying custom compression: threshold={threshold}dB, ratio={ratio}:1, attack={attack}s, release={release}s")
+            return self._apply_simple_compression(audio_data, threshold, ratio, attack, release)
+        except Exception as e:
+            logger.error(f"Custom compression failed: {e}")
+            return audio_data
+
+    def _apply_custom_stereo_widening(self, audio_data: np.ndarray, width: float) -> np.ndarray:
+        """Apply custom stereo widening with user-defined width"""
+        try:
+            logger.info(f"Applying custom stereo widening: width={width}x")
+            
+            if audio_data.ndim != 2 or audio_data.shape[1] != 2:
+                logger.warning("Audio is not stereo, skipping stereo widening")
+                return audio_data
+            
+            left, right = audio_data[:, 0], audio_data[:, 1]
+            
+            # Apply custom width
+            if width > 1.0:
+                # Stereo widening
+                mid = (left + right) / 2
+                side = (left - right) / 2
+                
+                # Apply width scaling
+                side_scaled = side * width
+                
+                # Reconstruct stereo
+                left_new = mid + side_scaled
+                right_new = mid - side_scaled
+                
+                # Normalize to prevent clipping
+                max_val = max(np.max(np.abs(left_new)), np.max(np.abs(right_new)))
+                if max_val > 1.0:
+                    left_new = left_new / max_val
+                    right_new = right_new / max_val
+                
+                processed = np.column_stack([left_new, right_new])
+            else:
+                processed = audio_data
+            
+            return processed
+            
+        except Exception as e:
+            logger.error(f"Custom stereo widening failed: {e}")
+            return audio_data
+
+    def _apply_custom_limiting(self, audio_data: np.ndarray, threshold: float, ceiling: float) -> np.ndarray:
+        """Apply custom limiting with user-defined parameters"""
+        try:
+            logger.info(f"Applying custom limiting: threshold={threshold}dB, ceiling={ceiling}dB")
             
             processed = audio_data.copy()
             
-            if eq_type == "low_shelf":
-                # Simple low shelf (simplified)
-                if gain > 0:
-                    # Apply simple gain boost to low frequencies
-                    for ch in range(audio_data.shape[0]):
-                        # Simple frequency-based gain adjustment
-                        processed[ch] = processed[ch] * (1 + gain/20)  # Reduced gain for stability
+            # Convert dB to linear
+            threshold_linear = 10 ** (threshold / 20)
+            ceiling_linear = 10 ** (ceiling / 20)
             
-            elif eq_type == "high_shelf":
-                # Simple high shelf (simplified)
-                if gain > 0:
-                    # Apply simple gain boost to high frequencies
-                    for ch in range(audio_data.shape[0]):
-                        # Simple frequency-based gain adjustment
-                        processed[ch] = processed[ch] * (1 + gain/20)  # Reduced gain for stability
-            
-            elif eq_type == "peak":
-                # Simple peak filter (simplified)
-                if gain != 0:
-                    # Apply simple gain adjustment
-                    for ch in range(audio_data.shape[0]):
-                        # Simple frequency-based gain adjustment
-                        processed[ch] = processed[ch] * (1 + gain/20)  # Reduced gain for stability
+            # Apply limiting
+            peak = np.max(np.abs(processed))
+            if peak > threshold_linear:
+                # Calculate gain reduction
+                gain_reduction = ceiling_linear / peak
+                processed = processed * gain_reduction
+                logger.info(f"Custom limiting applied: {20*np.log10(gain_reduction):.1f}dB reduction")
             
             return processed
             
         except Exception as e:
-            logger.warning(f"Simple EQ failed: {e}")
+            logger.error(f"Custom limiting failed: {e}")
             return audio_data
-    
-    def _apply_compression(self, audio_data: np.ndarray, sample_rate: int, ratio: float = 2.0, threshold: float = -12.0) -> np.ndarray:
-        """Apply compression with given ratio and threshold"""
+
+    def _apply_custom_loudness(self, audio_data: np.ndarray, gain_db: float) -> np.ndarray:
+        """Apply custom loudness adjustment"""
         try:
-            # Use provided parameters instead of genre presets for flexibility
+            logger.info(f"Applying custom loudness: {gain_db} dB")
             
             processed = audio_data.copy()
             
-            for ch in range(audio_data.shape[0]):
-                # Convert to dB
-                db_audio = 20 * np.log10(np.abs(audio_data[ch]) + 1e-10)
-                
-                # Apply compression
-                compressed_db = np.where(
-                    db_audio > threshold,
-                    threshold + (db_audio - threshold) / ratio,
-                    db_audio
-                )
-                
-                # Convert back to linear
-                processed[ch] = np.sign(audio_data[ch]) * (10 ** (compressed_db / 20))
+            # Convert dB to linear gain
+            gain_linear = 10 ** (gain_db / 20)
+            
+            # Apply gain
+            processed = processed * gain_linear
+            
+            # Prevent clipping
+            peak = np.max(np.abs(processed))
+            if peak > 1.0:
+                processed = processed / peak
+                logger.info(f"Loudness gain applied with peak limiting: {gain_db} dB")
+            else:
+                logger.info(f"Custom loudness applied: {gain_db} dB")
             
             return processed
             
         except Exception as e:
-            logger.warning(f"Compression failed: {e}")
+            logger.error(f"Custom loudness failed: {e}")
             return audio_data
-    
-    def _apply_stereo_widening(self, audio_data: np.ndarray, genre: str, tier_config: Dict[str, Any]) -> np.ndarray:
-        """Apply stereo widening"""
+
+    def _apply_standard_compression(self, audio_data: np.ndarray, sample_rate: int, tier_config: Dict[str, Any]) -> np.ndarray:
+        """Apply standard compression based on tier"""
         try:
+            logger.info("Applying standard compression")
+            
+            # Standard compression settings based on tier
+            if tier_config["processing_quality"] == "basic":
+                ratio = 2.0
+                threshold = -18.0
+                attack = 0.003
+                release = 0.2
+            elif tier_config["processing_quality"] == "standard":
+                ratio = 2.5
+                threshold = -16.0
+                attack = 0.002
+                release = 0.15
+            else:  # premium
+                ratio = 3.0
+                threshold = -14.0
+                attack = 0.001
+                release = 0.1
+            
+            return self._apply_simple_compression(audio_data, threshold, ratio, attack, release)
+            
+        except Exception as e:
+            logger.error(f"Standard compression failed: {e}")
+            return audio_data
+
+    def _apply_standard_stereo_widening(self, audio_data: np.ndarray, tier_config: Dict[str, Any]) -> np.ndarray:
+        """Apply enhanced stereo widening for Professional+ tiers"""
+        try:
+            # For Professional tier we preserve original stereo (no widening)
+            if tier_config.get("processing_quality") == "standard":
+                return audio_data
+
+            logger.info("Applying enhanced stereo widening")
+            
             if audio_data.shape[0] != 2:
+                return audio_data  # Only process stereo
+            
+            processed = audio_data.copy()
+            
+            # Enhanced stereo width based on tier - much more noticeable
+            if tier_config["processing_quality"] == "premium":
+                width = 2.2  # 120% widening (was 1.4)
+            else:
+                # Non-premium should not widen (safety)
                 return audio_data
             
-            preset = self.genre_presets.get(genre, self.genre_presets["Pop"])
-            width = preset["stereo_width"]
+            left = processed[0]
+            right = processed[1]
             
-            if width == 1.0:
-                return audio_data
+            # Enhanced mid-side processing with stereo expansion
+            mid = (left + right) * 0.5
+            side = (left - right) * 0.5
             
-            # Simple stereo widening
-            left = audio_data[0]
-            right = audio_data[1]
+            # Apply enhanced width with stereo expansion
+            side = side * width
             
-            # Mid-side processing
-            mid = (left + right) / 2
-            side = (left - right) / 2
+            # Convert back to left-right with enhanced stereo image
+            new_left = mid + side
+            new_right = mid - side
             
-            # Apply width
-            side *= width
+            # Apply additional stereo enhancement techniques
+            # 1. High-frequency stereo enhancement
+            sample_rate = 44100  # Default sample rate
+            enhanced_left, enhanced_right = self._apply_stereo_enhancement(new_left, new_right, sample_rate)
+            
+            processed[0] = enhanced_left
+            processed[1] = enhanced_right
+            
+            logger.info(f"Enhanced stereo widening applied: width={width:.1f}x")
+            return processed
+            
+        except Exception as e:
+            logger.error(f"Enhanced stereo widening failed: {e}")
+            return audio_data
+
+    def _apply_stereo_enhancement(self, left: np.ndarray, right: np.ndarray, sample_rate: int) -> tuple:
+        """Apply additional stereo enhancement techniques"""
+        try:
+            # 1. High-frequency stereo enhancement
+            # Boost stereo information in the 2-8kHz range for better stereo definition
+            
+            # Simple high-frequency stereo enhancement
+            # Apply subtle phase shifting to enhance stereo width
+            enhanced_left = left.copy()
+            enhanced_right = right.copy()
+            
+            # Apply gentle stereo enhancement in high frequencies
+            # This creates more noticeable stereo expansion
+            stereo_enhancement_factor = 0.3  # 30% enhancement
+            
+            # Create stereo difference signal
+            stereo_diff = (left - right) * stereo_enhancement_factor
+            
+            # Add enhanced stereo information back
+            enhanced_left = left + stereo_diff
+            enhanced_right = right - stereo_diff
+            
+            # 2. Apply subtle stereo imaging enhancement
+            # Create a wider stereo image by processing the side signal
+            side_signal = (enhanced_left - enhanced_right) * 0.5
+            mid_signal = (enhanced_left + enhanced_right) * 0.5
+            
+            # Enhance the side signal for wider stereo image
+            enhanced_side = side_signal * 1.5  # 50% side enhancement
+            
+            # Reconstruct with enhanced stereo width
+            final_left = mid_signal + enhanced_side
+            final_right = mid_signal - enhanced_side
+            
+            return final_left, final_right
+            
+        except Exception as e:
+            logger.error(f"Stereo enhancement failed: {e}")
+            return left, right
+
+
+    def _apply_genre_based_stereo_widening(self, audio_data: np.ndarray, genre: str, tier_config: Dict[str, Any]) -> np.ndarray:
+        """Apply genre-specific stereo widening with enhanced effects"""
+        try:
+            logger.info(f"Applying genre-based stereo widening for {genre}")
+            
+            if audio_data.shape[0] != 2:
+                return audio_data  # Only process stereo
+            
+            processed = audio_data.copy()
+            
+            # Get genre-specific stereo width from presets
+            genre_info = self.get_genre_information()
+            preset = genre_info.get(genre, {})
+            base_width = preset.get("stereo_width", 1.0)
+            
+            # Apply tier-based multiplier for enhanced widening
+            tier_multiplier = {
+                "standard": 1.5,  # 50% additional widening
+                "premium": 2.0    # 100% additional widening
+            }
+            
+            tier_quality = tier_config.get("processing_quality", "standard")
+            multiplier = tier_multiplier.get(tier_quality, 1.5)
+            
+            # Calculate final width with genre and tier enhancement
+            final_width = base_width * multiplier
+            
+            # Ensure minimum noticeable widening
+            final_width = max(final_width, 1.6)  # Minimum 60% widening
+            
+            # Cap maximum widening to prevent artifacts
+            final_width = min(final_width, 2.5)  # Maximum 150% widening
+            
+            logger.info(f"Genre {genre}: base_width={base_width:.1f}, final_width={final_width:.1f}")
+            
+            left = processed[0]
+            right = processed[1]
+            
+            # Enhanced mid-side processing
+            mid = (left + right) * 0.5
+            side = (left - right) * 0.5
+            
+            # Apply genre-based width
+            side = side * final_width
             
             # Convert back to left-right
             new_left = mid + side
             new_right = mid - side
             
-            return np.stack([new_left, new_right])
+            # Apply genre-specific stereo enhancement
+            enhanced_left, enhanced_right = self._apply_genre_stereo_enhancement(new_left, new_right, genre)
+            
+            processed[0] = enhanced_left
+            processed[1] = enhanced_right
+            
+            logger.info(f"Genre-based stereo widening applied: {final_width:.1f}x for {genre}")
+            return processed
             
         except Exception as e:
-            logger.warning(f"Stereo widening failed: {e}")
+            logger.error(f"Genre-based stereo widening failed: {e}")
             return audio_data
-    
-    def _apply_limiting(self, audio_data: np.ndarray, sample_rate: int, tier_config: Dict[str, Any]) -> np.ndarray:
-        """Apply limiting to prevent clipping"""
+
+    def _apply_genre_stereo_enhancement(self, left: np.ndarray, right: np.ndarray, genre: str) -> tuple:
+        """Apply genre-specific stereo enhancement techniques"""
         try:
-            # Simple limiter
-            max_level = 0.95  # Leave some headroom
+            # Genre-specific stereo enhancement
+            enhancement_factors = {
+                "Electronic": 0.4,    # High stereo enhancement for electronic music
+                "Hip Hop": 0.35,      # Strong stereo for hip hop
+                "Pop": 0.3,           # Moderate stereo for pop
+                "Rock": 0.25,         # Moderate stereo for rock
+                "Afrobeats": 0.4,     # High stereo for afrobeats
+                "Amapiano": 0.45,     # Very high stereo for amapiano
+                "Trap": 0.4,          # High stereo for trap
+                "House": 0.35,        # Strong stereo for house
+                "Techno": 0.4,        # High stereo for techno
+                "Dubstep": 0.45,      # Very high stereo for dubstep
+            }
             
-            # Find peak level
-            peak = np.max(np.abs(audio_data))
+            enhancement_factor = enhancement_factors.get(genre, 0.3)  # Default 30%
+            
+            # Apply genre-specific stereo enhancement
+            stereo_diff = (left - right) * enhancement_factor
+            
+            # Create enhanced stereo image
+            enhanced_left = left + stereo_diff
+            enhanced_right = right - stereo_diff
+            
+            # Additional stereo imaging for certain genres
+            if genre in ["Electronic", "Amapiano", "Dubstep", "Techno"]:
+                # Extra stereo enhancement for electronic genres
+                side_signal = (enhanced_left - enhanced_right) * 0.5
+                mid_signal = (enhanced_left + enhanced_right) * 0.5
+                
+                # Extra side enhancement for electronic music
+                enhanced_side = side_signal * 1.8  # 80% side enhancement
+                
+                final_left = mid_signal + enhanced_side
+                final_right = mid_signal - enhanced_side
+                
+                return final_left, final_right
+            
+            return enhanced_left, enhanced_right
+            
+        except Exception as e:
+            logger.error(f"Genre stereo enhancement failed: {e}")
+            return left, right
+
+    def _apply_standard_limiting(self, audio_data: np.ndarray, sample_rate: int) -> np.ndarray:
+        """Apply standard limiting to prevent clipping"""
+        try:
+            logger.info("Applying standard limiting")
+            
+            processed = audio_data.copy()
+            
+            # Standard limiting threshold
+            max_level = 0.95  # -0.4 dB
+            
+            peak = np.max(np.abs(processed))
             
             if peak > max_level:
-                # Apply limiting
                 gain_reduction = max_level / peak
-                audio_data *= gain_reduction
+                processed = processed * gain_reduction
+                logger.info(f"Applied limiting: {20*np.log10(gain_reduction):.1f}dB reduction")
             
-            return audio_data
+            return processed
             
         except Exception as e:
-            logger.warning(f"Limiting failed: {e}")
+            logger.error(f"Standard limiting failed: {e}")
             return audio_data
-    
-    def _apply_comprehensive_normalization(self, audio_data: np.ndarray, sample_rate: int, target_lufs: float) -> np.ndarray:
-        """
-        Apply comprehensive normalization including LUFS and peak normalization
-        Ensures all processed audio is properly normalized
-        """
+
+    def _apply_comprehensive_normalization_with_brick_wall(self, audio_data: np.ndarray, sample_rate: int, target_lufs: float) -> np.ndarray:
+        """Apply comprehensive normalization with brick wall limiter (pegged within -7 to -9 LUFS)"""
         try:
-            logger.info("Applying comprehensive normalization")
+            logger.info(f"Applying comprehensive normalization with brick wall limiter (LUFS range: -7 to -9)")
             
-            # Step 1: LUFS Normalization
-            processed = self._normalize_lufs(audio_data, sample_rate, target_lufs)
+            processed = audio_data.copy()
             
-            # Step 2: Peak Normalization to prevent clipping
-            processed = self._apply_peak_normalization(processed)
+            # Calculate current LUFS (simplified)
+            rms = np.sqrt(np.mean(processed ** 2))
+            current_lufs = 20 * np.log10(rms + 1e-10)
             
-            # Step 3: Final safety check and soft limiting
-            processed = self._apply_soft_limiting(processed)
+            logger.info(f"Current LUFS: {current_lufs:.2f} dB, Target: {target_lufs:.2f} dB")
             
-            logger.info("Comprehensive normalization completed")
+            # FORCE all audio to be pegged within -7 to -9 LUFS range (increased volume)
+            # If current LUFS is lower than -9, boost it to -9
+            # If current LUFS is higher than -7, reduce it to -7
+            # If current LUFS is between -9 and -7, use the target if it's within range
+            
+            if current_lufs < -9.0:
+                # Too quiet - boost to -9 LUFS (louder than before)
+                effective_target = -9.0
+                logger.info(f"Audio too quiet ({current_lufs:.2f} dB), boosting to -9.0 dB")
+            elif current_lufs > -7.0:
+                # Too loud - reduce to -7 LUFS (louder than before)
+                effective_target = -7.0
+                logger.info(f"Audio too loud ({current_lufs:.2f} dB), reducing to -7.0 dB")
+            else:
+                # Within range - use target if it's also within range, otherwise clamp it
+                if target_lufs < -9.0:
+                    effective_target = -9.0
+                    logger.info(f"Target too quiet ({target_lufs:.2f} dB), clamping to -9.0 dB")
+                elif target_lufs > -7.0:
+                    effective_target = -7.0
+                    logger.info(f"Target too loud ({target_lufs:.2f} dB), clamping to -7.0 dB")
+                else:
+                    effective_target = target_lufs
+                    logger.info(f"Using target LUFS: {target_lufs:.2f} dB")
+            
+            # Calculate gain needed to reach effective target
+            gain_db = effective_target - current_lufs
+            gain_linear = 10 ** (gain_db / 20)
+            
+            # Apply gain
+            processed = processed * gain_linear
+            
+            # Verify the result is within range
+            new_rms = np.sqrt(np.mean(processed ** 2))
+            new_lufs = 20 * np.log10(new_rms + 1e-10)
+            logger.info(f"After gain adjustment: {new_lufs:.2f} dB")
+            
+            # Apply brick wall limiting to prevent any clipping
+            max_level = 0.99  # Brick wall at -0.1 dB
+            peak = np.max(np.abs(processed))
+            
+            if peak > max_level:
+                # Hard limiting - no soft knee
+                gain_reduction = max_level / peak
+                processed = processed * gain_reduction
+                logger.info(f"Brick wall limiting applied: {20*np.log10(gain_reduction):.1f}dB reduction")
+                
+                # Recalculate LUFS after limiting
+                final_rms = np.sqrt(np.mean(processed ** 2))
+                final_lufs = 20 * np.log10(final_rms + 1e-10)
+                logger.info(f"Final LUFS after limiting: {final_lufs:.2f} dB")
+            
+            # Final verification - ensure we're still within the -7 to -9 range
+            final_rms = np.sqrt(np.mean(processed ** 2))
+            final_lufs = 20 * np.log10(final_rms + 1e-10)
+            
+            if final_lufs < -9.0 or final_lufs > -7.0:
+                logger.warning(f"Final LUFS ({final_lufs:.2f} dB) is outside target range (-7 to -9 dB)")
+                # Apply final correction if needed
+                if final_lufs < -9.0:
+                    correction_gain = 10 ** ((-9.0 - final_lufs) / 20)
+                    processed = processed * correction_gain
+                    logger.info(f"Applied final boost to reach -9.0 dB")
+                elif final_lufs > -7.0:
+                    correction_gain = 10 ** ((-7.0 - final_lufs) / 20)
+                    processed = processed * correction_gain
+                    logger.info(f"Applied final reduction to reach -7.0 dB")
+            
+            logger.info(f"Comprehensive normalization completed - Final LUFS: {20*np.log10(np.sqrt(np.mean(processed ** 2)) + 1e-10):.2f} dB")
             return processed
             
         except Exception as e:
             logger.error(f"Comprehensive normalization failed: {e}")
             return audio_data
 
-    def _normalize_lufs(self, audio_data: np.ndarray, sample_rate: int, target_lufs: float) -> np.ndarray:
-        """Normalize audio to target LUFS level"""
+    def _apply_final_loudness_safety(self, audio_data: np.ndarray, sample_rate: int, target_lufs: float) -> np.ndarray:
+        """Apply final loudness safety check (enforce -7 to -9 LUFS range)"""
         try:
-            # Calculate current LUFS (simplified)
-            current_lufs = self._calculate_simple_lufs(audio_data, sample_rate)
-            
-            # Calculate gain adjustment
-            gain_db = target_lufs - current_lufs
-            gain_linear = 10 ** (gain_db / 20)
-            
-            # Apply gain
-            processed = audio_data * gain_linear
-            
-            logger.info(f"LUFS normalization: {current_lufs:.1f} → {target_lufs:.1f} LUFS")
-            return processed
-            
-        except Exception as e:
-            logger.warning(f"LUFS normalization failed: {e}")
-            return audio_data
-
-    def _apply_peak_normalization(self, audio_data: np.ndarray) -> np.ndarray:
-        """Apply peak normalization to prevent clipping"""
-        try:
-            # Find the maximum absolute value across all channels
-            if audio_data.ndim == 2:  # Stereo
-                peak = np.max(np.abs(audio_data))
-            else:  # Mono
-                peak = np.max(np.abs(audio_data))
-            
-            # Normalize to -0.1 dB (0.988) to leave headroom
-            target_peak = 0.988
-            if peak > 0:
-                gain = target_peak / peak
-                processed = audio_data * gain
-                logger.info(f"Peak normalization: {peak:.3f} → {target_peak:.3f}")
-            else:
-                processed = audio_data
-                logger.warning("Audio has no signal, skipping peak normalization")
-            
-            return processed
-            
-        except Exception as e:
-            logger.error(f"Peak normalization failed: {e}")
-            return audio_data
-
-    def _apply_soft_limiting(self, audio_data: np.ndarray) -> np.ndarray:
-        """Apply soft limiting as final safety measure"""
-        try:
-            # Soft limiting threshold at -0.3 dB (0.933)
-            threshold = 0.933
-            ratio = 10.0  # 10:1 ratio for soft limiting
+            logger.info("Applying final loudness safety check (LUFS range: -7 to -9)")
             
             processed = audio_data.copy()
             
-            # Apply soft limiting to each channel
-            if audio_data.ndim == 2:  # Stereo
-                for ch in range(audio_data.shape[0]):
-                    channel = processed[ch]
-                    # Find samples above threshold
-                    above_threshold = np.abs(channel) > threshold
-                    if np.any(above_threshold):
-                        # Apply soft limiting
-                        limited = np.where(
-                            above_threshold,
-                            np.sign(channel) * (threshold + (np.abs(channel) - threshold) / ratio),
-                            channel
-                        )
-                        processed[ch] = limited
-            else:  # Mono
-                channel = processed
-                above_threshold = np.abs(channel) > threshold
-                if np.any(above_threshold):
-                    limited = np.where(
-                        above_threshold,
-                        np.sign(channel) * (threshold + (np.abs(channel) - threshold) / ratio),
-                        channel
-                    )
-                    processed = limited
+            # Enforce strict LUFS range: -7 to -9 dB (increased volume)
+            min_safe_lufs = -9.0   # Minimum LUFS (louder)
+            max_safe_lufs = -7.0   # Maximum LUFS (louder)
+            max_safe_peak = 0.989  # Maximum safe peak (-0.1 dB)
             
-            # Final safety check - hard limit at -0.1 dB
-            max_peak = np.max(np.abs(processed))
-            if max_peak > 0.988:
-                processed *= (0.988 / max_peak)
-                logger.info(f"Final safety limiting applied: {max_peak:.3f} → 0.988")
+            # Check current LUFS
+            rms = np.sqrt(np.mean(processed ** 2))
+            current_lufs = 20 * np.log10(rms + 1e-10)
+            
+            logger.info(f"Final safety check - Current LUFS: {current_lufs:.2f} dB")
+            
+            # Enforce LUFS range
+            if current_lufs < min_safe_lufs:
+                # Too quiet - boost to minimum
+                lufs_gain_db = min_safe_lufs - current_lufs
+                lufs_gain_linear = 10 ** (lufs_gain_db / 20)
+                processed = processed * lufs_gain_linear
+                logger.info(f"LUFS safety boost: {current_lufs:.2f} → {min_safe_lufs:.2f} dB")
+            elif current_lufs > max_safe_lufs:
+                # Too loud - reduce to maximum
+                lufs_gain_db = max_safe_lufs - current_lufs
+                lufs_gain_linear = 10 ** (lufs_gain_db / 20)
+                processed = processed * lufs_gain_linear
+                logger.info(f"LUFS safety reduction: {current_lufs:.2f} → {max_safe_lufs:.2f} dB")
+            else:
+                logger.info(f"LUFS within safe range: {current_lufs:.2f} dB")
+            
+            # Check peak safety
+            peak = np.max(np.abs(processed))
+            if peak > max_safe_peak:
+                peak_gain = max_safe_peak / peak
+                processed = processed * peak_gain
+                logger.info(f"Peak safety applied: {peak:.3f} → {max_safe_peak:.3f}")
+                
+                # Recalculate LUFS after peak limiting
+                final_rms = np.sqrt(np.mean(processed ** 2))
+                final_lufs = 20 * np.log10(final_rms + 1e-10)
+                logger.info(f"LUFS after peak limiting: {final_lufs:.2f} dB")
+            
+            # Final verification
+            final_rms = np.sqrt(np.mean(processed ** 2))
+            final_lufs = 20 * np.log10(final_rms + 1e-10)
+            final_peak = np.max(np.abs(processed))
+            
+            logger.info(f"Final safety check complete - LUFS: {final_lufs:.2f} dB, Peak: {final_peak:.3f}")
             
             return processed
             
         except Exception as e:
-            logger.error(f"Soft limiting failed: {e}")
+            logger.error(f"Final loudness safety failed: {e}")
             return audio_data
-    
-    def _calculate_simple_lufs(self, audio_data: np.ndarray, sample_rate: int) -> float:
-        """Calculate simplified LUFS"""
-        try:
-            # Simplified LUFS calculation
-            rms = np.sqrt(np.mean(audio_data**2))
-            lufs = 20 * np.log10(rms + 1e-10) - 0.691
-            return float(lufs)
-        except Exception:
-            return -14.0
-    
-    async def preview_genre_effects(
-        self,
-        input_file_path: str,
-        genre: str,
-        tier: str
-    ) -> str:
-        """
-        Generate real-time preview of genre effects - SIMPLIFIED BUT AUDIBLE
-        """
-        try:
-            logger.info(f"Starting SIMPLIFIED genre preview for: {genre}")
-            
-            # Load audio file
-            audio_data, sample_rate = librosa.load(input_file_path, sr=None)
-            logger.info(f"Loaded audio: {audio_data.shape}, {sample_rate}Hz")
-            
-            # Apply pitch correction from 440 Hz to 444.0 Hz tuning
-            logger.info("Applying pitch correction (440 Hz → 444.0 Hz)...")
-            audio_data = self._apply_pitch_correction(audio_data, sample_rate)
-            
-            # Ensure stereo
-            if audio_data.ndim == 1:
-                audio_data = np.stack([audio_data, audio_data])
-            
-            # Create dramatic, audible effects
-            processed_audio = audio_data.copy()
-            
-            if genre.lower() == 'hip-hop':
-                # HIP-HOP: Heavy bass, scooped mids, loud
-                logger.info("Applying DRAMATIC HIP-HOP effects")
-                # Heavy bass boost (first 30% of samples)
-                bass_boost = 1.2  # 120% louder
-                bass_end = len(processed_audio[0]) // 3
-                processed_audio[:, :bass_end] *= (1 + bass_boost)
-                
-                # Scoop mids (middle 40% of samples)
-                mid_scoop = 0.5  # 50% reduction
-                mid_start = len(processed_audio[0]) // 3
-                mid_end = 2 * len(processed_audio[0]) // 3
-                processed_audio[:, mid_start:mid_end] *= mid_scoop
-                
-                # Overall loudness
-                processed_audio *= 1.8
-                
-            elif genre.lower() == 'afrobeats':
-                # AFROBEATS: Mid boost, warmth, bright
-                logger.info("Applying DRAMATIC AFROBEATS effects")
-                # Mid boost (middle 50% of samples)
-                mid_boost = 0.8  # 80% louder
-                mid_start = len(processed_audio[0]) // 4
-                mid_end = 3 * len(processed_audio[0]) // 4
-                processed_audio[:, mid_start:mid_end] *= (1 + mid_boost)
-                
-                # High boost (last 25% of samples)
-                high_boost = 0.6  # 60% louder
-                high_start = 3 * len(processed_audio[0]) // 4
-                processed_audio[:, high_start:] *= (1 + high_boost)
-                
-                # Overall warmth
-                processed_audio *= 1.5
-                
-            else:
-                # Default: Simple loudness boost
-                logger.info("Applying DRAMATIC DEFAULT effects")
-                processed_audio *= 1.6
-            
-            # Prevent clipping
-            max_val = np.max(np.abs(processed_audio))
-            if max_val > 0.95:
-                processed_audio = processed_audio * (0.95 / max_val)
-            
-            # Save preview file
-            # Save preview file with a unique name to avoid conflicts
-            import time
-            base_name = os.path.splitext(os.path.basename(input_file_path))[0]
-            timestamp = int(time.time() * 1000)  # milliseconds
-            preview_file_path = f"{base_name}_preview_{genre.lower().replace(' ', '_')}_{timestamp}.wav"
-            
-            # Save as WAV
-            import soundfile as sf
-            sf.write(preview_file_path, processed_audio.T, sample_rate)
-            
-            logger.info(f"DRAMATIC genre preview generated: {preview_file_path}")
-            return preview_file_path
-            
-        except Exception as e:
-            logger.error(f"Simplified genre preview failed: {str(e)}")
-            # Return original file if processing fails
-            return input_file_path
 
-    def _apply_preview_eq(self, audio_data: np.ndarray, sample_rate: int, genre: str, tier_config: Dict[str, Any]) -> np.ndarray:
-        """Apply simplified EQ for preview (faster processing)"""
+    def _apply_simple_compression(self, audio_data: np.ndarray, threshold: float, ratio: float, attack: float, release: float) -> np.ndarray:
+        """Apply simple compression"""
         try:
-            preset = self.genre_presets.get(genre, self.genre_presets["Pop"])
-            eq_curve = preset["eq_curve"]
-            
-            logger.info(f"Applying preview EQ for {genre}")
-            
-            # Apply only essential EQ bands for speed
             processed = audio_data.copy()
             
-            # Apply low shelf (essential for bass)
-            low_shelf = eq_curve["low_shelf"]
-            if low_shelf["gain"] != 0:
-                processed = self._apply_simple_eq(processed, sample_rate, low_shelf["freq"], low_shelf["gain"], "low_shelf")
+            # Convert to linear values
+            threshold_linear = 10 ** (threshold / 20)
             
-            # Apply high shelf (essential for brightness)
-            high_shelf = eq_curve["high_shelf"]
-            if high_shelf["gain"] != 0:
-                processed = self._apply_simple_eq(processed, sample_rate, high_shelf["freq"], high_shelf["gain"], "high_shelf")
-            
-            # Apply one mid band for character (simplified)
-            if tier_config["eq_bands"] >= 3:
-                mid = eq_curve["mid"]
-                if mid["gain"] != 0:
-                    processed = self._apply_simple_eq(processed, sample_rate, mid["freq"], mid["gain"], "peak")
-            
-            return processed
-            
-        except Exception as e:
-            logger.error(f"Preview EQ failed: {e}")
-            return audio_data
-
-    def _apply_preview_compression(self, audio_data: np.ndarray, sample_rate: int, genre: str, tier_config: Dict[str, Any]) -> np.ndarray:
-        """Apply simplified compression for preview (faster processing)"""
-        try:
-            preset = self.genre_presets.get(genre, self.genre_presets["Pop"])
-            compression_settings = preset["compression"]
-            max_ratio = tier_config["compression_ratio_max"]
-            
-            # Use lighter compression for preview
-            ratio = min(compression_settings["ratio"] * 0.7, max_ratio)  # 70% of full compression
-            
-            logger.info(f"Applying preview compression with ratio {ratio}:1")
-            
-            # Apply simplified compression
-            processed = self._apply_compression(audio_data, sample_rate, ratio, compression_settings["threshold"])
+            # Simple compression implementation
+            for channel in range(processed.shape[0]):
+                channel_data = processed[channel]
+                compressed = np.zeros_like(channel_data)
+                
+                # Simple envelope follower
+                envelope = 0.0
+                for i, sample in enumerate(channel_data):
+                    # Attack/release envelope
+                    if abs(sample) > envelope:
+                        envelope += (abs(sample) - envelope) * (1 - np.exp(-1 / (attack * 44100)))
+                    else:
+                        envelope += (abs(sample) - envelope) * (1 - np.exp(-1 / (release * 44100)))
+                    
+                    # Apply compression
+                    if envelope > threshold_linear:
+                        gain_reduction = 1 - (1 - threshold_linear / envelope) * (1 - 1/ratio)
+                        compressed[i] = sample * gain_reduction
+                    else:
+                        compressed[i] = sample
+                
+                processed[channel] = compressed
             
             return processed
             
         except Exception as e:
-            logger.error(f"Preview compression failed: {e}")
+            logger.error(f"Simple compression failed: {e}")
             return audio_data
 
-    def _save_preview_audio(self, audio_data: np.ndarray, sample_rate: int, original_path: str, genre: str) -> str:
-        """Save preview audio to temporary file"""
+    def _apply_simple_eq(self, audio_data: np.ndarray, sample_rate: int, freq: float, gain: float, eq_type: str) -> np.ndarray:
+        """Apply simple EQ filter"""
         try:
-            # Create output file path
-            original_name = Path(original_path).stem
-            output_path = os.path.join(
-                self.temp_dir,
-                f"{original_name}_preview_{genre.lower().replace('-', '_')}.wav"
-            )
+            processed = audio_data.copy()
             
-            # Save as WAV file
-            if audio_data.ndim == 1:
-                sf.write(output_path, audio_data, sample_rate)
-            else:
-                sf.write(output_path, audio_data.T, sample_rate)
+            # Simple EQ implementation using numpy
+            if eq_type == "low_shelf":
+                # Low shelf filter
+                for channel in range(processed.shape[0]):
+                    # Simple low shelf approximation
+                    if gain > 0:
+                        # Boost low frequencies
+                        low_freq_mask = np.arange(len(processed[channel])) < len(processed[channel]) * (freq / (sample_rate / 2))
+                        processed[channel][low_freq_mask] *= (1 + gain / 10)
+                    else:
+                        # Cut low frequencies
+                        low_freq_mask = np.arange(len(processed[channel])) < len(processed[channel]) * (freq / (sample_rate / 2))
+                        processed[channel][low_freq_mask] *= (1 + gain / 10)
             
-            logger.info(f"Preview audio saved: {output_path}")
-            return output_path
+            elif eq_type == "high_shelf":
+                # High shelf filter
+                for channel in range(processed.shape[0]):
+                    # Simple high shelf approximation
+                    if gain > 0:
+                        # Boost high frequencies
+                        high_freq_mask = np.arange(len(processed[channel])) > len(processed[channel]) * (freq / (sample_rate / 2))
+                        processed[channel][high_freq_mask] *= (1 + gain / 10)
+                    else:
+                        # Cut high frequencies
+                        high_freq_mask = np.arange(len(processed[channel])) > len(processed[channel]) * (freq / (sample_rate / 2))
+                        processed[channel][high_freq_mask] *= (1 + gain / 10)
+            
+            elif eq_type == "peak":
+                # Peak filter
+                for channel in range(processed.shape[0]):
+                    # Simple peak filter approximation
+                    center_freq_mask = np.abs(np.arange(len(processed[channel])) - len(processed[channel]) * (freq / (sample_rate / 2))) < len(processed[channel]) * 0.1
+                    processed[channel][center_freq_mask] *= (1 + gain / 10)
+            
+            return processed
             
         except Exception as e:
-            logger.error(f"Failed to save preview audio: {e}")
-            raise
+            logger.error(f"Simple EQ failed: {e}")
+            return audio_data
 
-    def _save_processed_audio(self, audio_data: np.ndarray, sample_rate: int, original_path: str) -> str:
+    def _save_processed_audio(self, audio_data: np.ndarray, sample_rate: int, input_file_path: str) -> str:
         """Save processed audio to temporary file"""
         try:
-            # Create output file path
-            original_name = Path(original_path).stem
-            output_path = os.path.join(
-                self.temp_dir,
-                f"{original_name}_mastered.wav"
-            )
+            # Create output filename
+            input_path = Path(input_file_path)
+            output_filename = f"processed_{input_path.stem}.wav"
+            output_path = os.path.join(self.temp_dir, output_filename)
             
-            # Save as WAV file
-            if audio_data.ndim == 1:
-                sf.write(output_path, audio_data, sample_rate)
-            else:
-                sf.write(output_path, audio_data.T, sample_rate)
+            # Save audio
+            sf.write(output_path, audio_data.T, sample_rate)
             
             logger.info(f"Processed audio saved: {output_path}")
             return output_path
             
         except Exception as e:
             logger.error(f"Failed to save processed audio: {e}")
-            raise
+            return input_file_path
 
-    def _apply_professional_limiter(self, audio_data: np.ndarray, sample_rate: int, threshold: float = -0.1) -> np.ndarray:
-        """
-        Professional brickwall limiter inspired by Matchering's Hyrax limiter
-        Prevents clipping while maintaining musical dynamics
-        """
+    def get_tier_information(self) -> Dict[str, Any]:
+        """Get tier-specific processing information"""
         try:
-            logger.info(f"Applying professional limiter with threshold: {threshold}dB")
-            
-            # Convert threshold from dB to linear
-            threshold_linear = 10 ** (threshold / 20)
-            
-            # Apply soft limiting with lookahead
-            processed = audio_data.copy()
-            
-            # Simple but effective soft limiter
-            for channel in range(processed.shape[0]):
-                # Apply soft knee limiting
-                abs_signal = np.abs(processed[channel])
-                over_threshold = abs_signal > threshold_linear
+            return {
+                "tiers": self.tier_settings,
+                "available_genres": list(self.genre_presets.keys())
+            }
+        except Exception as e:
+            logger.error(f"Failed to get tier information: {e}")
+            return {}
+
+    def get_genre_information(self) -> Dict[str, Any]:
+        """Get genre-specific processing information"""
+        try:
+            genre_info = {}
+            for genre, preset in self.genre_presets.items():
+                # Provide default values for missing fields
+                default_compression = {"ratio": 2.0, "threshold": -18.0, "attack": 0.01, "release": 0.25}
+                default_stereo_width = 1.0
+                default_target_lufs = -14.0
                 
-                if np.any(over_threshold):
-                    # Soft knee compression for smooth limiting
-                    ratio = 10.0  # High ratio for limiting
-                    knee_width = 0.1  # Soft knee
-                    
-                    # Calculate gain reduction
-                    excess = abs_signal - threshold_linear
-                    gain_reduction = 1.0 - (1.0 / ratio) * (1.0 - np.exp(-excess / knee_width))
-                    
-                    # Apply gain reduction
-                    processed[channel] = processed[channel] * (1.0 - gain_reduction)
-            
-            # Final hard limit to prevent any clipping
-            processed = np.clip(processed, -0.99, 0.99)
-            
-            logger.info("Professional limiter applied successfully")
-            return processed
-            
-        except Exception as e:
-            logger.error(f"Professional limiter failed: {e}")
-            return audio_data
-
-    def _apply_hip_hop_processing(self, audio_data: np.ndarray, sample_rate: int) -> np.ndarray:
-        """
-        Professional Hip-Hop processing: Bass boost, mid scoop, compression
-        """
-        try:
-            logger.info("Applying professional Hip-Hop processing")
-            processed = audio_data.copy()
-            
-            # 1. Bass boost - simple gain adjustment for low frequencies
-            bass_boost = 0.8  # 80% louder bass
-            # Apply to first 25% of samples (representing low frequencies)
-            bass_samples = len(processed[0]) // 4
-            processed[:, :bass_samples] *= (1 + bass_boost)
-            
-            # 2. Mid scoop - reduce middle frequencies
-            mid_scoop = 0.6  # 40% reduction
-            mid_start = len(processed[0]) // 4
-            mid_end = 3 * len(processed[0]) // 4
-            processed[:, mid_start:mid_end] *= mid_scoop
-            
-            # 3. Compression for punch
-            processed = self._apply_compression(processed, sample_rate, ratio=3.0, threshold=-12.0)
-            
-            # 4. Overall loudness boost
-            processed *= 1.3
-            
-            logger.info("Professional Hip-Hop processing completed")
-            return processed
-            
-        except Exception as e:
-            logger.error(f"Hip-Hop processing failed: {e}")
-            return audio_data
-
-    def _apply_afrobeats_processing(self, audio_data: np.ndarray, sample_rate: int) -> np.ndarray:
-        """
-        Professional Afrobeats processing: Mid boost, warmth, light compression
-        """
-        try:
-            logger.info("Applying professional Afrobeats processing")
-            processed = audio_data.copy()
-            
-            # 1. Mid boost - enhance middle frequencies
-            mid_boost = 0.6  # 60% louder mids
-            mid_start = len(processed[0]) // 4
-            mid_end = 3 * len(processed[0]) // 4
-            processed[:, mid_start:mid_end] *= (1 + mid_boost)
-            
-            # 2. High shelf for warmth - boost high frequencies
-            high_boost = 0.4  # 40% louder highs
-            high_start = 3 * len(processed[0]) // 4
-            processed[:, high_start:] *= (1 + high_boost)
-            
-            # 3. Light compression for dynamics
-            processed = self._apply_compression(processed, sample_rate, ratio=2.0, threshold=-8.0)
-            
-            # 4. Overall warmth boost
-            processed *= 1.2
-            
-            logger.info("Professional Afrobeats processing completed")
-            return processed
-            
-        except Exception as e:
-            logger.error(f"Afrobeats processing failed: {e}")
-            return audio_data
-
-    def _apply_pitch_shift(self, audio_data: np.ndarray, sample_rate: int) -> np.ndarray:
-        """
-        Apply pitch correction to tune all audio to 444.0 Hz
-        Uses the dedicated PitchCorrection service for smooth, high-quality tuning
-        """
-        try:
-            logger.info("Applying pitch correction to 444.0 Hz using dedicated service")
-            
-            # Handle stereo audio by processing each channel
-            if audio_data.ndim == 2:  # Stereo
-                left_corrected, left_info = self.pitch_corrector.correct_pitch(audio_data[0], sample_rate)
-                right_corrected, right_info = self.pitch_corrector.correct_pitch(audio_data[1], sample_rate)
+                # Genre-specific defaults based on genre type
+                if genre in ["Afrobeats", "Amapiano", "Kwaito", "Gqom"]:
+                    default_compression = {"ratio": 2.5, "threshold": -16.0, "attack": 0.002, "release": 0.15}
+                    default_stereo_width = 1.2
+                    default_target_lufs = -10.0
+                elif genre in ["Hip Hop", "R&B", "Pop"]:
+                    default_compression = {"ratio": 2.2, "threshold": -17.0, "attack": 0.003, "release": 0.2}
+                    default_stereo_width = 1.1
+                    default_target_lufs = -12.0
+                elif genre in ["Rock", "Electronic"]:
+                    default_compression = {"ratio": 3.0, "threshold": -14.0, "attack": 0.001, "release": 0.1}
+                    default_stereo_width = 1.3
+                    default_target_lufs = -8.0
                 
-                processed = np.stack([left_corrected, right_corrected])
-                
-                logger.info(f"Pitch correction completed - Left: {left_info['cents_shift']:+.1f} cents, Right: {right_info['cents_shift']:+.1f} cents")
-            else:  # Mono
-                processed, info = self.pitch_corrector.correct_pitch(audio_data, sample_rate)
-                processed = np.expand_dims(processed, axis=0)
-                
-                logger.info(f"Pitch correction completed: {info['cents_shift']:+.1f} cents")
-            
-            return processed
+                genre_info[genre] = {
+                    "eq_curve": preset["eq_curve"],
+                    "compression": preset.get("compression", default_compression),
+                    "stereo_width": preset.get("stereo_width", default_stereo_width),
+                    "target_lufs": preset.get("target_lufs", default_target_lufs)
+                }
+            return genre_info
             
         except Exception as e:
-            logger.error(f"Pitch correction failed: {e}")
-            logger.warning("Continuing without pitch correction")
-            return audio_data
-
-    def _apply_default_processing(self, audio_data: np.ndarray, sample_rate: int) -> np.ndarray:
-        """
-        Professional default processing: Balanced enhancement
-        """
-        try:
-            logger.info("Applying professional default processing")
-            processed = audio_data.copy()
-            
-            # 1. Gentle high shelf for brightness
-            high_boost = 0.3  # 30% louder highs
-            high_start = 3 * len(processed[0]) // 4
-            processed[:, high_start:] *= (1 + high_boost)
-            
-            # 2. Light compression for consistency
-            processed = self._apply_compression(processed, sample_rate, ratio=1.5, threshold=-6.0)
-            
-            # 3. Overall enhancement
-            processed *= 1.1
-            
-            logger.info("Professional default processing completed")
-            return processed
-            
-        except Exception as e:
-            logger.error(f"Default processing failed: {e}")
-            return audio_data
+            logger.error(f"Failed to get genre information: {e}")
+            return {}

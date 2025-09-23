@@ -17,10 +17,11 @@ const GenrePresets: React.FC<GenrePresetsProps> = ({
   onToggleGenreLock 
 }) => {
   const [activeTab, setActiveTab] = useState<'popular' | 'all'>('popular');
+  // Use local TSX genres for instant loading
+  const allGenres = availableGenres;
 
   // Popular genres (first 12)
-  const popularGenres = availableGenres.slice(0, 12);
-  const allGenres = availableGenres;
+  const popularGenres = allGenres.slice(0, 12);
 
   return (
     <div className="bg-gradient-to-br from-gray-800 to-gray-700 rounded-lg p-2 border border-gray-600">
@@ -32,7 +33,7 @@ const GenrePresets: React.FC<GenrePresetsProps> = ({
           </div>
           <h3 className="text-sm font-bold text-white">Select Genre & Process</h3>
         </div>
-        <p className="text-gray-400 text-xs">Click a genre to apply its preset and process your audio</p>
+        <p className="text-gray-400 text-xs">Click a genre to apply its preset and process your audio ({allGenres.length} genres available)</p>
       </div>
 
       {/* Tab Navigation */}
@@ -63,7 +64,8 @@ const GenrePresets: React.FC<GenrePresetsProps> = ({
 
       {/* Genre Grid - Matching Professional Tier Design */}
       <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-1.5 mb-4">
-        {(activeTab === 'popular' ? popularGenres : allGenres).map((genre) => {
+        {
+          (activeTab === 'popular' ? popularGenres : allGenres).map((genre) => {
           const isSelected = selectedGenre === genre.id;
           
           return (
@@ -96,7 +98,8 @@ const GenrePresets: React.FC<GenrePresetsProps> = ({
               )}
             </button>
           );
-        })}
+        })
+        }
       </div>
 
       {/* Selected Genre Info */}

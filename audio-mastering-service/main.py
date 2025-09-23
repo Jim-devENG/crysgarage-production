@@ -4,9 +4,13 @@ FastAPI-based service for professional audio mastering and format conversion
 """
 
 from fastapi import FastAPI, HTTPException, BackgroundTasks, UploadFile, File, Form
+from fastapi.staticfiles import StaticFiles
+import tempfile
 from fastapi.responses import StreamingResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Optional, Dict, Any
+import asyncio
+import json
 import os
 import sentry_sdk
 from datetime import datetime
@@ -17,6 +21,7 @@ from services.storage_manager import StorageManager
 from services.ffmpeg_converter import FFmpegConverter
 from services.resource_monitor import resource_monitor
 from models.request_models import MasteringRequest, MasteringResponse
+from services.analysis import analyze_audio_file
 from config.logging import configure_logging, get_logger, AudioProcessingLogger
 from config.settings import DEBUG, LOG_LEVEL, SENTRY_DSN, AUDIO_PRESETS, GENRE_SETTINGS
 
@@ -45,17 +50,53 @@ app = FastAPI(
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Configure appropriately for production
+    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Mount static serving for processed/temp files (so /files/{filename} works in dev)
+TEMP_DIR = tempfile.gettempdir()
+try:
+    app.mount("/files", StaticFiles(directory=TEMP_DIR), name="files")
+except Exception:
+    # Fallback to current directory if temp not available
+    app.mount("/files", StaticFiles(directory="."), name="files")
 
 # Initialize services
 audio_processor = AudioProcessor()
 ml_engine = MLMasteringEngine()
 storage_manager = StorageManager()
 ffmpeg_converter = FFmpegConverter()
+# Simple in-memory progress broker keyed by user_id
+progress_queues: Dict[str, asyncio.Queue] = {}
+
+def get_progress_queue(user_id: str) -> asyncio.Queue:
+    if user_id not in progress_queues:
+        progress_queues[user_id] = asyncio.Queue()
+    return progress_queues[user_id]
+
+async def progress_emit(user_id: str, stage: str, percent: float, extra: Optional[dict] = None):
+    payload = {"stage": stage, "percent": max(0.0, min(100.0, float(percent)))}
+    if extra:
+        payload.update(extra)
+    queue = get_progress_queue(user_id)
+    await queue.put(payload)
+
+@app.get("/progress-stream")
+async def progress_stream(user_id: str):
+    async def event_gen():
+        queue = get_progress_queue(user_id)
+        # initial
+        yield f"data: {json.dumps({'stage': 'connected', 'percent': 0})}\n\n"
+        try:
+            while True:
+                event = await queue.get()
+                yield f"data: {json.dumps(event)}\n\n"
+        except asyncio.CancelledError:
+            return
+    return StreamingResponse(event_gen(), media_type="text/event-stream")
 
 # Optional noise reduction
 try:
@@ -104,15 +145,52 @@ async def health_check():
 
 @app.get("/tiers")
 async def get_tier_information():
-    """Get tier-specific processing information"""
+    """Get tier-specific processing information (normalized keys)."""
     try:
-        tier_info = ml_engine.get_tier_information()
+        # Guard against slow ML tier fetches with a quick fallback
+        raw = None
+        try:
+            # Try fast path first; if ML engine blocks, fall back below
+            raw = ml_engine.get_tier_information()
+        except Exception as _e:
+            raw = None
+        if not raw:
+            # Lightweight static fallback ensuring the frontend doesn't time out
+            raw = {
+                "free": {
+                    "processing_quality": "standard",
+                    "available_formats": ["mp3", "wav"],
+                    "max_sample_rate": 44100,
+                    "max_file_size_mb": 100
+                },
+                "pro": {
+                    "processing_quality": "professional",
+                    "available_formats": ["wav", "mp3", "flac", "aiff", "aac", "ogg"],
+                    "max_sample_rate": 192000,
+                    "max_file_size_mb": 500
+                },
+                "advanced": {
+                    "processing_quality": "advanced",
+                    "available_formats": ["wav", "mp3", "flac", "aiff", "aac", "ogg"],
+                    "max_sample_rate": 192000,
+                    "max_file_size_mb": 500
+                }
+            }
+        # Normalize keys: provide lowercase and aliases the frontend may check
+        tiers: Dict[str, Any] = {}
+        for key, val in raw.items():
+            k_lower = str(key).lower()
+            tiers[k_lower] = val
+            # Common aliases
+            if k_lower == "pro":
+                tiers.setdefault("professional", val)
+            if k_lower == "professional":
+                tiers.setdefault("pro", val)
         return {
             "status": "success",
-            "tiers": tier_info,
+            "tiers": tiers,
             "timestamp": datetime.utcnow().isoformat()
         }
-        
     except Exception as e:
         logger.error(f"Failed to get tier information: {e}")
         raise HTTPException(status_code=500, detail="Failed to get tier information")
@@ -159,6 +237,7 @@ async def master_audio(request: MasteringRequest, background_tasks: BackgroundTa
             raise HTTPException(status_code=400, detail="file_url is required")
         
         # Download input file
+        await progress_emit(request.user_id, 'download_start', 5, {'file_url': request.file_url})
         logger.info(f"Downloading input file: {request.file_url}")
         try:
             input_file_path = await audio_processor.download_file(request.file_url)
@@ -180,56 +259,99 @@ async def master_audio(request: MasteringRequest, background_tasks: BackgroundTa
             if _NR_AVAILABLE:
                 import soundfile as sf
                 import numpy as np
-                y, sr = sf.read(input_file_path, always_2d=False)
-                # Convert to mono for reduction, then keep shape
-                if y.ndim > 1:
-                    y_mono = np.mean(y, axis=1)
-                else:
-                    y_mono = y
-                y_denoised = nr.reduce_noise(y=y_mono, sr=sr, prop_decrease=0.75)
-                # Write a temp denoised file
+                y, sr = sf.read(input_file_path, always_2d=True)  # (n, ch)
+                # Apply noise reduction channel-wise to preserve stereo field
+                y_out = np.zeros_like(y)
+                for ch in range(y.shape[1]):
+                    try:
+                        y_out[:, ch] = nr.reduce_noise(y=y[:, ch], sr=sr, prop_decrease=0.75)
+                    except Exception:
+                        y_out[:, ch] = y[:, ch]
                 denoised_path = input_file_path.replace("temp_", "den_", 1)
-                sf.write(denoised_path, y_denoised, sr)
+                sf.write(denoised_path, y_out, sr)
                 input_file_path = denoised_path
-                logger.info("Applied noise reduction pre-processing")
+                logger.info("Applied stereo-preserving noise reduction")
+                await progress_emit(request.user_id, 'noise_reduction', 15, None)
         except Exception as e:
             logger.warning(f"Noise reduction skipped: {e}")
         
         # Resolve genre name to known presets (case/alias tolerant)
         def _resolve_genre(g: str) -> str:
             g_lower = (g or "").strip().lower()
-            if "hip" in g_lower:
-                return "Hip-Hop"
-            if "afro" in g_lower:
+            
+            # West African genres
+            if g_lower in ("afrobeats", "afro beats", "afro"):
                 return "Afrobeats"
-            if "gospel" in g_lower:
-                return "Gospel"
-            if "rock" in g_lower:
-                return "Rock"
-            if "electronic" in g_lower:
-                return "Electronic"
-            if "jazz" in g_lower:
-                return "Jazz"
-            if "classical" in g_lower:
-                return "Classical"
-            if "pop" in g_lower:
+            if g_lower in ("alté", "alte", "alternative"):
+                return "Alté"
+            if g_lower in ("hip-life", "hiplife", "hip life"):
+                return "Hip-life"
+            if g_lower == "azonto":
+                return "Azonto"
+            if g_lower in ("naija pop", "naijapop", "naija"):
+                return "Naija Pop"
+            if g_lower in ("bongo flava", "bongoflava", "bongo"):
+                return "Bongo Flava"
+            
+            # South African genres
+            if g_lower == "amapiano":
+                return "Amapiano"
+            if g_lower == "kwaito":
+                return "Kwaito"
+            if g_lower == "gqom":
+                return "Gqom"
+            if g_lower in ("shangaan electro", "shangaan", "electro"):
+                return "Shangaan Electro"
+            if g_lower == "kwela":
+                return "Kwela"
+            
+            # Central/East African genres
+            if g_lower == "kuduro":
+                return "Kuduro"
+            if g_lower == "ndombolo":
+                return "Ndombolo"
+            if g_lower == "gengetone":
+                return "Gengetone"
+            
+            # International genres
+            if g_lower in ("hip hop", "hip-hop", "hiphop", "hip"):
+                return "Hip Hop"
+            if g_lower in ("r&b", "rnb", "r and b", "rhythm and blues"):
+                return "R&B"
+            if g_lower in ("pop", "popular"):
                 return "Pop"
-            # Fallback: Title-case
+            if g_lower in ("rock", "rock music"):
+                return "Rock"
+            if g_lower in ("electronic", "edm", "electronic dance music"):
+                return "Electronic"
+            if g_lower in ("jazz", "jazz music"):
+                return "Jazz"
+            if g_lower in ("classical", "classical music"):
+                return "Classical"
+            if g_lower in ("reggae", "reggae music"):
+                return "Reggae"
+            if g_lower in ("country", "country music"):
+                return "Country"
+            if g_lower in ("blues", "blues music"):
+                return "Blues"
+            
+            # Fallback: Title-case or default to Pop
             return g.title() if g else "Pop"
 
         resolved_genre = _resolve_genre(str(request.genre))
+        logger.info(f"Genre resolution: '{request.genre}' -> '{resolved_genre}'")
 
         # Process audio with ML mastering
         logger.info(f"Applying ML mastering for genre: {resolved_genre} (requested: {request.genre}), tier: {request.tier}")
-        # Global LUFS policy: force all masters to -8 LUFS
-        # Allow client to request low/medium/high targets for A/B level matching
-        # Fallback to -8 LUFS if not provided
+        # Genre-based LUFS policy: let genre determine optimal loudness
+        # Allow client to request override, but default to genre-based LUFS
         try:
-            client_target = float(getattr(request, 'target_lufs') or -8.0)
+            client_target = float(getattr(request, 'target_lufs') or -14.0)  # -14.0 means use genre default
         except Exception:
-            client_target = -8.0
+            client_target = -14.0  # Use genre default
         effective_target_lufs = client_target
         try:
+            await progress_emit(request.user_id, 'ml_mastering_start', 25, {'genre': resolved_genre})
             mastered_file_path = await ml_engine.process_audio(
                 input_file_path=input_file_path,
                 genre=resolved_genre,
@@ -237,12 +359,14 @@ async def master_audio(request: MasteringRequest, background_tasks: BackgroundTa
                 target_lufs=effective_target_lufs
             )
             logger.info(f"ML mastering completed: {mastered_file_path}")
+            await progress_emit(request.user_id, 'ml_mastering_done', 65, None)
         except Exception as e:
             logger.error(f"ML mastering failed: {e}")
             raise HTTPException(status_code=500, detail=f"ML mastering failed: {str(e)}")
         
         # Convert to target format
         logger.info(f"Converting to format: {request.target_format}, sample rate: {request.target_sample_rate}")
+        await progress_emit(request.user_id, 'conversion_start', 70, {'format': str(request.target_format)})
         # Determine conversion params from request.applied format desires
         raw_format = request.target_format.value if hasattr(request.target_format, 'value') else request.target_format
         # Handle new format options: wav16, wav24
@@ -263,43 +387,10 @@ async def master_audio(request: MasteringRequest, background_tasks: BackgroundTa
             bit_depth=wav_bit_depth,
             bitrate_kbps=mp3_bitrate
         )
+        await progress_emit(request.user_id, 'conversion_done', 85, None)
 
-        # Post-conversion loudness touch-up to maintain -8 LUFS (all tiers)
-        try:
-            meta_conv = await audio_processor.get_audio_metadata(final_file_path)
-            current_lufs = meta_conv.get("lufs", effective_target_lufs)
-            gain_db = (effective_target_lufs - current_lufs)
-            # Only adjust if difference > 0.5 dB
-            if abs(gain_db) > 0.5:
-                adjusted_path = await ffmpeg_converter.apply_gain(
-                    input_path=final_file_path,
-                    output_format=request.target_format.value,
-                    sample_rate=request.target_sample_rate.value,
-                    gain_db=gain_db
-                )
-                final_file_path = adjusted_path
-
-            # Safety: clamp true peak/peak to avoid clipping after loudness adjustment
-            try:
-                import numpy as np
-                import librosa
-                y, sr = librosa.load(final_file_path, sr=None, mono=True)
-                peak = float(np.max(np.abs(y)) + 1e-12)
-                peak_dbfs = 20 * np.log10(peak)
-                ceiling_dbfs = -3.0  # extra headroom to avoid buzz/near-clipping perception
-                if peak_dbfs > ceiling_dbfs:
-                    safety_gain_db = ceiling_dbfs - peak_dbfs
-                    safe_path = await ffmpeg_converter.apply_gain(
-                        input_path=final_file_path,
-                        output_format=request.target_format.value,
-                        sample_rate=request.target_sample_rate.value,
-                        gain_db=safety_gain_db
-                    )
-                    final_file_path = safe_path
-            except Exception as e:
-                logger.warning(f"Peak safety clamp skipped: {e}")
-        except Exception as e:
-            logger.warning(f"Post-conversion LUFS adjustment skipped: {e}")
+        # Note: All post-conversion processing removed to preserve ML mastering parameters
+        # The ML mastering engine already handles all loudness, limiting, and safety checks correctly
         
         # Upload to storage
         logger.info("Uploading mastered file to storage")
@@ -308,6 +399,7 @@ async def master_audio(request: MasteringRequest, background_tasks: BackgroundTa
             user_id=request.user_id,
             format=request.target_format.value  # Convert enum to string
         )
+        await progress_emit(request.user_id, 'upload_done', 95, {'url': file_url})
         
         # Get audio metadata (recompute after any post-conversion gain)
         metadata = await audio_processor.get_audio_metadata(final_file_path)
@@ -346,6 +438,7 @@ async def master_audio(request: MasteringRequest, background_tasks: BackgroundTa
         # Force LUFS report to effective target for Free tier to avoid meter variance
         reported_lufs = effective_target_lufs
 
+        await progress_emit(request.user_id, 'complete', 100, {'url': file_url})
         return MasteringResponse(
             status="done",
             url=file_url,
@@ -365,6 +458,115 @@ async def master_audio(request: MasteringRequest, background_tasks: BackgroundTa
         logger.error(f"Mastering failed: {str(e)}")
         logger.error(f"Full traceback: {error_details}")
         raise HTTPException(status_code=500, detail=f"Mastering failed: {str(e) if str(e) else 'Unknown error - check logs'}")
+
+@app.post("/master-advanced")
+async def master_audio_advanced(
+    file: UploadFile = File(...),
+    genre: str = Form(...),
+    tier: str = Form("advanced"),
+    target_lufs: float = Form(-14.0),
+    compressor_threshold: float = Form(-16.0),
+    compressor_ratio: float = Form(3.0),
+    compressor_attack: float = Form(0.002),
+    compressor_release: float = Form(0.15),
+    compressor_enabled: bool = Form(True),
+    stereo_width: float = Form(1.5),
+    stereo_enabled: bool = Form(True),
+    loudness_gain: float = Form(0.0),
+    loudness_enabled: bool = Form(True),
+    limiter_threshold: float = Form(-3.0),
+    limiter_ceiling: float = Form(-0.1),
+    limiter_enabled: bool = Form(True),
+    user_id: str = Form("anonymous")
+):
+    """
+    Advanced tier mastering with real-time customizable effects
+    
+    Args:
+        file: Audio file to process
+        genre: Selected genre for EQ preset
+        tier: Processing tier (advanced)
+        target_lufs: Target LUFS value
+        compressor_*: Custom compression parameters
+        stereo_*: Custom stereo widening parameters
+        loudness_*: Custom loudness parameters
+        limiter_*: Custom limiting parameters
+        user_id: User identifier
+    """
+    try:
+        logger.info(f"Starting advanced mastering for genre: {genre}, tier: {tier}")
+        
+        # Save uploaded file
+        input_file_path = await audio_processor.save_uploaded_file(file, user_id)
+        logger.info(f"Saved uploaded file: {input_file_path}")
+        
+        # Build custom effects configuration
+        custom_effects = {
+            "compressor": {
+                "threshold": compressor_threshold,
+                "ratio": compressor_ratio,
+                "attack": compressor_attack,
+                "release": compressor_release,
+                "enabled": compressor_enabled
+            },
+            "stereo_widener": {
+                "width": stereo_width,
+                "enabled": stereo_enabled
+            },
+            "loudness": {
+                "gain": loudness_gain,
+                "enabled": loudness_enabled
+            },
+            "limiter": {
+                "threshold": limiter_threshold,
+                "ceiling": limiter_ceiling,
+                "enabled": limiter_enabled
+            }
+        }
+        
+        logger.info(f"Custom effects configuration: {custom_effects}")
+        
+        # Process with advanced customizable pipeline
+        output_path = await ml_engine.process_audio_advanced(
+            input_file_path=input_file_path,
+            genre=genre,
+            tier=tier,
+            target_lufs=target_lufs,
+            custom_effects=custom_effects
+        )
+        
+        # Upload to storage
+        file_url = await audio_processor.upload_to_storage(output_path, user_id)
+        
+        # Get metadata
+        metadata = await audio_processor.get_audio_metadata(output_path)
+        
+        # Cleanup only input upload; keep processed file for /proxy-download
+        await audio_processor.cleanup_temp_files([input_file_path])
+        
+        return MasteringResponse(
+            status="done",
+            url=file_url,
+            lufs=target_lufs,
+            format="WAV",
+            duration=metadata.get("duration", 0),
+            sample_rate=metadata.get("sample_rate", 44100),
+            file_size=metadata.get("file_size", 0),
+            processing_time=metadata.get("processing_time", 0),
+            ml_summary=[
+                {"title": "Engine", "detail": f"Advanced mastering with custom effects for {genre}"},
+                {"title": "Target LUFS", "detail": float(target_lufs)},
+                {"title": "Limiter ceiling", "detail": float(limiter_ceiling)},
+            ],
+            applied_params=custom_effects
+        )
+        
+    except Exception as e:
+        import traceback
+        error_details = traceback.format_exc()
+        logger.error(f"Advanced mastering failed: {str(e)}")
+        logger.error(f"Full traceback: {error_details}")
+        raise HTTPException(status_code=500, detail=f"Advanced mastering failed: {str(e)}")
 
 @app.post("/preview")
 async def preview_genre_effects(request: MasteringRequest):
@@ -557,6 +759,50 @@ async def analyze_file_advanced(audio: UploadFile = File(...), user_id: str = Fo
         logger.error(f"Advanced analyze failed: {e}")
         raise HTTPException(status_code=500, detail=f"Advanced analyze failed: {str(e)}")
 
+
+@app.post("/analyze-upload")
+async def analyze_upload(audio: UploadFile = File(...), user_id: str = Form("upload-user")):
+    """Analyze raw uploaded audio and return LUFS/RMS/Peak/Spectrum/Correlation."""
+    try:
+        import time
+        timestamp = int(time.time() * 1000)
+        temp_path = f"analyze_upload_{user_id}_{timestamp}_{audio.filename}"
+        with open(temp_path, "wb") as buffer:
+            content = await audio.read()
+            buffer.write(content)
+        result = analyze_audio_file(temp_path)
+        try:
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
+        except Exception:
+            pass
+        return result
+    except Exception as e:
+        logger.error(f"/analyze-upload failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/analyze-final")
+async def analyze_final(audio: UploadFile = File(...), user_id: str = Form("final-user")):
+    """Analyze audio after client-side effects were applied; analyzes provided file."""
+    try:
+        import time
+        timestamp = int(time.time() * 1000)
+        temp_path = f"analyze_final_{user_id}_{timestamp}_{audio.filename}"
+        with open(temp_path, "wb") as buffer:
+            content = await audio.read()
+            buffer.write(content)
+        result = analyze_audio_file(temp_path)
+        try:
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
+        except Exception:
+            pass
+        return result
+    except Exception as e:
+        logger.error(f"/analyze-final failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.post("/analyze-ml")
 async def analyze_ml(audio: UploadFile = File(...), user_id: str = Form("anonymous"), genre: str = Form("Auto")):
     """Lightweight ML-style analysis that predicts mastering parameters with confidence.
@@ -631,66 +877,152 @@ async def analyze_ml(audio: UploadFile = File(...), user_id: str = Form("anonymo
         raise HTTPException(status_code=500, detail=f"ML analyze failed: {str(e)}")
 
 @app.get("/proxy-download")
-async def proxy_download(file_url: str):
-    """Server-side proxy to download a remote file and stream it as an attachment to avoid CORS.
-    Uses an async generator and forwards Content-Length/Content-Type when available to prevent
-    incomplete chunked encoding issues on some browsers.
+async def proxy_download(file_url: str, format: str = "WAV", sample_rate: int = 44100):
+    """Server-side proxy to download a remote file and convert it to the requested format/sample rate.
+    Uses FFmpeg to convert the audio to the specified format and sample rate before streaming.
     Files are automatically deleted after 5 minutes of creation.
     """
     try:
         import aiohttp
         import urllib.parse
         import mimetypes
+        import tempfile
+        import subprocess
+        import asyncio
+        from pathlib import Path
+
+        # Validate format and sample rate
+        format = format.upper()
+        if format not in ['WAV', 'MP3', 'FLAC', 'AIFF', 'AAC', 'OGG']:
+            raise HTTPException(status_code=400, detail="Unsupported format. Supported: WAV, MP3, FLAC, AIFF, AAC, OGG")
+
+        if sample_rate not in [44100, 48000, 88200, 96000, 192000]:
+            raise HTTPException(status_code=400, detail="Unsupported sample rate. Supported: 44100, 48000, 88200, 96000, 192000")
 
         parsed = urllib.parse.urlparse(file_url)
-        filename = parsed.path.split('/')[-1] or 'mastered_audio'
+        original_filename = parsed.path.split('/')[-1] or 'mastered_audio'
+        
+        # Create output filename with format and sample rate
+        base_name = Path(original_filename).stem
+        if format == 'MP3':
+            output_filename = f"{base_name}_{sample_rate}Hz.mp3"
+            media_type = "audio/mpeg"
+        elif format == 'FLAC':
+            output_filename = f"{base_name}_{sample_rate}Hz.flac"
+            media_type = "audio/flac"
+        elif format == 'AIFF':
+            output_filename = f"{base_name}_{sample_rate}Hz.aiff"
+            media_type = "audio/aiff"
+        elif format == 'AAC':
+            output_filename = f"{base_name}_{sample_rate}Hz.aac"
+            media_type = "audio/aac"
+        elif format == 'OGG':
+            output_filename = f"{base_name}_{sample_rate}Hz.ogg"
+            media_type = "audio/ogg"
+        else:  # WAV (24-bit)
+            output_filename = f"{base_name}_{sample_rate}Hz.wav"
+            media_type = "audio/wav"
 
-        # Optimization: if the URL points to local Laravel storage, stream directly from disk
+        logger.info(f"Converting {original_filename} to {format} @ {sample_rate}Hz")
+
+        # Prepare input and output temp paths
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.wav') as temp_input:
+            with tempfile.NamedTemporaryFile(delete=False, suffix=f'.{format.lower()}') as temp_output:
+                temp_input_path = temp_input.name
+                temp_output_path = temp_output.name
+
         try:
-            if parsed.hostname in ("localhost", "127.0.0.1") and parsed.port in (8000, None) and parsed.path.startswith("/storage/mastered/"):
-                local_name = filename
-                local_base = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "crysgarage-backend-fresh", "storage", "app", "public", "mastered"))
-                local_path = os.path.normpath(os.path.join(local_base, local_name))
-                if os.path.isfile(local_path):
-                    media_type = mimetypes.guess_type(local_path)[0] or "application/octet-stream"
-                    return FileResponse(
-                        path=local_path,
-                        media_type=media_type,
-                        filename=filename,
-                        headers={'Cache-Control': 'no-cache'}
-                    )
-        except Exception as e:
-            logger.warning(f"Local file optimization skipped: {e}")
+            # If the file_url points to our own /files temp mount, read directly from disk
+            from urllib.parse import urlparse
+            parsed_fu = urlparse(file_url)
+            local_files_path = parsed_fu.path if parsed_fu.path else file_url
+            is_local_files = local_files_path.startswith('/files/')
+            if is_local_files:
+                base_name = local_files_path.rsplit('/', 1)[-1]
+                local_path = os.path.join(tempfile.gettempdir(), base_name)
+                if not os.path.exists(local_path):
+                    raise HTTPException(status_code=404, detail="Source file not found")
+                # Copy to working temp_input_path
+                with open(local_path, 'rb') as src, open(temp_input_path, 'wb') as dst:
+                    dst.write(src.read())
+            else:
+                # Download from external/absolute URL
+                async with aiohttp.ClientSession() as session:
+                    async with session.get(file_url) as resp:
+                        if resp.status != 200:
+                            raise HTTPException(status_code=502, detail=f"Upstream returned {resp.status}")
+                        async for chunk in resp.content.iter_chunked(8192):
+                            with open(temp_input_path, 'ab') as f:
+                                f.write(chunk)
 
-        # Fallback: stream via HTTP proxy
-        async with aiohttp.ClientSession() as session:
-            async with session.get(file_url) as resp:
-                if resp.status != 200:
-                    raise HTTPException(status_code=502, detail=f"Upstream returned {resp.status}")
+            # Convert using FFmpeg (gain staging handled in ML mastering chain)
+            ffmpeg_cmd = [
+                'ffmpeg', '-y',  # -y to overwrite output file
+                '-i', temp_input_path,
+                '-ar', str(sample_rate),  # Set sample rate
+                '-ac', '2',  # Force stereo
+            ]
+            
+            # Add format-specific options
+            if format == 'MP3':
+                ffmpeg_cmd.extend(['-acodec', 'libmp3lame', '-b:a', '320k'])
+            elif format == 'FLAC':
+                ffmpeg_cmd.extend(['-acodec', 'flac'])
+            elif format == 'AIFF':
+                ffmpeg_cmd.extend(['-acodec', 'pcm_s24be'])  # 24-bit big-endian
+            elif format == 'AAC':
+                ffmpeg_cmd.extend(['-acodec', 'aac', '-b:a', '256k', '-profile:a', 'aac_low'])
+            elif format == 'OGG':
+                ffmpeg_cmd.extend(['-acodec', 'libvorbis', '-q:a', '8'])
+            else:  # WAV - force 24-bit
+                ffmpeg_cmd.extend(['-acodec', 'pcm_s24le'])
+            
+            ffmpeg_cmd.append(temp_output_path)
 
-                upstream_ct = resp.headers.get('Content-Type', 'application/octet-stream')
+            # Run FFmpeg conversion
+            result = subprocess.run(ffmpeg_cmd, capture_output=True, text=True)
+            if result.returncode != 0:
+                logger.error(f"FFmpeg conversion failed: {result.stderr}")
+                raise HTTPException(status_code=500, detail="Audio conversion failed")
 
-                async def file_iter():
-                    try:
+            # Read the converted file and stream it
+            def file_iter():
+                try:
+                    with open(temp_output_path, 'rb') as f:
                         while True:
-                            chunk = await resp.content.read(64 * 1024)
+                            chunk = f.read(64 * 1024)
                             if not chunk:
                                 break
                             yield chunk
-                    finally:
-                        await resp.release()
+                finally:
+                    # Clean up temporary files
+                    try:
+                        os.unlink(temp_input_path)
+                        os.unlink(temp_output_path)
+                    except:
+                        pass
 
-                headers = {
-                    'Content-Disposition': f'attachment; filename="{filename}"',
-                    'Cache-Control': 'no-cache'
-                }
+            headers = {
+                'Content-Disposition': f'attachment; filename="{output_filename}"',
+                'Cache-Control': 'no-cache'
+            }
 
-                return StreamingResponse(file_iter(), media_type=upstream_ct, headers=headers)
+            return StreamingResponse(file_iter(), media_type=media_type, headers=headers)
+
+        except Exception as e:
+            # Clean up temporary files on error
+            try:
+                os.unlink(temp_input_path)
+                os.unlink(temp_output_path)
+            except:
+                pass
+            raise e
+
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Proxy download failed: {e}")
-        raise HTTPException(status_code=500, detail="Proxy download failed")
+        logger.error(f"Proxy download with conversion failed: {e}")
+        raise HTTPException(status_code=500, detail="Download and conversion failed")
 
 @app.get("/storage-stats")
 async def get_storage_stats():
@@ -705,60 +1037,15 @@ async def get_storage_stats():
         logger.error(f"Failed to get storage stats: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to get storage stats: {str(e)}")
 
-@app.get("/tiers")
-async def get_tier_info():
-    """Get tier-specific processing capabilities"""
-    return {
-        "Free": {
-            "max_file_size_mb": 50,
-            "formats": ["WAV", "MP3"],
-            "sample_rates": [44100, 48000],
-            "processing_priority": "low"
-        },
-        "Pro": {
-            "max_file_size_mb": 200,
-            "formats": ["WAV", "MP3", "FLAC", "AIFF"],
-            "sample_rates": [44100, 48000, 96000],
-            "processing_priority": "medium"
-        },
-        "Professional": {
-            "max_file_size_mb": 200,
-            "formats": ["WAV", "MP3", "FLAC", "AIFF"],
-            "sample_rates": [44100, 48000, 96000],
-            "processing_priority": "medium"
-        },
-        "Advanced": {
-            "max_file_size_mb": 500,
-            "formats": ["WAV", "MP3", "FLAC", "AIFF", "AAC", "OGG"],
-            "sample_rates": [44100, 48000, 96000, 192000],
-            "processing_priority": "high"
-        }
-    }
+# Removed duplicate /tiers handler; normalized version is defined earlier
 
 @app.get("/genre-presets")
 async def get_industry_presets():
-    """Return simplified industry presets for key genres used by the frontend for real-time preview."""
+    """Return all available genre presets for the frontend real-time preview."""
     try:
         genre_info = ml_engine.get_genre_information()
-        # Normalize and pick two key presets; fall back to defaults if missing
-        def pick(name: str) -> Dict[str, Any]:
-            return genre_info.get(name) or genre_info.get(name.title()) or genre_info.get(name.capitalize()) or {
-                "eq_curve": {
-                    "low_shelf": {"freq": 120, "gain": 0},
-                    "low_mid": {"freq": 250, "gain": 0},
-                    "mid": {"freq": 1000, "gain": 0},
-                    "high_mid": {"freq": 3000, "gain": 0},
-                    "high_shelf": {"freq": 8000, "gain": 0},
-                },
-                "compression": {"ratio": 2, "threshold": -24, "attack": 0.01, "release": 0.25},
-                "stereo_width": 1.0,
-                "target_lufs": -14,
-            }
-        presets = {
-            "Hip-Hop": pick("Hip-Hop"),
-            "Afrobeats": pick("Afrobeats"),
-        }
-        return {"status": "success", "presets": presets, "timestamp": datetime.utcnow().isoformat()}
+        # Return all available genres instead of just 2
+        return {"status": "success", "presets": genre_info, "timestamp": datetime.utcnow().isoformat()}
     except Exception as e:
         logger.error(f"Failed to get industry presets: {e}")
         raise HTTPException(status_code=500, detail="Failed to get industry presets")
@@ -855,8 +1142,9 @@ async def upload_file(
             # Resolve genre to known presets to avoid key errors (handles case/aliases)
             def _resolve_genre_name(g: str) -> str:
                 gl = (g or "").strip().lower()
+                
                 # West African genres
-                if gl in ("afrobeats", "afro beats"):
+                if gl in ("afrobeats", "afro beats", "afro"):
                     return "Afrobeats"
                 if gl in ("alté", "alte", "alternative"):
                     return "Alté"
@@ -888,123 +1176,43 @@ async def upload_file(
                     return "Ndombolo"
                 if gl == "gengetone":
                     return "Gengetone"
-                if gl == "shrap":
-                    return "Shrap"
-                if gl == "singeli":
-                    return "Singeli"
-                if gl in ("urban benga", "urbanbenga"):
-                    return "Urban Benga"
-                if gl in ("new benga", "newbenga"):
-                    return "New Benga"
                 
-                # North African genres
-                if gl in ("raï n'b", "rai n'b", "rai nb", "raï nb"):
-                    return "Raï N'B"
-                if gl in ("raï-hop", "rai-hop", "rai hop", "raï hop"):
-                    return "Raï-hop"
-                if gl in ("gnawa fusion", "gnawafusion"):
-                    return "Gnawa Fusion"
-                
-                # Fusion genres
-                if gl == "afrotrap":
-                    return "Afrotrap"
-                if gl in ("afro-gospel", "afrogospel"):
-                    return "Afro-Gospel"
-                if gl in ("urban gospel", "urbangospel"):
-                    return "Urban Gospel"
-                
-                # Advanced tier genres
-                if gl == "trap":
-                    return "Trap"
-                if gl == "drill":
-                    return "Drill"
-                if gl == "dubstep":
-                    return "Dubstep"
-                if gl in ("r&b", "rnb", "rnb/soul", "r and b", "r n b"):
+                # International genres
+                if gl in ("hip hop", "hip-hop", "hiphop", "hip"):
+                    return "Hip Hop"
+                if gl in ("r&b", "rnb", "r and b", "rhythm and blues"):
                     return "R&B"
-                if gl in ("lofi-hiphop", "lofi hiphop", "lofi", "lo-fi"):
-                    return "Lofi Hip-Hop"
-                if gl in ("hip-hop", "hip hop", "hiphop"):
-                    return "Hip-Hop"
-                if gl == "house":
-                    return "House"
-                if gl == "techno":
-                    return "Techno"
-                if gl == "highlife":
-                    return "Highlife"
-                if gl in ("instrumentals", "instrumental"):
-                    return "Instrumentals"
-                if gl == "beats":
-                    return "Beats"
-                if gl == "trance":
-                    return "Trance"
-                if gl in ("drum-bass", "drum and bass", "drum&bass"):
-                    return "Drum & Bass"
-                if gl == "reggae":
-                    return "Reggae"
-                if gl in ("voice-over", "voiceover", "voice over"):
-                    return "Voice Over"
-                if gl in ("journalist", "journalism"):
-                    return "Journalist"
-                if gl == "soul":
-                    return "Soul"
-                if gl in ("content-creator", "contentcreator", "content creator"):
-                    return "Content Creator"
-                if gl == "pop":
+                if gl in ("pop", "popular"):
                     return "Pop"
-                if gl == "jazz":
-                    return "Jazz"
-                if gl in ("crysgarage", "crys garage"):
-                    return "CrysGarage"
-                
-                # Legacy fallbacks
-                if "hip" in gl:
-                    return "Hip-Hop"
-                if gl in ("r&b", "rnb", "rnb/soul", "r and b", "r n b"):
-                    return "R&B"
-                if "house" in gl:
-                    return "House"
-                if "trap" in gl:
-                    return "Trap"
-                if "gospel" in gl:
-                    return "Gospel"
-                if "rock" in gl:
+                if gl in ("rock", "rock music"):
                     return "Rock"
-                if "electronic" in gl:
+                if gl in ("electronic", "edm", "electronic dance music"):
                     return "Electronic"
-                if "jazz" in gl:
+                if gl in ("jazz", "jazz music"):
                     return "Jazz"
-                if "classical" in gl:
+                if gl in ("classical", "classical music"):
                     return "Classical"
-                if "pop" in gl:
-                    return "Pop"
-                return g.title() if g else "Afrobeats"
+                if gl in ("reggae", "reggae music"):
+                    return "Reggae"
+                if gl in ("country", "country music"):
+                    return "Country"
+                if gl in ("blues", "blues music"):
+                    return "Blues"
+                
+                # Fallback: Title-case or default to Pop
+                return g.title() if g else "Pop"
 
             resolved_genre = _resolve_genre_name(genre)
+            logger.info(f"Genre resolution: '{genre}' -> '{resolved_genre}'")
             # Allow client-provided target LUFS (low/medium/high), default -8 LUFS
             try:
                 effective_target_lufs = float(target_lufs) if target_lufs is not None else -8.0
             except Exception:
                 effective_target_lufs = -8.0
 
-            # Step 1: Mastering
-            try:
-                if _NR_AVAILABLE:
-                    import soundfile as sf
-                    import numpy as np
-                    y, sr = sf.read(temp_file_path, always_2d=False)
-                    if y.ndim > 1:
-                        y_mono = np.mean(y, axis=1)
-                    else:
-                        y_mono = y
-                    y_denoised = nr.reduce_noise(y=y_mono, sr=sr, prop_decrease=0.75)
-                    den_path = temp_file_path.replace("temp_", "den_", 1)
-                    sf.write(den_path, y_denoised, sr)
-                    temp_in_path = den_path
-                else:
-                    temp_in_path = temp_file_path
-            except Exception:
-                temp_in_path = temp_file_path
+            # Step 1: Mastering (noise reduction disabled to preserve original audio characteristics)
+            # Note: Noise reduction removed to ensure ML mastering works with original audio
+            temp_in_path = temp_file_path
 
             mastered_file_path = await ml_engine.process_audio(
                 input_file_path=temp_in_path,
@@ -1036,19 +1244,9 @@ async def upload_file(
                 bitrate_kbps=desired_mp3_bitrate
             )
 
-            # Optional: loudness touch-up and peak safety (reuse logic from /master if needed)
+            # Optional LUFS touch-up disabled (no apply_gain function in converter; preserve stereo/levels)
             try:
-                meta_conv = await audio_processor.get_audio_metadata(final_file_path)
-                current_lufs = meta_conv.get("lufs", effective_target_lufs)
-                gain_db = (effective_target_lufs - current_lufs)
-                if abs(gain_db) > 0.5:
-                    adjusted_path = await ffmpeg_converter.apply_gain(
-                        input_path=final_file_path,
-                        output_format=desired_format,
-                        sample_rate=desired_sr,
-                        gain_db=gain_db
-                    )
-                    final_file_path = adjusted_path
+                pass
             except Exception as e:
                 logger.warning(f"Upload-file LUFS adjustment skipped: {e}")
 
@@ -1091,11 +1289,14 @@ async def upload_file(
             }
             
     except Exception as e:
+        import traceback as _tb
+        err_tb = _tb.format_exc()
         logger.error(f"File upload failed: {str(e)}")
+        logger.error(f"Traceback: {err_tb}")
         # Clean up temp file if it exists
         if 'temp_file_path' in locals() and os.path.exists(temp_file_path):
             os.remove(temp_file_path)
-        raise HTTPException(status_code=500, detail=f"File upload failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"File upload failed: {str(e)} | {err_tb}")
 
 
 # Mirror endpoint with trailing slash to avoid 307 redirects from Starlette's redirect_slashes
@@ -1138,7 +1339,7 @@ if __name__ == "__main__":
     uvicorn.run(
         "main:app",
         host="0.0.0.0",
-        port=8000,
+        port=8002,
         reload=True,
         log_level="info"
     )

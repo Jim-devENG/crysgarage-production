@@ -9,7 +9,7 @@ const Support: React.FC = () => {
     {
       id: 1,
       question: "How do I get started with CrysGarage?",
-      answer: "Getting started is easy! Simply create an account, upload your audio file, select a genre preset, and let our AI-powered mastering engine process your track. You can start with our Free tier for $2.99 per download or choose a credit package for better value."
+      answer: "Getting started is easy! Simply create an account, upload your audio file, select a genre preset, and let the Crysgarage Mastering Engine process your track. You can start with our Free tier for $2.99 per download or choose a credit package for better value."
     },
     {
       id: 2,

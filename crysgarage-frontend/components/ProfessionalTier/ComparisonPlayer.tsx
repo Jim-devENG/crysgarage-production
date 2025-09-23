@@ -181,14 +181,14 @@ const ComparisonPlayer: React.FC<ComparisonPlayerProps> = ({
         <div className="bg-crys-graphite rounded-xl p-6">
           <h3 className="text-xl font-bold mb-4 flex items-center">
             <BarChart3 className="w-5 h-5 mr-2 text-crys-gold" />
-            AI Analysis & Applied Parameters
+            Crysgarage Mastering Engine Analysis & Applied Parameters
           </h3>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* ML Summary */}
             {mlSummary && (
               <div>
-                <h4 className="font-semibold text-crys-gold mb-3">AI Analysis</h4>
+                <h4 className="font-semibold text-crys-gold mb-3">Crysgarage Mastering Engine Analysis</h4>
                 <div className="space-y-2 text-sm">
                   {mlSummary.confidence && (
                     <div className="flex justify-between">

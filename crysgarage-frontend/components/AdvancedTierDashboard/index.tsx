@@ -10,34 +10,31 @@ import {
   Pause,
   Volume2,
   TrendingUp,
-  CheckCircle
+  CheckCircle,
+  Loader2
 } from 'lucide-react';
 import StudioHeader from './StudioHeader';
 import FileUpload from './FileUpload';
 
 import AudioEffects from './AudioEffects';
 import ExportGate from './ExportGate/index';
+import ProcessingOverlay from './ProcessingOverlay';
 
-import RealTimeMasteringPlayer, { RealTimeMasteringPlayerRef } from './RealTimeMasteringPlayer';
+import SimplePreviewPlayer, { SimplePreviewPlayerRef } from './SimplePreviewPlayer';
 import StudioDashboard from './StudioDashboard';
 import GenrePresets from './GenrePresets';
+import BasicEffectsPanel from './BasicEffectsPanel';
+import SpectrumVisualizer from './SpectrumVisualizer';
+import RealTimeAnalysisPanel from './RealTimeAnalysisPanel';
 import { GENRE_PRESETS, multiplierToDb } from './sharedGenrePresets';
+import { advancedAudioService, AdvancedEffects, AdvancedMasteringRequest } from '../../services/advancedAudioService';
 
 interface AdvancedTierDashboardProps {
   onFileUpload?: (file: File) => void;
   credits?: number;
 }
 
-interface MeterData {
-  lufs: number;
-  peak: number;
-  rms: number;
-  correlation: number;
-  leftLevel: number;
-  rightLevel: number;
-  frequencyData: number[];
-  goniometerData: number[];
-}
+// Removed MeterData interface - using Python backend processing
 
 const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({ 
   onFileUpload, 
@@ -49,21 +46,27 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
   const [fileInfo, setFileInfo] = useState<{name: string, size: number, type: string} | null>(null);
   const [processedAudioUrl, setProcessedAudioUrl] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [processingStep, setProcessingStep] = useState(0);
+  const processingSteps = [
+    'Uploading file',
+    'Analyzing audio',
+    'Applying genre EQ',
+    'Compression',
+    'Stereo widening',
+    'Limiting',
+    'Normalization (brick wall)',
+    'Finalizing & saving'
+  ];
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(1);
   const [selectedGenre, setSelectedGenre] = useState<string>('');
-  const [meterData, setMeterData] = useState<MeterData>({
-    lufs: -20,
-    peak: -6,
-    rms: -12,
-    correlation: 0.8,
-    leftLevel: -6,
-    rightLevel: -6,
-    frequencyData: new Array(256).fill(0),
-    goniometerData: new Array(256).fill(0)
-  });
+  // Removed meter data - using Python backend processing
+  // Lightweight analysis state
+  const [analyzing, setAnalyzing] = useState(false);
+  const [analysis, setAnalysis] = useState<{ lufs?: number; peak_db?: number; rms_db?: number; stereo_correlation?: number } | null>(null);
+
 
   // Audio effects state - structured for real-time processing
   const [audioEffects, setAudioEffects] = useState({
@@ -156,7 +159,7 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
 
 
   // Refs for real-time analysis
-  const realTimeMasteringPlayerRef = useRef<RealTimeMasteringPlayerRef>(null);
+  const simplePreviewPlayerRef = useRef<SimplePreviewPlayerRef>(null);
 
   // Cleanup object URLs on unmount
   useEffect(() => {
@@ -183,20 +186,10 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
   }, [genreLocked, selectedGenre, lockedGenrePreset, lockedEffectValues, effectStateBackup]);
 
   // Initialize audio context when reaching step 3 for export
-  useEffect(() => {
-    if (currentStep === 3 && selectedFile && realTimeMasteringPlayerRef.current) {
-      console.log('🎵 Initializing audio context for export processing...');
-      // Small delay to ensure component is mounted
-      setTimeout(() => {
-        realTimeMasteringPlayerRef.current?.manualInitializeAudioContext();
-      }, 100);
-    }
-  }, [currentStep, selectedFile]);
+  // Removed audio context initialization - using Python backend processing
 
   const manualInit = useCallback(() => {
-    try {
-      realTimeMasteringPlayerRef.current?.manualInitializeAudioContext();
-    } catch {}
+    // No-op: Web Audio chain removed; Python backend handles processing
   }, []);
 
   // File upload handler
@@ -210,13 +203,40 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
         type: file.type
       });
       setCurrentStep(2);
+      
+      // If no genre selected, set the original file for playback
+      if (simplePreviewPlayerRef.current) {
+        const originalUrl = URL.createObjectURL(file);
+        console.log('🎵 Setting original file URL for playback:', originalUrl);
+        simplePreviewPlayerRef.current.updatePreviewUrl(originalUrl);
+        
+        // Start playback immediately to initialize audio context
+        setTimeout(() => {
+          try {
+            simplePreviewPlayerRef.current?.play();
+            console.log('🎵 Initial playback started');
+          } catch (e) {
+            console.warn('Initial playback failed:', e);
+          }
+        }, 500);
+      }
+
+      // Kick off analysis after upload
+      setAnalyzing(true);
+      advancedAudioService.analyzeUpload(file).then((data) => {
+        setAnalysis({
+          lufs: data?.metadata?.lufs,
+          peak_db: data?.peak_db,
+          rms_db: data?.rms_db,
+          stereo_correlation: data?.stereo_correlation,
+        });
+      }).catch((e) => {
+        console.warn('analyzeUpload failed:', e);
+      }).finally(() => setAnalyzing(false));
     }
   };
 
-  // Handle meter data updates
-  const handleMeterUpdate = (newMeterData: MeterData) => {
-    setMeterData(newMeterData);
-  };
+  // Removed handleMeterUpdate - using Python backend processing
 
   // Handle feedback timer
 
@@ -294,7 +314,7 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
 
   // Intelligent Optimization Engine
   const getIntelligentOptimizations = () => {
-    if (!selectedGenre || !meterData) return null;
+    if (!selectedGenre) return null;
 
     // Professional Dashboard genre presets (real industry standards)
     const professionalPresets = {
@@ -329,8 +349,9 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
     
     if (!preset) return null;
 
-    const currentLufs = meterData.lufs;
-    const currentPeak = meterData.peak;
+    // Removed meterData references - using Python backend processing
+    const currentLufs = -14; // Default LUFS
+    const currentPeak = -1.5; // Default peak
     const optimizations = [];
 
     // Define acceptable ranges for the genre
@@ -492,7 +513,7 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
     // Show success message
     showToastNotification(`Applied ${optimizations.length} optimizations for ${selectedGenre} genre`, 'success');
 
-    // Track that these are AI optimizations
+    // Track that these are Crysgarage Mastering Engine optimizations
     const newManualAdjustments = new Set(manualAdjustments);
     optimizations.forEach(opt => {
       newManualAdjustments.add(opt.type);
@@ -502,25 +523,149 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
 
 
 
-  // Continue to export
+  // Real-time preview with Python backend
+  const handleRealTimePreview = async () => {
+    if (selectedFile && selectedGenre) {
+      try {
+        console.log('🎵 Starting real-time Python preview...');
+        
+        // Convert audioEffects to AdvancedEffects format
+        const advancedEffects: AdvancedEffects = {
+          compressor: {
+            threshold: audioEffects.compressor.threshold,
+            ratio: audioEffects.compressor.ratio,
+            attack: audioEffects.compressor.attack / 1000, // Convert ms to seconds
+            release: audioEffects.compressor.release / 1000, // Convert ms to seconds
+            enabled: audioEffects.compressor.enabled
+          },
+          stereo_widener: {
+            width: audioEffects.stereoWidener.width / 100, // Convert percentage to multiplier
+            enabled: audioEffects.stereoWidener.enabled
+          },
+          loudness: {
+            gain: audioEffects.loudness.gain,
+            enabled: audioEffects.loudness.enabled
+          },
+          limiter: {
+            threshold: audioEffects.limiter.threshold,
+            ceiling: audioEffects.limiter.ceiling,
+            enabled: audioEffects.limiter.enabled
+          }
+        };
+        
+        // Create preview request
+        const previewRequest: AdvancedMasteringRequest = {
+          file: selectedFile,
+          genre: selectedGenre,
+          tier: 'advanced',
+          target_lufs: -8.0, // Default target LUFS
+          effects: advancedEffects,
+          user_id: 'advanced-preview'
+        };
+        
+        console.log('📤 Sending real-time preview request:', previewRequest);
+        
+        // Process with Python backend for preview
+        const result = await advancedAudioService.masterAudioAdvanced(previewRequest);
+        
+        console.log('✅ Real-time preview completed:', result);
+        
+        // Update the preview audio URL
+        if (simplePreviewPlayerRef.current) {
+          console.log('🎵 Updating player with new URL:', result.url);
+          simplePreviewPlayerRef.current.updatePreviewUrl(result.url);
+        } else {
+          console.warn('⚠️ SimplePreviewPlayer ref is null, cannot update preview URL');
+          // Try to initialize the player first
+          setTimeout(() => {
+            if (simplePreviewPlayerRef.current) {
+              console.log('🎵 Player ref now available, updating URL');
+              simplePreviewPlayerRef.current.updatePreviewUrl(result.url);
+            } else {
+              console.error('❌ Player ref still null after timeout');
+            }
+          }, 1000);
+        }
+        
+      } catch (error) {
+        console.error('❌ Real-time preview failed:', error);
+        showToastNotification('Real-time preview failed. Python backend must succeed.', 'error');
+        // No fallback: enforce Python-only preview
+      }
+    } else {
+      console.warn('⚠️ Cannot start real-time preview: missing file or genre', {
+        hasFile: !!selectedFile,
+        hasGenre: !!selectedGenre
+      });
+    }
+  };
+
+  // Continue to export with Python processing
   const handleContinueToExport = async () => {
     if (selectedFile) {
       setIsProcessing(true);
+      setProcessingStep(0);
       try {
-        // Just set the original file URL for now
-        // Audio processing will happen when user clicks download
-        const fallbackUrl = URL.createObjectURL(selectedFile);
-        setProcessedAudioUrl(fallbackUrl);
+        console.log('🎵 Starting Python-based advanced mastering...');
         
+        // Convert audioEffects to AdvancedEffects format
+        const advancedEffects: AdvancedEffects = {
+          compressor: {
+            threshold: audioEffects.compressor.threshold,
+            ratio: audioEffects.compressor.ratio,
+            attack: audioEffects.compressor.attack / 1000, // Convert ms to seconds
+            release: audioEffects.compressor.release / 1000, // Convert ms to seconds
+            enabled: audioEffects.compressor.enabled
+          },
+          stereo_widener: {
+            width: audioEffects.stereoWidener.width / 100, // Convert percentage to multiplier
+            enabled: audioEffects.stereoWidener.enabled
+          },
+          loudness: {
+            gain: audioEffects.loudness.gain,
+            enabled: audioEffects.loudness.enabled
+          },
+          limiter: {
+            threshold: audioEffects.limiter.threshold,
+            ceiling: audioEffects.limiter.ceiling,
+            enabled: audioEffects.limiter.enabled
+          }
+        };
+        
+        // Create mastering request
+        const masteringRequest: AdvancedMasteringRequest = {
+          file: selectedFile,
+          genre: selectedGenre,
+          tier: 'advanced',
+          target_lufs: -8.0, // Default target LUFS
+          effects: advancedEffects,
+          user_id: 'advanced-user'
+        };
+        
+        console.log('📤 Sending advanced mastering request:', masteringRequest);
+        
+        // Process with Python backend
+        // Simulate step advancement while awaiting backend
+        const stepTimer = setInterval(() => {
+          setProcessingStep(prev => (prev < processingSteps.length - 1 ? prev + 1 : prev));
+        }, 900);
+
+        const result = await advancedAudioService.masterAudioAdvanced(masteringRequest);
+        clearInterval(stepTimer);
+        setProcessingStep(processingSteps.length - 1);
+        
+        console.log('✅ Advanced mastering completed:', result);
+        
+        // Set the processed audio URL
+        setProcessedAudioUrl(result.url);
         setCurrentStep(3);
+        
       } catch (error) {
-        console.error('Error in export transition:', error);
-        // Final fallback
-        const fallbackUrl = URL.createObjectURL(selectedFile);
-        setProcessedAudioUrl(fallbackUrl);
-        setCurrentStep(3);
+        console.error('❌ Advanced mastering failed:', error);
+        showToastNotification('Advanced mastering failed. Python backend must succeed.', 'error');
+        // No fallback: enforce Python-only output
       } finally {
-        setIsProcessing(false);
+        setTimeout(() => setIsProcessing(false), 600);
       }
     }
   };
@@ -554,10 +699,19 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
     
     setAudioEffects(prev => {
       const updatedEffects = {
-        ...prev,
-        [effectType]: { ...prev[effectType as keyof typeof prev], ...settings }
+      ...prev,
+      [effectType]: { ...prev[effectType as keyof typeof prev], ...settings }
       };
       console.log(`🎛️ New audio effects state:`, updatedEffects[effectType]);
+      // Apply instantly in the browser via Web Audio API
+      try {
+        simplePreviewPlayerRef.current?.applyEffects(updatedEffects);
+      } catch (e) {
+        console.warn('applyEffects (on change) failed:', e);
+      }
+      
+        // Remove Python preview; Web Audio API handles instant preview
+      
       return updatedEffects;
     });
   };
@@ -659,67 +813,67 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
   };
 
   // Genre selection - always apply genre preset and allow manual adjustments
-  const handleGenreSelect = (genreId: string) => {
-    setSelectedGenre(genreId);
-    const preset = GENRE_PRESETS[genreId];
-    if (preset) {
-      // Store the preset for genre lock system
-      setLockedGenrePreset(preset);
-      
-      // Store the locked effect values for this genre
-      const lockedValues = {
-        eq: {
-          bands: [
-            { frequency: 60, gain: multiplierToDb(preset.eq.low), q: 1, type: 'lowshelf' as const },
-            { frequency: 150, gain: multiplierToDb(preset.eq.mid), q: 1, type: 'peaking' as const },
-            { frequency: 400, gain: multiplierToDb(preset.eq.mid), q: 1, type: 'peaking' as const },
-            { frequency: 1000, gain: multiplierToDb(preset.eq.mid), q: 1, type: 'peaking' as const },
-            { frequency: 2500, gain: multiplierToDb(preset.eq.mid), q: 1, type: 'peaking' as const },
-            { frequency: 6000, gain: multiplierToDb(preset.eq.mid), q: 1, type: 'peaking' as const },
-            { frequency: 10000, gain: multiplierToDb(preset.eq.high), q: 1, type: 'peaking' as const },
-            { frequency: 16000, gain: multiplierToDb(preset.eq.high), q: 1, type: 'highshelf' as const }
-          ]
-        },
-        compressor: {
-          threshold: preset.compression.threshold,
-          ratio: preset.compression.ratio,
-          attack: Math.round(preset.compression.attack * 1000),
-          release: Math.round(preset.compression.release * 1000)
-        },
-        loudness: {
-          gain: multiplierToDb(preset.gain)
-        },
-                  limiter: {
-            threshold: -1,
-            ceiling: preset.truePeak
+  const handleGenreSelect = async (genreId: string) => {
+    // Normalize to canonical genre id used by presets
+    const resolveGenreId = (g: string): string => {
+      const gl = (g || '').trim().toLowerCase();
+      if (gl === 'afrobeats' || gl === 'afro beats' || gl === 'afro') return 'Afrobeats';
+      if (gl === 'naija pop' || gl === 'naijapop' || gl === 'naija') return 'Naija Pop';
+      if (gl === 'bongo flava' || gl === 'bongoflava' || gl === 'bongo') return 'Bongo Flava';
+      if (gl === 'hip-life' || gl === 'hiplife' || gl === 'hip life') return 'Hip-life';
+      if (gl === 'r-b' || gl === 'r&b' || gl === 'rnb' || gl === 'r and b') return 'R&B';
+      if (gl === 'hip-hop' || gl === 'hiphop' || gl === 'hip hop') return 'Hip Hop';
+      if (gl === 'drum-bass' || gl === 'drum & bass' || gl === 'dnb') return 'Drum & Bass';
+      if (gl === 'voice-over' || gl === 'voice over') return 'Voice Over';
+      if (gl === 'content-creator' || gl === 'content creator') return 'Content Creator';
+      if (gl === 'crys-garage' || gl === 'crysgarage') return 'CrysGarage';
+      return g;
+    };
+    const canonicalId = resolveGenreId(genreId);
+    setSelectedGenre(canonicalId);
+    
+    try {
+      const fallbackPreset = GENRE_PRESETS[canonicalId];
+      if (fallbackPreset) {
+        console.log(`🎵 Applying ${genreId} preset (TSX local):`, fallbackPreset);
+        setLockedGenrePreset(fallbackPreset);
+        const lockedValues = {
+          eq: {
+            bands: [
+              { frequency: 60, gain: multiplierToDb(fallbackPreset.eq.low), q: 1, type: 'lowshelf' as const },
+              { frequency: 150, gain: multiplierToDb(fallbackPreset.eq.mid), q: 1, type: 'peaking' as const },
+              { frequency: 400, gain: multiplierToDb(fallbackPreset.eq.mid), q: 1, type: 'peaking' as const },
+              { frequency: 1000, gain: multiplierToDb(fallbackPreset.eq.mid), q: 1, type: 'peaking' as const },
+              { frequency: 2500, gain: multiplierToDb(fallbackPreset.eq.mid), q: 1, type: 'peaking' as const },
+              { frequency: 6000, gain: multiplierToDb(fallbackPreset.eq.mid), q: 1, type: 'peaking' as const },
+              { frequency: 10000, gain: multiplierToDb(fallbackPreset.eq.high), q: 1, type: 'peaking' as const },
+              { frequency: 16000, gain: multiplierToDb(fallbackPreset.eq.high), q: 1, type: 'highshelf' as const }
+            ]
           },
-          gDigitalTape: {
-            saturation: preset.gDigitalTape?.saturation || 0
+          compressor: {
+            threshold: fallbackPreset.compression.threshold,
+            ratio: fallbackPreset.compression.ratio,
+            attack: fallbackPreset.compression.attack,
+            release: fallbackPreset.compression.release
           },
-          gMultiBand: {
-            low: { 
-              threshold: preset.gMultiBand?.thresholds?.[0] || -20, 
-              ratio: preset.gMultiBand?.ratios?.[0] || 3 
-            },
-            mid: { 
-              threshold: preset.gMultiBand?.thresholds?.[1] || -18, 
-              ratio: preset.gMultiBand?.ratios?.[1] || 4 
-            },
-            high: { 
-              threshold: preset.gMultiBand?.thresholds?.[2] || -16, 
-              ratio: preset.gMultiBand?.ratios?.[2] || 5 
-            }
+          loudness: {
+            gain: multiplierToDb(fallbackPreset.gain)
+          },
+          limiter: {
+            threshold: -3.0,
+            ceiling: fallbackPreset.truePeak
           }
         };
-      setLockedEffectValues(lockedValues);
-      
-      console.log(`Genre selected: ${genreId}`, {
-        preset,
-        lockedValues,
+        setLockedEffectValues(lockedValues);
+      } else {
+        console.warn(`⚠️ No preset found for genre: ${genreId}`);
+      }
+
+      console.log(`Genre selected: ${canonicalId}`, {
+        preset: GENRE_PRESETS[canonicalId],
         genreLocked
       });
-      
-      // Store current effect states before applying presets
+
       setAudioEffects(prev => {
         const backup = {
           eq: { ...prev.eq },
@@ -728,72 +882,96 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
           limiter: { ...prev.limiter }
         };
         setEffectStateBackup(backup);
-        
-        // Always apply genre preset when a genre is selected
-        return {
-          ...prev,
-          eq: { 
-            ...prev.eq, 
-            bands: [
-              { frequency: 60, gain: multiplierToDb(preset.eq.low), q: 1, type: 'lowshelf' as const },
-              { frequency: 150, gain: multiplierToDb(preset.eq.mid), q: 1, type: 'peaking' as const },
-              { frequency: 400, gain: multiplierToDb(preset.eq.mid), q: 1, type: 'peaking' as const },
-              { frequency: 1000, gain: multiplierToDb(preset.eq.mid), q: 1, type: 'peaking' as const },
-              { frequency: 2500, gain: multiplierToDb(preset.eq.mid), q: 1, type: 'peaking' as const },
-              { frequency: 6000, gain: multiplierToDb(preset.eq.mid), q: 1, type: 'peaking' as const },
-              { frequency: 10000, gain: multiplierToDb(preset.eq.high), q: 1, type: 'peaking' as const },
-              { frequency: 16000, gain: multiplierToDb(preset.eq.high), q: 1, type: 'highshelf' as const }
-            ],
-            enabled: true 
-          },
-          compressor: { 
-            ...prev.compressor, 
-            threshold: preset.compression.threshold, 
-            ratio: preset.compression.ratio, 
-            attack: Math.round(preset.compression.attack * 1000), 
-            release: Math.round(preset.compression.release * 1000), 
-            enabled: true 
-          },
-                  loudness: {
-          ...prev.loudness,
-          gain: multiplierToDb(preset.gain),
-          enabled: true
-        },
-          limiter: { 
-            ...prev.limiter, 
-            threshold: -1, 
-            ceiling: preset.truePeak, 
-            enabled: true 
-          },
-          gDigitalTape: {
-            ...prev.gDigitalTape,
-            saturation: preset.gDigitalTape?.saturation || 0,
-            enabled: preset.gDigitalTape?.enabled || false
-          },
-          gMultiBand: {
-            ...prev.gMultiBand,
-            low: { 
-              threshold: preset.gMultiBand?.thresholds?.[0] || -20, 
-              ratio: preset.gMultiBand?.ratios?.[0] || 3 
+        const currentPreset = GENRE_PRESETS[canonicalId];
+        if (currentPreset) {
+          const previewGainDb2 = multiplierToDb(currentPreset.gain || 1);
+          return {
+            ...prev,
+            eq: {
+              ...prev.eq,
+              bands: [
+                { frequency: 60, gain: multiplierToDb(currentPreset.eq?.low || 1), q: 1, type: 'lowshelf' as const },
+                { frequency: 150, gain: multiplierToDb(currentPreset.eq?.mid || 1), q: 1, type: 'peaking' as const },
+                { frequency: 400, gain: multiplierToDb(currentPreset.eq?.mid || 1), q: 1, type: 'peaking' as const },
+                { frequency: 1000, gain: multiplierToDb(currentPreset.eq?.mid || 1), q: 1, type: 'peaking' as const },
+                { frequency: 2500, gain: multiplierToDb(currentPreset.eq?.mid || 1), q: 1, type: 'peaking' as const },
+                { frequency: 6000, gain: multiplierToDb(currentPreset.eq?.mid || 1), q: 1, type: 'peaking' as const },
+                { frequency: 10000, gain: multiplierToDb(currentPreset.eq?.high || 1), q: 1, type: 'peaking' as const },
+                { frequency: 16000, gain: multiplierToDb(currentPreset.eq?.high || 1), q: 1, type: 'highshelf' as const }
+              ],
+              enabled: true
             },
-            mid: { 
-              threshold: preset.gMultiBand?.thresholds?.[1] || -18, 
-              ratio: preset.gMultiBand?.ratios?.[1] || 4 
+            compressor: {
+              ...prev.compressor,
+              threshold: currentPreset.compression?.threshold || -16.0,
+              ratio: currentPreset.compression?.ratio || 3.0,
+              attack: currentPreset.compression?.attack ?? 2,
+              release: currentPreset.compression?.release ?? 150,
+              enabled: true
             },
-            high: { 
-              threshold: preset.gMultiBand?.thresholds?.[2] || -16, 
-              ratio: preset.gMultiBand?.ratios?.[2] || 5 
+            loudness: {
+              ...prev.loudness,
+              gain: previewGainDb2,
+              enabled: true
             },
-            enabled: preset.gMultiBand?.enabled || false
-          }
-        };
+            limiter: {
+              ...prev.limiter,
+              threshold: -3.0,
+              ceiling: currentPreset.truePeak || -0.1,
+              enabled: true
+            }
+          };
+        }
+        return prev;
       });
-      
-      // Clear manual adjustments tracking since we're applying a new genre preset
+
+      try {
+        const presetToUse: any = GENRE_PRESETS[canonicalId];
+        if (presetToUse) {
+          const effectsForApply = {
+            eq: {
+              bands: [
+                { frequency: 60, gain: multiplierToDb(presetToUse.eq?.low || 1), q: 1, type: 'lowshelf' as const },
+                { frequency: 150, gain: multiplierToDb(presetToUse.eq?.mid || 1), q: 1, type: 'peaking' as const },
+                { frequency: 400, gain: multiplierToDb(presetToUse.eq?.mid || 1), q: 1, type: 'peaking' as const },
+                { frequency: 1000, gain: multiplierToDb(presetToUse.eq?.mid || 1), q: 1, type: 'peaking' as const },
+                { frequency: 2500, gain: multiplierToDb(presetToUse.eq?.mid || 1), q: 1, type: 'peaking' as const },
+                { frequency: 6000, gain: multiplierToDb(presetToUse.eq?.mid || 1), q: 1, type: 'peaking' as const },
+                { frequency: 10000, gain: multiplierToDb(presetToUse.eq?.high || 1), q: 1, type: 'peaking' as const },
+                { frequency: 16000, gain: multiplierToDb(presetToUse.eq?.high || 1), q: 1, type: 'highshelf' as const }
+              ]
+            },
+            compressor: {
+              threshold: presetToUse.compression?.threshold || -16.0,
+              ratio: presetToUse.compression?.ratio || 3.0,
+              attack: presetToUse.compression?.attack ?? 2,
+              release: presetToUse.compression?.release ?? 150,
+              enabled: true
+            },
+            loudness: { gain: multiplierToDb(presetToUse.gain || 1), enabled: true },
+            limiter: { threshold: -3.0, ceiling: presetToUse.truePeak ?? -0.1, enabled: true }
+          };
+          console.log('🎵 Applying genre effects:', effectsForApply);
+          simplePreviewPlayerRef.current?.applyEffects(effectsForApply as any);
+          
+          // Force playback to ensure genre changes are heard immediately
+          setTimeout(() => {
+            try {
+              simplePreviewPlayerRef.current?.play();
+              console.log('🎵 Genre effects applied and playback started');
+            } catch (e) {
+              console.warn('Genre auto-play failed:', e);
+            }
+          }, 100);
+        }
+      } catch (e) {
+        console.warn('applyEffects (on genre select) failed:', e);
+      }
+
       setManualAdjustments(new Set());
-      
-      // Ensure audio is initialized for immediate preview
-      setTimeout(() => manualInit(), 0);
+
+    } catch (error) {
+      console.error('Failed to apply local preset:', error);
     }
   };
 
@@ -836,16 +1014,7 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
     setDuration(0);
     setVolume(1);
     setSelectedGenre('');
-    setMeterData({
-      lufs: -20,
-      peak: -6,
-      rms: -12,
-      correlation: 0.8,
-      leftLevel: -6,
-      rightLevel: -6,
-      frequencyData: new Array(256).fill(0),
-      goniometerData: new Array(256).fill(0)
-    });
+    // Removed setMeterData - using Python backend processing
 
     setAudioEffects({
       eq: { 
@@ -928,7 +1097,7 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
       
       case 2:
         return (
-          <div className="space-y-4">
+          <div className="space-y-4 max-w-6xl mx-auto px-4">
             {/* Back Button */}
             <div className="mb-6">
               <button
@@ -943,20 +1112,27 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
             </div>
             
             {/* Main Layout - Player and Genre */}
-            <div className="grid grid-cols-1 gap-3">
+            <div className="grid grid-cols-1 gap-3 max-w-6xl mx-auto">
               {/* Player and Genre */}
               <div className="space-y-3">
-                {/* Real-time Mastering Player */}
-                <RealTimeMasteringPlayer
-                  ref={realTimeMasteringPlayerRef}
+                {/* Simple Preview Player */}
+                <SimplePreviewPlayer
+                  ref={simplePreviewPlayerRef}
                   audioFile={selectedFile}
-                  audioEffects={audioEffects}
-                  meterData={meterData}
-                  onMeterUpdate={handleMeterUpdate}
-                  onEffectChange={handleEffectChange}
-                  isProcessing={isProcessing}
                   selectedGenre={selectedGenre}
+                  isProcessing={isProcessing}
                 />
+                {selectedFile && (
+                  <div className="space-y-3">
+                    <div className="bg-audio-panel-bg border border-audio-panel-border rounded-lg p-3">
+                      <SpectrumVisualizer analyser={simplePreviewPlayerRef.current?.getAnalyserNode() || null} />
+                    </div>
+                    <RealTimeAnalysisPanel 
+                      analyser={simplePreviewPlayerRef.current?.getAnalyserNode() || null}
+                      isPlaying={simplePreviewPlayerRef.current?.isPlaying || false}
+                    />
+                  </div>
+                )}
                 
                 {/* Genre Presets - Directly under player */}
                 <GenrePresets
@@ -965,135 +1141,77 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
                   genreLocked={genreLocked}
                   onToggleGenreLock={handleToggleGenreLock}
                 />
-
-              </div>
+                
+               </div>
             </div>
 
-            {/* Studio Dashboard - Full width below */}
-            <div className="grid grid-cols-1 gap-3">
-              <StudioDashboard
-                audioEffects={audioEffects}
-                onUpdateEffectSettings={handleUpdateEffectSettings}
-                onTogglePremiumEffect={handleTogglePremiumEffect}
-                onToggleEffect={handleToggleEffect}
-                selectedGenre={selectedGenre}
-                onGenreSelect={handleGenreSelect}
-                meterData={meterData}
-                onManualInit={manualInit}
-                manualAdjustments={manualAdjustments}
-                lockedEffectValues={lockedEffectValues}
+            {/* Effects only, centered within genre width */}
+            <div className="max-w-6xl mx-auto flex justify-center items-start">
+              <div className="w-full">
+                <BasicEffectsPanel
+                effects={{
+                  eq: audioEffects.eq,
+                  compressor: audioEffects.compressor,
+                  stereoWidener: audioEffects.stereoWidener,
+                  loudness: audioEffects.loudness,
+                  limiter: audioEffects.limiter,
+                }}
+                onChange={(next) => {
+                  setAudioEffects(prev => ({ ...prev, ...next } as any));
+                }}
+                onApply={(next) => {
+                  try {
+                    const merged: any = { ...audioEffects, ...next };
+                    console.log('🎛️ Applying effects to player:', merged);
+                    
+                    // Apply effects to the Web Audio API player
+                    simplePreviewPlayerRef.current?.applyEffects({
+                      eq: merged.eq,
+                      compressor: {
+                        threshold: merged.compressor.threshold,
+                        ratio: merged.compressor.ratio,
+                        attack: merged.compressor.attack,
+                        release: merged.compressor.release,
+                        enabled: true,
+                      },
+                      loudness: { gain: merged.loudness.gain, enabled: true },
+                      limiter: { threshold: merged.limiter.threshold, ceiling: merged.limiter.ceiling, enabled: true },
+                    });
+                    
+                    // Force playback to ensure effects are heard
+                    setTimeout(() => {
+                      try {
+                        simplePreviewPlayerRef.current?.play();
+                      } catch (e) {
+                        console.warn('Auto-play failed:', e);
+                      }
+                    }, 100);
+                    
+                  } catch (e) {
+                    console.error('Failed to apply effects:', e);
+                  }
+                  
+                  if (selectedFile) {
+                    setAnalyzing(true);
+                    advancedAudioService
+                      .analyzeFinal(selectedFile, 'advanced-final')
+                      .then((data) => {
+                        setAnalysis({
+                          lufs: data?.metadata?.lufs,
+                          peak_db: data?.peak_db,
+                          rms_db: data?.rms_db,
+                          stereo_correlation: data?.stereo_correlation,
+                        });
+                      })
+                      .catch(() => {})
+                      .finally(() => setAnalyzing(false));
+                  }
+                }}
               />
+              </div>
             </div>
 
-            {/* Genre Mastering Reference Guide */}
-            {selectedGenre && (
-              <div className="bg-gradient-to-br from-blue-900 to-indigo-800 rounded-lg p-6 border border-blue-500 border-opacity-50">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-8 h-8 bg-gradient-to-r from-green-400 to-blue-400 rounded-full flex items-center justify-center">
-                      <CheckCircle className="w-4 h-4 text-white" />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-semibold text-white">Processing Summary</h3>
-                      <p className="text-sm text-green-200">Mastered audio analysis and applied changes</p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-xs text-gray-300">Advanced</div>
-                    <div className="text-xs text-green-400 font-medium">Mastering</div>
-                  </div>
-                </div>
-
-                {(() => {
-                  // Get genre-specific preset values
-                  const genreKey = selectedGenre.toLowerCase().replace(/\s+/g, '-');
-                  const professionalPresets = {
-                    trap: { targetLufs: -7.2, truePeak: -0.1, gain: 1.9, compression: { ratio: 3 } },
-                    'hip-hop': { targetLufs: -8.0, truePeak: -0.2, gain: 1.8, compression: { ratio: 3 } },
-                    afrobeats: { targetLufs: -7.0, truePeak: -0.1, gain: 2.0, compression: { ratio: 3 } },
-                    drill: { targetLufs: -7.5, truePeak: -0.15, gain: 1.85, compression: { ratio: 3 } },
-                    dubstep: { targetLufs: -7.0, truePeak: -0.1, gain: 2.0, compression: { ratio: 3 } },
-                    gospel: { targetLufs: -8.5, truePeak: -0.3, gain: 1.65, compression: { ratio: 2.5 } },
-                    'r-b': { targetLufs: -8.8, truePeak: -0.35, gain: 1.6, compression: { ratio: 2.5 } },
-                    'lofi-hiphop': { targetLufs: -9.0, truePeak: -0.4, gain: 1.5, compression: { ratio: 2 } },
-                    'crysgarage': { targetLufs: -7.8, truePeak: -0.15, gain: 1.8, compression: { ratio: 3 } },
-                    house: { targetLufs: -8.0, truePeak: -0.2, gain: 1.8, compression: { ratio: 3 } },
-                    techno: { targetLufs: -7.5, truePeak: -0.15, gain: 1.85, compression: { ratio: 3 } },
-                    highlife: { targetLufs: -8.2, truePeak: -0.25, gain: 1.7, compression: { ratio: 2.5 } },
-                    instrumentals: { targetLufs: -8.5, truePeak: -0.3, gain: 1.65, compression: { ratio: 2.5 } },
-                    beats: { targetLufs: -8.0, truePeak: -0.2, gain: 1.8, compression: { ratio: 3 } },
-                    amapiano: { targetLufs: -8.0, truePeak: -0.2, gain: 1.8, compression: { ratio: 3 } },
-                    trance: { targetLufs: -7.8, truePeak: -0.15, gain: 1.8, compression: { ratio: 3 } },
-                    'drum-bass': { targetLufs: -7.0, truePeak: -0.1, gain: 2.0, compression: { ratio: 3 } },
-                    reggae: { targetLufs: -8.2, truePeak: -0.25, gain: 1.7, compression: { ratio: 2.5 } },
-                    'voice-over': { targetLufs: -9.2, truePeak: -0.4, gain: 1.4, compression: { ratio: 2 } },
-                    journalist: { targetLufs: -9.5, truePeak: -0.45, gain: 1.35, compression: { ratio: 2 } },
-                    soul: { targetLufs: -8.8, truePeak: -0.35, gain: 1.6, compression: { ratio: 2.5 } },
-                    'content-creator': { targetLufs: -8.5, truePeak: -0.3, gain: 1.65, compression: { ratio: 2.5 } },
-                    pop: { targetLufs: -8.0, truePeak: -0.25, gain: 1.8, compression: { ratio: 3 } },
-                    jazz: { targetLufs: -9.0, truePeak: -0.4, gain: 1.5, compression: { ratio: 2 } }
-                  };
-                  
-                  const preset = professionalPresets[genreKey] || { targetLufs: -8.0, truePeak: -0.2, gain: 1.8, compression: { ratio: 3 } };
-                  
-                  // Calculate applied changes based on current effect settings
-                  const gainApplied = Math.round((audioEffects.loudness.gain + 12) * 10) / 10; // Convert from -12 to +12 range
-                  const compressionApplied = `${audioEffects.compressor.ratio}:1`;
-                  
-                  return (
-                    <div className="space-y-4">
-                      {/* File Information */}
-                      <div className="grid md:grid-cols-2 gap-4">
-                        <div className="bg-gray-700 rounded-lg p-4">
-                          <h4 className="font-medium mb-2">Original File</h4>
-                          <p className="text-sm text-gray-400">{fileInfo?.name || 'Audio File'}</p>
-                          <p className="text-xs text-gray-500">{fileInfo ? (fileInfo.size / 1024 / 1024).toFixed(2) : '0'} MB</p>
-                        </div>
-                        <div className="bg-gray-700 rounded-lg p-4">
-                          <h4 className="font-medium mb-2">Applied Genre</h4>
-                          <p className="text-sm text-crys-gold">{selectedGenre}</p>
-                          <p className="text-xs text-gray-500">Professional mastering preset</p>
-                        </div>
-                      </div>
-                      
-                      {/* Applied Changes */}
-                      <div className="bg-gray-700 rounded-lg p-4">
-                        <h4 className="font-medium mb-3 text-crys-gold">Applied Changes</h4>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                          <div className="text-center">
-                            <div className="text-lg font-semibold text-crys-gold">+{gainApplied}dB</div>
-                            <div className="text-xs text-gray-400">Gain Boost</div>
-                          </div>
-                          <div className="text-center">
-                            <div className="text-lg font-semibold text-crys-gold">{compressionApplied}</div>
-                            <div className="text-xs text-gray-400">Compression</div>
-                          </div>
-                          <div className="text-center">
-                            <div className="text-lg font-semibold text-crys-gold">{preset.targetLufs} LUFS</div>
-                            <div className="text-xs text-gray-400">Target Loudness</div>
-                          </div>
-                          <div className="text-center">
-                            <div className="text-lg font-semibold text-crys-gold">{preset.truePeak} dB</div>
-                            <div className="text-xs text-gray-400">True Peak</div>
-                          </div>
-                        </div>
-                      </div>
-
-
-
-                      {/* Processing Status */}
-                      <div className="bg-gray-800 bg-opacity-30 rounded-lg p-3">
-                        <div className="text-xs text-gray-400 mb-2">Processing Status</div>
-                        <div className="text-xs text-gray-300">
-                          Audio is being processed in real-time with {selectedGenre} mastering effects. 
-                          Adjust the effects above to fine-tune your sound.
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })()}
-              </div>
-            )}
+            {/* Processing summary removed as requested */}
 
             {/* Continue to Export Button */}
              <div className="text-center">
@@ -1119,7 +1237,7 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
           </div>
         );
       
-       case 3:
+             case 3:
          return (
            <ExportGate
              originalFile={selectedFile}
@@ -1127,26 +1245,8 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
              audioEffects={audioEffects}
              onBack={() => setCurrentStep(2)}
              onUpdateEffectSettings={handleUpdateEffectSettings}
-             meterData={meterData}
+             // Removed meterData prop - using Python backend processing
              selectedGenre={selectedGenre}
-             getProcessedAudioUrl={async (onProgress?: (progress: number, stage: string) => void) => {
-               console.log('🔍 getProcessedAudioUrl called from ExportGate');
-               console.log('realTimeMasteringPlayerRef.current:', realTimeMasteringPlayerRef.current);
-               if (realTimeMasteringPlayerRef.current?.getProcessedAudioUrl) {
-                 console.log('✅ getProcessedAudioUrl function exists, calling it...');
-                 try {
-                   const result = await realTimeMasteringPlayerRef.current.getProcessedAudioUrl(onProgress);
-                   console.log('✅ getProcessedAudioUrl result:', result);
-                   return result;
-                 } catch (error) {
-                   console.error('❌ Error calling getProcessedAudioUrl:', error);
-                   return null;
-                 }
-               } else {
-                 console.log('❌ getProcessedAudioUrl function not found');
-                 return null;
-               }
-             }}
            />
          );
       
@@ -1179,18 +1279,14 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
         {renderCurrentStep()}
       </div>
 
-      {/* Hidden RealTimeMasteringPlayer for export processing */}
+      {/* Hidden SimplePreviewPlayer for export processing */}
       {currentStep === 3 && (
         <div style={{ display: 'none' }}>
-          <RealTimeMasteringPlayer
-            ref={realTimeMasteringPlayerRef}
+          <SimplePreviewPlayer
+            ref={simplePreviewPlayerRef}
             audioFile={selectedFile}
-            audioEffects={audioEffects}
-            meterData={meterData}
-            onMeterUpdate={handleMeterUpdate}
-            onEffectChange={handleEffectChange}
-            isProcessing={isProcessing}
             selectedGenre={selectedGenre}
+            isProcessing={isProcessing}
           />
         </div>
       )}
@@ -1203,6 +1299,14 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
           {toastMessage}
         </div>
       )}
+
+      {/* Processing Overlay */}
+      <ProcessingOverlay
+        visible={isProcessing}
+        currentStepIndex={processingStep}
+        steps={processingSteps}
+        subtitle={selectedGenre ? `Genre: ${selectedGenre}` : undefined}
+      />
     </div>
   );
 };
