@@ -57,7 +57,7 @@ export function PaymentModal({
       description: '$15 for 5 credits ($3 per credit)',
       features: [
         '5 mastering credits',
-        'AI-powered mastering',
+        'Crysgarage Mastering Engine',
         'Genre-specific presets',
         'High-quality exports',
         'WAV, MP3, FLAC formats',

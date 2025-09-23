@@ -50,7 +50,7 @@ const FREE_GENRE_PRESETS: Record<string, GenrePreset> = {
     truePeak: -0.2,
     targetLufs: -8.0
   },
-  'afrobeats': {
+  'amapiano': {
     gain: 2.2,
     compression: { threshold: -18, ratio: 4, attack: 0.002, release: 0.2 },
     eq: { low: 0.9, mid: 1.0, high: 1.6 },
@@ -63,13 +63,13 @@ const FREE_GENRE_PRESETS: Record<string, GenrePreset> = {
 const availableGenres: Genre[] = [
   {
     id: 'hip-hop',
-    name: 'Hip-Hop',
+    name: 'Chill Vibes',
     color: 'bg-orange-500',
     description: 'Bass-Driven & Punchy'
   },
   {
-    id: 'afrobeats',
-    name: 'Afrobeats',
+    id: 'amapiano',
+    name: 'Party Bounce',
     color: 'bg-red-500',
     description: 'Rhythmic & Energetic'
   }

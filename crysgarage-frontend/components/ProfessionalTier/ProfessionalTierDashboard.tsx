@@ -1,7 +1,8 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Upload, Play, Pause, Download, Activity, Music, ArrowLeft, CreditCard, DollarSign, Loader2, Settings, Zap, Volume2, VolumeX } from 'lucide-react';
 import DownloadStep from './DownloadStep';
 import FreeComparisonPlayer from '../FreeTier/ComparisonPlayer';
+import RealTimeAnalysisPanel from '../AdvancedTierDashboard/RealTimeAnalysisPanel';
 import { creditsAPI } from '../../services/api';
 import { pythonAudioService, TierInfo, GenreInfo } from '../../services/pythonAudioService';
 import { useAuth } from '../../contexts/AuthenticationContext';
@@ -74,16 +75,43 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
   const [isLoadingGenres, setIsLoadingGenres] = useState(false);
   const [downloadFormat, setDownloadFormat] = useState<'mp3' | 'wav16' | 'wav24'>('wav24');
   const [isApplyingEffects, setIsApplyingEffects] = useState(false);
-  // Volume control: enable/disable and discrete LUFS selection for preview/mastering
+  
+  // LUFS and volume control states
   const [volumeEnabled, setVolumeEnabled] = useState<boolean>(true);
   const [selectedLufs, setSelectedLufs] = useState<-14 | -12 | -10 | -9 | -8>(-8);
+  
+  const processingSteps = useMemo(
+    () => [
+      'EQ Processing',
+      'Compression',
+      'Multiband Compression (Pro+)',
+      'Stereo Widening (Pro+)',
+      'Harmonic Exciter (Advanced+)',
+      'Limiting',
+      'Comprehensive Normalization ← ENHANCED',
+      'LUFS Normalization',
+      'Peak Normalization',
+      'Soft Limiting'
+    ],
+    []
+  );
+  const [processingStepIndex, setProcessingStepIndex] = useState<number>(0);
+  const progressIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  useEffect(() => {
+    if (!isProcessing) return;
+    setProcessingStepIndex(0);
+    const interval = setInterval(() => {
+      setProcessingStepIndex((idx) => (idx + 1) % processingSteps.length);
+    }, 1500);
+    return () => clearInterval(interval);
+  }, [isProcessing, processingSteps]);
   // Cached genre info to avoid network wait on every switch
   const [genreInfoMap, setGenreInfoMap] = useState<Record<string, any> | null>(null);
 
   // Audio refs
   const originalAudioRef = useRef<HTMLAudioElement | null>(null);
   const masteredAudioRef = useRef<HTMLAudioElement | null>(null);
-
+  
   // WebAudio preview chain
   const audioContextRef = useRef<AudioContext | null>(null);
   const originalChainRef = useRef<{
@@ -94,7 +122,8 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
     highShelf: BiquadFilterNode | null;
     compressor: DynamicsCompressorNode | null;
     limiter: DynamicsCompressorNode | null;
-  }>({ source: null, outputGain: null, lowShelf: null, midPeaking: null, highShelf: null, compressor: null, limiter: null });
+    analyser: AnalyserNode | null;
+  }>({ source: null, outputGain: null, lowShelf: null, midPeaking: null, highShelf: null, compressor: null, limiter: null, analyser: null });
   // Tracks the base preview gain computed from preset/level before applying the level multiplier
   const basePreviewGainRef = useRef<number>(1.0);
 
@@ -108,6 +137,10 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
     'bg-indigo-600',   // Royal Indigo (Kuduro, Ndombolo)
     'bg-purple-600'    // Rich Purple (Gengetone, Shrap)
   ];
+
+  // Static canvas waveform refs/state (stable, no scroll)
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const peaksRef = useRef<Float32Array | null>(null);
 
   // Initialize audio context
   useEffect(() => {
@@ -149,6 +182,24 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
 
   const handleOriginalPlayPause = () => {
     if (!originalAudioRef.current) return;
+    // Ensure processing chain (incl. analyser) exists before playback toggles
+    buildPreviewChain();
+    if (isPlayingOriginal) {
+      originalAudioRef.current.pause();
+      setIsPlayingOriginal(false);
+    } else {
+      originalAudioRef.current.play();
+      setIsPlayingOriginal(true);
+      if (audioContextRef.current && audioContextRef.current.state === 'suspended') {
+        audioContextRef.current.resume();
+      }
+    }
+  };
+
+  // Handle instant preview play/pause (for genre effects)
+  const handlePlayPauseInstant = () => {
+    if (!originalAudioRef.current) return;
+    
     if (isPlayingOriginal) {
       originalAudioRef.current.pause();
       setIsPlayingOriginal(false);
@@ -190,6 +241,9 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
     limiter.ratio.value = 20;
     limiter.attack.value = 0.002;
     limiter.release.value = 0.1;
+    const analyser = ctx.createAnalyser();
+    analyser.fftSize = 2048;
+    analyser.smoothingTimeConstant = 0.8;
     const outputGain = ctx.createGain();
     outputGain.gain.value = 1.0;
 
@@ -199,12 +253,105 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
     midPeaking.connect(highShelf);
     highShelf.connect(compressor);
     compressor.connect(limiter);
-    limiter.connect(outputGain);
+    limiter.connect(analyser);
+    analyser.connect(outputGain);
     outputGain.connect(ctx.destination);
 
-    originalChainRef.current = { source, outputGain, lowShelf, midPeaking, highShelf, compressor, limiter };
+    originalChainRef.current = { source, outputGain, lowShelf, midPeaking, highShelf, compressor, limiter, analyser };
     return true;
   };
+
+  // Initialize WaveSurfer to render waveform and enable seek on the original audio element
+  // Decode uploaded file once and compute static peaks for drawing
+  useEffect(() => {
+    let cancelled = false;
+    const compute = async () => {
+      if (!uploadedFile) { peaksRef.current = null; drawWaveform(); return; }
+      try {
+        const arrayBuffer = await uploadedFile.file.arrayBuffer();
+        const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+        const audioBuffer = await ctx.decodeAudioData(arrayBuffer.slice(0));
+        const numChannels = audioBuffer.numberOfChannels;
+        const dataL = audioBuffer.getChannelData(0);
+        const dataR = numChannels > 1 ? audioBuffer.getChannelData(1) : null;
+        const desiredBuckets = 1000;
+        const samplesPerBucket = Math.max(1, Math.floor(audioBuffer.length / desiredBuckets));
+        const peaks = new Float32Array(desiredBuckets);
+        for (let i = 0; i < desiredBuckets; i++) {
+          const start = i * samplesPerBucket;
+          const end = Math.min(audioBuffer.length, start + samplesPerBucket);
+          let sum = 0, count = 0;
+          for (let s = start; s < end; s++) {
+            const l = dataL[s] || 0;
+            const r = dataR ? (dataR[s] || 0) : l;
+            const v = (Math.abs(l) + Math.abs(r)) * 0.5;
+            sum += v; count++;
+          }
+          peaks[i] = count ? sum / count : 0;
+        }
+        let peakMax = 0;
+        for (let i = 0; i < peaks.length; i++) peakMax = Math.max(peakMax, peaks[i]);
+        if (peakMax > 0) for (let i = 0; i < peaks.length; i++) peaks[i] = peaks[i] / peakMax;
+        if (!cancelled) { peaksRef.current = peaks; drawWaveform(); }
+        ctx.close();
+      } catch {
+        peaksRef.current = null; drawWaveform();
+      }
+    };
+    compute();
+    return () => { cancelled = true; };
+  }, [uploadedFile]);
+
+  // Draw static waveform to canvas, with progress overlay
+  const drawWaveform = () => {
+    const canvas = canvasRef.current;
+    const peaks = peaksRef.current;
+    if (!canvas) return;
+    const dpr = Math.max(1, Math.floor(window.devicePixelRatio || 1));
+    const cssWidth = canvas.clientWidth || 1;
+    const cssHeight = canvas.clientHeight || 1;
+    const width = cssWidth * dpr;
+    const height = cssHeight * dpr;
+    if (canvas.width !== width || canvas.height !== height) { canvas.width = width; canvas.height = height; }
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.clearRect(0, 0, width, height);
+    ctx.fillStyle = '#1f1f23';
+    ctx.fillRect(0, 0, width, height);
+    const midY = height / 2;
+    const maxBar = Math.max(1, height * 0.45);
+    const total = peaks ? peaks.length : 0;
+    const progressRatio = originalDuration > 0 ? originalProgress / originalDuration : 0;
+    const playedX = Math.floor(progressRatio * width);
+    const drawSegment = (startX: number, endX: number, color: string) => {
+      ctx.fillStyle = color;
+      if (!total) { ctx.fillRect(startX, midY - 2, Math.max(0, endX - startX), 4); return; }
+      const columnWidth = Math.max(1, Math.floor(dpr * 2));
+      for (let x = startX; x < endX; x += columnWidth) {
+        const pIndex = Math.floor((x / width) * total);
+        const amp = Math.min(1, peaks![Math.min(total - 1, Math.max(0, pIndex))]);
+        const barH = Math.max(1, amp * maxBar);
+        ctx.fillRect(x, midY - barH, columnWidth, barH * 2);
+      }
+    };
+    drawSegment(0, playedX, '#d4af37');
+    drawSegment(playedX, width, '#49494f');
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(playedX, 0, Math.max(1, Math.floor(dpr)), height);
+  };
+
+  // Redraw on progress/resize
+  useEffect(() => { drawWaveform(); }, [originalProgress, originalDuration]);
+  useEffect(() => {
+    const onResize = () => drawWaveform();
+    window.addEventListener('resize', onResize);
+    let ro: ResizeObserver | null = null;
+    if (canvasRef.current && 'ResizeObserver' in window) {
+      ro = new ResizeObserver(() => drawWaveform());
+      ro.observe(canvasRef.current);
+    }
+    return () => { window.removeEventListener('resize', onResize); if (ro && canvasRef.current) { try { ro.unobserve(canvasRef.current); } catch {} } };
+  }, []);
 
   // Apply instant genre effects for real-time preview
   const applyInstantGenreEffects = async (genre: Genre) => {
@@ -231,19 +378,50 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
       // Apply genre-specific settings
       const { outputGain, lowShelf, midPeaking, highShelf, compressor, limiter } = originalChainRef.current;
       
-      // Get genre preset (prefer cached map for instant response)
-      let preset: any = genreInfoMap ? genreInfoMap[genre.name] : undefined;
+      // Get genre preset - try multiple keys (name/id/lowercase), then fallback
+      let preset: any = undefined;
+      if (genreInfoMap) {
+        preset =
+          genreInfoMap[genre.name] ||
+          genreInfoMap[genre.id] ||
+          genreInfoMap[(genre.name || '').toLowerCase()] ||
+          genreInfoMap[(genre.id || '').toLowerCase()];
+      }
+      
       if (!preset) {
+        // Try to get from Python service (async, may be slow)
         try {
-          const genreInfo = await pythonAudioService.getGenreInformation();
-          preset = genreInfo[genre.name];
-        } catch {}
+          const genrePresets = await pythonAudioService.getIndustryPresets();
+          preset =
+            (genrePresets as any)[genre.name] ||
+            (genrePresets as any)[genre.id] ||
+            (genrePresets as any)[(genre.name || '').toLowerCase()] ||
+            (genrePresets as any)[(genre.id || '').toLowerCase()];
+          console.log(`Got ${genre.name} preset from Python service:`, preset);
+        } catch (error) {
+          console.log('Python service unavailable, using hardcoded preset');
+        }
+      }
+      
+      // Fallback to hardcoded presets for instant response
+      if (!preset) {
+        const candidates = [
+          genre.name,
+          genre.id,
+          (genre.name || '').replace(/-/g, ' '),
+          (genre.id || '').replace(/-/g, ' '),
+        ].filter(Boolean) as string[];
+        for (const key of candidates) {
+          const p = getHardcodedGenrePreset(key);
+          if (p) { preset = p; break; }
+        }
+        console.log(`Using hardcoded preset for ${genre.name}:`, preset);
       }
       
       if (preset) {
         const currentTime = audioContextRef.current.currentTime;
         // More pronounced EQ: map preset shelves and mid, with a slight exaggeration for audibility
-        const exaggerate = 1.2;
+        const exaggerate = 1.35;
         lowShelf.frequency.setValueAtTime(preset.eq_curve.low_shelf.freq, currentTime);
         lowShelf.gain.setValueAtTime(preset.eq_curve.low_shelf.gain * exaggerate, currentTime);
         highShelf.frequency.setValueAtTime(preset.eq_curve.high_shelf.freq, currentTime);
@@ -299,24 +477,49 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
 
   // Load tier information and available genres on component mount
   useEffect(() => {
-    loadTierInformation();
+    let cancelled = false;
+    // Safety timeout: stop loading after 10s with fallback
+    const timeoutId = setTimeout(() => {
+      if (!cancelled) {
+        console.warn('Genre loading timed out (Professional). Falling back.');
+        setIsLoadingGenres(false);
+        setAvailableGenres([
+          { id: 'hip-hop', name: 'Hip-Hop', color: 'bg-red-500', description: 'Bass-Driven & Punchy' },
+          { id: 'afrobeats', name: 'Afrobeats', color: 'bg-orange-500', description: 'Rhythmic & Energetic' }
+        ]);
+      }
+    }, 10000);
+
+    loadTierInformation().finally(() => {
+      if (!cancelled) clearTimeout(timeoutId);
+    });
+
+    return () => { cancelled = true; clearTimeout(timeoutId); };
   }, []);
 
   const loadTierInformation = async () => {
     try {
       setIsLoadingGenres(true);
-      
-      // Get tier information from Python service
-      const tierData = await pythonAudioService.getTierInformation();
-      const proTierInfo = tierData.pro || tierData.professional;
-      setTierInfo(proTierInfo);
+      // Load genres immediately from local index to avoid UI wait
+      try {
+        const { getAllGenresForUI } = await import('../ProfessionalDashboard/genres');
+        const genres: Genre[] = getAllGenresForUI();
+        setAvailableGenres(genres);
+        console.log('Loaded professional tier genres (local index):', genres);
+      } catch (e) {
+        console.warn('Local genre import failed:', e);
+      }
 
-      // Import all professional genres (48 total: 24 African + 24 Advanced)
-      const { getAllGenresForUI } = await import('../ProfessionalDashboard/genres');
-      const genres: Genre[] = getAllGenresForUI();
-      
-      setAvailableGenres(genres);
-      console.log('Loaded professional tier genres:', genres);
+      // Fetch tier information with timeout protection
+      const withTimeout = <T,>(p: Promise<T>, ms = 8000): Promise<T> => {
+        return new Promise((resolve, reject) => {
+          const t = setTimeout(() => reject(new Error('Tier fetch timeout')), ms);
+          p.then((v) => { clearTimeout(t); resolve(v); }).catch((err) => { clearTimeout(t); reject(err); });
+        });
+      };
+      const tierData = await withTimeout(pythonAudioService.getTierInformation(), 8000);
+      const proTierInfo = (tierData as any).pro || (tierData as any).professional;
+      if (proTierInfo) setTierInfo(proTierInfo);
       
     } catch (error) {
       console.error('Failed to load tier information:', error);
@@ -386,6 +589,281 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
     return descriptions[name] || 'Professional Mastering';
   };
 
+  // Hardcoded genre presets for instant preview (fallback when Python service is unavailable)
+  const getHardcodedGenrePreset = (genreName: string) => {
+    const presets: Record<string, any> = {
+      // West African Genres
+      'Afrobeats': {
+        eq_curve: { low_shelf: { freq: 100, gain: 2.0 }, low_mid: { freq: 300, gain: -0.5 }, mid: { freq: 1000, gain: 0.0 }, high_mid: { freq: 4000, gain: 1.0 }, high_shelf: { freq: 8000, gain: 1.5 } },
+        compression: { ratio: 2.5, threshold: -16.0, attack: 0.002, release: 0.15 },
+        target_lufs: -10.0
+      },
+      'Alté': {
+        eq_curve: { low_shelf: { freq: 80, gain: 0.5 }, low_mid: { freq: 300, gain: -1.0 }, mid: { freq: 1000, gain: 0.0 }, high_mid: { freq: 4000, gain: 1.0 }, high_shelf: { freq: 12000, gain: 3.0 } },
+        compression: { ratio: 2.0, threshold: -18.0, attack: 0.01, release: 0.25 },
+        target_lufs: -14.0
+      },
+      'Hip-life': {
+        eq_curve: { low_shelf: { freq: 70, gain: 2.5 }, low_mid: { freq: 300, gain: 1.0 }, mid: { freq: 1000, gain: 0.0 }, high_mid: { freq: 4000, gain: 1.5 }, high_shelf: { freq: 8000, gain: 1.5 } },
+        compression: { ratio: 2.5, threshold: -16.0, attack: 0.002, release: 0.15 },
+        target_lufs: -10.0
+      },
+      'Azonto': {
+        eq_curve: { low_shelf: { freq: 100, gain: 2.0 }, low_mid: { freq: 300, gain: 0.5 }, mid: { freq: 1000, gain: 0.0 }, high_mid: { freq: 4000, gain: 1.0 }, high_shelf: { freq: 8000, gain: 2.0 } },
+        compression: { ratio: 2.5, threshold: -16.0, attack: 0.002, release: 0.15 },
+        target_lufs: -10.0
+      },
+      'Naija Pop': {
+        eq_curve: { low_shelf: { freq: 80, gain: 1.8 }, low_mid: { freq: 300, gain: 1.0 }, mid: { freq: 1000, gain: 0.0 }, high_mid: { freq: 4000, gain: 1.0 }, high_shelf: { freq: 8000, gain: 1.8 } },
+        compression: { ratio: 2.0, threshold: -18.0, attack: 0.01, release: 0.25 },
+        target_lufs: -14.0
+      },
+      'Bongo Flava': {
+        eq_curve: { low_shelf: { freq: 80, gain: 2.0 }, low_mid: { freq: 300, gain: 0.8 }, mid: { freq: 1000, gain: 0.0 }, high_mid: { freq: 4000, gain: 1.0 }, high_shelf: { freq: 8000, gain: 1.5 } },
+        compression: { ratio: 2.0, threshold: -18.0, attack: 0.01, release: 0.25 },
+        target_lufs: -14.0
+      },
+      
+      // South African Genres
+      'Amapiano': {
+        eq_curve: { low_shelf: { freq: 50, gain: 2.5 }, low_mid: { freq: 300, gain: -0.8 }, mid: { freq: 1000, gain: 0.0 }, high_mid: { freq: 4000, gain: 1.0 }, high_shelf: { freq: 8000, gain: 1.2 } },
+        compression: { ratio: 2.5, threshold: -16.0, attack: 0.002, release: 0.15 },
+        target_lufs: -10.0
+      },
+      'Kwaito': {
+        eq_curve: { low_shelf: { freq: 80, gain: 2.2 }, low_mid: { freq: 300, gain: 0.5 }, mid: { freq: 1000, gain: 0.0 }, high_mid: { freq: 4000, gain: 0.8 }, high_shelf: { freq: 8000, gain: 0.8 } },
+        compression: { ratio: 2.5, threshold: -16.0, attack: 0.002, release: 0.15 },
+        target_lufs: -10.0
+      },
+      'Gqom': {
+        eq_curve: { low_shelf: { freq: 40, gain: 3.0 }, low_mid: { freq: 200, gain: -1.5 }, mid: { freq: 1000, gain: 0.0 }, high_mid: { freq: 4000, gain: 1.0 }, high_shelf: { freq: 8000, gain: 1.0 } },
+        compression: { ratio: 3.0, threshold: -14.0, attack: 0.001, release: 0.1 },
+        target_lufs: -8.0
+      },
+      'Shangaan Electro': {
+        eq_curve: { low_shelf: { freq: 80, gain: 1.5 }, low_mid: { freq: 300, gain: 0.2 }, mid: { freq: 1000, gain: 0.0 }, high_mid: { freq: 4000, gain: 1.0 }, high_shelf: { freq: 12000, gain: 2.5 } },
+        compression: { ratio: 2.5, threshold: -16.0, attack: 0.002, release: 0.15 },
+        target_lufs: -10.0
+      },
+      'Kwela': {
+        eq_curve: { low_shelf: { freq: 80, gain: 1.0 }, low_mid: { freq: 300, gain: 0.0 }, mid: { freq: 2000, gain: 2.0 }, high_mid: { freq: 4000, gain: 1.5 }, high_shelf: { freq: 8000, gain: 1.5 } },
+        compression: { ratio: 2.0, threshold: -18.0, attack: 0.01, release: 0.25 },
+        target_lufs: -14.0
+      },
+      
+      // Central/East African Genres
+      'Kuduro': {
+        eq_curve: { low_shelf: { freq: 80, gain: 2.5 }, low_mid: { freq: 300, gain: 0.5 }, mid: { freq: 1000, gain: 0.0 }, high_mid: { freq: 4000, gain: 1.0 }, high_shelf: { freq: 8000, gain: 1.5 } },
+        compression: { ratio: 2.5, threshold: -16.0, attack: 0.002, release: 0.15 },
+        target_lufs: -10.0
+      },
+      'Ndombolo': {
+        eq_curve: { low_shelf: { freq: 80, gain: 1.5 }, low_mid: { freq: 300, gain: 0.0 }, mid: { freq: 1000, gain: 0.0 }, high_mid: { freq: 4000, gain: 1.0 }, high_shelf: { freq: 8000, gain: 1.0 } },
+        compression: { ratio: 2.0, threshold: -18.0, attack: 0.01, release: 0.25 },
+        target_lufs: -14.0
+      },
+      'Gengetone': {
+        eq_curve: { low_shelf: { freq: 80, gain: 2.0 }, low_mid: { freq: 300, gain: 0.0 }, mid: { freq: 1000, gain: 0.0 }, high_mid: { freq: 4000, gain: 1.0 }, high_shelf: { freq: 8000, gain: 1.0 } },
+        compression: { ratio: 2.5, threshold: -16.0, attack: 0.002, release: 0.15 },
+        target_lufs: -10.0
+      },
+      
+      // International Genres
+      'Pop': {
+        eq_curve: { low_shelf: { freq: 80, gain: 1.0 }, low_mid: { freq: 300, gain: 0.5 }, mid: { freq: 1000, gain: 0.0 }, high_mid: { freq: 4000, gain: 1.0 }, high_shelf: { freq: 8000, gain: 1.5 } },
+        compression: { ratio: 2.0, threshold: -18.0, attack: 0.01, release: 0.25 },
+        target_lufs: -14.0
+      },
+      'Hip Hop': {
+        eq_curve: { low_shelf: { freq: 60, gain: 2.5 }, low_mid: { freq: 300, gain: 0.0 }, mid: { freq: 1000, gain: 0.0 }, high_mid: { freq: 4000, gain: 1.0 }, high_shelf: { freq: 8000, gain: 1.0 } },
+        compression: { ratio: 2.2, threshold: -17.0, attack: 0.003, release: 0.2 },
+        target_lufs: -12.0
+      },
+      'R&B': {
+        eq_curve: { low_shelf: { freq: 80, gain: 1.5 }, low_mid: { freq: 300, gain: 0.8 }, mid: { freq: 1000, gain: 0.0 }, high_mid: { freq: 4000, gain: 1.2 }, high_shelf: { freq: 8000, gain: 1.8 } },
+        compression: { ratio: 2.2, threshold: -17.0, attack: 0.003, release: 0.2 },
+        target_lufs: -12.0
+      },
+      'Rock': {
+        eq_curve: { low_shelf: { freq: 80, gain: 1.0 }, low_mid: { freq: 300, gain: 0.0 }, mid: { freq: 1000, gain: 0.5 }, high_mid: { freq: 4000, gain: 1.5 }, high_shelf: { freq: 8000, gain: 1.0 } },
+        compression: { ratio: 3.0, threshold: -14.0, attack: 0.001, release: 0.1 },
+        target_lufs: -8.0
+      },
+      'Electronic': {
+        eq_curve: { low_shelf: { freq: 60, gain: 2.0 }, low_mid: { freq: 300, gain: -0.5 }, mid: { freq: 1000, gain: 0.0 }, high_mid: { freq: 4000, gain: 1.0 }, high_shelf: { freq: 8000, gain: 2.0 } },
+        compression: { ratio: 3.0, threshold: -14.0, attack: 0.001, release: 0.1 },
+        target_lufs: -8.0
+      },
+      'Jazz': {
+        eq_curve: { low_shelf: { freq: 80, gain: 0.5 }, low_mid: { freq: 300, gain: 0.0 }, mid: { freq: 1000, gain: 0.0 }, high_mid: { freq: 4000, gain: 0.5 }, high_shelf: { freq: 8000, gain: 1.0 } },
+        compression: { ratio: 2.0, threshold: -18.0, attack: 0.01, release: 0.25 },
+        target_lufs: -14.0
+      },
+      'Classical': {
+        eq_curve: { low_shelf: { freq: 80, gain: 0.0 }, low_mid: { freq: 300, gain: 0.0 }, mid: { freq: 1000, gain: 0.0 }, high_mid: { freq: 4000, gain: 0.0 }, high_shelf: { freq: 8000, gain: 0.0 } },
+        compression: { ratio: 1.5, threshold: -20.0, attack: 0.05, release: 0.5 },
+        target_lufs: -16.0
+      },
+      'Reggae': {
+        eq_curve: { low_shelf: { freq: 80, gain: 1.5 }, low_mid: { freq: 300, gain: 0.0 }, mid: { freq: 1000, gain: 0.0 }, high_mid: { freq: 4000, gain: 0.5 }, high_shelf: { freq: 8000, gain: 1.0 } },
+        compression: { ratio: 2.0, threshold: -18.0, attack: 0.01, release: 0.25 },
+        target_lufs: -14.0
+      },
+      'Country': {
+        eq_curve: { low_shelf: { freq: 80, gain: 0.5 }, low_mid: { freq: 300, gain: 0.0 }, mid: { freq: 1000, gain: 0.5 }, high_mid: { freq: 4000, gain: 1.0 }, high_shelf: { freq: 8000, gain: 1.0 } },
+        compression: { ratio: 2.0, threshold: -18.0, attack: 0.01, release: 0.25 },
+        target_lufs: -14.0
+      },
+      'Blues': {
+        eq_curve: { low_shelf: { freq: 80, gain: 1.0 }, low_mid: { freq: 300, gain: 0.0 }, mid: { freq: 1000, gain: 0.0 }, high_mid: { freq: 4000, gain: 1.0 }, high_shelf: { freq: 8000, gain: 1.2 } },
+        compression: { ratio: 2.0, threshold: -18.0, attack: 0.01, release: 0.25 },
+        target_lufs: -14.0
+      },
+      
+      // Additional Advanced Genres
+      'Trap': {
+        eq_curve: { low_shelf: { freq: 60, gain: 3.5 }, low_mid: { freq: 200, gain: 1.2 }, mid: { freq: 1000, gain: 0.0 }, high_mid: { freq: 4000, gain: 0.6 }, high_shelf: { freq: 8000, gain: 0.6 } },
+        compression: { ratio: 2.5, threshold: -16.0, attack: 0.002, release: 0.15 },
+        target_lufs: -10.0
+      },
+      'Drill': {
+        eq_curve: { low_shelf: { freq: 70, gain: 3.0 }, low_mid: { freq: 250, gain: 1.8 }, mid: { freq: 1000, gain: 0.0 }, high_mid: { freq: 4000, gain: 0.7 }, high_shelf: { freq: 8000, gain: 0.7 } },
+        compression: { ratio: 2.5, threshold: -16.0, attack: 0.002, release: 0.15 },
+        target_lufs: -10.0
+      },
+      'Dubstep': {
+        eq_curve: { low_shelf: { freq: 50, gain: 4.0 }, low_mid: { freq: 150, gain: 1.0 }, mid: { freq: 1000, gain: 0.0 }, high_mid: { freq: 4000, gain: 0.8 }, high_shelf: { freq: 8000, gain: 0.8 } },
+        compression: { ratio: 3.0, threshold: -14.0, attack: 0.001, release: 0.1 },
+        target_lufs: -8.0
+      },
+      'Gospel': {
+        eq_curve: { low_shelf: { freq: 80, gain: 1.5 }, low_mid: { freq: 300, gain: 2.0 }, mid: { freq: 1000, gain: 0.0 }, high_mid: { freq: 4000, gain: 1.0 }, high_shelf: { freq: 8000, gain: 1.0 } },
+        compression: { ratio: 2.0, threshold: -18.0, attack: 0.01, release: 0.25 },
+        target_lufs: -14.0
+      },
+      'Lofi Hip-Hop': {
+        eq_curve: { low_shelf: { freq: 80, gain: 0.8 }, low_mid: { freq: 300, gain: 1.5 }, mid: { freq: 1000, gain: 0.0 }, high_mid: { freq: 4000, gain: 1.2 }, high_shelf: { freq: 8000, gain: 1.2 } },
+        compression: { ratio: 2.0, threshold: -18.0, attack: 0.01, release: 0.25 },
+        target_lufs: -14.0
+      },
+      'House': {
+        eq_curve: { low_shelf: { freq: 60, gain: 2.5 }, low_mid: { freq: 200, gain: 1.8 }, mid: { freq: 1000, gain: 0.0 }, high_mid: { freq: 4000, gain: 1.0 }, high_shelf: { freq: 8000, gain: 1.0 } },
+        compression: { ratio: 2.5, threshold: -16.0, attack: 0.002, release: 0.15 },
+        target_lufs: -10.0
+      },
+      'Techno': {
+        eq_curve: { low_shelf: { freq: 50, gain: 3.2 }, low_mid: { freq: 150, gain: 1.6 }, mid: { freq: 1000, gain: 0.0 }, high_mid: { freq: 4000, gain: 0.9 }, high_shelf: { freq: 8000, gain: 0.9 } },
+        compression: { ratio: 3.0, threshold: -14.0, attack: 0.001, release: 0.1 },
+        target_lufs: -8.0
+      },
+      'Highlife': {
+        eq_curve: { low_shelf: { freq: 80, gain: 1.8 }, low_mid: { freq: 300, gain: 2.2 }, mid: { freq: 1000, gain: 0.0 }, high_mid: { freq: 4000, gain: 1.2 }, high_shelf: { freq: 8000, gain: 1.2 } },
+        compression: { ratio: 2.0, threshold: -18.0, attack: 0.01, release: 0.25 },
+        target_lufs: -14.0
+      },
+      'Instrumentals': {
+        eq_curve: { low_shelf: { freq: 80, gain: 1.5 }, low_mid: { freq: 300, gain: 2.0 }, mid: { freq: 1000, gain: 0.0 }, high_mid: { freq: 4000, gain: 1.5 }, high_shelf: { freq: 8000, gain: 1.5 } },
+        compression: { ratio: 2.0, threshold: -18.0, attack: 0.01, release: 0.25 },
+        target_lufs: -14.0
+      },
+      'Beats': {
+        eq_curve: { low_shelf: { freq: 70, gain: 2.2 }, low_mid: { freq: 250, gain: 1.8 }, mid: { freq: 1000, gain: 0.0 }, high_mid: { freq: 4000, gain: 1.0 }, high_shelf: { freq: 8000, gain: 1.0 } },
+        compression: { ratio: 2.5, threshold: -16.0, attack: 0.002, release: 0.15 },
+        target_lufs: -10.0
+      },
+      'Trance': {
+        eq_curve: { low_shelf: { freq: 60, gain: 2.0 }, low_mid: { freq: 200, gain: 1.5 }, mid: { freq: 1000, gain: 0.0 }, high_mid: { freq: 4000, gain: 1.8 }, high_shelf: { freq: 8000, gain: 1.8 } },
+        compression: { ratio: 2.5, threshold: -16.0, attack: 0.002, release: 0.15 },
+        target_lufs: -10.0
+      },
+      'Drum & Bass': {
+        eq_curve: { low_shelf: { freq: 50, gain: 3.8 }, low_mid: { freq: 150, gain: 1.4 }, mid: { freq: 1000, gain: 0.0 }, high_mid: { freq: 4000, gain: 1.0 }, high_shelf: { freq: 8000, gain: 1.0 } },
+        compression: { ratio: 3.0, threshold: -14.0, attack: 0.001, release: 0.1 },
+        target_lufs: -8.0
+      },
+      'Voice Over': {
+        eq_curve: { low_shelf: { freq: 80, gain: 0.8 }, low_mid: { freq: 300, gain: 2.8 }, mid: { freq: 1000, gain: 0.0 }, high_mid: { freq: 4000, gain: 2.2 }, high_shelf: { freq: 8000, gain: 2.2 } },
+        compression: { ratio: 1.5, threshold: -20.0, attack: 0.05, release: 0.5 },
+        target_lufs: -16.0
+      },
+      'Journalist': {
+        eq_curve: { low_shelf: { freq: 80, gain: 0.6 }, low_mid: { freq: 300, gain: 3.0 }, mid: { freq: 1000, gain: 0.0 }, high_mid: { freq: 4000, gain: 2.5 }, high_shelf: { freq: 8000, gain: 2.5 } },
+        compression: { ratio: 1.5, threshold: -20.0, attack: 0.05, release: 0.5 },
+        target_lufs: -16.0
+      },
+      'Soul': {
+        eq_curve: { low_shelf: { freq: 80, gain: 1.2 }, low_mid: { freq: 300, gain: 2.5 }, mid: { freq: 1000, gain: 0.0 }, high_mid: { freq: 4000, gain: 1.8 }, high_shelf: { freq: 8000, gain: 1.8 } },
+        compression: { ratio: 2.0, threshold: -18.0, attack: 0.01, release: 0.25 },
+        target_lufs: -14.0
+      },
+      'Content Creator': {
+        eq_curve: { low_shelf: { freq: 80, gain: 1.5 }, low_mid: { freq: 300, gain: 2.0 }, mid: { freq: 1000, gain: 0.0 }, high_mid: { freq: 4000, gain: 1.5 }, high_shelf: { freq: 8000, gain: 1.5 } },
+        compression: { ratio: 2.0, threshold: -18.0, attack: 0.01, release: 0.25 },
+        target_lufs: -14.0
+      },
+      'CrysGarage': {
+        eq_curve: { low_shelf: { freq: 60, gain: 3.2 }, low_mid: { freq: 200, gain: 2.2 }, mid: { freq: 1000, gain: 0.0 }, high_mid: { freq: 4000, gain: 1.5 }, high_shelf: { freq: 8000, gain: 1.5 } },
+        compression: { ratio: 2.5, threshold: -16.0, attack: 0.002, release: 0.15 },
+        target_lufs: -10.0
+      },
+      
+      // Missing African Genres
+      'Shrap': {
+        eq_curve: { low_shelf: { freq: 50, gain: 3.8 }, low_mid: { freq: 150, gain: 1.4 }, mid: { freq: 1000, gain: 0.0 }, high_mid: { freq: 4000, gain: 1.0 }, high_shelf: { freq: 8000, gain: 1.0 } },
+        compression: { ratio: 3.0, threshold: -14.0, attack: 0.001, release: 0.1 },
+        target_lufs: -8.0
+      },
+      'Singeli': {
+        eq_curve: { low_shelf: { freq: 50, gain: 4.0 }, low_mid: { freq: 150, gain: 1.0 }, mid: { freq: 1000, gain: 0.0 }, high_mid: { freq: 4000, gain: 0.8 }, high_shelf: { freq: 8000, gain: 0.8 } },
+        compression: { ratio: 3.0, threshold: -14.0, attack: 0.001, release: 0.1 },
+        target_lufs: -8.0
+      },
+      'Urban Benga': {
+        eq_curve: { low_shelf: { freq: 80, gain: 1.8 }, low_mid: { freq: 300, gain: 2.2 }, mid: { freq: 1000, gain: 0.0 }, high_mid: { freq: 4000, gain: 1.2 }, high_shelf: { freq: 8000, gain: 1.2 } },
+        compression: { ratio: 2.0, threshold: -18.0, attack: 0.01, release: 0.25 },
+        target_lufs: -14.0
+      },
+      'New Benga': {
+        eq_curve: { low_shelf: { freq: 80, gain: 1.8 }, low_mid: { freq: 300, gain: 2.2 }, mid: { freq: 1000, gain: 0.0 }, high_mid: { freq: 4000, gain: 1.2 }, high_shelf: { freq: 8000, gain: 1.2 } },
+        compression: { ratio: 2.0, threshold: -18.0, attack: 0.01, release: 0.25 },
+        target_lufs: -14.0
+      },
+      'Raï N\'B': {
+        eq_curve: { low_shelf: { freq: 80, gain: 1.2 }, low_mid: { freq: 300, gain: 2.5 }, mid: { freq: 1000, gain: 0.0 }, high_mid: { freq: 4000, gain: 1.8 }, high_shelf: { freq: 8000, gain: 1.8 } },
+        compression: { ratio: 2.0, threshold: -18.0, attack: 0.01, release: 0.25 },
+        target_lufs: -14.0
+      },
+      'Raï-hop': {
+        eq_curve: { low_shelf: { freq: 60, gain: 3.0 }, low_mid: { freq: 200, gain: 1.5 }, mid: { freq: 1000, gain: 0.0 }, high_mid: { freq: 4000, gain: 0.8 }, high_shelf: { freq: 8000, gain: 0.8 } },
+        compression: { ratio: 2.5, threshold: -16.0, attack: 0.002, release: 0.15 },
+        target_lufs: -10.0
+      },
+      'Gnawa Fusion': {
+        eq_curve: { low_shelf: { freq: 80, gain: 1.8 }, low_mid: { freq: 300, gain: 2.2 }, mid: { freq: 1000, gain: 0.0 }, high_mid: { freq: 4000, gain: 1.2 }, high_shelf: { freq: 8000, gain: 1.2 } },
+        compression: { ratio: 2.0, threshold: -18.0, attack: 0.01, release: 0.25 },
+        target_lufs: -14.0
+      },
+      'Afrotrap': {
+        eq_curve: { low_shelf: { freq: 50, gain: 3.8 }, low_mid: { freq: 150, gain: 1.4 }, mid: { freq: 1000, gain: 0.0 }, high_mid: { freq: 4000, gain: 1.0 }, high_shelf: { freq: 8000, gain: 1.0 } },
+        compression: { ratio: 3.0, threshold: -14.0, attack: 0.001, release: 0.1 },
+        target_lufs: -8.0
+      },
+      'Afro-Gospel': {
+        eq_curve: { low_shelf: { freq: 80, gain: 1.5 }, low_mid: { freq: 300, gain: 2.0 }, mid: { freq: 1000, gain: 0.0 }, high_mid: { freq: 4000, gain: 1.0 }, high_shelf: { freq: 8000, gain: 1.0 } },
+        compression: { ratio: 2.0, threshold: -18.0, attack: 0.01, release: 0.25 },
+        target_lufs: -14.0
+      },
+      'Urban Gospel': {
+        eq_curve: { low_shelf: { freq: 80, gain: 1.5 }, low_mid: { freq: 300, gain: 2.0 }, mid: { freq: 1000, gain: 0.0 }, high_mid: { freq: 4000, gain: 1.5 }, high_shelf: { freq: 8000, gain: 1.5 } },
+        compression: { ratio: 2.0, threshold: -18.0, attack: 0.01, release: 0.25 },
+        target_lufs: -14.0
+      }
+    };
+    
+    // Return the preset or a default one
+    return presets[genreName] || presets['Pop'];
+  };
+
   // File upload handler
   const handleFileUpload = (file: File) => {
     const audioFile: AudioFile = {
@@ -406,14 +884,22 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
   const handleGenreSelect = async (genre: Genre) => {
     setSelectedGenre(genre);
     console.log('Genre selected:', genre);
-    
-    // Apply instant effects for preview
-    if (uploadedFile && originalAudioRef.current) {
-      console.log('Applying instant effects for genre:', genre.name);
-      await applyInstantGenreEffects(genre);
-    } else {
+    if (!uploadedFile || !originalAudioRef.current) {
       console.log('No uploaded file or audio element available for preview');
+      return;
     }
+    // Ensure chain exists and context is running
+    buildPreviewChain();
+    try { if (audioContextRef.current?.state === 'suspended') await audioContextRef.current.resume(); } catch {}
+    // Start playback so changes are audible
+    try {
+      if (originalAudioRef.current.paused) {
+        await originalAudioRef.current.play();
+        setIsPlayingOriginal(true);
+      }
+    } catch {}
+    console.log('Applying instant effects for genre:', genre.name);
+    await applyInstantGenreEffects(genre);
   };
 
   // Process audio with Python service
@@ -441,10 +927,16 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
       console.log('Selected genre:', selectedGenre.name);
       
       // Simulate progress updates
-      const progressInterval = setInterval(() => {
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current);
+      }
+      progressIntervalRef.current = setInterval(() => {
         setProcessingProgress(prev => {
           if (prev >= 90) {
-            clearInterval(progressInterval);
+            if (progressIntervalRef.current) {
+              clearInterval(progressIntervalRef.current);
+              progressIntervalRef.current = null;
+            }
             return prev;
           }
           return prev + Math.random() * 10;
@@ -466,7 +958,10 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
         levelLufs
       );
 
-      clearInterval(progressInterval);
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current);
+        progressIntervalRef.current = null;
+      }
       setProcessingProgress(100);
 
       console.log('Final processing completed:', result);
@@ -494,30 +989,41 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
         appliedParams
       });
 
+      // Stop any playing audio when processing completes and moving to download tab
+      if (originalAudioRef.current) {
+        originalAudioRef.current.pause();
+        setIsPlayingOriginal(false);
+      }
+
       setActiveTab('download');
     } catch (error) {
       console.error('Python processing failed:', error);
       setError('Audio processing failed on server');
     } finally {
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current);
+        progressIntervalRef.current = null;
+      }
       setIsProcessing(false);
       setProcessingProgress(0);
     }
   };
 
   // Download handler
-  const handleDownload = async () => {
+  const handleDownload = async (format = 'WAV', sampleRate = 44100) => {
     if (!masteredAudioUrl) return;
     
     try {
       // Use Python proxy to bypass CORS regardless of storage origin
       const base = (pythonAudioService as any).baseURL || '';
-      const proxyUrl = `${base || ''}/proxy-download?file_url=${encodeURIComponent(masteredAudioUrl)}`;
+      const proxyUrl = `${base || ''}/proxy-download?file_url=${encodeURIComponent(masteredAudioUrl)}&format=${format}&sample_rate=${sampleRate}`;
       const response = await fetch(proxyUrl);
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${uploadedFile?.name.replace(/\.[^/.]+$/, '')}_mastered_${selectedGenre?.name.toLowerCase()}.${downloadFormat === 'mp3' ? 'mp3' : 'wav'}`;
+      const fileExtension = format.toLowerCase() === 'mp3' ? 'mp3' : format.toLowerCase() === 'flac' ? 'flac' : 'wav';
+      a.download = `${uploadedFile?.name.replace(/\.[^/.]+$/, '')}_mastered_${selectedGenre?.name.toLowerCase()}_${sampleRate}Hz.${fileExtension}`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
@@ -528,13 +1034,45 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
     }
   };
 
+  // Initialize audio context
+  useEffect(() => {
+    if (!audioContextRef.current) {
+      audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+      console.log('Audio context initialized for instant effects');
+    }
+  }, []);
+
+  // Format file size
+  const formatFileSize = (bytes: number) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
 
   return (
     <div className="min-h-screen bg-crys-dark text-white">
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-8 max-w-7xl">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center space-x-4">
+            {/* Back link */}
+            <button
+              onClick={() => {
+                if (activeTab !== 'upload') {
+                  setActiveTab('upload');
+                } else if (window.history.length > 1) {
+                  window.history.back();
+                } else {
+                  try { (window as any).location = '/'; } catch {}
+                }
+              }}
+              className="flex items-center text-crys-light-grey hover:text-white transition-colors mr-2"
+            >
+              <ArrowLeft className="w-5 h-5 mr-1" />
+              <span className="text-sm">Back</span>
+            </button>
             <div className="p-3 bg-crys-gold rounded-lg">
               <Zap className="w-8 h-8 text-crys-dark" />
             </div>
@@ -553,7 +1091,7 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
         </div>
 
         {/* Tab Navigation */}
-        <div className="flex space-x-1 mb-8 bg-crys-graphite p-1 rounded-lg">
+        <div className="flex space-x-1 mb-8 bg-crys-graphite p-1 rounded-lg max-w-2xl mx-auto">
           <button
             onClick={() => setActiveTab('upload')}
             className={`flex-1 py-3 px-4 rounded-md transition-all ${
@@ -602,109 +1140,102 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
           </div>
         )}
 
-        {/* Upload Tab */}
-        {activeTab === 'upload' && (
-          <div className="max-w-2xl mx-auto">
-            <div className="bg-crys-graphite rounded-xl p-8 text-center">
-              <Upload className="w-16 h-16 text-crys-gold mx-auto mb-4" />
-              <h2 className="text-2xl font-bold mb-4">Upload Your Audio</h2>
-              <p className="text-crys-light-grey mb-6">
-                Upload your audio file to start professional mastering with 47+ genre presets
-              </p>
-              
-              <div className="border-2 border-dashed border-crys-gold/30 rounded-lg p-8 hover:border-crys-gold/60 transition-colors">
-                <input
-                  type="file"
-                  accept="audio/*"
-                  onChange={(e) => e.target.files?.[0] && handleFileUpload(e.target.files[0])}
-                  className="hidden"
-                  id="audio-upload"
-                />
-                <label
-                  htmlFor="audio-upload"
-                  className="cursor-pointer block"
-                >
-                  <div className="text-crys-gold mb-2">
-                    <Upload className="w-8 h-8 mx-auto" />
-                  </div>
-                  <p className="text-lg font-semibold mb-2">Click to upload or drag and drop</p>
-                  <p className="text-sm text-crys-light-grey">
-                    Supports WAV, MP3, FLAC, AIFF up to {tierInfo?.max_file_size_mb || 200}MB
-                  </p>
-                </label>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Processing Tab */}
-        {activeTab === 'processing' && uploadedFile && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {/* Audio Player */}
-            <div className="bg-crys-graphite rounded-xl p-6">
-              <h3 className="text-xl font-bold mb-4 flex items-center">
-                <Music className="w-5 h-5 mr-2 text-crys-gold" />
-                Original Audio
-              </h3>
-              
-              <div className="mb-4">
-                <audio
-                  ref={originalAudioRef}
-                  src={uploadedFile.url}
-                  preload="metadata"
-                  className="hidden"
-                />
-                <div className="space-y-4">
-                  <div className="flex items-center justify-center">
-                    <button
-                      onClick={handleOriginalPlayPause}
-                      className="bg-crys-gold text-crys-dark p-4 rounded-full hover:bg-crys-gold/90 transition-colors"
-                    >
-                      {isPlayingOriginal ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6" />}
-                    </button>
-                  </div>
-                  <div className="space-y-2">
-                    <div className="w-full bg-crys-dark rounded-full h-2">
-                      <div
-                        className="bg-crys-gold h-2 rounded-full transition-all duration-100"
-                        style={{ width: `${originalDuration ? (originalProgress / originalDuration) * 100 : 0}%` }}
-                      />
+        {/* Tab Content */}
+        <>
+          {/* Upload Tab */}
+          {activeTab === 'upload' && (
+            <div className="max-w-2xl mx-auto">
+              <div className="bg-crys-graphite rounded-xl p-8 text-center">
+                <Upload className="w-16 h-16 text-crys-gold mx-auto mb-4" />
+                <h2 className="text-2xl font-bold mb-4">Upload Your Audio</h2>
+                <p className="text-crys-light-grey mb-6">
+                  Upload your audio file to start professional mastering with 47+ genre presets
+                </p>
+                
+                <div className="border-2 border-dashed border-crys-gold/30 rounded-lg p-8 hover:border-crys-gold/60 transition-colors">
+                  <input
+                    type="file"
+                    accept="audio/*"
+                    onChange={(e) => e.target.files?.[0] && handleFileUpload(e.target.files[0])}
+                    className="hidden"
+                    id="audio-upload"
+                  />
+                  <label
+                    htmlFor="audio-upload"
+                    className="cursor-pointer block"
+                  >
+                    <div className="text-crys-gold mb-2">
+                      <Upload className="w-8 h-8 mx-auto" />
                     </div>
-                    <div className="flex justify-between text-sm text-crys-light-grey">
-                      <span>{formatTime(originalProgress)}</span>
-                      <span>{formatTime(originalDuration)}</span>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <button
-                      onClick={() => setOriginalMuted(!originalMuted)}
-                      className="text-crys-light-grey hover:text-white transition-colors"
-                    >
-                      {originalMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-                    </button>
-                    <input
-                      type="range"
-                      min="0" max="1" step="0.1"
-                      value={originalMuted ? 0 : originalVolume}
-                      onChange={(e) => { setOriginalVolume(parseFloat(e.target.value)); setOriginalMuted(false); }}
-                      className="flex-1"
-                    />
-                    <span className="text-sm text-crys-light-grey w-10 text-right">{Math.round((originalMuted ? 0 : originalVolume) * 100)}%</span>
-                  </div>
+                    <p className="text-lg font-semibold mb-2">Click to upload or drag and drop</p>
+                    <p className="text-sm text-crys-light-grey">
+                      Supports WAV, MP3, FLAC, AIFF up to {tierInfo?.max_file_size_mb || 200}MB
+                    </p>
+                  </label>
                 </div>
               </div>
-              
-              <div className="text-sm text-crys-light-grey">
-                <p><strong>File:</strong> {uploadedFile.name}</p>
-                <p><strong>Size:</strong> {(uploadedFile.size / 1024 / 1024).toFixed(2)} MB</p>
+            </div>
+          )}
+
+          {/* Processing Tab */}
+          {activeTab === 'processing' && uploadedFile && (
+          <div className="max-w-6xl mx-auto">
+            {/* File Info */}
+            <div className="bg-audio-panel-bg border border-audio-panel-border rounded-xl p-6 mb-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-4">
+                  <div className="w-12 h-12 bg-crys-gold/20 rounded-lg flex items-center justify-center">
+                    <Music className="w-6 h-6 text-crys-gold" />
+                  </div>
+                  <div>
+                    <h3 className="text-crys-white font-medium">{uploadedFile.name}</h3>
+                    <p className="text-crys-light-grey text-sm">{formatFileSize(uploadedFile.size)}</p>
+                  </div>
+                </div>
+                
+                <button
+                  onClick={handlePlayPauseInstant}
+                  className="flex items-center space-x-2 bg-crys-blue/20 hover:bg-crys-blue/30 text-crys-blue px-4 py-2 rounded-lg transition-colors"
+                >
+                  {isPlayingOriginal ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+                  <span className="text-sm">Instant Preview</span>
+                </button>
               </div>
             </div>
 
-            {/* Genre Selection */}
-            <div className="bg-crys-graphite rounded-xl p-6">
-              <h3 className="text-xl font-bold mb-4 flex items-center">
+            {/* Hidden Audio Element for Instant Preview */}
+            <audio ref={originalAudioRef} src={uploadedFile.url} preload="metadata" className="hidden" />
+
+            {/* Static Waveform Seekbar (canvas) */}
+            <div className="mt-4">
+              <div className="flex items-center space-x-2 mb-1">
+                <span className="text-xs text-crys-light-grey w-8">{formatTime(originalProgress)}</span>
+                <div className="flex-1">
+                  <canvas
+                    ref={canvasRef}
+                    className="w-full h-20 rounded-md cursor-pointer select-none bg-[#1f1f23]"
+                    onMouseDown={(e) => {
+                      if (!originalAudioRef.current || !originalDuration) return;
+                      const rect = (e.currentTarget as HTMLCanvasElement).getBoundingClientRect();
+                      const ratio = Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width));
+                      originalAudioRef.current.currentTime = ratio * originalDuration;
+                    }}
+                  />
+                </div>
+                <span className="text-xs text-crys-light-grey w-8">{formatTime(originalDuration)}</span>
+              </div>
+            </div>
+
+            {/* Real-time Analysis directly under waveform */}
+            <div className="mt-3">
+              <RealTimeAnalysisPanel analyser={originalChainRef.current?.analyser || null} isPlaying={isPlayingOriginal} />
+            </div>
+
+            {/* Genre Selection - Directly Beneath Player */}
+            <div className="bg-crys-graphite rounded-xl p-6 mb-6">
+              <h3 className="text-xl font-bold mb-4 flex items-center justify-center">
                 <Activity className="w-5 h-5 mr-2 text-crys-gold" />
-                Select Genre (24+ Professional Options)
+                Select Genre (47+ Professional Options)
                 {isApplyingEffects && (
                   <div className="ml-2 flex items-center text-sm text-crys-gold">
                     <Loader2 className="w-4 h-4 animate-spin mr-1" />
@@ -713,43 +1244,21 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
                 )}
               </h3>
               
-              {/* Instructions + Volume on/off + discrete LUFS */}
-              <div className="mb-4 p-3 bg-crys-dark rounded-lg flex items-center justify-between gap-4">
-                <p className="text-sm text-crys-light-grey m-0">
+              {/* Instructions - Centered */}
+              <div className="mb-6 p-4 bg-crys-dark rounded-lg text-center">
+                <p className="text-sm text-crys-light-grey">
                   💡 <strong>Real-time Preview:</strong> Click any genre to hear instant effects. Make sure your audio is playing.
                 </p>
-                <div className="flex items-center gap-4 text-sm">
-                  <label className="flex items-center gap-2 cursor-pointer select-none">
-                    <span className="text-crys-light-grey">Volume</span>
-                    <div
-                      onClick={() => { setVolumeEnabled(!volumeEnabled); selectedGenre && applyInstantGenreEffects(selectedGenre); }}
-                      className={`w-10 h-5 rounded-full ${volumeEnabled ? 'bg-crys-gold' : 'bg-crys-graphite'} relative`}
-                    >
-                      <div className={`w-4 h-4 bg-black rounded-full absolute top-0.5 transition-all ${volumeEnabled ? 'left-5' : 'left-0.5'}`} />
-                    </div>
-                  </label>
-                  <div className="flex items-center gap-1">
-                    {([-14,-12,-10,-9,-8] as const).map(lufs => (
-                      <button
-                        key={lufs}
-                        onClick={() => { setSelectedLufs(lufs); selectedGenre && applyInstantGenreEffects(selectedGenre); }}
-                        disabled={!volumeEnabled || !selectedGenre}
-                        className={`px-2 py-1 rounded ${selectedLufs===lufs && volumeEnabled ? 'bg-crys-gold text-crys-dark' : 'text-crys-light-grey hover:text-white'}`}
-                      >{lufs}</button>
-                    ))}
-                    <span className="text-xs text-crys-gold ml-2">{selectedLufs} LUFS</span>
-                  </div>
-                </div>
               </div>
 
-              {/* Genre Grid - All genres displayed without scrolling */}
+              {/* Genre Grid - Centered */}
               {isLoadingGenres ? (
                 <div className="flex items-center justify-center py-8">
                   <Loader2 className="w-6 h-6 animate-spin text-crys-gold" />
                   <span className="ml-2">Loading genres...</span>
                 </div>
               ) : (
-                <div className="grid grid-cols-4 gap-3">
+                <div className="grid grid-cols-4 gap-3 max-w-5xl mx-auto">
                   {availableGenres.map((genre) => (
                     <button
                       key={genre.id}
@@ -768,70 +1277,83 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
                   ))}
                 </div>
               )}
+            </div>
 
-              {/* Process Button */}
-              {selectedGenre && (
-                <div className="mt-6">
-                  <button
-                    onClick={handleProcessAudio}
-                    disabled={isProcessing}
-                    className="w-full bg-crys-gold text-crys-dark py-3 px-6 rounded-lg font-semibold hover:bg-crys-gold/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-                  >
-                    {isProcessing ? (
-                      <>
-                        <Loader2 className="w-5 h-5 animate-spin mr-2" />
-                        Processing...
-                      </>
-                    ) : (
-                      <>
-                        <Zap className="w-5 h-5 mr-2" />
-                        Master Audio
-                      </>
-                    )}
-                  </button>
-                  
-                  {isProcessing && (
-                    <div className="mt-4">
-                      <div className="w-full bg-crys-dark rounded-full h-2">
-                        <div 
-                          className="bg-crys-gold h-2 rounded-full transition-all duration-300"
-                          style={{ width: `${processingProgress}%` }}
-                        />
-                      </div>
-                      <p className="text-crys-light-grey text-sm mt-2">
+            {/* Process Button - Centered Below Genres */}
+            {selectedGenre && (
+              <div className="text-center">
+                <button
+                  onClick={handleProcessAudio}
+                  disabled={isProcessing}
+                  className="bg-crys-gold text-crys-dark py-4 px-8 rounded-lg font-semibold hover:bg-crys-gold/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center mx-auto text-lg"
+                >
+                  {isProcessing ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      <Zap className="w-5 h-5 mr-2" />
+                      Master Audio
+                    </>
+                  )}
+                </button>
+                
+                {isProcessing && (
+                  <div className="mt-6 max-w-2xl mx-auto">
+                    <div className="w-full bg-crys-dark rounded-full h-3">
+                      <div 
+                        className="bg-crys-gold h-3 rounded-full transition-all duration-300"
+                        style={{ width: `${processingProgress}%` }}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between mt-3 text-sm">
+                      <p className="text-crys-light-grey">
                         {Math.round(processingProgress)}% complete
                       </p>
+                      <p className="text-crys-gold font-medium">
+                        {processingSteps[processingStepIndex]}
+                      </p>
                     </div>
-                  )}
-                </div>
-              )}
-            </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
 
         {/* Download/Comparison Tab */}
         {activeTab === 'download' && masteredAudioUrl && (
-          <FreeComparisonPlayer
-            originalFile={uploadedFile}
-            masteredAudioUrl={masteredAudioUrl}
-            selectedGenre={selectedGenre}
-            // optional ML
-            mlSummary={(masteredStats as any)?.mlSummary}
-            appliedParams={(masteredStats as any)?.appliedParams}
-            originalLufs={originalStats?.loudness}
-            masteredLufs={(masteredStats as any)?.loudness}
-            recommendedAttenuationDb={(masteredStats as any)?.recommended_playback_attenuation_db}
-            onBack={() => setActiveTab('processing')}
-            onNewUpload={() => {
-              setUploadedFile(null);
-              setSelectedGenre(null);
-              setMasteredAudioUrl(null);
-              setActiveTab('upload');
-            }}
-            onDownload={handleDownload}
-          />
+          <div className="max-w-4xl mx-auto">
+            <FreeComparisonPlayer
+              originalFile={uploadedFile}
+              masteredAudioUrl={masteredAudioUrl}
+              selectedGenre={selectedGenre}
+              // optional ML
+              mlSummary={(masteredStats as any)?.mlSummary}
+              appliedParams={(masteredStats as any)?.appliedParams}
+              originalLufs={originalStats?.loudness}
+              masteredLufs={(masteredStats as any)?.loudness}
+              recommendedAttenuationDb={(masteredStats as any)?.recommended_playback_attenuation_db}
+              onBack={() => setActiveTab('processing')}
+              onNewUpload={() => {
+                setUploadedFile(null);
+                setSelectedGenre(null);
+                setMasteredAudioUrl(null);
+                setActiveTab('upload');
+              }}
+              onDownload={handleDownload}
+              showFormatOptions={true}
+            />
+          </div>
         )}
+        
+        {/* (single hidden audio declared above next to player) */}
+        </>
       </div>
+
+      
     </div>
   );
 };

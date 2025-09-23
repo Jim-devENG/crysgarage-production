@@ -1,6 +1,7 @@
 """
-Pitch Correction Service
-Automatically fine-tunes all audio to 444.0 Hz (A4) with smooth pitch shifting
+Pitch Correction Service - DISABLED
+This service was used to automatically fine-tune all audio to 444.0 Hz (A4) with smooth pitch shifting.
+It has been disabled as per user request to remove 444 Hz tuning from the process entirely.
 """
 
 import numpy as np
@@ -61,33 +62,44 @@ class PitchCorrection:
     
     def smooth_pitch_shift(self, audio: np.ndarray, cents: float, sr: int = 44100) -> np.ndarray:
         """
-        Apply smooth pitch shifting using librosa's phase vocoder
-        This maintains audio quality while shifting pitch
+        Apply smooth, natural pitch shifting with formant preservation when available.
+        Prefers Rubber Band (pyrubberband) with formant preservation; falls back to librosa.
         """
         try:
-            if abs(cents) < 1.0:  # Less than 1 cent difference, no need to shift
+            if abs(cents) < 1.0:
                 return audio
-            
-            # Convert cents to ratio
-            ratio = 2 ** (cents / 1200.0)
-            
-            # Use librosa's phase vocoder for smooth pitch shifting
-            # This preserves formants and maintains natural sound
+
+            semitones = cents / 100.0
+
+            # Try Rubber Band (formant-preserving)
+            try:
+                import pyrubberband as pyrb  # type: ignore
+                y = audio.astype(np.float32, copy=False)
+                # Prefer explicit formant preservation flag when supported by pyrubberband
+                try:
+                    shifted = pyrb.pitch_shift(y, sr, semitones, formant=True)  # type: ignore[arg-type]
+                except TypeError:
+                    # Older versions: pass no extras (still higher quality than pure PV)
+                    shifted = pyrb.pitch_shift(y, sr, semitones)
+                shifted = shifted.astype(np.float32, copy=False)
+                shifted = self._apply_gentle_compression(shifted)
+                return shifted
+            except Exception as rb_err:
+                logger.info(f"Rubber Band not available or failed ({rb_err}); falling back to librosa")
+
+            # Fallback: librosa pitch shift
             shifted_audio = librosa.effects.pitch_shift(
                 audio,
                 sr=sr,
-                n_steps=cents / 100.0,  # Convert cents to semitones
+                n_steps=semitones,
                 bins_per_octave=12
             )
-            
-            # Apply gentle compression to maintain dynamics
             shifted_audio = self._apply_gentle_compression(shifted_audio)
-            
             return shifted_audio
-            
+
         except Exception as e:
             logger.error(f"Pitch shifting failed: {e}")
-            return audio  # Return original if shifting fails
+            return audio
     
     def _apply_gentle_compression(self, audio: np.ndarray, ratio: float = 1.5, threshold: float = 0.7) -> np.ndarray:
         """

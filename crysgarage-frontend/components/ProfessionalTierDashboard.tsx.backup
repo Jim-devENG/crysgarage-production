@@ -70,7 +70,7 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
   const genres: Genre[] = [
     { name: 'Pop', description: 'Mainstream pop music with clear vocals and catchy melodies', color: 'bg-pink-500' },
     { name: 'Hip Hop / Rap', description: 'Bass-heavy hip hop and rap with punchy dynamics and clear vocals', color: 'bg-purple-600' },
-    { name: 'Hip Hop Deluxe', description: 'AI-enhanced hip hop with intelligent parameter adjustments', color: 'bg-indigo-700' },
+    { name: 'Hip Hop Deluxe', description: 'Crysgarage Mastering Engine tuned hip hop with intelligent parameter adjustments', color: 'bg-indigo-700' },
     { name: 'Instrumentals & Beats', description: 'Optimized for instrumental tracks and beat production with intelligent dynamics', color: 'bg-cyan-600' },
     { name: 'R&B / Soul', description: 'Smooth R&B and soul music with warm vocals and rich harmonies', color: 'bg-emerald-600' },
     { name: 'Rock (Classic Rock, Alternative, Indie, Hard Rock)', description: 'Powerful rock music with driving guitars, punchy drums, and energetic dynamics', color: 'bg-orange-600' },
@@ -78,7 +78,7 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
   ];
 
   const getIntelligentPresetAdjustments = (genre: Genre, analysis: any) => {
-    // Simple, clean adjustments - no complex AI for now
+    // Simple, clean adjustments - no complex engine extras for now
     return {
       gainAdjustment: 0,
       bassBoost: 0,
@@ -395,7 +395,7 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
         return await offlineContext.startRendering();
         
       case 'Hip Hop Deluxe':
-        // Hip Hop Deluxe - AI-Enhanced Intelligent Settings
+        // Hip Hop Deluxe - Crysgarage Mastering Engine Intelligent Settings
         const getIntelligentAdjustments = () => {
           if (!audioAnalysis) {
             return {

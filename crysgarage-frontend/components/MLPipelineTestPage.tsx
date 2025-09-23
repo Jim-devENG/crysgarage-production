@@ -54,7 +54,7 @@ const MLPipelineTestPage: React.FC = () => {
             Crys Garage ML Pipeline
           </h1>
           <p className="text-lg text-crys-light-grey">
-            Advanced AI-powered audio mastering with genre-specific recommendations
+            Advanced Crysgarage Mastering Engine with genre-specific recommendations
           </p>
         </div>
 
@@ -91,7 +91,7 @@ const MLPipelineTestPage: React.FC = () => {
             <div className="text-crys-gold text-2xl mb-3">🎵</div>
             <h3 className="text-lg font-semibold text-crys-white mb-2">Genre-Specific Processing</h3>
             <p className="text-crys-light-grey text-sm">
-              AI-powered recommendations tailored for Hip Hop, Afrobeats, Gospel, and more
+              Crysgarage Mastering Engine recommendations tailored for Hip Hop, Afrobeats, Gospel, and more
             </p>
           </div>
           
@@ -148,7 +148,7 @@ const MLPipelineTestPage: React.FC = () => {
             <li>Select an audio file by dragging and dropping or clicking "Choose File"</li>
             <li>Choose your processing tier (Free, Pro, or Advanced)</li>
             <li>Select the genre of your audio for optimal ML recommendations</li>
-            <li>Click "Start ML Processing" to begin the AI-powered mastering</li>
+            <li>Click "Start ML Processing" to begin mastering with the Crysgarage Mastering Engine</li>
             <li>Download your processed audio in multiple formats</li>
           </ol>
         </div>

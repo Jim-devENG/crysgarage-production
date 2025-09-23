@@ -26,7 +26,8 @@ class FFmpegConverter:
             'AAC': {'ext': '.aac', 'codec': 'aac'},
             'OGG': {'ext': '.ogg', 'codec': 'libvorbis'}
         }
-        self.supported_sample_rates = [44100, 48000, 96000, 192000]
+        # Add 88.2kHz and 192kHz to supported sample rates
+        self.supported_sample_rates = [44100, 48000, 88200, 96000, 192000]
         
     def is_available(self) -> bool:
         """Check if FFmpeg is available"""
@@ -117,16 +118,19 @@ class FFmpegConverter:
         
         # format_info = self.supported_formats[output_format]  # not used
         
-        # Base command
+        # Base command with gain staging
         cmd = [
             'ffmpeg',
             '-i', input_path,
+            '-af', 'volume=4dB',  # Apply +4 dB gain staging
             '-ar', str(sample_rate),  # Sample rate
+            '-ac', '2',  # Force stereo output; preserve stereo mapping
             '-y'  # Overwrite output file
         ]
         
         # Add format-specific options
         if output_format == 'WAV':
+            # Ensure 24-bit WAV by default unless explicitly overridden
             if bit_depth:
                 if bit_depth == 16:
                     cmd.extend(['-acodec', 'pcm_s16le'])
@@ -134,8 +138,10 @@ class FFmpegConverter:
                     cmd.extend(['-acodec', 'pcm_s24le'])
                 elif bit_depth == 32:
                     cmd.extend(['-acodec', 'pcm_s32le'])
+                else:
+                    cmd.extend(['-acodec', 'pcm_s24le'])
             else:
-                cmd.extend(['-acodec', 'pcm_s16le'])
+                cmd.extend(['-acodec', 'pcm_s24le'])
         
         elif output_format == 'MP3':
             cmd.extend([
@@ -149,7 +155,11 @@ class FFmpegConverter:
                 cmd.extend(['-sample_fmt', f's{bit_depth}'])
         
         elif output_format == 'AIFF':
-            cmd.extend(['-acodec', 'pcm_s16be'])
+            # Prefer 24-bit big-endian for AIFF
+            if bit_depth == 16:
+                cmd.extend(['-acodec', 'pcm_s16be'])
+            else:
+                cmd.extend(['-acodec', 'pcm_s24be'])
         
         elif output_format == 'AAC':
             cmd.extend([
@@ -224,29 +234,8 @@ class FFmpegConverter:
                 'stderr': f"FFmpeg execution failed: {e}"
             }
 
-    async def apply_gain(
-        self,
-        input_path: str,
-        output_format: str,
-        sample_rate: int,
-        gain_db: float
-    ) -> str:
-        """Apply a simple gain (in dB) to the audio using ffmpeg volume filter."""
-        try:
-            base_name = Path(input_path).stem
-            out_path = os.path.join(self.temp_dir, f"{base_name}_gain.{output_format.lower()}")
-            cmd = [
-                'ffmpeg', '-y',
-                '-i', input_path,
-                '-filter:a', f"volume={gain_db}dB",
-                '-ar', str(sample_rate),
-                out_path
-            ]
-            await self._execute_ffmpeg(cmd)
-            return out_path
-        except Exception as e:
-            logger.error(f"FFmpeg gain apply failed: {e}")
-            raise
+    # Note: apply_gain method removed to preserve ML mastering parameters
+    # The ML mastering engine handles all gain and loudness processing correctly
     
     async def get_audio_info(self, file_path: str) -> Dict[str, Any]:
         """

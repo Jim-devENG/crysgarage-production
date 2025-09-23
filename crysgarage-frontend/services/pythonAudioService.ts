@@ -16,7 +16,7 @@ const computePythonBaseUrl = (): string => {
   }
   const { hostname, origin } = window.location;
   if (hostname === 'localhost' || hostname === '127.0.0.1') {
-    return 'http://localhost:8000';
+    return 'http://localhost:8002';
   }
   return `${origin}/api/python`;
 };
@@ -110,7 +110,6 @@ class PythonAudioService {
       formData.append('user_id', userId);
       formData.append('genre', genre || 'Auto');
       const response = await axios.post(`${this.baseURL}/analyze-ml`, formData, {
-        timeout: 60000,
         headers: { 'Content-Type': 'multipart/form-data' },
       });
       return { ml_summary: response.data.ml_summary, predicted_params: response.data.predicted_params };
@@ -144,7 +143,7 @@ class PythonAudioService {
       if (!this.baseURL || !this.baseURL.startsWith('http')) {
         this.baseURL = computePythonBaseUrl();
       }
-      const response = await axios.get(`${this.baseURL}/genres`, { timeout: 8000 });
+      const response = await axios.get(`${this.baseURL}/genres`);
       return response.data.genres;
     } catch (error) {
       console.error('Failed to get genre information:', error);
@@ -157,13 +156,13 @@ class PythonAudioService {
    */
   async getAvailableGenresForTier(tier: string): Promise<string[]> {
     try {
-      const tierInfo = await this.getTierInformation();
-      const genreInfo = await this.getGenreInformation();
-      
-      // For free tier, return only 2 genres
+      // Fast path: avoid network calls for static tiers
       if (tier === 'free') {
         return ['Hip-Hop', 'Afrobeats'];
       }
+
+      const tierInfo = await this.getTierInformation();
+      const genreInfo = await this.getGenreInformation();
       
       // For professional tier, return all 24+ genres
       if (tier === 'professional' || tier === 'pro') {
@@ -193,7 +192,6 @@ class PythonAudioService {
         this.baseURL = computePythonBaseUrl();
       }
       const response = await axios.post(`${this.baseURL}/master`, request, {
-        timeout: 300000, // 5 minutes timeout for processing
         headers: {
           'Content-Type': 'application/json',
         },
@@ -258,10 +256,10 @@ class PythonAudioService {
         console.log('Uploading file directly to Python for mastering (local)...');
         let resp;
         try {
-          resp = await axios.post(`${this.baseURL}/upload-file/`, formData, { timeout: 600000 });
+          resp = await axios.post(`${this.baseURL}/upload-file/`, formData);
         } catch (e: any) {
           if (e?.response?.status === 404) {
-            resp = await axios.post(`${this.baseURL}/upload-file`, formData, { timeout: 600000 });
+            resp = await axios.post(`${this.baseURL}/upload-file`, formData);
           } else {
             throw e;
           }
@@ -307,10 +305,10 @@ class PythonAudioService {
         console.log('Uploading file directly to Python for mastering (prod)...');
         let resp;
         try {
-          resp = await axios.post(`${this.baseURL}/upload-file/`, formData, { timeout: 600000 });
+          resp = await axios.post(`${this.baseURL}/upload-file/`, formData);
         } catch (e: any) {
           if (e?.response?.status === 404) {
-            resp = await axios.post(`${this.baseURL}/upload-file`, formData, { timeout: 600000 });
+            resp = await axios.post(`${this.baseURL}/upload-file`, formData);
           } else {
             throw e;
           }
@@ -478,7 +476,6 @@ class PythonAudioService {
       console.log('File type:', file.type);
       
       const response = await axios.post(`${this.baseURL}/upload-file`, formData, {
-        timeout: 60000, // 1 minute timeout for preview
         headers: {
           'Content-Type': 'multipart/form-data',
         },

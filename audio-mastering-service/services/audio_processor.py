@@ -36,6 +36,48 @@ class AudioProcessor:
             return False
     
     
+    async def save_uploaded_file(self, file, user_id: str) -> str:
+        """
+        Save uploaded file to temporary location
+        
+        Args:
+            file: Uploaded file object
+            user_id: User identifier
+            
+        Returns:
+            str: Path to the saved file
+            
+        Raises:
+            Exception: If save fails or file is too large
+        """
+        try:
+            # Validate file size
+            file_size = 0
+            content = await file.read()
+            file_size = len(content)
+            
+            if file_size > self.max_file_size:
+                raise Exception(f"File too large: {file_size} bytes (max: {self.max_file_size} bytes)")
+            
+            # Create temporary file
+            file_extension = os.path.splitext(file.filename)[1] if file.filename else '.wav'
+            temp_file = tempfile.NamedTemporaryFile(
+                delete=False, 
+                suffix=file_extension,
+                prefix=f"upload_{user_id}_"
+            )
+            
+            # Write content to temporary file
+            temp_file.write(content)
+            temp_file.close()
+            
+            logger.info(f"Saved uploaded file: {temp_file.name} ({file_size} bytes)")
+            return temp_file.name
+            
+        except Exception as e:
+            logger.error(f"Failed to save uploaded file: {e}")
+            raise
+
     async def download_file(self, file_url: str) -> str:
         """
         Download audio file from URL to temporary location
@@ -149,6 +191,38 @@ class AudioProcessor:
                 "file_size": 0,
                 "format": "UNKNOWN"
             }
+
+    async def upload_to_storage(self, file_path: str, user_id: str) -> str:
+        """Return a URL for the processed file. For local dev, expose a local static path.
+
+        In production, this should upload to object storage (S3/GCS) and return a public URL.
+        For now, we provide a file-serving URL via FastAPI's static handler expectation: /files/{filename}
+        """
+        try:
+            # Ensure file exists
+            if not os.path.exists(file_path):
+                raise FileNotFoundError(file_path)
+
+            filename = os.path.basename(file_path)
+            # Assume main.py mounts StaticFiles at /files pointing to the temp dir or storage dir
+            # If not mounted, the frontend will still be able to fetch via proxy-download.
+            url = f"/files/{filename}"
+            logger.info(f"Prepared storage URL: {url} for user {user_id}")
+            return url
+        except Exception as e:
+            logger.error(f"upload_to_storage failed: {e}")
+            # As a strict mode, rethrow so the client sees failure and no fallback is used
+            raise
+
+    async def cleanup_temp_files(self, file_paths: list):
+        """Remove temporary files safely (async signature for compatibility)."""
+        for file_path in file_paths:
+            try:
+                if file_path and os.path.exists(file_path):
+                    os.remove(file_path)
+                    logger.info(f"Cleaned up temporary file: {file_path}")
+            except Exception as e:
+                logger.warning(f"Failed to cleanup file {file_path}: {e}")
     
     def _calculate_lufs(self, audio_data: np.ndarray, sample_rate: int) -> float:
         """
