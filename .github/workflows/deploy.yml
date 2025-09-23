@@ -1,300 +1,78 @@
-name: Auto Deploy to VPS
+name: Deploy to VPS
 
 on:
   push:
-    branches: [ master ]
-  workflow_dispatch:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        shell: bash
     
     steps:
-    - uses: actions/checkout@v3
-    
-    - name: Install essential tools
-      run: |
-        # Update package lists
-        sudo apt-get update || echo "apt-get update failed, continuing..."
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: crysgarage-frontend/package-lock.json
         
-        # Install essential packages
-        sudo apt-get install -y bash coreutils openssh-client git curl || echo "Package installation failed, continuing..."
-        
-        # Verify bash is available
-        which bash || echo "bash not found in PATH"
-        /bin/bash --version || echo "bash version check failed"
-        
-        # Verify coreutils
-        which ls || echo "ls not found in PATH"
-        /bin/ls --version || echo "ls version check failed"
-        
-        echo "Essential tools installation completed"
-
-    - name: Start SSH agent
+    - name: Install frontend dependencies
       run: |
-        eval "$(ssh-agent -s)"
-        echo "SSH_AUTH_SOCK=$SSH_AUTH_SOCK" >> $GITHUB_ENV
-        echo "SSH_AGENT_PID=$SSH_AGENT_PID" >> $GITHUB_ENV
-        echo "SSH agent started"
-      shell: bash
-
-    - name: Add SSH key
-      run: |
-        echo "Adding SSH key to agent..."
-        ssh-add - <<< "${{ secrets.SSH_PRIVATE_KEY }}"
-        echo "SSH key added to agent"
-      shell: bash
-      env:
-        SSH_AUTH_SOCK: ${{ env.SSH_AUTH_SOCK }}
-        SSH_AGENT_PID: ${{ env.SSH_AGENT_PID }}
-
-    - name: Setup known_hosts
-      run: |
-        mkdir -p ~/.ssh
-        echo "Adding VPS to known hosts..."
-        ssh-keyscan -H 209.74.80.162 >> ~/.ssh/known_hosts
-        echo "Known hosts setup completed"
-      shell: bash
-
-    - name: Test SSH connection
-      run: |
-        echo "Testing SSH connection..."
-        ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no ${{ secrets.VPS_USER }}@209.74.80.162 "echo 'SSH connection test successful'"
-        echo "SSH connection test completed"
-      shell: bash
-      env:
-        SSH_AUTH_SOCK: ${{ env.SSH_AUTH_SOCK }}
-        SSH_AGENT_PID: ${{ env.SSH_AGENT_PID }}
-
-    - name: Upload Nginx site config
-      run: |
-        echo "Uploading clean Nginx config..."
-        scp -o StrictHostKeyChecking=no deploy/nginx/crysgarage.conf ${{ secrets.VPS_USER }}@209.74.80.162:/etc/nginx/conf.d/crysgarage.conf
-        echo "Nginx config uploaded"
-      shell: bash
-      env:
-        SSH_AUTH_SOCK: ${{ env.SSH_AUTH_SOCK }}
-        SSH_AGENT_PID: ${{ env.SSH_AGENT_PID }}
-
-    - name: Reload Nginx
-      run: |
-        ssh -o StrictHostKeyChecking=no ${{ secrets.VPS_USER }}@209.74.80.162 "nginx -t && nginx -s reload && echo 'Nginx reloaded'"
-      shell: bash
-      env:
-        SSH_AUTH_SOCK: ${{ env.SSH_AUTH_SOCK }}
-        SSH_AGENT_PID: ${{ env.SSH_AGENT_PID }}
-    
-    - name: Deploy to VPS
-      run: |
-        echo "🚀 Starting deployment to VPS... (Test deployment v2)"
-        ssh -o ConnectTimeout=30 -o StrictHostKeyChecking=no ${{ secrets.VPS_USER }}@209.74.80.162 << 'EOF'
-        # Set proper PATH
-        export PATH="/usr/local/ruby-3.1.0/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
-
-        set -e  # Exit on any error
-
-        # Update the deployment directory first
-        cd /var/www/crysgarage-deploy
-        echo "⚙️ Resetting repository to origin/master (clean)"
-        git fetch --all
-        git reset --hard origin/master
-        git clean -fd
-
-        # Build frontend in deployment directory
         cd crysgarage-frontend
-        export VITE_PYTHON_SERVICE_URL="https://crysgarage.studio/api/python"
         npm ci
+        
+    - name: Build frontend
+      run: |
+        cd crysgarage-frontend
         npm run build
-
-        # Frontend is already built in dist/ and will be served by Nginx
-        # from /var/www/crysgarage-deploy/crysgarage-frontend/dist/
-        echo "✅ Frontend built successfully - served from current directory"
-
-        # Cache-bust: ensure dist/index.html points to latest hashed assets with version query
-        echo "🧹 Applying cache-busting to dist/index.html"
-        JS_FILE=$(ls -1 dist/assets/index-*.js | sort | tail -n 1)
-        CSS_FILE=$(ls -1 dist/assets/index-*.css | sort | tail -n 1)
-        # Strip leading 'dist/' so public paths remain /assets/... not /dist/assets/...
-        JS_PUBLIC=${JS_FILE#dist/}
-        CSS_PUBLIC=${CSS_FILE#dist/}
-        echo "Using JS_PUBLIC=${JS_PUBLIC} CSS_PUBLIC=${CSS_PUBLIC}"
-        sed -i "s#\(/assets/index-.*\.js\)#/${JS_PUBLIC}?v=${GITHUB_RUN_NUMBER}#" dist/index.html
-        sed -i "s#\(/assets/index-.*\.css\)#/${CSS_PUBLIC}?v=${GITHUB_RUN_NUMBER}#" dist/index.html
-        # Sanity check that referenced files exist
-        test -f "${JS_FILE}" && test -f "${CSS_FILE}" || (echo "Hashed asset(s) missing" && ls -la dist/assets && exit 1)
-        touch dist/index.html
-
-        # Set proper permissions for frontend
-        chown -R nginx:nginx /var/www/crysgarage-deploy/crysgarage-frontend/dist
-        chmod -R 755 /var/www/crysgarage-deploy/crysgarage-frontend/dist
-
-        # Deploy backend essentials
-        echo "🔧 Deploying backend..."
-        cd ../crysgarage-backend-fresh
-        # Backend is already in place, just ensure permissions
-        chown -R nginx:nginx /var/www/crysgarage-deploy/crysgarage-backend-fresh
-        chmod -R 755 /var/www/crysgarage-deploy/crysgarage-backend-fresh
-
-        # Update Python audio-mastering service (use repo under /var/www/crysgarage-deploy)
-        echo "🐍 Updating Python service..."
-        if [ -d "/var/www/crysgarage-deploy/audio-mastering-service" ]; then
-          cd /var/www/crysgarage-deploy/audio-mastering-service
-          git fetch --all || true
-          git reset --hard origin/master || true
-          # Ensure venv exists
-          if [ -d "venv" ]; then
-            ./venv/bin/pip install -U pip wheel setuptools || true
-            ./venv/bin/pip install -r requirements.txt || true
-          elif command -v python3 >/dev/null 2>&1; then
-            python3 -m venv venv && ./venv/bin/pip install -U pip && ./venv/bin/pip install -r requirements.txt || true
-          fi
-
-          # Ensure system deps for audio libs
-          echo "Installing system dependencies (ffmpeg, libsndfile1)..."
-          sudo apt-get update -y || true
-          sudo apt-get install -y ffmpeg libsndfile1 || true
-
-          # Verify critical Python packages
-          echo "Verifying Python audio stack..."
-          ./venv/bin/python - <<'PYCHK'
-import importlib, sys
-mods = [
-  'numpy','scipy','librosa','soundfile','pyloudnorm','aiohttp','aiofiles'
-]
-missing = []
-for m in mods:
-  try:
-    importlib.import_module(m)
-  except Exception as e:
-    missing.append((m, str(e)))
-if missing:
-  print('Missing or failing imports:', missing)
-  sys.exit(1)
-print('All audio deps present')
-PYCHK
-
-          if [ $? -ne 0 ]; then
-            echo "Installing missing Python audio deps..."
-            ./venv/bin/pip install numpy scipy librosa soundfile pyloudnorm aiohttp aiofiles || true
-          fi
-
-          # Pre-warm heavy imports to avoid cold-start
-          ./venv/bin/python - <<'WARM'
-import librosa, numpy as np
-print('Librosa/Numpy pre-warmed')
-WARM
-          # Restart uvicorn (no systemd assumed)
-          pkill -f "uvicorn main:app" 2>/dev/null || true
-          nohup ./venv/bin/uvicorn main:app --host 0.0.0.0 --port 8002 --proxy-headers >/var/log/uvicorn.log 2>&1 &
-          echo "Python service restarted"
-          sleep 2
-          # Verify genre-presets endpoint is available
-          echo "Checking Python /genre-presets endpoint..."
-          for i in 1 2 3 4 5; do
-            if curl -sf http://127.0.0.1:8002/genre-presets >/dev/null; then
-              echo "✔ /genre-presets is responding"
-              break
-            fi
-            echo "Attempt $i: /genre-presets not ready, retrying in 2s..."
-            sleep 2
-          done
-          # Final assert
-          curl -sf http://127.0.0.1:8002/genre-presets | head -c 200 || (echo "❌ /genre-presets not available" && exit 1)
-
-          # Verify /upload-file routes exist (OPTIONS should return 200/405); fallback to GET /openapi.json check
-          echo "Checking Python /upload-file routes..."
-          UPLOAD_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X OPTIONS http://127.0.0.1:8002/upload-file || true)
-          UPLOAD_CODE_SLASH=$(curl -s -o /dev/null -w "%{http_code}" -X OPTIONS http://127.0.0.1:8002/upload-file/ || true)
-          if [ "$UPLOAD_CODE" != "200" ] && [ "$UPLOAD_CODE" != "405" ] && [ "$UPLOAD_CODE_SLASH" != "200" ] && [ "$UPLOAD_CODE_SLASH" != "405" ]; then
-            if curl -sf http://127.0.0.1:8002/openapi.json | grep -q "/upload-file"; then
-              echo "✔ /upload-file present in OpenAPI"
-            else
-              echo "❌ /upload-file not reachable and not in OpenAPI (HTTP $UPLOAD_CODE). Recent uvicorn logs:";
-              tail -n 200 /var/log/uvicorn.log || true;
-              exit 1;
-            fi
-          else
-            echo "✔ /upload-file reachable (HTTP $UPLOAD_CODE / $UPLOAD_CODE_SLASH)"
-          fi
-
-          # Ensure service is publicly reachable via Nginx (auto-heal if needed)
-          echo "Checking public /api/python/tiers..."
-          for i in 1 2 3 4 5; do
-            CODE=$(curl -s -o /dev/null -w "%{http_code}" https://crysgarage.studio/api/python/tiers || true)
-            if [ "$CODE" = "200" ]; then
-              echo "✔ Public /api/python/tiers is responding"
-              break
-            fi
-            echo "Attempt $i: /api/python/tiers returned $CODE, restarting uvicorn and retrying..."
-            pkill -f "uvicorn main:app" 2>/dev/null || true
-            nohup ./venv/bin/uvicorn main:app --host 0.0.0.0 --port 8002 --proxy-headers >/var/log/uvicorn.log 2>&1 &
-            sleep 3
-          done
-          CODE=$(curl -s -o /dev/null -w "%{http_code}" https://crysgarage.studio/api/python/tiers || true)
-          if [ "$CODE" != "200" ]; then
-            echo "❌ Public /api/python/tiers still failing (HTTP $CODE). Recent uvicorn logs:";
-            tail -n 200 /var/log/uvicorn.log || true;
-            exit 1;
-          fi
-        else
-          echo "Warning: /var/www/crysgarage-deploy/audio-mastering-service not found; attempting to create from repo"
-          cd /var/www/crysgarage-deploy
-          if [ -d "audio-mastering-service" ]; then
-            cd audio-mastering-service
-            git fetch --all || true
-            git reset --hard origin/master || true
-          else
-            # The repo should already include this directory; fallback: do nothing
-            echo "audio-mastering-service directory missing. Ensure repo layout includes it."
-          fi
-          # Try setup anyway
-          if [ -d "/var/www/crysgarage-deploy/audio-mastering-service" ]; then
-            cd /var/www/crysgarage-deploy/audio-mastering-service
-            if [ ! -d venv ]; then python3 -m venv venv || true; fi
-            ./venv/bin/pip install -U pip wheel setuptools || true
-            ./venv/bin/pip install -r requirements.txt || true
-            pkill -f "uvicorn main:app" 2>/dev/null || true
-            nohup ./venv/bin/uvicorn main:app --host 0.0.0.0 --port 8002 >/var/log/uvicorn.log 2>&1 &
-            echo "Python service bootstrapped and restarted"
-          fi
-        fi
-
-        # Ensure global client_max_body_size and proxy timeouts exist
-        echo "client_max_body_size 100M;" > /etc/nginx/conf.d/99-client-max-body-size.conf
-        cat >/etc/nginx/conf.d/98-python-proxy-timeouts.conf <<'NGX'
-proxy_read_timeout 600s;
-proxy_send_timeout 600s;
-proxy_connect_timeout 30s;
-proxy_request_buffering off;
-proxy_buffering off;
-NGX
-
-        # Restart php-fpm gracefully (frontend uses static; API via Laravel)
-        echo "🔄 Restarting php-fpm..."
-        systemctl restart php-fpm || (echo "php-fpm restart failed" && systemctl status php-fpm | cat && exit 1)
-
-        # Verify public proxy path for Python service
-        echo "🔎 Verifying public /api/python/genre-presets endpoint..."
-        if ! curl -sf https://crysgarage.studio/api/python/genre-presets | head -c 200; then
-          echo "❌ Public /api/python/genre-presets is not available. Dumping recent uvicorn logs...";
-          tail -n 200 /var/log/uvicorn.log || true;
-          exit 1;
-        else
-          echo "✔ Public /api/python/genre-presets is responding";
-        fi
-
-        # Health check
-        echo "🏥 Running health check..."
-        sleep 5
-        curl -f https://crysgarage.studio || echo "Main site health check failed but deployment completed"
-
-        echo "✅ Deployment completed at $(date)"
-        echo "🌐 Website should now be accessible at https://crysgarage.studio"
-        EOF
-      shell: bash
-      env:
-        SSH_AUTH_SOCK: ${{ env.SSH_AUTH_SOCK }}
-        SSH_AGENT_PID: ${{ env.SSH_AGENT_PID }}
+        
+    - name: Deploy to VPS
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.VPS_HOST }}
+        username: ${{ secrets.VPS_USERNAME }}
+        key: ${{ secrets.VPS_SSH_KEY }}
+        port: 22
+        script: |
+          # Update repository
+          cd /opt/crysgarage
+          sudo -u crysgarage git pull origin master
+          
+          # Update Python dependencies if needed
+          cd /opt/crysgarage/audio-mastering-service
+          source .venv/bin/activate
+          pip install -r requirements.txt 2>/dev/null || true
+          deactivate
+          
+          # Restart services
+          sudo systemctl restart crysgarage-python.service
+          sudo systemctl restart nginx
+          
+          echo "Deployment completed successfully!"
+          
+    - name: Upload frontend to VPS
+      uses: appleboy/scp-action@v0.1.7
+      with:
+        host: ${{ secrets.VPS_HOST }}
+        username: ${{ secrets.VPS_USERNAME }}
+        key: ${{ secrets.VPS_SSH_KEY }}
+        port: 22
+        source: "crysgarage-frontend/dist/*"
+        target: "/opt/crysgarage/crysgarage-frontend/dist/"
+        strip_components: 2
+        
+    - name: Restart Nginx
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.VPS_HOST }}
+        username: ${{ secrets.VPS_USERNAME }}
+        key: ${{ secrets.VPS_SSH_KEY }}
+        port: 22
+        script: |
+          sudo systemctl restart nginx
+          echo "Frontend updated and Nginx restarted!"

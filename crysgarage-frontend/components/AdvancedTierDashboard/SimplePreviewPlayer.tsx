@@ -197,7 +197,7 @@ const SimplePreviewPlayer = forwardRef<SimplePreviewPlayerRef, SimplePreviewPlay
       try {
         if (!audioRef.current || !waveContainerRef.current || !audioUrl) return;
         // Dynamic ESM import from CDN
-        const mod: any = await import('https://unpkg.com/wavesurfer.js@7/dist/wavesurfer.esm.js');
+        const mod: any = await import('https://unpkg.com/wavesurfer.js@7/dist/wavesurfer.esm.js' as any);
         if (destroyed) return;
         // Destroy previous instance if any
         if (waveSurferRef.current) {

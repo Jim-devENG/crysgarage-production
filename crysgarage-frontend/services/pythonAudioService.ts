@@ -12,13 +12,13 @@ const isLocal = typeof window !== 'undefined'
 const computePythonBaseUrl = (): string => {
   // Prefer explicit localhost for dev; otherwise, route through the public Nginx proxy
   if (typeof window === 'undefined') {
-    return 'https://crysgarage.studio/api/python';
+    return 'https://crysgarage.studio';
   }
   const { hostname, origin } = window.location;
   if (hostname === 'localhost' || hostname === '127.0.0.1') {
     return 'http://localhost:8002';
   }
-  return `${origin}/api/python`;
+  return origin;
 };
 
 const PYTHON_SERVICE_URL = computePythonBaseUrl();
