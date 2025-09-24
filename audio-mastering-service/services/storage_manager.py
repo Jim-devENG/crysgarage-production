@@ -33,7 +33,8 @@ class StorageManager:
         self.local_storage_path = os.getenv('LOCAL_STORAGE_PATH', '../crysgarage-backend-fresh/storage/app/public/mastered')
         self.s3_bucket = os.getenv('S3_BUCKET', 'crysgarage-mastered-audio')
         self.s3_region = os.getenv('S3_REGION', 'us-east-1')
-        self.base_url = os.getenv('BASE_URL', 'http://localhost:8000')
+        # Public base URL for serving mastered files
+        self.base_url = os.getenv('BASE_URL', 'https://crysgarage.studio')
         
         # File cleanup settings
         self.cleanup_delay_minutes = int(os.getenv('FILE_CLEANUP_DELAY_MINUTES', '5'))
@@ -217,8 +218,8 @@ class StorageManager:
                     import json
                     await f.write(json.dumps(metadata, indent=2))
             
-            # Generate URL using Laravel's storage format
-            url = f"{self.base_url}/storage/mastered/{filename}"
+            # Generate public URL served by Nginx alias at /files/
+            url = f"{self.base_url}/files/{filename}"
             return url
             
         except Exception as e:
