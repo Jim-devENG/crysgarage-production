@@ -592,7 +592,7 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
         showToastNotification('Real-time preview failed. Python backend must succeed.', 'error');
         // No fallback: enforce Python-only preview
       }
-    } else {
+        } else {
       console.warn('⚠️ Cannot start real-time preview: missing file or genre', {
         hasFile: !!selectedFile,
         hasGenre: !!selectedGenre
@@ -837,8 +837,8 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
       if (fallbackPreset) {
         console.log(`🎵 Applying ${genreId} preset (TSX local):`, fallbackPreset);
         setLockedGenrePreset(fallbackPreset);
-        const lockedValues = {
-          eq: {
+      const lockedValues = {
+        eq: {
             bands: [
               { frequency: 60, gain: multiplierToDb(fallbackPreset.eq.low), q: 1, type: 'lowshelf' as const },
               { frequency: 150, gain: multiplierToDb(fallbackPreset.eq.mid), q: 1, type: 'peaking' as const },
@@ -849,31 +849,31 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
               { frequency: 10000, gain: multiplierToDb(fallbackPreset.eq.high), q: 1, type: 'peaking' as const },
               { frequency: 16000, gain: multiplierToDb(fallbackPreset.eq.high), q: 1, type: 'highshelf' as const }
             ]
-          },
-          compressor: {
+        },
+        compressor: {
             threshold: fallbackPreset.compression.threshold,
             ratio: fallbackPreset.compression.ratio,
             attack: fallbackPreset.compression.attack,
             release: fallbackPreset.compression.release
-          },
-          loudness: {
+        },
+        loudness: {
             gain: multiplierToDb(fallbackPreset.gain)
-          },
-          limiter: {
+        },
+        limiter: {
             threshold: -3.0,
             ceiling: fallbackPreset.truePeak
-          }
-        };
-        setLockedEffectValues(lockedValues);
+        }
+      };
+      setLockedEffectValues(lockedValues);
       } else {
         console.warn(`⚠️ No preset found for genre: ${genreId}`);
       }
-
+      
       console.log(`Genre selected: ${canonicalId}`, {
         preset: GENRE_PRESETS[canonicalId],
         genreLocked
       });
-
+      
       setAudioEffects(prev => {
         const backup = {
           eq: { ...prev.eq },
@@ -887,8 +887,8 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
           const previewGainDb2 = multiplierToDb(currentPreset.gain || 1);
           return {
             ...prev,
-            eq: {
-              ...prev.eq,
+            eq: { 
+              ...prev.eq, 
               bands: [
                 { frequency: 60, gain: multiplierToDb(currentPreset.eq?.low || 1), q: 1, type: 'lowshelf' as const },
                 { frequency: 150, gain: multiplierToDb(currentPreset.eq?.mid || 1), q: 1, type: 'peaking' as const },
@@ -899,26 +899,26 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
                 { frequency: 10000, gain: multiplierToDb(currentPreset.eq?.high || 1), q: 1, type: 'peaking' as const },
                 { frequency: 16000, gain: multiplierToDb(currentPreset.eq?.high || 1), q: 1, type: 'highshelf' as const }
               ],
-              enabled: true
+              enabled: true 
             },
-            compressor: {
-              ...prev.compressor,
+            compressor: { 
+              ...prev.compressor, 
               threshold: currentPreset.compression?.threshold || -16.0,
               ratio: currentPreset.compression?.ratio || 3.0,
               attack: currentPreset.compression?.attack ?? 2,
               release: currentPreset.compression?.release ?? 150,
-              enabled: true
+              enabled: true 
             },
-            loudness: {
-              ...prev.loudness,
+            loudness: { 
+              ...prev.loudness, 
               gain: previewGainDb2,
-              enabled: true
+              enabled: true 
             },
-            limiter: {
-              ...prev.limiter,
+            limiter: { 
+              ...prev.limiter, 
               threshold: -3.0,
               ceiling: currentPreset.truePeak || -0.1,
-              enabled: true
+              enabled: true 
             }
           };
         }
@@ -1142,8 +1142,8 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
                   onToggleGenreLock={handleToggleGenreLock}
                 />
                 
-               </div>
-            </div>
+                    </div>
+              </div>
 
             {/* Effects only, centered within genre width */}
             <div className="max-w-6xl mx-auto flex justify-center items-start">
@@ -1207,8 +1207,8 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
                       .finally(() => setAnalyzing(false));
                   }
                 }}
-              />
-              </div>
+                 />
+               </div>
             </div>
 
             {/* Processing summary removed as requested */}

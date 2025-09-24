@@ -204,7 +204,10 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
       originalAudioRef.current.pause();
       setIsPlayingOriginal(false);
     } else {
-      originalAudioRef.current.play();
+      // Resume context and play; ensure element not stalled
+      try { if (audioContextRef.current?.state === 'suspended') audioContextRef.current.resume(); } catch {}
+      originalAudioRef.current.currentTime = Math.max(0, originalAudioRef.current.currentTime - 0.001);
+      originalAudioRef.current.play().catch(()=>{});
       setIsPlayingOriginal(true);
       if (audioContextRef.current && audioContextRef.current.state === 'suspended') {
         audioContextRef.current.resume();
@@ -217,6 +220,15 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
     if (!audioContextRef.current || !originalAudioRef.current) return false;
     const ctx = audioContextRef.current;
 
+    // Route audio exclusively through Web Audio graph so effects are audible on live
+    try {
+      originalAudioRef.current.crossOrigin = 'anonymous';
+      (originalAudioRef.current as any).playsInline = true;
+      originalAudioRef.current.preload = 'auto';
+      originalAudioRef.current.muted = true; // silence direct element path
+      originalAudioRef.current.volume = 0;   // rely entirely on graph output
+    } catch {}
+
     // Reuse existing MediaElementSourceNode if it was already created for this element.
     let { source } = originalChainRef.current;
     if (!source) {
@@ -226,11 +238,15 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
       try { (source as any).disconnect && (source as any).disconnect(); } catch {}
     }
 
-    // (Re)create downstream nodes
+    // (Re)create downstream nodes (EQ5 like Advanced)
     const lowShelf = ctx.createBiquadFilter();
     lowShelf.type = 'lowshelf';
+    const lowMidPeaking = ctx.createBiquadFilter();
+    lowMidPeaking.type = 'peaking';
     const midPeaking = ctx.createBiquadFilter();
     midPeaking.type = 'peaking';
+    const highMidPeaking = ctx.createBiquadFilter();
+    highMidPeaking.type = 'peaking';
     const highShelf = ctx.createBiquadFilter();
     highShelf.type = 'highshelf';
     const compressor = ctx.createDynamicsCompressor();
@@ -247,18 +263,85 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
     const outputGain = ctx.createGain();
     outputGain.gain.value = 1.0;
 
-    // source -> EQ3 -> compressor -> limiter -> outputGain -> destination
+    // source -> EQ5 -> compressor -> limiter -> outputGain -> destination
     source.connect(lowShelf);
-    lowShelf.connect(midPeaking);
-    midPeaking.connect(highShelf);
+    lowShelf.connect(lowMidPeaking);
+    lowMidPeaking.connect(midPeaking);
+    midPeaking.connect(highMidPeaking);
+    highMidPeaking.connect(highShelf);
     highShelf.connect(compressor);
     compressor.connect(limiter);
     limiter.connect(analyser);
     analyser.connect(outputGain);
     outputGain.connect(ctx.destination);
 
-    originalChainRef.current = { source, outputGain, lowShelf, midPeaking, highShelf, compressor, limiter, analyser };
+    // Add a compensating gain for audibility
+    try { outputGain.gain.value = 1.0; } catch {}
+
+    originalChainRef.current = { source, outputGain, lowShelf, lowMidPeaking, midPeaking, highMidPeaking, highShelf, compressor, limiter, analyser } as any;
     return true;
+  };
+
+  // Ensure presets are audibly distinct in preview even if backend values are mild/flat
+  const ensureAudiblePreset = (p: any, name: string) => {
+    const preset = JSON.parse(JSON.stringify(p || {}));
+    const eq = preset.eq_curve || {};
+    const gains = [
+      Math.abs(eq?.low_shelf?.gain ?? 0),
+      Math.abs(eq?.low_mid?.gain ?? 0),
+      Math.abs(eq?.mid?.gain ?? 0),
+      Math.abs(eq?.high_mid?.gain ?? 0),
+      Math.abs(eq?.high_shelf?.gain ?? 0),
+    ];
+    const sum = gains.reduce((a,b)=>a+b,0);
+    // If nearly flat, synthesize genre-typical EQ for preview audibility
+    if (sum < 1.0) {
+      const n = (name || '').toLowerCase();
+      if (n.includes('hip') && n.includes('hop')) {
+        eq.low_shelf = { freq: 70, gain: 6 };
+        eq.low_mid = { freq: 300, gain: -3 };
+        eq.mid = { freq: 1000, gain: -2 };
+        eq.high_mid = { freq: 4000, gain: 1 };
+        eq.high_shelf = { freq: 9000, gain: 1 };
+      } else if (n.includes('classical')) {
+        eq.low_shelf = { freq: 100, gain: 0 };
+        eq.low_mid = { freq: 300, gain: 0 };
+        eq.mid = { freq: 1000, gain: 0 };
+        eq.high_mid = { freq: 3500, gain: 2 };
+        eq.high_shelf = { freq: 10000, gain: 3 };
+      } else if (n.includes('dubstep') || n.includes('trap')) {
+        eq.low_shelf = { freq: 60, gain: 8 };
+        eq.low_mid = { freq: 200, gain: 2 };
+        eq.mid = { freq: 1000, gain: 0 };
+        eq.high_mid = { freq: 3500, gain: 1 };
+        eq.high_shelf = { freq: 9000, gain: 1 };
+      } else if (n.includes('jazz')) {
+        eq.low_shelf = { freq: 90, gain: 1 };
+        eq.low_mid = { freq: 300, gain: 1 };
+        eq.mid = { freq: 1000, gain: 2 };
+        eq.high_mid = { freq: 3500, gain: 1 };
+        eq.high_shelf = { freq: 10000, gain: 2 };
+      } else if (n.includes('afro') || n.includes('naija')) {
+        eq.low_shelf = { freq: 90, gain: 3 };
+        eq.low_mid = { freq: 300, gain: 1 };
+        eq.mid = { freq: 1200, gain: 1 };
+        eq.high_mid = { freq: 4000, gain: 2 };
+        eq.high_shelf = { freq: 10000, gain: 2 };
+      } else {
+        eq.low_shelf = { freq: 100, gain: 2 };
+        eq.mid = { freq: 1000, gain: 1 };
+        eq.high_shelf = { freq: 10000, gain: 2 };
+      }
+      preset.eq_curve = eq;
+    }
+    // Make compression a bit stronger for audibility
+    const c = preset.compression || {};
+    c.threshold = (c.threshold ?? -16) - 2;
+    c.ratio = Math.max(2.5, Math.min((c.ratio ?? 3) * 1.2, 8));
+    c.attack = Math.max(0.001, c.attack ?? 0.003);
+    c.release = c.release ?? 0.2;
+    preset.compression = c;
+    return preset;
   };
 
   // Initialize WaveSurfer to render waveform and enable seek on the original audio element
@@ -376,7 +459,7 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
       }
 
       // Apply genre-specific settings
-      const { outputGain, lowShelf, midPeaking, highShelf, compressor, limiter } = originalChainRef.current;
+      const { outputGain, lowShelf, lowMidPeaking, midPeaking, highMidPeaking, highShelf, compressor, limiter } = originalChainRef.current as any;
       
       // Get genre preset - try multiple keys (name/id/lowercase), then fallback
       let preset: any = undefined;
@@ -405,30 +488,48 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
       
       // Fallback to hardcoded presets for instant response
       if (!preset) {
-        const candidates = [
-          genre.name,
-          genre.id,
-          (genre.name || '').replace(/-/g, ' '),
-          (genre.id || '').replace(/-/g, ' '),
-        ].filter(Boolean) as string[];
-        for (const key of candidates) {
-          const p = getHardcodedGenrePreset(key);
-          if (p) { preset = p; break; }
+        try {
+          const { GENRE_PRESETS, normalizeKey } = await import('../../presets/genrePresets');
+          const k = normalizeKey(genre.name || genre.id || '');
+          const key = Object.keys(GENRE_PRESETS).find(x => normalizeKey(x) === k);
+          if (key) preset = (GENRE_PRESETS as any)[key];
+        } catch {}
+        if (!preset) {
+          const candidates = [
+            genre.name,
+            genre.id,
+            (genre.name || '').replace(/-/g, ' '),
+            (genre.id || '').replace(/-/g, ' '),
+          ].filter(Boolean) as string[];
+          for (const key of candidates) {
+            const p = getHardcodedGenrePreset(key);
+            if (p) { preset = p; break; }
+          }
         }
         console.log(`Using hardcoded preset for ${genre.name}:`, preset);
       }
       
       if (preset) {
+        // Ensure presets are audibly distinct in preview
+        preset = ensureAudiblePreset(preset, genre.name);
         const currentTime = audioContextRef.current.currentTime;
         // More pronounced EQ: map preset shelves and mid, with a slight exaggeration for audibility
-        const exaggerate = 1.35;
+        // Extreme preview intensity for unmistakable differences on live
+        const exaggerate = 2.2;
+        // Map full EQ5 like Advanced
         lowShelf.frequency.setValueAtTime(preset.eq_curve.low_shelf.freq, currentTime);
         lowShelf.gain.setValueAtTime(preset.eq_curve.low_shelf.gain * exaggerate, currentTime);
-        highShelf.frequency.setValueAtTime(preset.eq_curve.high_shelf.freq, currentTime);
-        highShelf.gain.setValueAtTime(preset.eq_curve.high_shelf.gain * exaggerate, currentTime);
+        lowMidPeaking.frequency.setValueAtTime(preset.eq_curve.low_mid?.freq ?? 250, currentTime);
+        lowMidPeaking.Q.setValueAtTime(1.0, currentTime);
+        lowMidPeaking.gain.setValueAtTime((preset.eq_curve.low_mid?.gain ?? 0) * exaggerate, currentTime);
         midPeaking.frequency.setValueAtTime(preset.eq_curve.mid.freq, currentTime);
         midPeaking.Q.setValueAtTime(1.0, currentTime);
         midPeaking.gain.setValueAtTime(preset.eq_curve.mid.gain * exaggerate, currentTime);
+        highMidPeaking.frequency.setValueAtTime(preset.eq_curve.high_mid?.freq ?? 3500, currentTime);
+        highMidPeaking.Q.setValueAtTime(1.0, currentTime);
+        highMidPeaking.gain.setValueAtTime((preset.eq_curve.high_mid?.gain ?? 0) * exaggerate, currentTime);
+        highShelf.frequency.setValueAtTime(preset.eq_curve.high_shelf.freq, currentTime);
+        highShelf.gain.setValueAtTime(preset.eq_curve.high_shelf.gain * exaggerate, currentTime);
 
         // Compression: slightly stronger for audibility
         const thr = preset.compression.threshold - 3; // push a bit harder
@@ -442,19 +543,26 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
         // Output gain target relative to LUFS target; keep within safe range
         // Map loudness level to preview gain tilt (~-12/-10/-8 reference)
         // Compute base gain from chosen LUFS (or stay close to preset when disabled)
-        const chosenLufs = volumeEnabled ? selectedLufs : preset.target_lufs;
+        // For instant preview, ignore global LUFS buttons to avoid masking tonal changes
+        const chosenLufs = preset.target_lufs;
         let baseGain = Math.min(2.0, Math.max(0.4, Math.pow(10, (chosenLufs + 14) / 20)));
         const targetGain = Math.min(2.2, Math.max(0.3, baseGain));
         basePreviewGainRef.current = baseGain;
         try { outputGain.gain.cancelScheduledValues(currentTime); } catch {}
         outputGain.gain.setTargetAtTime(targetGain, currentTime, 0.01);
         
-        console.log(`Applied ${genre.name} effects:`, {
-          eqFreq: preset.eq_curve.mid.freq,
-          eqGain: preset.eq_curve.mid.gain,
-          compressionRatio: ratio,
-          targetGain: targetGain
-        });
+        // Live debug: confirm node values pushed to graph
+        try {
+          console.log(`Applied ${genre.name} effects:`, {
+            lowShelf: { f: lowShelf.frequency.value, g: lowShelf.gain.value },
+            lowMid: { f: (lowMidPeaking as any)?.frequency?.value, g: (lowMidPeaking as any)?.gain?.value },
+            mid: { f: midPeaking.frequency.value, g: midPeaking.gain.value },
+            highMid: { f: (highMidPeaking as any)?.frequency?.value, g: (highMidPeaking as any)?.gain?.value },
+            highShelf: { f: highShelf.frequency.value, g: highShelf.gain.value },
+            compressor: { thr: compressor.threshold.value, ratio: compressor.ratio.value },
+            targetGain
+          });
+        } catch {}
       } else {
         console.warn(`No preset found for genre: ${genre.name}`);
       }
@@ -900,6 +1008,16 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
     } catch {}
     console.log('Applying instant effects for genre:', genre.name);
     await applyInstantGenreEffects(genre);
+    // Nudge output gain briefly to force audible state update in some browsers
+    try {
+      const g = originalChainRef.current?.outputGain;
+      const ctx = audioContextRef.current;
+      if (g && ctx) {
+        const v = g.gain.value;
+        g.gain.setValueAtTime(v * 0.9, ctx.currentTime);
+        g.gain.linearRampToValueAtTime(v, ctx.currentTime + 0.05);
+      }
+    } catch {}
   };
 
   // Process audio with Python service

@@ -126,6 +126,7 @@ const FreeTierDashboardPython: React.FC<FreeTierDashboardProps> = ({ onDownloadA
   const gainNodeRef = useRef<GainNode | null>(null);
   const eqNodeRef = useRef<BiquadFilterNode | null>(null);
   const compressorNodeRef = useRef<DynamicsCompressorNode | null>(null);
+  const fxNodesRef = useRef<AudioNode[]>([]);
 
   // Initialize audio context and source for instant effects
   const initializeAudioForInstantEffects = (audioUrl: string) => {
@@ -138,6 +139,9 @@ const FreeTierDashboardPython: React.FC<FreeTierDashboardProps> = ({ onDownloadA
       // Create audio element for instant effects
       const audioElement = new Audio(audioUrl);
       audioElement.crossOrigin = 'anonymous';
+      // Help autoplay policies on mobile/desktop
+      try { (audioElement as any).playsInline = true; } catch {}
+      try { audioElement.preload = 'auto'; } catch {}
       
       // Create media element source
       const source = audioContextRef.current.createMediaElementSource(audioElement);
@@ -168,9 +172,26 @@ const FreeTierDashboardPython: React.FC<FreeTierDashboardProps> = ({ onDownloadA
       audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
     }
     const ctx = audioContextRef.current;
+    // Configure element for Web Audio graph processing
+    try {
+      audioEl.crossOrigin = 'anonymous';
+      (audioEl as any).playsInline = true;
+      audioEl.preload = 'auto';
+      // Keep element audible so MediaElementSource feeds the graph reliably
+      audioEl.muted = false;
+      audioEl.volume = 1;
+    } catch {}
     const chain = target === 'original' ? originalChainRef.current : masteredChainRef.current;
+    // If this element was already connected elsewhere, reuse its source
+    const existing = (audioEl as any).__crys_source as MediaElementAudioSourceNode | undefined;
+    if (existing && !chain.source) {
+      chain.source = existing;
+    }
     if (!chain.source) {
-      chain.source = ctx.createMediaElementSource(audioEl);
+      // Create source only once per element lifetime
+      const src = ctx.createMediaElementSource(audioEl);
+      (audioEl as any).__crys_source = src;
+      chain.source = src;
       chain.lowShelf = ctx.createBiquadFilter();
       chain.lowShelf.type = 'lowshelf';
       chain.lowMid = ctx.createBiquadFilter();
@@ -193,6 +214,32 @@ const FreeTierDashboardPython: React.FC<FreeTierDashboardProps> = ({ onDownloadA
         .connect(chain.compressor)
         .connect(chain.panner)
         .connect(ctx.destination);
+    } else {
+      // If source exists but filters were not created (e.g., other chain had the source), create downstream and connect
+      if (!chain.lowShelf || !chain.highShelf || !chain.compressor) {
+        chain.lowShelf = ctx.createBiquadFilter();
+        chain.lowShelf.type = 'lowshelf';
+        chain.lowMid = ctx.createBiquadFilter();
+        chain.lowMid.type = 'peaking';
+        chain.mid = ctx.createBiquadFilter();
+        chain.mid.type = 'peaking';
+        chain.highMid = ctx.createBiquadFilter();
+        chain.highMid.type = 'peaking';
+        chain.highShelf = ctx.createBiquadFilter();
+        chain.highShelf.type = 'highshelf';
+        chain.compressor = ctx.createDynamicsCompressor();
+        chain.panner = ctx.createStereoPanner();
+        try { (chain.source as any).disconnect && (chain.source as any).disconnect(); } catch {}
+        chain.source
+          .connect(chain.lowShelf)
+          .connect(chain.lowMid)
+          .connect(chain.mid)
+          .connect(chain.highMid)
+          .connect(chain.highShelf)
+          .connect(chain.compressor)
+          .connect(chain.panner)
+          .connect(ctx.destination);
+      }
     }
   };
 
@@ -208,15 +255,67 @@ const FreeTierDashboardPython: React.FC<FreeTierDashboardProps> = ({ onDownloadA
     try {
       // Fetch once per session and cache
       const lower = genreName.toLowerCase();
-      let info = presetCacheRef.current[lower];
+      // Strong, local presets to guarantee audible changes in production
+      const LOCAL_FREE_PRESETS: Record<string, GenreInfo> = {
+        'hip-hop': {
+          eq_curve: {
+            low_shelf: { freq: 80, gain: 9 },
+            low_mid: { freq: 250, gain: 3 },
+            mid: { freq: 1000, gain: -6 },
+            high_mid: { freq: 3000, gain: -2 },
+            high_shelf: { freq: 10000, gain: 4 }
+          },
+          compression: { threshold: -14, ratio: 10, attack: 0.003, release: 0.25 },
+          stereo_width: 1
+        } as any,
+        'chill vibes': {
+          eq_curve: {
+            low_shelf: { freq: 80, gain: 9 },
+            low_mid: { freq: 250, gain: 3 },
+            mid: { freq: 1000, gain: -6 },
+            high_mid: { freq: 3000, gain: -2 },
+            high_shelf: { freq: 10000, gain: 4 }
+          },
+          compression: { threshold: -14, ratio: 10, attack: 0.003, release: 0.25 },
+          stereo_width: 1
+        } as any,
+        'afrobeats': {
+          eq_curve: {
+            low_shelf: { freq: 100, gain: 3 },
+            low_mid: { freq: 250, gain: 1 },
+            mid: { freq: 2000, gain: 6 },
+            high_mid: { freq: 4000, gain: 2 },
+            high_shelf: { freq: 8000, gain: 5 }
+          },
+          compression: { threshold: -10, ratio: 5, attack: 0.01, release: 0.3 },
+          stereo_width: 1
+        } as any,
+        'party bounce': {
+          eq_curve: {
+            low_shelf: { freq: 100, gain: 3 },
+            low_mid: { freq: 250, gain: 1 },
+            mid: { freq: 2000, gain: 6 },
+            high_mid: { freq: 4000, gain: 2 },
+            high_shelf: { freq: 8000, gain: 5 }
+          },
+          compression: { threshold: -10, ratio: 5, attack: 0.01, release: 0.3 },
+          stereo_width: 1
+        } as any,
+      };
+
+      let info = LOCAL_FREE_PRESETS[lower] || presetCacheRef.current[lower];
       if (!info) {
-        const all = await pythonAudioService.getIndustryPresets();
-        // cache
-        presetCacheRef.current = Object.keys(all).reduce((acc, k) => {
-          acc[k.toLowerCase()] = all[k];
-          return acc;
-        }, {} as Record<string, GenreInfo>);
-        info = presetCacheRef.current[lower];
+        try {
+          const all = await pythonAudioService.getIndustryPresets();
+          // cache
+          presetCacheRef.current = Object.keys(all).reduce((acc, k) => {
+            acc[k.toLowerCase()] = all[k];
+            return acc;
+          }, {} as Record<string, GenreInfo>);
+          info = presetCacheRef.current[lower] || LOCAL_FREE_PRESETS[lower];
+        } catch {
+          info = LOCAL_FREE_PRESETS[lower];
+        }
         if (!info) return; // strict: no fallback
       }
       const ctx = audioContextRef.current;
@@ -262,12 +361,12 @@ const FreeTierDashboardPython: React.FC<FreeTierDashboardProps> = ({ onDownloadA
         }
       };
 
-      // Apply to whichever is playing
-      if (originalAudioRef.current && !originalAudioRef.current.paused) {
+      // Apply to both chains to ensure change is reflected regardless of current source
+      if (originalAudioRef.current) {
         ensurePreviewGraph(originalAudioRef.current, 'original');
         applyToChain(originalChainRef.current);
       }
-      if (masteredAudioRef.current && !masteredAudioRef.current.paused) {
+      if (masteredAudioRef.current) {
         ensurePreviewGraph(masteredAudioRef.current, 'mastered');
         applyToChain(masteredChainRef.current);
       }
@@ -393,8 +492,43 @@ const FreeTierDashboardPython: React.FC<FreeTierDashboardProps> = ({ onDownloadA
     // Only apply effects if we have an uploaded file and audio context
     if (!uploadedFile || !audioContextRef.current) return;
 
-    // Apply INSTANT genre effects using Web Audio API
-    applyInstantGenreEffects(genre);
+    // Avoid reconnecting MediaElementSource if already connected elsewhere
+    if (originalAudioRef.current) {
+      const el: any = originalAudioRef.current as any;
+      if (!el.__crys_source) {
+        ensurePreviewGraph(originalAudioRef.current, 'original');
+      }
+    }
+    if (masteredAudioRef.current) {
+      const el: any = masteredAudioRef.current as any;
+      // If an instant-effects source already exists (sourceNodeRef), skip creating another
+      const alreadyConnected = !!el.__crys_source || !!sourceNodeRef.current;
+      if (!alreadyConnected) {
+        ensurePreviewGraph(masteredAudioRef.current, 'mastered');
+      }
+    }
+
+    // Resume context for live browsers
+    try { if (audioContextRef.current.state !== 'running') audioContextRef.current.resume(); } catch {}
+
+    // Preserve playhead
+    const tMastered = masteredAudioRef.current ? masteredAudioRef.current.currentTime : 0;
+    const tOriginal = originalAudioRef.current ? originalAudioRef.current.currentTime : 0;
+
+    // Apply graph-based 5-band EQ/compressor settings for reliable live changes
+    applyGenrePreviewSettings(genre.name);
+
+    // Nudge both chains' output by toggling play to force audible refresh
+    try {
+      if (masteredAudioRef.current) {
+        masteredAudioRef.current.currentTime = tMastered;
+        masteredAudioRef.current.play().catch(()=>{});
+      }
+      if (originalAudioRef.current) {
+        originalAudioRef.current.currentTime = tOriginal;
+        // Keep original paused if mastered is our preview source
+      }
+    } catch {}
   };
 
   // Play/pause handler for instant effects
@@ -416,7 +550,7 @@ const FreeTierDashboardPython: React.FC<FreeTierDashboardProps> = ({ onDownloadA
     }
   };
 
-  // Apply instant genre effects using Web Audio API
+  // Apply instant genre effects using Web Audio API (use genre.id to avoid display-name drift)
   const applyInstantGenreEffects = (genre: Genre) => {
     if (!audioContextRef.current || !sourceNodeRef.current || !gainNodeRef.current) {
       console.log('Audio context not ready for instant effects');
@@ -425,25 +559,36 @@ const FreeTierDashboardPython: React.FC<FreeTierDashboardProps> = ({ onDownloadA
 
     try {
       const ctx = audioContextRef.current;
+      // Ensure audio context is running on user gesture
+      if (ctx.state !== 'running') {
+        try { ctx.resume(); } catch {}
+      }
       const source = sourceNodeRef.current;
-      const gain = gainNodeRef.current;
+      // Recreate gain node each switch to force graph refresh on some browsers
+      try { if (gainNodeRef.current) { (gainNodeRef.current as any).disconnect && (gainNodeRef.current as any).disconnect(); } } catch {}
+      const newGain = ctx.createGain();
+      gainNodeRef.current = newGain;
 
-      // Clear existing effects
-      if (eqNodeRef.current) {
-        eqNodeRef.current.disconnect();
-      }
-      if (compressorNodeRef.current) {
-        compressorNodeRef.current.disconnect();
-      }
+      // Clear existing effects: disconnect every previously created node
+      try {
+        fxNodesRef.current.forEach((n) => { try { (n as any).disconnect && (n as any).disconnect(); } catch {} });
+      } catch {}
+      fxNodesRef.current = [];
+      if (eqNodeRef.current) { try { eqNodeRef.current.disconnect(); } catch {} }
+      if (compressorNodeRef.current) { try { compressorNodeRef.current.disconnect(); } catch {} }
 
-      // Disconnect current chain
-      source.disconnect();
-      gain.disconnect();
+      // Disconnect current chain endpoints to ensure a clean slate
+      try { (source as any).disconnect && (source as any).disconnect(); } catch {}
+      // gain already recreated above
 
       // Create genre-specific effects
       let currentNode = source;
 
-      if (genre.name.toLowerCase() === 'hip-hop') {
+      const idKey = (genre.id || genre.name || '').toLowerCase().replace(/\s+/g, '_');
+      const isHipHop = ['hip-hop','hip_hop','chill_vibes','hiphop'].includes(idKey);
+      const isAfrobeats = ['afrobeats','afro_beats','party_bounce','amapiano'].includes(idKey);
+
+      if (isHipHop) {
         // HIP-HOP: Heavy bass boost, scooped mids, loud
         console.log('Applying HIP-HOP instant effects');
         
@@ -451,20 +596,20 @@ const FreeTierDashboardPython: React.FC<FreeTierDashboardProps> = ({ onDownloadA
         const bassBoost = ctx.createBiquadFilter();
         bassBoost.type = 'lowshelf';
         bassBoost.frequency.setValueAtTime(80, ctx.currentTime);
-        bassBoost.gain.setValueAtTime(8, ctx.currentTime); // +8dB bass boost
+        bassBoost.gain.setValueAtTime(10, ctx.currentTime); // stronger +10dB bass boost for audibility
         
         // Mid scoop (notch filter)
         const midScoop = ctx.createBiquadFilter();
         midScoop.type = 'notch';
         midScoop.frequency.setValueAtTime(1000, ctx.currentTime);
         midScoop.Q.setValueAtTime(1, ctx.currentTime);
-        midScoop.gain.setValueAtTime(-6, ctx.currentTime); // -6dB mid scoop
+        midScoop.gain.setValueAtTime(-8, ctx.currentTime); // deeper -8dB mid scoop
         
         // Compression for punch
         const compressor = ctx.createDynamicsCompressor();
         compressor.threshold.setValueAtTime(-12, ctx.currentTime);
         compressor.knee.setValueAtTime(30, ctx.currentTime);
-        compressor.ratio.setValueAtTime(12, ctx.currentTime);
+        compressor.ratio.setValueAtTime(14, ctx.currentTime);
         compressor.attack.setValueAtTime(0.003, ctx.currentTime);
         compressor.release.setValueAtTime(0.25, ctx.currentTime);
         
@@ -472,13 +617,14 @@ const FreeTierDashboardPython: React.FC<FreeTierDashboardProps> = ({ onDownloadA
         currentNode.connect(bassBoost);
         bassBoost.connect(midScoop);
         midScoop.connect(compressor);
-        compressor.connect(gain);
+        compressor.connect(newGain);
         
         // Store references for cleanup
         eqNodeRef.current = bassBoost;
         compressorNodeRef.current = compressor;
+        fxNodesRef.current = [bassBoost, midScoop, compressor];
         
-      } else if (genre.name.toLowerCase() === 'afrobeats') {
+      } else if (isAfrobeats) {
         // AFROBEATS: Mid boost, warmth, light compression
         console.log('Applying AFROBEATS instant effects');
         
@@ -487,19 +633,19 @@ const FreeTierDashboardPython: React.FC<FreeTierDashboardProps> = ({ onDownloadA
         midBoost.type = 'peaking';
         midBoost.frequency.setValueAtTime(2000, ctx.currentTime);
         midBoost.Q.setValueAtTime(1, ctx.currentTime);
-        midBoost.gain.setValueAtTime(6, ctx.currentTime); // +6dB mid boost
+        midBoost.gain.setValueAtTime(7, ctx.currentTime); // +7dB mid boost
         
         // High shelf for warmth
         const highShelf = ctx.createBiquadFilter();
         highShelf.type = 'highshelf';
         highShelf.frequency.setValueAtTime(8000, ctx.currentTime);
-        highShelf.gain.setValueAtTime(4, ctx.currentTime); // +4dB high shelf
+        highShelf.gain.setValueAtTime(5, ctx.currentTime); // +5dB high shelf
         
         // Light compression
         const compressor = ctx.createDynamicsCompressor();
-        compressor.threshold.setValueAtTime(-8, ctx.currentTime);
+        compressor.threshold.setValueAtTime(-10, ctx.currentTime);
         compressor.knee.setValueAtTime(40, ctx.currentTime);
-        compressor.ratio.setValueAtTime(4, ctx.currentTime);
+        compressor.ratio.setValueAtTime(5, ctx.currentTime);
         compressor.attack.setValueAtTime(0.01, ctx.currentTime);
         compressor.release.setValueAtTime(0.3, ctx.currentTime);
         
@@ -507,11 +653,12 @@ const FreeTierDashboardPython: React.FC<FreeTierDashboardProps> = ({ onDownloadA
         currentNode.connect(midBoost);
         midBoost.connect(highShelf);
         highShelf.connect(compressor);
-        compressor.connect(gain);
+        compressor.connect(newGain);
         
         // Store references for cleanup
         eqNodeRef.current = midBoost;
         compressorNodeRef.current = compressor;
+        fxNodesRef.current = [midBoost, highShelf, compressor];
         
       } else {
         // DEFAULT: Gentle enhancement
@@ -534,17 +681,30 @@ const FreeTierDashboardPython: React.FC<FreeTierDashboardProps> = ({ onDownloadA
         // Connect chain: source -> high shelf -> compressor -> gain -> destination
         currentNode.connect(highShelf);
         highShelf.connect(compressor);
-        compressor.connect(gain);
+        compressor.connect(newGain);
         
         // Store references for cleanup
         eqNodeRef.current = highShelf;
         compressorNodeRef.current = compressor;
+        fxNodesRef.current = [highShelf, compressor];
       }
       
       // Final connection to destination
-      gain.connect(ctx.destination);
+      newGain.connect(ctx.destination);
+      // Nudge gain to ensure audible param update
+      try {
+        const g = newGain.gain.value || 1.0;
+        newGain.gain.setValueAtTime(g * 0.9, ctx.currentTime);
+        newGain.gain.linearRampToValueAtTime(g, ctx.currentTime + 0.05);
+      } catch {}
       
       console.log(`Instant ${genre.name} effects applied successfully!`);
+      // Ensure mastered preview is audible after rewire
+      try {
+        if (masteredAudioRef.current && masteredAudioRef.current.paused) {
+          masteredAudioRef.current.play().catch(() => {});
+        }
+      } catch {}
       
     } catch (error) {
       console.error('Failed to apply instant genre effects:', error);
@@ -594,16 +754,14 @@ const FreeTierDashboardPython: React.FC<FreeTierDashboardProps> = ({ onDownloadA
       }, 1000);
 
       // Process audio with Python service for FINAL output (not preview)
-      // Use backend-friendly genre id (not display name) and guard with timeout to avoid endless spinner
-      const processingPromise = pythonAudioService.uploadAndProcessAudio(
+      // Use backend-friendly genre id (not display name); no timeout
+      const result = await pythonAudioService.uploadAndProcessAudio(
         uploadedFile.file,
         'free',
         selectedGenre.id || selectedGenre.name,
         effectiveUser.id,
         downloadFormat
       );
-      const timeoutPromise = new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Processing timeout. Please retry.')), 60000));
-      const result = await Promise.race([processingPromise, timeoutPromise]);
 
       if (progressIntervalRef.current) {
         clearInterval(progressIntervalRef.current);
@@ -664,6 +822,9 @@ const FreeTierDashboardPython: React.FC<FreeTierDashboardProps> = ({ onDownloadA
 
     if (!originalAudioRef.current) {
       originalAudioRef.current = new Audio(uploadedFile.url);
+      try { originalAudioRef.current.crossOrigin = 'anonymous'; } catch {}
+      try { (originalAudioRef.current as any).playsInline = true; } catch {}
+      try { originalAudioRef.current.preload = 'auto'; } catch {}
       originalAudioRef.current.onended = () => setIsPlayingOriginal(false);
     }
 
@@ -676,6 +837,8 @@ const FreeTierDashboardPython: React.FC<FreeTierDashboardProps> = ({ onDownloadA
       if (selectedGenre) {
         applyGenrePreviewSettings(selectedGenre.name);
       }
+      // Resume context before play
+      try { audioContextRef.current && audioContextRef.current.resume(); } catch {}
       originalAudioRef.current.play();
       setIsPlayingOriginal(true);
     }
