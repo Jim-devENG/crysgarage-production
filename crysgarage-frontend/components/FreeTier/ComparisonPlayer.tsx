@@ -250,7 +250,18 @@ const ComparisonPlayer: React.FC<ComparisonPlayerProps> = ({
     }
   };
 
-  // Switch A/B while maintaining playhead and play state
+  // Attempt resilient playback start on target element
+  const ensurePlay = async (el: HTMLAudioElement | null) => {
+    if (!el) return;
+    try { await el.play(); return; } catch {}
+    const onCanPlay = async () => {
+      el.removeEventListener('canplay', onCanPlay);
+      try { await el.play(); } catch {}
+    };
+    el.addEventListener('canplay', onCanPlay, { once: true });
+  };
+
+  // Switch A/B while maintaining playhead and play state (more resilient, avoids stopping)
   const handleSwitchSource = (next: 'original' | 'mastered') => {
     if (next === activeSource) return;
     const fromRef = activeRef.current;
@@ -266,6 +277,10 @@ const ComparisonPlayer: React.FC<ComparisonPlayerProps> = ({
     const startTarget = async () => {
       isSwitchSeekingRef.current = true;
       const seekTo = Math.max(0, Math.min(currentTime, toRef.duration || currentTime));
+      // Proactively begin playback to avoid "stopped" perception while seeking
+      if (wasPlaying) {
+        await ensurePlay(toRef);
+      }
       try {
         if ('fastSeek' in toRef && typeof (toRef as any).fastSeek === 'function') {
           (toRef as any).fastSeek(seekTo);
@@ -463,6 +478,8 @@ const ComparisonPlayer: React.FC<ComparisonPlayerProps> = ({
               ref={originalAudioRef}
               src={originalFile.url}
               preload="auto"
+              playsInline
+              crossOrigin="anonymous"
             />
           )}
 
@@ -521,6 +538,8 @@ const ComparisonPlayer: React.FC<ComparisonPlayerProps> = ({
               ref={masteredAudioRef}
               src={masteredAudioUrl}
               preload="auto"
+              playsInline
+              crossOrigin="anonymous"
             />
           )}
 
