@@ -143,8 +143,9 @@ const FreeTierDashboardPython: React.FC<FreeTierDashboardProps> = ({ onDownloadA
       try { (audioElement as any).playsInline = true; } catch {}
       try { audioElement.preload = 'auto'; } catch {}
       
-      // Create media element source
+      // Create media element source and tag it on the element for reuse guards
       const source = audioContextRef.current.createMediaElementSource(audioElement);
+      try { (audioElement as any).__crys_source = source; } catch {}
       
       // Create gain node
       const gain = audioContextRef.current.createGain();
@@ -363,11 +364,17 @@ const FreeTierDashboardPython: React.FC<FreeTierDashboardProps> = ({ onDownloadA
 
       // Apply to both chains to ensure change is reflected regardless of current source
       if (originalAudioRef.current) {
-        ensurePreviewGraph(originalAudioRef.current, 'original');
+        const el: any = originalAudioRef.current as any;
+        if (!el.__crys_source) {
+          ensurePreviewGraph(originalAudioRef.current, 'original');
+        }
         applyToChain(originalChainRef.current);
       }
       if (masteredAudioRef.current) {
-        ensurePreviewGraph(masteredAudioRef.current, 'mastered');
+        const el: any = masteredAudioRef.current as any;
+        if (!el.__crys_source) {
+          ensurePreviewGraph(masteredAudioRef.current, 'mastered');
+        }
         applyToChain(masteredChainRef.current);
       }
     } catch (e) {
@@ -501,8 +508,8 @@ const FreeTierDashboardPython: React.FC<FreeTierDashboardProps> = ({ onDownloadA
     }
     if (masteredAudioRef.current) {
       const el: any = masteredAudioRef.current as any;
-      // If an instant-effects source already exists (sourceNodeRef), skip creating another
-      const alreadyConnected = !!el.__crys_source || !!sourceNodeRef.current;
+      // If element already has a MediaElementSource, never create another
+      const alreadyConnected = !!el.__crys_source;
       if (!alreadyConnected) {
         ensurePreviewGraph(masteredAudioRef.current, 'mastered');
       }
