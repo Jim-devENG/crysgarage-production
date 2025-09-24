@@ -54,7 +54,7 @@ class AdvancedAudioService {
     if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
       this.baseURL = 'http://localhost:8002';
     } else {
-      this.baseURL = 'https://crysgarage.studio/api/python';
+      this.baseURL = 'https://crysgarage.studio';
     }
   }
 

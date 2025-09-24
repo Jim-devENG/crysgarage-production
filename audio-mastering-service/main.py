@@ -14,6 +14,7 @@ import json
 import os
 import sentry_sdk
 from datetime import datetime
+import math
 
 from services.audio_processor import AudioProcessor
 from services.ml_mastering import MLMasteringEngine
@@ -46,6 +47,21 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc"
 )
+
+# Ensure responses never contain NaN/Inf which can break JSON serialization and hang clients
+def sanitize_for_json(value):
+    try:
+        if isinstance(value, float):
+            if math.isnan(value) or math.isinf(value):
+                return 0.0
+            return float(value)
+        if isinstance(value, dict):
+            return {k: sanitize_for_json(v) for k, v in value.items()}
+        if isinstance(value, list):
+            return [sanitize_for_json(v) for v in value]
+        return value
+    except Exception:
+        return value
 
 # CORS middleware
 app.add_middleware(
@@ -1278,7 +1294,7 @@ async def upload_file(
             except Exception:
                 pass
 
-            return {
+            return sanitize_for_json({
                 "status": "success",
                 "url": file_url,
                 "lufs": metadata.get("lufs", effective_target_lufs),
@@ -1286,7 +1302,7 @@ async def upload_file(
                 "duration": metadata.get("duration", 0),
                 "sample_rate": desired_sr,
                 "file_size": metadata.get("file_size", 0)
-            }
+            })
             
     except Exception as e:
         import traceback as _tb

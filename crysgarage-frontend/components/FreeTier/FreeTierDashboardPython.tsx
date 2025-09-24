@@ -594,13 +594,16 @@ const FreeTierDashboardPython: React.FC<FreeTierDashboardProps> = ({ onDownloadA
       }, 1000);
 
       // Process audio with Python service for FINAL output (not preview)
-      const result = await pythonAudioService.uploadAndProcessAudio(
+      // Use backend-friendly genre id (not display name) and guard with timeout to avoid endless spinner
+      const processingPromise = pythonAudioService.uploadAndProcessAudio(
         uploadedFile.file,
         'free',
-        selectedGenre.name,
+        selectedGenre.id || selectedGenre.name,
         effectiveUser.id,
         downloadFormat
       );
+      const timeoutPromise = new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Processing timeout. Please retry.')), 60000));
+      const result = await Promise.race([processingPromise, timeoutPromise]);
 
       if (progressIntervalRef.current) {
         clearInterval(progressIntervalRef.current);
@@ -716,7 +719,7 @@ const FreeTierDashboardPython: React.FC<FreeTierDashboardProps> = ({ onDownloadA
     try {
       // Fetch via python proxy and save as blob to avoid navigation/popups
       const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
-      const proxyBase = isLocal ? 'http://localhost:8002' : 'https://crysgarage.studio/api/python';
+      const proxyBase = isLocal ? 'http://localhost:8002' : 'https://crysgarage.studio';
       const proxyUrl = `${proxyBase}/proxy-download?file_url=${encodeURIComponent(masteredAudioUrl)}`;
       const res = await fetch(proxyUrl, { method: 'GET' });
       if (!res.ok) throw new Error(`Proxy HTTP ${res.status}`);

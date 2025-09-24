@@ -60,7 +60,7 @@ const ExportGate: React.FC<ExportGateProps> = ({
       if (processedAudioUrl) {
         const base = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
           ? 'http://localhost:8002'
-          : 'https://crysgarage.studio/api/python';
+          : 'https://crysgarage.studio';
         const srNum = Math.round(parseFloat(sampleRate.replace('kHz', '')) * 1000);
         const sourceUrl = processedAudioUrl.startsWith('/files') ? `${base}${processedAudioUrl}` : processedAudioUrl;
         const proxyUrl = `${base}/proxy-download?file_url=${encodeURIComponent(sourceUrl)}&format=${downloadFormat}&sample_rate=${srNum}`;
