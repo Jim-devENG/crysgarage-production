@@ -893,152 +893,136 @@ async def analyze_ml(audio: UploadFile = File(...), user_id: str = Form("anonymo
         raise HTTPException(status_code=500, detail=f"ML analyze failed: {str(e)}")
 
 @app.get("/proxy-download")
-async def proxy_download(file_url: str, format: str = "WAV", sample_rate: int = 44100):
-    """Server-side proxy to download a remote file and convert it to the requested format/sample rate.
-    Uses FFmpeg to convert the audio to the specified format and sample rate before streaming.
-    Files are automatically deleted after 5 minutes of creation.
-    """
+async def proxy_download(file_url: str):
+    """Simple proxy to download and stream a remote file for CORS-free access"""
     try:
         import aiohttp
         import urllib.parse
-        import mimetypes
-        import tempfile
-        import subprocess
-        import asyncio
-        from pathlib import Path
-
-        # Validate format and sample rate
-        format = format.upper()
-        if format not in ['WAV', 'MP3', 'FLAC', 'AIFF', 'AAC', 'OGG']:
-            raise HTTPException(status_code=400, detail="Unsupported format. Supported: WAV, MP3, FLAC, AIFF, AAC, OGG")
-
-        if sample_rate not in [44100, 48000, 88200, 96000, 192000]:
-            raise HTTPException(status_code=400, detail="Unsupported sample rate. Supported: 44100, 48000, 88200, 96000, 192000")
-
-        parsed = urllib.parse.urlparse(file_url)
-        original_filename = parsed.path.split('/')[-1] or 'mastered_audio'
+        from urllib.parse import urlparse
         
-        # Create output filename with format and sample rate
-        base_name = Path(original_filename).stem
-        if format == 'MP3':
-            output_filename = f"{base_name}_{sample_rate}Hz.mp3"
-            media_type = "audio/mpeg"
-        elif format == 'FLAC':
-            output_filename = f"{base_name}_{sample_rate}Hz.flac"
-            media_type = "audio/flac"
-        elif format == 'AIFF':
-            output_filename = f"{base_name}_{sample_rate}Hz.aiff"
-            media_type = "audio/aiff"
-        elif format == 'AAC':
-            output_filename = f"{base_name}_{sample_rate}Hz.aac"
-            media_type = "audio/aac"
-        elif format == 'OGG':
-            output_filename = f"{base_name}_{sample_rate}Hz.ogg"
-            media_type = "audio/ogg"
-        else:  # WAV (24-bit)
-            output_filename = f"{base_name}_{sample_rate}Hz.wav"
-            media_type = "audio/wav"
-
-        logger.info(f"Converting {original_filename} to {format} @ {sample_rate}Hz")
-
-        # Prepare input and output temp paths
-        with tempfile.NamedTemporaryFile(delete=False, suffix='.wav') as temp_input:
-            with tempfile.NamedTemporaryFile(delete=False, suffix=f'.{format.lower()}') as temp_output:
-                temp_input_path = temp_input.name
-                temp_output_path = temp_output.name
-
-        try:
-            # If the file_url points to our own /files temp mount, read directly from disk
-            from urllib.parse import urlparse
-            parsed_fu = urlparse(file_url)
-            local_files_path = parsed_fu.path if parsed_fu.path else file_url
-            is_local_files = local_files_path.startswith('/files/')
-            if is_local_files:
-                base_name = local_files_path.rsplit('/', 1)[-1]
-                local_path = os.path.join(tempfile.gettempdir(), base_name)
-                if not os.path.exists(local_path):
-                    raise HTTPException(status_code=404, detail="Source file not found")
-                # Copy to working temp_input_path
-                with open(local_path, 'rb') as src, open(temp_input_path, 'wb') as dst:
-                    dst.write(src.read())
-            else:
-                # Download from external/absolute URL
-                async with aiohttp.ClientSession() as session:
-                    async with session.get(file_url) as resp:
-                        if resp.status != 200:
-                            raise HTTPException(status_code=502, detail=f"Upstream returned {resp.status}")
-                        async for chunk in resp.content.iter_chunked(8192):
-                            with open(temp_input_path, 'ab') as f:
-                                f.write(chunk)
-
-            # Convert using FFmpeg (gain staging handled in ML mastering chain)
-            ffmpeg_cmd = [
-                'ffmpeg', '-y',  # -y to overwrite output file
-                '-i', temp_input_path,
-                '-ar', str(sample_rate),  # Set sample rate
-                '-ac', '2',  # Force stereo
-            ]
+        logger.info(f"Proxy download requested for: {file_url}")
+        
+        # If the file_url points to our own /files temp mount, read directly from disk
+        parsed_fu = urlparse(file_url)
+        local_files_path = parsed_fu.path if parsed_fu.path else file_url
+        is_local_files = local_files_path.startswith('/files/')
+        
+        if is_local_files:
+            # Handle local files from our temp directory
+            base_name = local_files_path.rsplit('/', 1)[-1]
+            local_path = os.path.join(tempfile.gettempdir(), base_name)
+            logger.info(f"Looking for local file: {local_path}")
             
-            # Add format-specific options
-            if format == 'MP3':
-                ffmpeg_cmd.extend(['-acodec', 'libmp3lame', '-b:a', '320k'])
-            elif format == 'FLAC':
-                ffmpeg_cmd.extend(['-acodec', 'flac'])
-            elif format == 'AIFF':
-                ffmpeg_cmd.extend(['-acodec', 'pcm_s24be'])  # 24-bit big-endian
-            elif format == 'AAC':
-                ffmpeg_cmd.extend(['-acodec', 'aac', '-b:a', '256k', '-profile:a', 'aac_low'])
-            elif format == 'OGG':
-                ffmpeg_cmd.extend(['-acodec', 'libvorbis', '-q:a', '8'])
-            else:  # WAV - force 24-bit
-                ffmpeg_cmd.extend(['-acodec', 'pcm_s24le'])
+            if not os.path.exists(local_path):
+                logger.error(f"Local file not found: {local_path}")
+                # Try alternative paths including the actual temp directory and storage manager paths
+                alt_paths = [
+                    os.path.join(tempfile.gettempdir(), base_name),
+                    os.path.join("/tmp", base_name),
+                    os.path.join(".", base_name),
+                    os.path.join("..", "tmp", base_name),
+                    os.path.join(os.getcwd(), base_name),
+                    # Check StorageManager's local storage path
+                    os.path.join("../crysgarage-backend-fresh/storage/app/public/mastered", base_name),
+                    os.path.join("storage/app/public/mastered", base_name),
+                    os.path.join("../storage/app/public/mastered", base_name)
+                ]
+                for alt_path in alt_paths:
+                    if os.path.exists(alt_path):
+                        local_path = alt_path
+                        logger.info(f"Found file at alternative path: {local_path}")
+                        break
+                else:
+                    # List files in temp directory for debugging
+                    temp_files = os.listdir(tempfile.gettempdir()) if os.path.exists(tempfile.gettempdir()) else []
+                    logger.error(f"Available files in temp dir: {temp_files}")
+                    raise HTTPException(status_code=404, detail=f"Source file not found: {base_name}")
             
-            ffmpeg_cmd.append(temp_output_path)
-
-            # Run FFmpeg conversion
-            result = subprocess.run(ffmpeg_cmd, capture_output=True, text=True)
-            if result.returncode != 0:
-                logger.error(f"FFmpeg conversion failed: {result.stderr}")
-                raise HTTPException(status_code=500, detail="Audio conversion failed")
-
-            # Read the converted file and stream it
+            # Stream the local file directly
             def file_iter():
                 try:
-                    with open(temp_output_path, 'rb') as f:
+                    with open(local_path, 'rb') as f:
                         while True:
                             chunk = f.read(64 * 1024)
                             if not chunk:
                                 break
                             yield chunk
-                finally:
-                    # Clean up temporary files
-                    try:
-                        os.unlink(temp_input_path)
-                        os.unlink(temp_output_path)
-                    except:
-                        pass
-
+                except Exception as e:
+                    logger.error(f"Error reading local file: {e}")
+                    raise
+            
+            # Determine content type from file extension
+            if base_name.lower().endswith('.wav'):
+                media_type = "audio/wav"
+            elif base_name.lower().endswith('.mp3'):
+                media_type = "audio/mpeg"
+            else:
+                media_type = "application/octet-stream"
+            
             headers = {
-                'Content-Disposition': f'attachment; filename="{output_filename}"',
-                'Cache-Control': 'no-cache'
+                'Content-Disposition': f'inline; filename="{base_name}"',
+                'Cache-Control': 'no-cache, no-store, must-revalidate',
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'GET, OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type',
+                'Content-Type': media_type
             }
-
+            
+            logger.info(f"Streaming local file: {base_name} ({media_type})")
             return StreamingResponse(file_iter(), media_type=media_type, headers=headers)
-
-        except Exception as e:
-            # Clean up temporary files on error
-            try:
-                os.unlink(temp_input_path)
-                os.unlink(temp_output_path)
-            except:
-                pass
-            raise e
+        else:
+            # Download from external URL and stream
+            logger.info(f"Downloading external file: {file_url}")
+            async with aiohttp.ClientSession() as session:
+                async with session.get(file_url) as resp:
+                    if resp.status != 200:
+                        logger.error(f"Upstream returned {resp.status} for {file_url}")
+                        raise HTTPException(status_code=502, detail=f"Upstream returned {resp.status}")
+                    
+                    # Get content type from response
+                    content_type = resp.headers.get('content-type', 'application/octet-stream')
+                    
+                    # Get filename from URL or content-disposition
+                    filename = parsed_fu.path.split('/')[-1] or 'downloaded_file'
+                    if 'content-disposition' in resp.headers:
+                        cd = resp.headers['content-disposition']
+                        if 'filename=' in cd:
+                            filename = cd.split('filename=')[1].strip('"')
+                    
+                    headers = {
+                        'Content-Disposition': f'inline; filename="{filename}"',
+                        'Cache-Control': 'no-cache, no-store, must-revalidate',
+                        'Access-Control-Allow-Origin': '*',
+                        'Access-Control-Allow-Methods': 'GET, OPTIONS',
+                        'Access-Control-Allow-Headers': 'Content-Type',
+                        'Content-Type': content_type
+                    }
+                    
+                    async def stream_response():
+                        async for chunk in resp.content.iter_chunked(64 * 1024):
+                            yield chunk
+                    
+                    logger.info(f"Streaming external file: {filename} ({content_type})")
+                    return StreamingResponse(stream_response(), media_type=content_type, headers=headers)
 
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Proxy download with conversion failed: {e}")
-        raise HTTPException(status_code=500, detail="Download and conversion failed")
+        logger.error(f"Proxy download failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Download failed: {str(e)}")
+
+@app.options("/proxy-download")
+async def proxy_download_options():
+    """Handle CORS preflight requests"""
+    return Response(
+        status_code=200,
+        headers={
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type',
+            'Access-Control-Max-Age': '86400'
+        }
+    )
 
 @app.get("/storage-stats")
 async def get_storage_stats():
