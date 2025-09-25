@@ -1,49 +1,37 @@
-# Automated Deployment Script
+# Automatic VPS Deployment Script for CrysGarage
 param(
-  [string]$VPS_HOST = "209.74.80.162",
-  [string]$VPS_USER = "root",
-  [string]$SSH_OPTS = "-o StrictHostKeyChecking=no"
+    [string]$VpsHost = "",
+    [string]$VpsUser = "root"
 )
 
-Write-Host "Automated Deployment Starting..." -ForegroundColor Cyan
+$ErrorActionPreference = "Stop"
 
-# Step 1: Commit and push changes
-Write-Host "Committing and pushing changes..." -ForegroundColor Yellow
-git add .
-try { git commit -m "Auto-deploy: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" } catch { Write-Host "No changes to commit" -ForegroundColor Yellow }
-git push origin main
+Write-Host "Automatic VPS Deployment for CrysGarage" -ForegroundColor Cyan
 
-# Step 2: Deploy to VPS
-Write-Host "Deploying to VPS..." -ForegroundColor Yellow
-ssh $SSH_OPTS $VPS_USER@$VPS_HOST @"
-cd /var/www/crysgarage-deploy || mkdir -p /var/www/crysgarage-deploy
-git pull origin main
-"@
+# Get VPS host if not provided
+if ([string]::IsNullOrEmpty($VpsHost)) {
+    $VpsHost = Read-Host "Enter your VPS host (domain or IP)"
+}
 
-# Step 3: Build and deploy frontend
-Write-Host "Building frontend..." -ForegroundColor Yellow
-Push-Location "crysgarage-frontend"
+Write-Host "Deploying to: $VpsHost as $VpsUser" -ForegroundColor Yellow
+
+# Test SSH connection
+Write-Host "Testing SSH connection..." -ForegroundColor Blue
+ssh -o ConnectTimeout=10 $VpsUser@$VpsHost "echo 'SSH OK'"
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "SSH connection failed!" -ForegroundColor Red
+    exit 1
+}
+
+# Build frontend
+Write-Host "Building frontend..." -ForegroundColor Blue
+Set-Location "crysgarage-frontend"
+npm install
 npm run build
-Pop-Location
+Set-Location ".."
 
-# Copy frontend
-Write-Host "Deploying frontend..." -ForegroundColor Yellow
-ssh $SSH_OPTS $VPS_USER@$VPS_HOST "rm -rf /var/www/html/*"
-scp $SSH_OPTS -r "crysgarage-frontend/dist/*" "${VPS_USER}@${VPS_HOST}:/var/www/html/"
+# Deploy using the main script
+Write-Host "Starting deployment..." -ForegroundColor Blue
+& ".\deploy_fresh.ps1" -VpsHost $VpsHost -VpsUser $VpsUser
 
-# Step 4: Deploy backend essentials
-Write-Host "Deploying backend..." -ForegroundColor Yellow
-ssh $SSH_OPTS $VPS_USER@$VPS_HOST @"
-cd /var/www/crysgarage-deploy/crysgarage-backend
-composer install --no-dev --optimize-autoloader
-php artisan config:clear
-php artisan route:clear
-php artisan cache:clear
-"@
-
-# Step 5: Restart services
-Write-Host "Restarting services..." -ForegroundColor Yellow
-ssh $SSH_OPTS $VPS_USER@$VPS_HOST "systemctl restart php8.2-fpm && systemctl reload nginx"
-
-Write-Host "Automated deployment completed!" -ForegroundColor Green
-Write-Host "Site: https://crysgarage.studio" -ForegroundColor Cyan
+Write-Host "Deployment completed!" -ForegroundColor Green

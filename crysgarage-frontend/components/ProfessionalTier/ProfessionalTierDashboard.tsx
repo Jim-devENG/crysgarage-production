@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Upload, Play, Pause, Download, Activity, Music, ArrowLeft, CreditCard, DollarSign, Loader2, Settings, Zap, Volume2, VolumeX } from 'lucide-react';
 import DownloadStep from './DownloadStep';
-import FreeComparisonPlayer from '../FreeTier/ComparisonPlayer';
+import ComparisonPlayerFixed from './ComparisonPlayerFixed';
 import RealTimeAnalysisPanel from '../AdvancedTierDashboard/RealTimeAnalysisPanel';
 import { creditsAPI } from '../../services/api';
 import { pythonAudioService, TierInfo, GenreInfo } from '../../services/pythonAudioService';
@@ -63,6 +63,7 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
   const [originalStats, setOriginalStats] = useState<AudioStats | null>(null);
   const [masteredStats, setMasteredStats] = useState<AudioStats | null>(null);
   const [masteredAudioUrl, setMasteredAudioUrl] = useState<string | null>(null);
+  const [masteredRemoteUrl, setMasteredRemoteUrl] = useState<string | null>(null);
   const [isPlayingOriginal, setIsPlayingOriginal] = useState(false);
   const [isPlayingMastered, setIsPlayingMastered] = useState(false);
   const [originalVolume, setOriginalVolume] = useState(1);
@@ -184,6 +185,8 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
     if (!originalAudioRef.current) return;
     // Ensure processing chain (incl. analyser) exists before playback toggles
     buildPreviewChain();
+    // Resume context proactively for reliable playback
+    try { if (audioContextRef.current?.state === 'suspended') audioContextRef.current.resume(); } catch {}
     if (isPlayingOriginal) {
       originalAudioRef.current.pause();
       setIsPlayingOriginal(false);
@@ -206,7 +209,10 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
     } else {
       // Resume context and play; ensure element not stalled
       try { if (audioContextRef.current?.state === 'suspended') audioContextRef.current.resume(); } catch {}
-      originalAudioRef.current.currentTime = Math.max(0, originalAudioRef.current.currentTime - 0.001);
+      // Ensure the chain exists before play
+      buildPreviewChain();
+      // Slight nudge to retrigger playback capture
+      try { originalAudioRef.current.currentTime = Math.max(0, originalAudioRef.current.currentTime - 0.001); } catch {}
       originalAudioRef.current.play().catch(()=>{});
       setIsPlayingOriginal(true);
       if (audioContextRef.current && audioContextRef.current.state === 'suspended') {
@@ -225,15 +231,24 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
       originalAudioRef.current.crossOrigin = 'anonymous';
       (originalAudioRef.current as any).playsInline = true;
       originalAudioRef.current.preload = 'auto';
-      originalAudioRef.current.muted = true; // silence direct element path
-      originalAudioRef.current.volume = 0;   // rely entirely on graph output
+      // Keep element unmuted and with low volume so MediaElementSource is reliably fed,
+      // but direct element output is minimally audible
+      originalAudioRef.current.muted = false;
+      originalAudioRef.current.volume = 0.4; // x2 louder direct path for reliable capture
     } catch {}
 
-    // Reuse existing MediaElementSourceNode if it was already created for this element.
+    // Reuse existing MediaElementSourceNode if already created for this element
     let { source } = originalChainRef.current;
+    const el: any = originalAudioRef.current as any;
+    const existing = el.__crys_source as MediaElementAudioSourceNode | undefined;
     if (!source) {
-      // Create once per HTMLMediaElement lifetime; cannot create twice.
-      source = ctx.createMediaElementSource(originalAudioRef.current);
+      if (existing) {
+        source = existing;
+      } else {
+        // Create once per HTMLMediaElement lifetime; cannot create twice.
+        source = ctx.createMediaElementSource(originalAudioRef.current);
+        try { el.__crys_source = source; } catch {}
+      }
     } else {
       try { (source as any).disconnect && (source as any).disconnect(); } catch {}
     }
@@ -275,8 +290,8 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
     analyser.connect(outputGain);
     outputGain.connect(ctx.destination);
 
-    // Add a compensating gain for audibility
-    try { outputGain.gain.value = 1.0; } catch {}
+    // Add a compensating gain for audibility (ensure non-zero)
+    try { outputGain.gain.value = Math.max(2.0, outputGain.gain.value || 2.0); } catch {}
 
     originalChainRef.current = { source, outputGain, lowShelf, lowMidPeaking, midPeaking, highMidPeaking, highShelf, compressor, limiter, analyser } as any;
     return true;
@@ -515,7 +530,7 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
         const currentTime = audioContextRef.current.currentTime;
         // More pronounced EQ: map preset shelves and mid, with a slight exaggeration for audibility
         // Extreme preview intensity for unmistakable differences on live
-        const exaggerate = 2.2;
+        const exaggerate = 2.8; // stronger for clearer differences
         // Map full EQ5 like Advanced
         lowShelf.frequency.setValueAtTime(preset.eq_curve.low_shelf.freq, currentTime);
         lowShelf.gain.setValueAtTime(preset.eq_curve.low_shelf.gain * exaggerate, currentTime);
@@ -532,8 +547,8 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
         highShelf.gain.setValueAtTime(preset.eq_curve.high_shelf.gain * exaggerate, currentTime);
 
         // Compression: slightly stronger for audibility
-        const thr = preset.compression.threshold - 3; // push a bit harder
-        const ratio = Math.min(preset.compression.ratio * 1.2, 8);
+        const thr = preset.compression.threshold - 4; // push harder
+        const ratio = Math.min(preset.compression.ratio * 1.35, 10);
         compressor.threshold.setValueAtTime(thr, currentTime);
         compressor.knee.setValueAtTime(20, currentTime);
         compressor.ratio.setValueAtTime(ratio, currentTime);
@@ -544,12 +559,28 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
         // Map loudness level to preview gain tilt (~-12/-10/-8 reference)
         // Compute base gain from chosen LUFS (or stay close to preset when disabled)
         // For instant preview, ignore global LUFS buttons to avoid masking tonal changes
-        const chosenLufs = preset.target_lufs;
-        let baseGain = Math.min(2.0, Math.max(0.4, Math.pow(10, (chosenLufs + 14) / 20)));
-        const targetGain = Math.min(2.2, Math.max(0.3, baseGain));
+        // Peg all genres at -8 LUFS for preview loudness targeting
+        const chosenLufs = -8;
+        let baseGain = Math.min(2.5, Math.max(0.6, Math.pow(10, (chosenLufs + 14) / 20)));
+        // Blend in per-genre gain from merged presets (Advanced + Utils) when available
+        let genreGain = 1.0;
+        try {
+          const { getGenrePreset } = await import('../ProfessionalDashboard/genres');
+          const gp: any = getGenrePreset(genre.name);
+          if (gp && typeof gp.gain === 'number') {
+            // Map typical gain 1.0-2.5 into a 0.9-1.6 multiplier range
+            const g = Math.max(0.5, Math.min(3.0, gp.gain));
+            genreGain = Math.max(0.9, Math.min(1.6, 0.6 + g * 0.4));
+          }
+        } catch {}
+        // Double the preview loudness, with a safety clamp
+        const targetGain = Math.min(3.5, Math.max(0.5, baseGain * genreGain * 2));
         basePreviewGainRef.current = baseGain;
         try { outputGain.gain.cancelScheduledValues(currentTime); } catch {}
-        outputGain.gain.setTargetAtTime(targetGain, currentTime, 0.01);
+        // Quick nudge then settle to target for audible update
+        const pre = Math.max(0.3, Math.min(3.0, targetGain * 0.9));
+        try { outputGain.gain.setValueAtTime(pre, currentTime); } catch {}
+        outputGain.gain.linearRampToValueAtTime(targetGain, currentTime + 0.08);
         
         // Live debug: confirm node values pushed to graph
         try {
@@ -587,14 +618,17 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
   useEffect(() => {
     let cancelled = false;
     // Safety timeout: stop loading after 10s with fallback
-    const timeoutId = setTimeout(() => {
+    const timeoutId = setTimeout(async () => {
       if (!cancelled) {
-        console.warn('Genre loading timed out (Professional). Falling back.');
+        console.warn('Genre loading timed out (Professional). Falling back to Advanced list.');
         setIsLoadingGenres(false);
-        setAvailableGenres([
-          { id: 'hip-hop', name: 'Hip-Hop', color: 'bg-red-500', description: 'Bass-Driven & Punchy' },
-          { id: 'afrobeats', name: 'Afrobeats', color: 'bg-orange-500', description: 'Rhythmic & Energetic' }
-        ]);
+        try {
+          const { getAllGenresForUI } = await import('../ProfessionalDashboard/genres');
+          const genres: any[] = getAllGenresForUI();
+          setAvailableGenres(genres);
+        } catch {
+          setAvailableGenres([]);
+        }
       }
     }, 10000);
 
@@ -632,12 +666,13 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
     } catch (error) {
       console.error('Failed to load tier information:', error);
       setError('Failed to load tier information');
-      
-      // Fallback genres with rainbow colors
-      setAvailableGenres([
-        { id: 'hip-hop', name: 'Hip-Hop', color: 'bg-red-500', description: 'Bass-Driven & Punchy' },
-        { id: 'afrobeats', name: 'Afrobeats', color: 'bg-orange-500', description: 'Rhythmic & Energetic' }
-      ]);
+      try {
+        const { getAllGenresForUI } = await import('../ProfessionalDashboard/genres');
+        const genres: any[] = getAllGenresForUI();
+        setAvailableGenres(genres);
+      } catch {
+        setAvailableGenres([]);
+      }
     } finally {
       setIsLoadingGenres(false);
     }
@@ -996,7 +1031,7 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
       console.log('No uploaded file or audio element available for preview');
       return;
     }
-    // Ensure chain exists and context is running
+    // Ensure chain exists and context is running (without recreating source)
     buildPreviewChain();
     try { if (audioContextRef.current?.state === 'suspended') await audioContextRef.current.resume(); } catch {}
     // Start playback so changes are audible
@@ -1066,7 +1101,8 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
         downloadFormat === 'wav16' ? 'wav16' : downloadFormat === 'wav24' ? 'wav24' : downloadFormat;
 
       // Process audio with Python service for FINAL output (not preview)
-      const levelLufs = volumeEnabled ? selectedLufs : -8;
+      // Peg all genres at -8 LUFS for final processing as requested
+      const levelLufs = -8;
       const result = await pythonAudioService.uploadAndProcessAudio(
         uploadedFile.file,
         'pro',
@@ -1084,8 +1120,25 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
 
       console.log('Final processing completed:', result);
 
-      // Set mastered audio URL and ML details (if provided)
-      setMasteredAudioUrl(result.url);
+      // Keep remote URL for download, create a CORS-safe playable URL for the player
+      setMasteredRemoteUrl(result.url);
+      try {
+        const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+        const proxyBase = isLocal ? 'http://localhost:8002' : 'https://crysgarage.studio';
+        const proxyUrl = `${proxyBase}/proxy-download?file_url=${encodeURIComponent(result.url)}`;
+        const res = await fetch(proxyUrl, { method: 'GET' });
+        if (!res.ok) throw new Error(`Proxy HTTP ${res.status}`);
+        const blob = await res.blob();
+        const objectUrl = URL.createObjectURL(blob);
+        // Revoke previous object URL if any
+        if (masteredAudioUrl && masteredAudioUrl.startsWith('blob:')) {
+          try { URL.revokeObjectURL(masteredAudioUrl); } catch {}
+        }
+        setMasteredAudioUrl(objectUrl);
+      } catch (e) {
+        console.warn('Playable URL proxy failed, falling back to remote URL (may CORS fail):', e);
+        setMasteredAudioUrl(result.url);
+      }
       // @ts-ignore: backend may include ML fields
       const mlSummary = (result as any).ml_summary;
       // @ts-ignore
@@ -1128,24 +1181,37 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
   };
 
   // Download handler
-  const handleDownload = async (format = 'WAV', sampleRate = 44100) => {
-    if (!masteredAudioUrl) return;
-    
+  const handleDownload = async () => {
+    const urlForDownload = masteredRemoteUrl || masteredAudioUrl;
+    if (!urlForDownload) return;
+
     try {
       // Use Python proxy to bypass CORS regardless of storage origin
-      const base = (pythonAudioService as any).baseURL || '';
-      const proxyUrl = `${base || ''}/proxy-download?file_url=${encodeURIComponent(masteredAudioUrl)}&format=${format}&sample_rate=${sampleRate}`;
-      const response = await fetch(proxyUrl);
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
+      const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+      const proxyBase = isLocal ? 'http://localhost:8002' : 'https://crysgarage.studio';
+      // Only proxy the file_url; conversion is handled server-side during processing
+      const proxyUrl = `${proxyBase}/proxy-download?file_url=${encodeURIComponent(urlForDownload)}`;
+      const res = await fetch(proxyUrl, { method: 'GET' });
+      if (!res.ok) throw new Error(`Proxy HTTP ${res.status}`);
+      const blob = await res.blob();
+      if (!blob || (blob.size !== undefined && blob.size < 1024)) {
+        throw new Error(`Downloaded blob too small (${blob.size || 0} bytes)`);
+      }
+      const objectUrl = URL.createObjectURL(blob);
+      const baseName = (uploadedFile?.name?.replace(/\.[^/.]+$/, '') || 'audio');
+      // Choose extension based on known mastered URL or selected format
+      const ext = urlForDownload.toLowerCase().endsWith('.mp3')
+        ? 'mp3'
+        : urlForDownload.toLowerCase().endsWith('.wav')
+        ? 'wav'
+        : downloadFormat === 'mp3' ? 'mp3' : 'wav';
       const a = document.createElement('a');
-      a.href = url;
-      const fileExtension = format.toLowerCase() === 'mp3' ? 'mp3' : format.toLowerCase() === 'flac' ? 'flac' : 'wav';
-      a.download = `${uploadedFile?.name.replace(/\.[^/.]+$/, '')}_mastered_${selectedGenre?.name.toLowerCase()}_${sampleRate}Hz.${fileExtension}`;
+      a.href = objectUrl;
+      a.download = `${baseName}_mastered_${(selectedGenre?.name || 'genre').toLowerCase()}.${ext}`;
       document.body.appendChild(a);
       a.click();
-      window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
+      URL.revokeObjectURL(objectUrl);
     } catch (error) {
       console.error('Download failed:', error);
       setError('Download failed');
@@ -1444,16 +1510,14 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
         {/* Download/Comparison Tab */}
         {activeTab === 'download' && masteredAudioUrl && (
           <div className="max-w-4xl mx-auto">
-            <FreeComparisonPlayer
+            <ComparisonPlayerFixed
               originalFile={uploadedFile}
               masteredAudioUrl={masteredAudioUrl}
               selectedGenre={selectedGenre}
-              // optional ML
               mlSummary={(masteredStats as any)?.mlSummary}
               appliedParams={(masteredStats as any)?.appliedParams}
               originalLufs={originalStats?.loudness}
               masteredLufs={(masteredStats as any)?.loudness}
-              recommendedAttenuationDb={(masteredStats as any)?.recommended_playback_attenuation_db}
               onBack={() => setActiveTab('processing')}
               onNewUpload={() => {
                 setUploadedFile(null);
@@ -1462,7 +1526,9 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
                 setActiveTab('upload');
               }}
               onDownload={handleDownload}
-              showFormatOptions={true}
+              downloadFormat={downloadFormat}
+              onFormatChange={(f) => setDownloadFormat(f)}
+              tier={effectiveUser.tier}
             />
           </div>
         )}

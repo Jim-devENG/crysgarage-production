@@ -34,7 +34,7 @@ class StorageManager:
         self.s3_bucket = os.getenv('S3_BUCKET', 'crysgarage-mastered-audio')
         self.s3_region = os.getenv('S3_REGION', 'us-east-1')
         # Public base URL for serving mastered files
-        self.base_url = os.getenv('BASE_URL', 'https://crysgarage.studio')
+        self.base_url = os.getenv('BASE_URL', 'http://localhost:8002')
         
         # File cleanup settings
         self.cleanup_delay_minutes = int(os.getenv('FILE_CLEANUP_DELAY_MINUTES', '5'))

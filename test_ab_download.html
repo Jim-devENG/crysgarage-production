@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>A/B Player and Download Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 20px; border: 1px solid #ccc; }
+        .error { color: red; }
+        .success { color: green; }
+        button { margin: 5px; padding: 10px; }
+        audio { width: 100%; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <h1>A/B Player and Download Test</h1>
+    
+    <div class="test-section">
+        <h2>1. Python Service Health Check</h2>
+        <button onclick="testPythonHealth()">Test Python Service</button>
+        <div id="health-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>2. Proxy Download Test</h2>
+        <input type="text" id="test-url" placeholder="Enter mastered file URL" style="width: 400px;">
+        <button onclick="testProxyDownload()">Test Proxy Download</button>
+        <div id="proxy-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>3. A/B Player Test</h2>
+        <input type="file" id="original-file" accept="audio/*">
+        <input type="text" id="mastered-url" placeholder="Mastered audio URL" style="width: 400px;">
+        <button onclick="testABPlayer()">Test A/B Player</button>
+        <div id="ab-result"></div>
+        
+        <div id="audio-controls" style="display: none;">
+            <h3>Audio Controls</h3>
+            <button onclick="playOriginal()">Play Original</button>
+            <button onclick="playMastered()">Play Mastered</button>
+            <button onclick="pauseAll()">Pause All</button>
+            <button onclick="switchToOriginal()">Switch to Original</button>
+            <button onclick="switchToMastered()">Switch to Mastered</button>
+            
+            <h3>Original Audio</h3>
+            <audio id="original-audio" controls></audio>
+            
+            <h3>Mastered Audio</h3>
+            <audio id="mastered-audio" controls></audio>
+            
+            <h3>Status</h3>
+            <div id="status">Ready</div>
+        </div>
+    </div>
+
+    <script>
+        let originalAudio, masteredAudio;
+        let activeSource = 'original';
+        let isPlayingOriginal = false;
+        let isPlayingMastered = false;
+
+        async function testPythonHealth() {
+            const resultDiv = document.getElementById('health-result');
+            try {
+                const response = await fetch('http://localhost:8002/health');
+                const data = await response.json();
+                resultDiv.innerHTML = `<div class="success">✅ Python service is running: ${JSON.stringify(data)}</div>`;
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ Python service error: ${error.message}</div>`;
+            }
+        }
+
+        async function testProxyDownload() {
+            const resultDiv = document.getElementById('proxy-result');
+            const testUrl = document.getElementById('test-url').value;
+            
+            if (!testUrl) {
+                resultDiv.innerHTML = '<div class="error">❌ Please enter a test URL</div>';
+                return;
+            }
+
+            try {
+                const proxyUrl = `http://localhost:8002/proxy-download?file_url=${encodeURIComponent(testUrl)}`;
+                console.log('Testing proxy URL:', proxyUrl);
+                
+                const response = await fetch(proxyUrl);
+                console.log('Proxy response status:', response.status);
+                console.log('Proxy response headers:', [...response.headers.entries()]);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const blob = await response.blob();
+                console.log('Blob size:', blob.size, 'bytes');
+                console.log('Blob type:', blob.type);
+                
+                if (blob.size < 1024) {
+                    throw new Error(`Blob too small: ${blob.size} bytes`);
+                }
+                
+                const objectUrl = URL.createObjectURL(blob);
+                resultDiv.innerHTML = `<div class="success">✅ Proxy download successful! Blob size: ${blob.size} bytes, Type: ${blob.type}<br>Object URL: ${objectUrl}</div>`;
+                
+                // Test if the blob can be played
+                const testAudio = new Audio(objectUrl);
+                testAudio.onloadedmetadata = () => {
+                    resultDiv.innerHTML += `<br><div class="success">✅ Audio metadata loaded: Duration ${testAudio.duration}s</div>`;
+                };
+                testAudio.onerror = (e) => {
+                    resultDiv.innerHTML += `<br><div class="error">❌ Audio playback error: ${e}</div>`;
+                };
+                
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ Proxy download failed: ${error.message}</div>`;
+                console.error('Proxy download error:', error);
+            }
+        }
+
+        async function testABPlayer() {
+            const resultDiv = document.getElementById('ab-result');
+            const originalFile = document.getElementById('original-file').files[0];
+            const masteredUrl = document.getElementById('mastered-url').value;
+            
+            if (!originalFile && !masteredUrl) {
+                resultDiv.innerHTML = '<div class="error">❌ Please select an original file or enter a mastered URL</div>';
+                return;
+            }
+
+            try {
+                // Setup original audio
+                if (originalFile) {
+                    const originalUrl = URL.createObjectURL(originalFile);
+                    originalAudio = document.getElementById('original-audio');
+                    originalAudio.src = originalUrl;
+                    originalAudio.preload = 'auto';
+                    originalAudio.crossOrigin = 'anonymous';
+                }
+
+                // Setup mastered audio
+                if (masteredUrl) {
+                    masteredAudio = document.getElementById('mastered-audio');
+                    masteredAudio.src = masteredUrl;
+                    masteredAudio.preload = 'auto';
+                    masteredAudio.crossOrigin = 'anonymous';
+                }
+
+                // Show controls
+                document.getElementById('audio-controls').style.display = 'block';
+                resultDiv.innerHTML = '<div class="success">✅ A/B player setup complete</div>';
+                
+                // Test audio loading
+                if (originalAudio) {
+                    originalAudio.onloadedmetadata = () => {
+                        updateStatus(`Original loaded: ${originalAudio.duration}s`);
+                    };
+                    originalAudio.onerror = (e) => {
+                        updateStatus(`Original error: ${e}`);
+                    };
+                }
+                
+                if (masteredAudio) {
+                    masteredAudio.onloadedmetadata = () => {
+                        updateStatus(`Mastered loaded: ${masteredAudio.duration}s`);
+                    };
+                    masteredAudio.onerror = (e) => {
+                        updateStatus(`Mastered error: ${e}`);
+                    };
+                }
+                
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ A/B player setup failed: ${error.message}</div>`;
+            }
+        }
+
+        function playOriginal() {
+            if (originalAudio) {
+                originalAudio.play();
+                isPlayingOriginal = true;
+                updateStatus('Playing original');
+            }
+        }
+
+        function playMastered() {
+            if (masteredAudio) {
+                masteredAudio.play();
+                isPlayingMastered = true;
+                updateStatus('Playing mastered');
+            }
+        }
+
+        function pauseAll() {
+            if (originalAudio) originalAudio.pause();
+            if (masteredAudio) masteredAudio.pause();
+            isPlayingOriginal = false;
+            isPlayingMastered = false;
+            updateStatus('Paused');
+        }
+
+        function switchToOriginal() {
+            if (masteredAudio && isPlayingMastered) {
+                masteredAudio.pause();
+                isPlayingMastered = false;
+            }
+            if (originalAudio) {
+                originalAudio.currentTime = masteredAudio ? masteredAudio.currentTime : 0;
+                originalAudio.play();
+                isPlayingOriginal = true;
+            }
+            activeSource = 'original';
+            updateStatus('Switched to original');
+        }
+
+        function switchToMastered() {
+            if (originalAudio && isPlayingOriginal) {
+                originalAudio.pause();
+                isPlayingOriginal = false;
+            }
+            if (masteredAudio) {
+                masteredAudio.currentTime = originalAudio ? originalAudio.currentTime : 0;
+                masteredAudio.play();
+                isPlayingMastered = true;
+            }
+            activeSource = 'mastered';
+            updateStatus('Switched to mastered');
+        }
+
+        function updateStatus(message) {
+            document.getElementById('status').textContent = message;
+        }
+    </script>
+</body>
+</html>

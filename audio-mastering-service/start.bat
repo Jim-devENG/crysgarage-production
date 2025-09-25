@@ -50,11 +50,11 @@ if not exist ".env" (
 
 REM Start the service
 echo 🚀 Starting Audio Mastering Microservice...
-echo    Service will be available at: http://localhost:8000
-echo    API docs will be available at: http://localhost:8000/docs
+echo    Service will be available at: http://localhost:8002
+echo    API docs will be available at: http://localhost:8002/docs
 echo    Press Ctrl+C to stop the service
 echo.
 
-uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+python main.py
 
 

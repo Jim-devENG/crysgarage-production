@@ -122,13 +122,14 @@ const FreeTierDashboardPython: React.FC<FreeTierDashboardProps> = ({ onDownloadA
   const presetCacheRef = useRef<Record<string, GenreInfo>>({});
   
   // Additional refs for instant effects
-  const sourceNodeRef = useRef<AudioBufferSourceNode | null>(null);
+  // Legacy refs (not used after switching to graph-managed source); keep for safety
+  const sourceNodeRef = useRef<MediaElementAudioSourceNode | null>(null);
   const gainNodeRef = useRef<GainNode | null>(null);
   const eqNodeRef = useRef<BiquadFilterNode | null>(null);
   const compressorNodeRef = useRef<DynamicsCompressorNode | null>(null);
   const fxNodesRef = useRef<AudioNode[]>([]);
 
-  // Initialize audio context and source for instant effects
+  // Initialize audio context for instant effects (let preview graph own the source)
   const initializeAudioForInstantEffects = (audioUrl: string) => {
     try {
       // Create audio context if it doesn't exist
@@ -136,32 +137,18 @@ const FreeTierDashboardPython: React.FC<FreeTierDashboardProps> = ({ onDownloadA
         audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
       }
 
-      // Create audio element for instant effects
+      // Create audio element for instant effects; let ensurePreviewGraph create the source
       const audioElement = new Audio(audioUrl);
-      audioElement.crossOrigin = 'anonymous';
-      // Help autoplay policies on mobile/desktop
+      try { audioElement.crossOrigin = 'anonymous'; } catch {}
       try { (audioElement as any).playsInline = true; } catch {}
       try { audioElement.preload = 'auto'; } catch {}
-      
-      // Create media element source and tag it on the element for reuse guards
-      const source = audioContextRef.current.createMediaElementSource(audioElement);
-      try { (audioElement as any).__crys_source = source; } catch {}
-      
-      // Create gain node
-      const gain = audioContextRef.current.createGain();
-      
-      // Connect source to gain to destination
-      source.connect(gain);
-      gain.connect(audioContextRef.current.destination);
-      
-      // Store references
-      sourceNodeRef.current = source as any; // Type assertion for compatibility
-      gainNodeRef.current = gain;
-      
-      // Store audio element reference
+
       masteredAudioRef.current = audioElement;
-      
-      console.log('Audio context initialized for instant effects');
+
+      // Create preview graph once for mastered element (source created here, not elsewhere)
+      ensurePreviewGraph(audioElement, 'mastered');
+
+      console.log('Audio context initialized for instant effects (graph-managed source)');
       
     } catch (error) {
       console.error('Failed to initialize audio for instant effects:', error);
@@ -559,7 +546,7 @@ const FreeTierDashboardPython: React.FC<FreeTierDashboardProps> = ({ onDownloadA
 
   // Apply instant genre effects using Web Audio API (use genre.id to avoid display-name drift)
   const applyInstantGenreEffects = (genre: Genre) => {
-    if (!audioContextRef.current || !sourceNodeRef.current || !gainNodeRef.current) {
+    if (!audioContextRef.current || !masteredAudioRef.current) {
       console.log('Audio context not ready for instant effects');
       return;
     }
@@ -570,26 +557,18 @@ const FreeTierDashboardPython: React.FC<FreeTierDashboardProps> = ({ onDownloadA
       if (ctx.state !== 'running') {
         try { ctx.resume(); } catch {}
       }
-      const source = sourceNodeRef.current;
-      // Recreate gain node each switch to force graph refresh on some browsers
-      try { if (gainNodeRef.current) { (gainNodeRef.current as any).disconnect && (gainNodeRef.current as any).disconnect(); } } catch {}
-      const newGain = ctx.createGain();
-      gainNodeRef.current = newGain;
+      // Use mastered graph chain if available; otherwise bail
+      ensurePreviewGraph(masteredAudioRef.current, 'mastered');
+      const chain = masteredChainRef.current;
+      if (!chain.source) return;
 
       // Clear existing effects: disconnect every previously created node
-      try {
-        fxNodesRef.current.forEach((n) => { try { (n as any).disconnect && (n as any).disconnect(); } catch {} });
-      } catch {}
+      try { fxNodesRef.current.forEach((n) => { try { (n as any).disconnect && (n as any).disconnect(); } catch {} }); } catch {}
       fxNodesRef.current = [];
       if (eqNodeRef.current) { try { eqNodeRef.current.disconnect(); } catch {} }
       if (compressorNodeRef.current) { try { compressorNodeRef.current.disconnect(); } catch {} }
 
-      // Disconnect current chain endpoints to ensure a clean slate
-      try { (source as any).disconnect && (source as any).disconnect(); } catch {}
-      // gain already recreated above
-
       // Create genre-specific effects
-      let currentNode = source;
 
       const idKey = (genre.id || genre.name || '').toLowerCase().replace(/\s+/g, '_');
       const isHipHop = ['hip-hop','hip_hop','chill_vibes','hiphop'].includes(idKey);
@@ -621,10 +600,11 @@ const FreeTierDashboardPython: React.FC<FreeTierDashboardProps> = ({ onDownloadA
         compressor.release.setValueAtTime(0.25, ctx.currentTime);
         
         // Connect chain: source -> bass boost -> mid scoop -> compressor -> gain -> destination
+        let currentNode: AudioNode = chain.source;
         currentNode.connect(bassBoost);
         bassBoost.connect(midScoop);
         midScoop.connect(compressor);
-        compressor.connect(newGain);
+        compressor.connect(chain.panner || ctx.destination);
         
         // Store references for cleanup
         eqNodeRef.current = bassBoost;
@@ -657,10 +637,11 @@ const FreeTierDashboardPython: React.FC<FreeTierDashboardProps> = ({ onDownloadA
         compressor.release.setValueAtTime(0.3, ctx.currentTime);
         
         // Connect chain: source -> mid boost -> high shelf -> compressor -> gain -> destination
+        let currentNode: AudioNode = chain.source;
         currentNode.connect(midBoost);
         midBoost.connect(highShelf);
         highShelf.connect(compressor);
-        compressor.connect(newGain);
+        compressor.connect(chain.panner || ctx.destination);
         
         // Store references for cleanup
         eqNodeRef.current = midBoost;
@@ -686,9 +667,10 @@ const FreeTierDashboardPython: React.FC<FreeTierDashboardProps> = ({ onDownloadA
         compressor.release.setValueAtTime(0.3, ctx.currentTime);
         
         // Connect chain: source -> high shelf -> compressor -> gain -> destination
+        let currentNode: AudioNode = chain.source;
         currentNode.connect(highShelf);
         highShelf.connect(compressor);
-        compressor.connect(newGain);
+        compressor.connect(chain.panner || ctx.destination);
         
         // Store references for cleanup
         eqNodeRef.current = highShelf;
@@ -697,13 +679,8 @@ const FreeTierDashboardPython: React.FC<FreeTierDashboardProps> = ({ onDownloadA
       }
       
       // Final connection to destination
-      newGain.connect(ctx.destination);
-      // Nudge gain to ensure audible param update
-      try {
-        const g = newGain.gain.value || 1.0;
-        newGain.gain.setValueAtTime(g * 0.9, ctx.currentTime);
-        newGain.gain.linearRampToValueAtTime(g, ctx.currentTime + 0.05);
-      } catch {}
+      // Small nudge on high shelf freq to force audible update
+      try { (chain.highShelf as any)?.frequency?.linearRampToValueAtTime(((chain.highShelf as any).frequency.value || 10000) + 1, ctx.currentTime + 0.01); } catch {}
       
       console.log(`Instant ${genre.name} effects applied successfully!`);
       // Ensure mastered preview is audible after rewire
@@ -1170,16 +1147,9 @@ const FreeTierDashboardPython: React.FC<FreeTierDashboardProps> = ({ onDownloadA
 
         {/* Download/Comparison Tab */}
         {activeTab === 'download' && masteredAudioUrl && (
-          <ComparisonPlayer
-            originalFile={uploadedFile}
-            masteredAudioUrl={masteredAudioUrl}
+          <DownloadStep
+            uploadedFile={uploadedFile}
             selectedGenre={selectedGenre}
-            // @ts-ignore
-            mlSummary={(masteredStats as any)?.mlSummary}
-            // @ts-ignore
-            appliedParams={(masteredStats as any)?.appliedParams}
-            originalLufs={originalStats?.loudness}
-            masteredLufs={(masteredStats as any)?.loudness}
             onBack={() => setActiveTab('processing')}
             onNewUpload={() => {
               setUploadedFile(null);
@@ -1188,6 +1158,7 @@ const FreeTierDashboardPython: React.FC<FreeTierDashboardProps> = ({ onDownloadA
               setActiveTab('upload');
             }}
             onDownload={handleDownload}
+            masteredAudioUrl={masteredAudioUrl}
           />
         )}
       </div>
