@@ -66,7 +66,7 @@ def sanitize_for_json(value):
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -160,56 +160,64 @@ async def health_check():
         raise HTTPException(status_code=500, detail="Service unhealthy")
 
 @app.get("/tiers")
-async def get_tier_information():
-    """Get tier-specific processing information (normalized keys)."""
-    try:
-        # Guard against slow ML tier fetches with a quick fallback
-        raw = None
-        try:
-            # Try fast path first; if ML engine blocks, fall back below
-            raw = ml_engine.get_tier_information()
-        except Exception as _e:
-            raw = None
-        if not raw:
-            # Lightweight static fallback ensuring the frontend doesn't time out
-            raw = {
-                "free": {
-                    "processing_quality": "standard",
-                    "available_formats": ["mp3", "wav"],
-                    "max_sample_rate": 44100,
-                    "max_file_size_mb": 100
-                },
-                "pro": {
-                    "processing_quality": "professional",
-                    "available_formats": ["wav", "mp3", "flac", "aiff", "aac", "ogg"],
-                    "max_sample_rate": 192000,
-                    "max_file_size_mb": 500
-                },
-                "advanced": {
-                    "processing_quality": "advanced",
-                    "available_formats": ["wav", "mp3", "flac", "aiff", "aac", "ogg"],
-                    "max_sample_rate": 192000,
-                    "max_file_size_mb": 500
-                }
-            }
-        # Normalize keys: provide lowercase and aliases the frontend may check
-        tiers: Dict[str, Any] = {}
-        for key, val in raw.items():
-            k_lower = str(key).lower()
-            tiers[k_lower] = val
-            # Common aliases
-            if k_lower == "pro":
-                tiers.setdefault("professional", val)
-            if k_lower == "professional":
-                tiers.setdefault("pro", val)
-        return {
-            "status": "success",
-            "tiers": tiers,
-            "timestamp": datetime.utcnow().isoformat()
+async def get_tiers() -> Dict[str, Any]:
+    """Return strict JSON tier metadata expected by the frontend."""
+    return {
+        "free": {
+            "processing_quality": "standard",
+            "max_processing_time": 300,
+            "available_formats": ["mp3", "wav"],
+            "max_sample_rate": 44100,
+            "max_bit_depth": 16,
+            "features": {
+                "stereo_widening": False,
+                "harmonic_exciter": False,
+                "multiband_compression": False,
+                "advanced_features": False
+            },
+            "processing_limits": {
+                "eq_bands": 3,
+                "compression_ratio_max": 4
+            },
+            "max_file_size_mb": 20
+        },
+        "professional": {
+            "processing_quality": "high",
+            "max_processing_time": 600,
+            "available_formats": ["mp3", "wav"],
+            "max_sample_rate": 48000,
+            "max_bit_depth": 24,
+            "features": {
+                "stereo_widening": True,
+                "harmonic_exciter": True,
+                "multiband_compression": True,
+                "advanced_features": False
+            },
+            "processing_limits": {
+                "eq_bands": 5,
+                "compression_ratio_max": 8
+            },
+            "max_file_size_mb": 200
+        },
+        "advanced": {
+            "processing_quality": "premium",
+            "max_processing_time": 1200,
+            "available_formats": ["mp3", "wav"],
+            "max_sample_rate": 96000,
+            "max_bit_depth": 32,
+            "features": {
+                "stereo_widening": True,
+                "harmonic_exciter": True,
+                "multiband_compression": True,
+                "advanced_features": True
+            },
+            "processing_limits": {
+                "eq_bands": 8,
+                "compression_ratio_max": 12
+            },
+            "max_file_size_mb": 500
         }
-    except Exception as e:
-        logger.error(f"Failed to get tier information: {e}")
-        raise HTTPException(status_code=500, detail="Failed to get tier information")
+    }
 
 @app.get("/genres")
 async def get_genre_information():
@@ -1285,7 +1293,9 @@ async def upload_file(
                 "format": desired_format,
                 "duration": metadata.get("duration", 0),
                 "sample_rate": desired_sr,
-                "file_size": metadata.get("file_size", 0)
+                "file_size": metadata.get("file_size", 0),
+                "processed_file_size_mb": round(metadata.get("file_size", 0) / (1024 * 1024), 2),
+                "processed_file_size_bytes": metadata.get("file_size", 0)
             })
             
     except Exception as e:
