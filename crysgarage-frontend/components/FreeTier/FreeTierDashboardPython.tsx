@@ -13,6 +13,7 @@ interface AudioFile {
   size: number;
   file: File;
   url: string;
+  processedSize?: number; // Processed file size in bytes
 }
 
 interface AudioStats {
@@ -68,7 +69,7 @@ const FreeTierDashboardPython: React.FC<FreeTierDashboardProps> = ({ onDownloadA
   const [availableGenres, setAvailableGenres] = useState<Genre[]>([]);
   const [tierInfo, setTierInfo] = useState<TierInfo | null>(null);
   const [isLoadingGenres, setIsLoadingGenres] = useState(false);
-  const [downloadFormat, setDownloadFormat] = useState<'mp3' | 'wav'>('mp3');
+  // Format selection moved to main download page
   const processingSteps = useMemo(
     () => [
       'EQ Processing',
@@ -744,7 +745,7 @@ const FreeTierDashboardPython: React.FC<FreeTierDashboardProps> = ({ onDownloadA
         'free',
         selectedGenre.id || selectedGenre.name,
         effectiveUser.id,
-        downloadFormat
+        'mp3'  // Default format for free tier
       );
 
       if (progressIntervalRef.current) {
@@ -754,6 +755,17 @@ const FreeTierDashboardPython: React.FC<FreeTierDashboardProps> = ({ onDownloadA
       setProcessingProgress(100);
 
       console.log('Final processing completed:', result);
+
+      // Update uploadedFile with processed file size
+      console.log('🎵 DEBUG: Processing result:', result);
+      console.log('🎵 DEBUG: Processed file size bytes:', result.processed_file_size_bytes);
+      if (uploadedFile && result.processed_file_size_bytes) {
+        console.log('🎵 DEBUG: Updating uploadedFile with processed size:', result.processed_file_size_bytes);
+        setUploadedFile({
+          ...uploadedFile,
+          processedSize: result.processed_file_size_bytes
+        });
+      }
 
       // Set mastered audio URL and ML details (if provided)
       setMasteredAudioUrl(result.url);
@@ -1023,7 +1035,17 @@ const FreeTierDashboardPython: React.FC<FreeTierDashboardProps> = ({ onDownloadA
                     </div>
                     <div>
                       <h3 className="text-crys-white font-medium">{uploadedFile.name}</h3>
-                      <p className="text-crys-light-grey text-sm">{formatFileSize(uploadedFile.size)}</p>
+                      <p className="text-crys-light-grey text-sm">
+                        {(() => {
+                          const displaySize = uploadedFile.processedSize || uploadedFile.size;
+                          console.log('🎵 DEBUG: Display size calculation:', {
+                            processedSize: uploadedFile.processedSize,
+                            originalSize: uploadedFile.size,
+                            displaySize: displaySize
+                          });
+                          return formatFileSize(displaySize);
+                        })()}
+                      </p>
                     </div>
                   </div>
                   
@@ -1091,18 +1113,7 @@ const FreeTierDashboardPython: React.FC<FreeTierDashboardProps> = ({ onDownloadA
               {/* Process Button */}
               {selectedGenre && (
                 <div className="text-center">
-                  {/* Format selector */}
-                  <div className="mb-4 flex items-center justify-center gap-3 text-sm">
-                    <label className="text-crys-light-grey">Format:</label>
-                    <select
-                      value={downloadFormat}
-                      onChange={(e) => setDownloadFormat(e.target.value as any)}
-                      className="bg-crys-charcoal border border-crys-graphite rounded px-3 py-2 text-crys-white"
-                    >
-                      <option value="mp3">MP3 (320 kbps, 44.1 kHz)</option>
-                      <option value="wav">WAV (24-bit, 44.1 kHz)</option>
-                    </select>
-                  </div>
+                  {/* Format selector removed - using main download page format selection */}
                   <button
                     onClick={handleProcessAudio}
                     disabled={isProcessing}

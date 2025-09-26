@@ -10,6 +10,7 @@ interface AudioFile {
   size: number;
   file: File;
   url: string;
+  processedSize?: number; // Processed file size in bytes
 }
 
 interface AudioStats {
@@ -1107,7 +1108,7 @@ const FreeTierDashboard: React.FC<FreeTierDashboardProps> = ({ onDownloadAttempt
                       </div>
                       <div>
                         <h4 className="font-semibold">{uploadedFile.name}</h4>
-                        <p className="text-sm text-gray-400">{formatFileSize(uploadedFile.size)}</p>
+                        <p className="text-sm text-gray-400">{formatFileSize(uploadedFile.processedSize || uploadedFile.size)}</p>
                       </div>
                     </div>
                     <button
@@ -1137,7 +1138,7 @@ const FreeTierDashboard: React.FC<FreeTierDashboardProps> = ({ onDownloadAttempt
                     <div>
                       <h3 className="text-lg font-semibold mb-2">Selected File</h3>
                       <p className="text-gray-400">{uploadedFile.name}</p>
-                      <p className="text-sm text-gray-500">{formatFileSize(uploadedFile.size)}</p>
+                      <p className="text-sm text-gray-500">{formatFileSize(uploadedFile.processedSize || uploadedFile.size)}</p>
                     </div>
                     <div className="text-right">
                       <span className="text-sm text-gray-400">Ready for real-time processing</span>

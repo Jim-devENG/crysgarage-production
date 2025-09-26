@@ -82,6 +82,8 @@ export interface MasteringResponse {
   processing_time: number;
   sample_rate?: number;
   file_size?: number;
+  processed_file_size_mb?: number;
+  processed_file_size_bytes?: number;
   // ML extras
   ml_summary?: Array<{ area: string; action: string; reason?: string }>;
   applied_params?: Record<string, any>;
@@ -127,11 +129,36 @@ class PythonAudioService {
       if (!this.baseURL || !this.baseURL.startsWith('http')) {
         this.baseURL = computePythonBaseUrl();
       }
-      const response = await axios.get(`${this.baseURL}/tiers`);
-      return response.data.tiers;
+      console.log('🔍 Getting tier information from:', `${this.baseURL}/tiers`);
+      
+      const response = await axios.get(`${this.baseURL}/tiers`, { headers: { 'Accept': 'application/json' } });
+      console.log('🔍 Response received:', response.data);
+      
+      const data = response.data || {};
+      const tiers = data.tiers || data; // support both shapes
+      
+      console.log('🔍 Processed tiers:', tiers);
+      console.log('🔍 Tiers keys:', Object.keys(tiers));
+      
+      if (!tiers || Object.keys(tiers).length === 0) {
+        console.error('🔍 Empty tiers detected');
+        throw new Error('Empty tiers from backend');
+      }
+      
+      console.log('🔍 Returning tiers successfully');
+      return tiers as Record<string, TierInfo>;
     } catch (error) {
-      console.error('Failed to get tier information:', error);
-      throw new Error('Failed to get tier information from Python service');
+      console.error('🔍 Failed to get tier information:', error);
+      // Fallback to static file to keep UI working
+      try {
+        console.log('🔍 Trying fallback to /tiers.json');
+        const resp = await axios.get(`/tiers.json`, { headers: { 'Accept': 'application/json' } });
+        console.log('🔍 Fallback response:', resp.data);
+        return resp.data as Record<string, TierInfo>;
+      } catch (e) {
+        console.error('🔍 Fallback also failed:', e);
+        throw new Error('Failed to get tier information from Python service');
+      }
     }
   }
 
@@ -277,6 +304,8 @@ class PythonAudioService {
           format: resolvedFormat,
           duration: 0,
           processing_time: 0,
+          processed_file_size_mb: resp.data?.processed_file_size_mb || 0,
+          processed_file_size_bytes: resp.data?.processed_file_size_bytes || 0,
         } as any;
       } else {
         // Production path: Python-only. Try /upload-file/ then /upload-file (no fallback to Laravel)
@@ -326,6 +355,8 @@ class PythonAudioService {
           format: resolvedFormat,
           duration: 0,
           processing_time: 0,
+          processed_file_size_mb: resp.data?.processed_file_size_mb || 0,
+          processed_file_size_bytes: resp.data?.processed_file_size_bytes || 0,
         } as any;
       }
     } catch (error: any) {

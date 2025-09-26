@@ -120,11 +120,24 @@ class AdvancedAudioService {
 
   async getTierInformation(): Promise<any> {
     try {
-      const response = await axios.get(`${this.baseURL}/tiers`);
-      return response.data;
+      const response = await axios.get(`${this.baseURL}/tiers`, { headers: { 'Accept': 'application/json' } });
+      const data = response.data || {};
+      // Support both shapes: {free, pro, advanced} or {tiers: {...}}
+      const tiers = (data && (data.free || data.pro || data.advanced)) ? data : (data.tiers || {});
+      // If still empty, throw to trigger fallback
+      if (!tiers || Object.keys(tiers).length === 0) {
+        throw new Error('Empty tiers from backend');
+      }
+      return tiers;
     } catch (error) {
       console.error('Failed to get tier information:', error);
-      throw new Error('Failed to get tier information');
+      // Fallback to static file if backend route is not yet wired
+      try {
+        const resp = await axios.get(`/tiers.json`, { headers: { 'Accept': 'application/json' } });
+        return resp.data;
+      } catch (e) {
+        throw new Error('Failed to get tier information');
+      }
     }
   }
 
