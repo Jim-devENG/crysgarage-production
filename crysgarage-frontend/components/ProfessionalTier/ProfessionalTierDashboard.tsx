@@ -14,6 +14,7 @@ interface AudioFile {
   size: number;
   file: File;
   url: string;
+  processedSize?: number; // Processed file size in bytes
 }
 
 interface AudioStats {
@@ -1120,6 +1121,14 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
 
       console.log('Final processing completed:', result);
 
+      // Update uploadedFile with processed file size
+      if (uploadedFile && result.processed_file_size_bytes) {
+        setUploadedFile({
+          ...uploadedFile,
+          processedSize: result.processed_file_size_bytes
+        });
+      }
+
       // Keep remote URL for download, create a CORS-safe playable URL for the player
       setMasteredRemoteUrl(result.url);
       try {
@@ -1373,7 +1382,7 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
                   </div>
                   <div>
                     <h3 className="text-crys-white font-medium">{uploadedFile.name}</h3>
-                    <p className="text-crys-light-grey text-sm">{formatFileSize(uploadedFile.size)}</p>
+                    <p className="text-crys-light-grey text-sm">{formatFileSize(uploadedFile.processedSize || uploadedFile.size)}</p>
                   </div>
                 </div>
                 
