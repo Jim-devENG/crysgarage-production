@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Download, ArrowLeft, CreditCard, DollarSign } from 'lucide-react';
+import { Download, FileAudio, Settings, CheckCircle } from 'lucide-react';
 import AdvancedDownloadSettings from '../Shared/AdvancedDownloadSettings';
 import createAdvancedDownloadHandler from '../Shared/AdvancedDownloadHandler';
 
@@ -9,6 +9,7 @@ interface AudioFile {
   size: number;
   file: File;
   url: string;
+  processedSize?: number;
 }
 
 interface Genre {
@@ -25,6 +26,9 @@ interface DownloadStepProps {
   onNewUpload: () => void;
   onDownload: () => Promise<void>;
   masteredAudioUrl?: string | null;
+  downloadFormat?: string;
+  onFormatChange?: (format: string) => void;
+  tier?: string;
 }
 
 const DownloadStep: React.FC<DownloadStepProps> = ({
@@ -33,11 +37,29 @@ const DownloadStep: React.FC<DownloadStepProps> = ({
   onBack,
   onNewUpload,
   onDownload,
-  masteredAudioUrl
+  masteredAudioUrl,
+  downloadFormat: propDownloadFormat,
+  onFormatChange,
+  tier
 }) => {
   const [isDownloading, setIsDownloading] = useState(false);
-  const [downloadFormat, setDownloadFormat] = useState('MP3');
+  const [downloadFormat, setDownloadFormat] = useState(propDownloadFormat || 'MP3');
   const [sampleRate, setSampleRate] = useState('44.1kHz');
+  
+  // Update local state when prop changes
+  React.useEffect(() => {
+    if (propDownloadFormat) {
+      setDownloadFormat(propDownloadFormat);
+    }
+  }, [propDownloadFormat]);
+  
+  // Handle format change
+  const handleFormatChange = (format: string) => {
+    setDownloadFormat(format);
+    if (onFormatChange) {
+      onFormatChange(format);
+    }
+  };
   
   const advancedDownloadHandler = createAdvancedDownloadHandler();
 
@@ -49,10 +71,13 @@ const DownloadStep: React.FC<DownloadStepProps> = ({
     try {
       // Use advanced download handler if we have a processed audio URL
       if (masteredAudioUrl) {
+        // Convert free tier format to AdvancedDownloadHandler format
+        const mappedFormat = downloadFormat === 'wav24' ? 'WAV' : 'MP3';
+        
         await advancedDownloadHandler({
           originalFile: uploadedFile.file,
           processedAudioUrl: masteredAudioUrl,
-          downloadFormat,
+          downloadFormat: mappedFormat,
           sampleRate,
           genre: selectedGenre.name
         });
@@ -76,111 +101,73 @@ const DownloadStep: React.FC<DownloadStepProps> = ({
         
         {/* Pricing Information */}
         <div className="mt-4 inline-flex items-center gap-2 bg-gradient-to-r from-amber-500/20 to-yellow-400/20 border border-amber-500/30 rounded-lg px-4 py-2">
-          <DollarSign className="w-4 h-4 text-amber-400" />
-          <span className="text-sm text-amber-400 font-medium">
-            Download Cost: <span className="text-white">$2.99 per download</span>
-          </span>
+          <CheckCircle className="w-4 h-4 text-amber-400" />
+          <span className="text-amber-400 font-medium">Free Tier - No Cost</span>
         </div>
       </div>
 
       {/* File Information */}
       {uploadedFile && (
-        <div className="bg-gradient-to-br from-gray-800 to-gray-700 rounded-lg p-4 border border-gray-600">
-          <h3 className="text-md font-semibold text-white mb-4 flex items-center">
-            <Download className="w-4 h-4 mr-2" />
-            File Information
-          </h3>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-3">
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-300">File Name:</span>
-                <span className="text-white font-medium">{uploadedFile.file.name}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-300">File Size:</span>
-                <span className="text-white font-medium">
-                  {(uploadedFile.file.size / (1024 * 1024)).toFixed(2)} MB
-                </span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-300">Selected Genre:</span>
-                <span className="text-white font-medium">{selectedGenre?.name || 'None'}</span>
-              </div>
-            </div>
-            
-            <div className="space-y-3">
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-300">Processing:</span>
-                <span className="text-amber-400 font-medium">Real-time</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-300">Quality:</span>
-                <span className="text-white font-medium">Professional</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-300">Format:</span>
-                <span className="text-white font-medium">WAV 24-bit</span>
+        <div className="bg-crys-charcoal rounded-lg p-6">
+          <h3 className="text-crys-white font-medium mb-4">Processed File</h3>
+          <div className="flex items-center space-x-4">
+            <FileAudio size={24} className="text-crys-gold" />
+            <div className="flex-1">
+              <p className="text-crys-white font-medium">{uploadedFile.name}</p>
+              <div className="flex items-center space-x-4 text-sm text-crys-light-grey">
+                <span>Original: {(uploadedFile.size / (1024 * 1024)).toFixed(2)} MB</span>
+                {uploadedFile.processedSize && (
+                  <span>Processed: {(uploadedFile.processedSize / (1024 * 1024)).toFixed(2)} MB</span>
+                )}
               </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* Advanced Download Settings */}
-      <div className="bg-gradient-to-br from-gray-800 to-gray-700 rounded-lg p-6 border border-gray-600">
-        <AdvancedDownloadSettings
-          onDownload={handleDownload}
-          isDownloading={isDownloading}
-          downloadFormat={downloadFormat}
-          onFormatChange={setDownloadFormat}
-          sampleRate={sampleRate}
-          onSampleRateChange={setSampleRate}
-          tier="free"
-        />
-      </div>
-
-      {/* Credit Purchase Information */}
-      <div className="bg-gradient-to-r from-amber-500/10 to-yellow-400/10 border border-amber-500/20 rounded-lg p-6">
-        <h3 className="text-lg font-semibold text-amber-400 mb-4 flex items-center justify-center gap-2">
-          <CreditCard className="w-5 h-5" />
-          Download Credits Required
-        </h3>
-        <div className="text-center space-y-3">
-          <p className="text-amber-300 text-sm">
-            <span className="font-semibold">Mastering is FREE!</span> But to download your mastered audio, you need credits.
-          </p>
-          <div className="flex items-center justify-center gap-4 text-sm">
-            <div className="flex items-center gap-2">
-              <span className="w-3 h-3 bg-amber-400 rounded-full"></span>
-              <span className="text-gray-300">$2.99 = 1 Download</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="w-3 h-3 bg-amber-400 rounded-full"></span>
-              <span className="text-gray-300">Pay-per-download model</span>
+      {/* Genre Information */}
+      {selectedGenre && (
+        <div className="bg-crys-charcoal rounded-lg p-6">
+          <h3 className="text-crys-white font-medium mb-4">Applied Genre</h3>
+          <div className="flex items-center space-x-3">
+            <div 
+              className="w-4 h-4 rounded-full" 
+              style={{ backgroundColor: selectedGenre.color }}
+            ></div>
+            <div>
+              <p className="text-crys-white font-medium">{selectedGenre.name}</p>
+              <p className="text-crys-light-grey text-sm">{selectedGenre.description}</p>
             </div>
           </div>
-          <p className="text-xs text-amber-300">
-            Each mastered audio download costs $2.99.
-          </p>
         </div>
-      </div>
+      )}
 
-      {/* Navigation Buttons */}
-      <div className="flex justify-between items-center pt-4">
+      {/* Download Settings */}
+      <AdvancedDownloadSettings
+        onDownload={handleDownload}
+        isDownloading={isDownloading}
+        downloadFormat={downloadFormat}
+        onFormatChange={handleFormatChange}
+        sampleRate={sampleRate}
+        onSampleRateChange={setSampleRate}
+        tier="free"
+      />
+
+      {/* Action Buttons */}
+      <div className="flex flex-col sm:flex-row gap-4 justify-center">
         <button
           onClick={onBack}
-          className="text-amber-400 hover:text-amber-300 transition-colors flex items-center gap-2"
+          className="px-6 py-3 bg-crys-graphite hover:bg-crys-graphite/80 text-crys-white rounded-lg transition-colors flex items-center justify-center space-x-2"
         >
-          <ArrowLeft className="w-4 h-4" />
-          Back to Processing
+          <Settings size={20} />
+          <span>Back to Processing</span>
         </button>
         
         <button
           onClick={onNewUpload}
-          className="text-amber-400 hover:text-amber-300 transition-colors flex items-center gap-2"
+          className="px-6 py-3 bg-crys-charcoal hover:bg-crys-charcoal/80 text-crys-white rounded-lg transition-colors flex items-center justify-center space-x-2"
         >
-          Start New Master
+          <span>Upload New File</span>
         </button>
       </div>
     </div>

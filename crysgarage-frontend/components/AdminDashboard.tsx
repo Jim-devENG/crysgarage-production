@@ -25,6 +25,19 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
     networkTraffic: 800
   });
 
+  // New backend features state
+  const [processedFilesStatus, setProcessedFilesStatus] = useState({
+    total_files: 0,
+    files: [],
+    current_time: 0
+  });
+  const [storageStats, setStorageStats] = useState({
+    total_size: 0,
+    free_space: 0,
+    processed_files_count: 0,
+    cleanup_last_run: null
+  });
+
   const [processingQueue, setProcessingQueue] = useState([]);
 
   const [users, setUsers] = useState([
@@ -75,6 +88,52 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
 
   // Counter for generating readable file IDs
   const [fileIdCounter, setFileIdCounter] = useState(1001);
+
+  // Fetch backend data
+  const fetchBackendData = async () => {
+    try {
+      const baseUrl = window.location.hostname === 'localhost' ? 'http://localhost:8002' : 'https://crysgarage.studio';
+      
+      // Fetch processed files status
+      const processedResponse = await fetch(`${baseUrl}/processed-files-status`);
+      if (processedResponse.ok) {
+        const processedData = await processedResponse.json();
+        setProcessedFilesStatus(processedData);
+      }
+
+      // Fetch storage stats
+      const storageResponse = await fetch(`${baseUrl}/storage-stats`);
+      if (storageResponse.ok) {
+        const storageData = await storageResponse.json();
+        setStorageStats(storageData);
+      }
+    } catch (error) {
+      console.error('Failed to fetch backend data:', error);
+    }
+  };
+
+  // Manual cleanup function
+  const triggerCleanup = async () => {
+    try {
+      const baseUrl = window.location.hostname === 'localhost' ? 'http://localhost:8002' : 'https://crysgarage.studio';
+      const response = await fetch(`${baseUrl}/cleanup-processed-files`);
+      if (response.ok) {
+        const result = await response.json();
+        alert(`Cleanup completed: ${result.message}`);
+        fetchBackendData(); // Refresh data
+      } else {
+        alert('Cleanup failed');
+      }
+    } catch (error) {
+      console.error('Cleanup failed:', error);
+      alert('Cleanup failed');
+    }
+  };
+
+  // Fetch backend data on mount
+  useEffect(() => {
+    fetchBackendData();
+  }, []);
 
   // Real-time updates simulation
   useEffect(() => {

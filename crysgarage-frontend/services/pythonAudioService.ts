@@ -252,7 +252,8 @@ class PythonAudioService {
     tier: 'free' | 'pro' | 'professional' | 'advanced' | 'one_on_one',
     genre: string,
     userId: string,
-    format: 'mp3' | 'wav' | 'wav16' | 'wav24' = 'mp3',
+    format: 'mp3' | 'wav' | 'wav16' | 'wav24' | 'flac' | 'aac' | 'ogg' | 'm4a' = 'mp3',
+    sampleRate: number = 44100,
     targetLufs?: number
   ): Promise<MasteringResponse> {
     try {

@@ -2,6 +2,77 @@ name: Deploy to VPS
 
 on:
   push:
+    branches: [ "main", "master" ]
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            set -euo pipefail
+            REPO_DIR=/var/www/crysgarage
+            FRONT_BUILD_DIR=$REPO_DIR/crysgarage-frontend
+            FRONT_PUBLISH_DIR=/var/www/crysgarage/frontend
+
+            # Ensure repo exists
+            if [ ! -d "$REPO_DIR/.git" ]; then
+              mkdir -p "$REPO_DIR"
+              cd /var/www
+              if [ ! -d crysgarage ]; then
+                git clone https://github.com/${{ github.repository }} crysgarage
+              fi
+            fi
+
+            cd "$REPO_DIR"
+            git fetch --all --prune
+            git reset --hard origin/${GITHUB_REF_NAME:-main} || git reset --hard origin/main || git reset --hard origin/master
+
+            # Build frontend
+            if [ -d "$FRONT_BUILD_DIR" ]; then
+              cd "$FRONT_BUILD_DIR"
+              # Prefer npm ci; fall back to npm i
+              if command -v npm >/dev/null 2>&1; then
+                npm ci --no-audit --no-fund || npm install --no-audit --no-fund
+                npm run build --if-present
+              else
+                echo "npm not found" >&2; exit 1
+              fi
+              # Publish build
+              mkdir -p "$FRONT_PUBLISH_DIR"
+              rm -rf "$FRONT_PUBLISH_DIR"/*
+              if [ -d dist ]; then
+                cp -r dist/* "$FRONT_PUBLISH_DIR"/
+              elif [ -d build ]; then
+                cp -r build/* "$FRONT_PUBLISH_DIR"/
+              else
+                echo "No frontend build output found" >&2; exit 1
+              fi
+            fi
+
+            # Restart services
+            systemctl restart crysgarage-python || true
+            nginx -t && systemctl reload nginx || true
+
+            # Verify endpoints
+            curl -fsS https://crysgarage.studio/tiers | head -n 3 || true
+
+name: Deploy to VPS
+
+on:
+  push:
     branches: [ master, main ]
   pull_request:
     branches: [ master, main ]

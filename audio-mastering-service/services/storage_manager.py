@@ -36,9 +36,10 @@ class StorageManager:
         # Public base URL for serving mastered files
         self.base_url = os.getenv('BASE_URL', 'http://localhost:8002')
         
-        # File cleanup settings
-        self.cleanup_delay_minutes = int(os.getenv('FILE_CLEANUP_DELAY_MINUTES', '5'))
+        # File cleanup settings - 12 hours as requested
+        self.cleanup_delay_hours = int(os.getenv('FILE_CLEANUP_DELAY_HOURS', '12'))
         self.file_timestamps = {}  # Track when files were created for cleanup
+        self.audio_storage_dir = '/tmp/audio'  # Dedicated audio storage directory
         
         # Initialize storage
         self._initialize_storage()
@@ -68,9 +69,9 @@ class StorageManager:
                 current_time = time.time()
                 files_to_delete = []
                 
-                # Check files that are older than cleanup_delay_minutes
+                # Check files that are older than cleanup_delay_hours
                 for file_url, timestamp in self.file_timestamps.items():
-                    if current_time - timestamp > (self.cleanup_delay_minutes * 60):
+                    if current_time - timestamp > (self.cleanup_delay_hours * 3600):  # Convert hours to seconds
                         files_to_delete.append(file_url)
                 
                 # Delete old files
@@ -106,8 +107,14 @@ class StorageManager:
         """Initialize storage directory"""
         try:
             if self.storage_type == 'local':
+                # Create main storage directory
                 os.makedirs(self.local_storage_path, exist_ok=True)
+                # Create dedicated audio storage directory with proper permissions
+                os.makedirs(self.audio_storage_dir, exist_ok=True)
+                # Set proper permissions for audio directory
+                os.chmod(self.audio_storage_dir, 0o755)
                 logger.info(f"Local storage initialized: {self.local_storage_path}")
+                logger.info(f"Audio storage directory created: {self.audio_storage_dir}")
             elif self.storage_type == 's3':
                 logger.info(f"S3 storage configured: {self.s3_bucket}")
         except Exception as e:
@@ -148,7 +155,7 @@ class StorageManager:
             
             # Track file timestamp for cleanup
             self.file_timestamps[url] = time.time()
-            logger.info(f"File uploaded successfully: {url} (will auto-delete in {self.cleanup_delay_minutes} minutes)")
+            logger.info(f"File uploaded successfully: {url} (will auto-delete in {self.cleanup_delay_hours} hours)")
             return url
             
         except Exception as e:
@@ -199,11 +206,11 @@ class StorageManager:
     async def _upload_to_local(self, file_path: str, filename: str, metadata: Optional[Dict[str, Any]] = None) -> str:
         """Upload file to local storage"""
         try:
-            # Create mastered directory (Laravel storage structure)
-            os.makedirs(self.local_storage_path, exist_ok=True)
+            # Use dedicated audio storage directory
+            os.makedirs(self.audio_storage_dir, exist_ok=True)
             
-            # Destination path
-            dest_path = os.path.join(self.local_storage_path, filename)
+            # Destination path in audio directory
+            dest_path = os.path.join(self.audio_storage_dir, filename)
             
             # Copy file
             async with aiofiles.open(file_path, 'rb') as src:
@@ -211,12 +218,16 @@ class StorageManager:
                     while chunk := await src.read(8192):
                         await dst.write(chunk)
             
+            # Set proper permissions for the audio file
+            os.chmod(dest_path, 0o644)
+            
             # Save metadata if provided
             if metadata:
                 metadata_path = dest_path + '.meta'
                 async with aiofiles.open(metadata_path, 'w') as f:
                     import json
                     await f.write(json.dumps(metadata, indent=2))
+                os.chmod(metadata_path, 0o644)
             
             # Generate public URL served by Nginx alias at /files/
             url = f"{self.base_url}/files/{filename}"
@@ -283,17 +294,22 @@ class StorageManager:
         try:
             # Extract path from URL
             path_part = file_url.split('/files/')[-1]
-            file_path = os.path.join(self.local_storage_path, path_part)
+            # Check both storage directories
+            file_paths = [
+                os.path.join(self.local_storage_path, path_part),
+                os.path.join(self.audio_storage_dir, path_part)
+            ]
             
-            if os.path.exists(file_path):
-                os.remove(file_path)
-                
-                # Also remove metadata file if it exists
-                metadata_path = file_path + '.meta'
-                if os.path.exists(metadata_path):
-                    os.remove(metadata_path)
-                
-                return True
+            for file_path in file_paths:
+                if os.path.exists(file_path):
+                    os.remove(file_path)
+                    
+                    # Also remove metadata file if it exists
+                    metadata_path = file_path + '.meta'
+                    if os.path.exists(metadata_path):
+                        os.remove(metadata_path)
+                    
+                    return True
             
             return False
             
@@ -352,9 +368,19 @@ class StorageManager:
         try:
             # Extract path from URL
             path_part = file_url.split('/files/')[-1]
-            file_path = os.path.join(self.local_storage_path, path_part)
+            # Check both storage directories
+            file_paths = [
+                os.path.join(self.local_storage_path, path_part),
+                os.path.join(self.audio_storage_dir, path_part)
+            ]
             
-            if not os.path.exists(file_path):
+            file_path = None
+            for path in file_paths:
+                if os.path.exists(path):
+                    file_path = path
+                    break
+            
+            if not file_path:
                 return None
             
             stat = os.stat(file_path)
@@ -362,7 +388,8 @@ class StorageManager:
             info = {
                 'size': stat.st_size,
                 'last_modified': datetime.fromtimestamp(stat.st_mtime),
-                'content_type': mimetypes.guess_type(file_path)[0]
+                'content_type': mimetypes.guess_type(file_path)[0],
+                'storage_location': file_path
             }
             
             # Load metadata if available
@@ -390,11 +417,12 @@ class StorageManager:
             # Add cleanup information
             stats.update({
                 "cleanup_enabled": True,
-                "cleanup_delay_minutes": self.cleanup_delay_minutes,
+                "cleanup_delay_hours": self.cleanup_delay_hours,
+                "audio_storage_dir": self.audio_storage_dir,
                 "tracked_files": len(self.file_timestamps),
                 "files_scheduled_for_cleanup": len([
                     url for url, timestamp in self.file_timestamps.items()
-                    if time.time() - timestamp > (self.cleanup_delay_minutes * 60)
+                    if time.time() - timestamp > (self.cleanup_delay_hours * 3600)
                 ])
             })
             
