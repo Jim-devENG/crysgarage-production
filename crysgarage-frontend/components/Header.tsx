@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "../contexts/AuthenticationContext";
 import { UserDropdown } from "./authentication";
+import { CreditDisplay } from "./CreditDisplay";
 
 interface HeaderProps {
   onNavigate: (page: string) => void;
@@ -33,6 +34,7 @@ export function Header({
     { id: 'community', label: 'Community' },
     { id: 'about', label: 'About' },
     { id: 'help', label: 'Help' },
+    { id: 'admin', label: 'Admin' },
   ];
 
   const handleDownloadClick = () => {
@@ -80,7 +82,16 @@ export function Header({
           {/* Right Side - Auth/User */}
           <div className="flex items-center space-x-4">
             {isAuthenticated ? (
-              <UserDropdown onNavigate={onNavigate} />
+              <>
+                {/* Show credits for authenticated users */}
+                <div className="hidden lg:block">
+                  <CreditDisplay 
+                    onPurchaseClick={() => onNavigate('pricing')}
+                    className="min-w-[200px]"
+                  />
+                </div>
+                <UserDropdown onNavigate={onNavigate} />
+              </>
             ) : (
               <div className="flex items-center space-x-2">
                 <Button

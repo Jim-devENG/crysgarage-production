@@ -272,6 +272,12 @@ function AppContent() {
         {currentPage === 'ml-pipeline' && (
           <MLPipelineTestPage />
         )}
+
+        {currentPage === 'admin' && (
+          <AdminDashboard 
+            onBack={() => handleNavigation('landing')}
+          />
+        )}
       </main>
 
       <Footer onNavigate={handleNavigation} />

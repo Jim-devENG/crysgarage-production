@@ -65,7 +65,10 @@ export function AuthModal({ isOpen, onClose, onSuccess, selectedTier }: AuthModa
 
     try {
       if (isSignup) {
-        await signup(formData.name, formData.email, formData.password);
+        // Determine tier based on selectedTier prop
+        const tier = selectedTier === 'professional' ? 'pro' : 
+                    selectedTier === 'advanced' ? 'advanced' : 'free';
+        await signup(formData.name, formData.email, formData.password, tier);
         setMessage('Account created successfully! You are now signed in.');
         setTimeout(() => {
           onSuccess();
@@ -86,7 +89,10 @@ export function AuthModal({ isOpen, onClose, onSuccess, selectedTier }: AuthModa
     try {
       clearError();
       setMessage('');
-      await signInWithGoogle();
+      // Determine tier based on selectedTier prop
+      const tier = selectedTier === 'professional' ? 'pro' : 
+                  selectedTier === 'advanced' ? 'advanced' : 'free';
+      await signInWithGoogle(tier);
       setMessage('Successfully signed in with Google!');
       setTimeout(() => {
         onSuccess();

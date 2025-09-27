@@ -211,6 +211,13 @@ export function PaymentModal({
                 : `${selectedTierInfo.credits} download${selectedTierInfo.credits > 1 ? 's' : ''} included`
               }
             </p>
+            {selectedTier === 'professional' || selectedTier === 'advanced' ? (
+              <div className="mt-2 p-2 rounded bg-green-500/10 border border-green-500/20">
+                <p className="text-green-400 text-xs">
+                  🎉 <strong>Welcome Bonus:</strong> Get 2 free credits when you sign up for the first time!
+                </p>
+              </div>
+            ) : null}
           </div>
 
           {/* Payment Button */}

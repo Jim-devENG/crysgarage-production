@@ -6,9 +6,9 @@ interface AuthenticationContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
-  signup: (name: string, email: string, password: string) => Promise<void>;
+  signup: (name: string, email: string, password: string, tier?: 'free' | 'pro' | 'advanced') => Promise<void>;
   login: (email: string, password: string) => Promise<void>;
-  signInWithGoogle: () => Promise<void>;
+  signInWithGoogle: (tier?: 'free' | 'pro' | 'advanced') => Promise<void>;
   logout: () => Promise<void>;
   updateProfile: (profileData: Partial<User>) => Promise<void>;
   refreshUser: () => Promise<void>;
@@ -79,13 +79,13 @@ export function AuthenticationProvider({ children }: AuthenticationProviderProps
     }
   }, []);
 
-  const signup = async (name: string, email: string, password: string) => {
+  const signup = async (name: string, email: string, password: string, tier: 'free' | 'pro' | 'advanced' = 'free') => {
     try {
       setIsLoading(true);
       setError(null);
       
-      console.log('AuthenticationContext: Starting Firebase signup for:', email);
-      const user = await firebaseAuthService.signUpWithEmail(email, password, name);
+      console.log('AuthenticationContext: Starting Firebase signup for:', email, 'with tier:', tier);
+      const user = await firebaseAuthService.signUpWithEmail(email, password, name, tier);
       console.log('AuthenticationContext: Firebase signup successful, new user:', user);
       setUser(user);
       setAuthVersion(prev => prev + 1); // Force re-render
@@ -118,13 +118,13 @@ export function AuthenticationProvider({ children }: AuthenticationProviderProps
     }
   };
 
-  const signInWithGoogle = async () => {
+  const signInWithGoogle = async (tier: 'free' | 'pro' | 'advanced' = 'free') => {
     try {
       setIsLoading(true);
       setError(null);
       
       console.log('AuthenticationContext: Starting Firebase Google sign in...');
-      const user = await firebaseAuthService.signInWithGoogle();
+      const user = await firebaseAuthService.signInWithGoogle(tier);
       console.log('AuthenticationContext: Firebase Google sign in successful:', user);
       setUser(user);
       setAuthVersion(prev => prev + 1); // Force re-render
