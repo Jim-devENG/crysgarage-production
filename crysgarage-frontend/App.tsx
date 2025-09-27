@@ -188,9 +188,7 @@ function AppContent() {
         )}
 
         {currentPage === 'dashboard' && (
-          <FreeTierDashboardPython 
-            onDownloadAttempt={handleDownloadAttempt}
-          />
+          <FreeTierDashboardPython />
         )}
 
         {currentPage === 'professional' && (

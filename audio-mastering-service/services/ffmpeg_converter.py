@@ -19,15 +19,16 @@ class FFmpegConverter:
     def __init__(self):
         self.temp_dir = tempfile.gettempdir()
         self.supported_formats = {
-            'WAV': {'ext': '.wav', 'codec': 'pcm_s16le'},
-            'MP3': {'ext': '.mp3', 'codec': 'libmp3lame'},
-            'FLAC': {'ext': '.flac', 'codec': 'flac'},
-            'AIFF': {'ext': '.aiff', 'codec': 'pcm_s16be'},
-            'AAC': {'ext': '.aac', 'codec': 'aac'},
-            'OGG': {'ext': '.ogg', 'codec': 'libvorbis'}
+            'WAV': {'ext': '.wav', 'codec': 'pcm_s16le', 'mime': 'audio/wav'},
+            'MP3': {'ext': '.mp3', 'codec': 'libmp3lame', 'mime': 'audio/mpeg'},
+            'FLAC': {'ext': '.flac', 'codec': 'flac', 'mime': 'audio/flac'},
+            'AIFF': {'ext': '.aiff', 'codec': 'pcm_s16be', 'mime': 'audio/aiff'},
+            'AAC': {'ext': '.aac', 'codec': 'aac', 'mime': 'audio/aac'},
+            'OGG': {'ext': '.ogg', 'codec': 'libvorbis', 'mime': 'audio/ogg'},
+            'M4A': {'ext': '.m4a', 'codec': 'aac', 'mime': 'audio/mp4'}
         }
-        # Add 88.2kHz and 192kHz to supported sample rates
-        self.supported_sample_rates = [44100, 48000, 88200, 96000, 192000]
+        # Support all required sample rates: 22050, 44100, 48000, 96000 Hz
+        self.supported_sample_rates = [22050, 44100, 48000, 96000]
         
     def is_available(self) -> bool:
         """Check if FFmpeg is available"""
@@ -97,6 +98,19 @@ class FFmpegConverter:
             file_size = os.path.getsize(output_path)
             if file_size == 0:
                 raise Exception("Conversion failed - output file is empty")
+            
+            # 🔍 DEBUG: Log FFmpeg conversion details
+            input_size = os.path.getsize(input_path) if os.path.exists(input_path) else 0
+            logger.info(f"🔍 DEBUG: FFmpeg conversion completed:")
+            logger.info(f"🔍 DEBUG: - Input: {input_path} ({input_size} bytes)")
+            logger.info(f"🔍 DEBUG: - Output: {output_path} ({file_size} bytes)")
+            logger.info(f"🔍 DEBUG: - Size change: {file_size - input_size} bytes")
+            logger.info(f"🔍 DEBUG: - Format: {output_format}")
+            
+            # Validate the converted file is not corrupted
+            is_valid = await self.validate_output_file(output_path, output_format)
+            if not is_valid:
+                raise Exception("Conversion failed - output file is corrupted or too small")
             
             logger.info(f"Audio conversion completed: {output_path} ({file_size} bytes)")
             return output_path
@@ -173,6 +187,13 @@ class FFmpegConverter:
                 '-acodec', 'libvorbis',
                 '-b:a', '320k',  # High quality Vorbis
                 '-q:a', '10'  # Best quality
+            ])
+        
+        elif output_format == 'M4A':
+            cmd.extend([
+                '-acodec', 'aac',
+                '-b:a', f"{(bitrate_kbps or 256)}k",  # High quality AAC
+                '-profile:a', 'aac_low'
             ])
         
         # Add output path
@@ -365,6 +386,54 @@ class FFmpegConverter:
             )
         except Exception as e:
             logger.error(f"Audio validation failed: {e}")
+            return False
+    
+    def get_mime_type(self, format_name: str) -> str:
+        """Get MIME type for audio format"""
+        if format_name in self.supported_formats:
+            return self.supported_formats[format_name]['mime']
+        return 'application/octet-stream'
+    
+    async def validate_output_file(self, file_path: str, expected_format: str) -> bool:
+        """
+        Validate that the output file is properly converted and not corrupted
+        
+        Args:
+            file_path: Path to output file
+            expected_format: Expected format (WAV, MP3, etc.)
+            
+        Returns:
+            bool: True if file is valid and properly sized
+        """
+        try:
+            if not os.path.exists(file_path):
+                return False
+            
+            # Check file size (should be in MB, not KB)
+            file_size = os.path.getsize(file_path)
+            if file_size < 1024:  # Less than 1KB is suspicious
+                logger.error(f"Output file too small: {file_size} bytes")
+                return False
+            
+            # Validate with FFprobe
+            info = await self.get_audio_info(file_path)
+            if info['duration'] <= 0 or info['sample_rate'] <= 0:
+                logger.error(f"Invalid audio properties: {info}")
+                return False
+            
+            # Check format-specific requirements
+            if expected_format == 'MP3' and file_size < 10000:  # MP3 should be at least 10KB
+                logger.error(f"MP3 file too small: {file_size} bytes")
+                return False
+            elif expected_format == 'WAV' and file_size < 100000:  # WAV should be at least 100KB
+                logger.error(f"WAV file too small: {file_size} bytes")
+                return False
+            
+            logger.info(f"Output file validation passed: {file_size} bytes, {info['duration']:.2f}s")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Output file validation failed: {e}")
             return False
 
 

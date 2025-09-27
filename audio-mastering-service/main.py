@@ -15,6 +15,8 @@ import os
 import sentry_sdk
 from datetime import datetime
 import math
+import time
+import threading
 
 from services.audio_processor import AudioProcessor
 from services.ml_mastering import MLMasteringEngine
@@ -48,11 +50,77 @@ app = FastAPI(
     redoc_url="/redoc"
 )
 
+# =============================================================================
+# ROBUST FILE PATH MAPPING SYSTEM
+# =============================================================================
+
+# In-memory store for processed file paths (replace with Redis/DB in production)
+processed_files = {}
+processed_files_lock = threading.Lock()
+
+def save_processed_file_path(file_id: str, file_path: str, tier: str = "free"):
+    """Store the exact path of a processed file"""
+    with processed_files_lock:
+        processed_files[file_id] = {
+            "path": file_path,
+            "tier": tier,
+            "created_at": time.time(),
+            "size": os.path.getsize(file_path) if os.path.exists(file_path) else 0
+        }
+    logger.info(f"✅ Processed file path stored: {file_id} -> {file_path}")
+
+def get_processed_file_path(file_id: str) -> Optional[Dict[str, Any]]:
+    """Get the exact path of a processed file"""
+    with processed_files_lock:
+        return processed_files.get(file_id)
+
+def cleanup_old_processed_files():
+    """Clean up processed files older than 12 hours"""
+    current_time = time.time()
+    cleanup_threshold = 12 * 60 * 60  # 12 hours in seconds
+    
+    with processed_files_lock:
+        to_remove = []
+        for file_id, file_info in processed_files.items():
+            if current_time - file_info["created_at"] > cleanup_threshold:
+                # Try to delete the file
+                try:
+                    if os.path.exists(file_info["path"]):
+                        os.remove(file_info["path"])
+                        logger.info(f"🗑️ Cleaned up old processed file: {file_info['path']}")
+                except Exception as e:
+                    logger.warning(f"Failed to delete old file {file_info['path']}: {e}")
+                to_remove.append(file_id)
+        
+        # Remove from mapping
+        for file_id in to_remove:
+            del processed_files[file_id]
+        
+        if to_remove:
+            logger.info(f"🧹 Cleaned up {len(to_remove)} old processed files")
+
+def get_mime_type_for_extension(ext: str) -> str:
+    """Get correct MIME type for audio file extension"""
+    mime_map = {
+        "mp3": "audio/mpeg",
+        "wav": "audio/wav", 
+        "flac": "audio/flac",
+        "aac": "audio/aac",
+        "ogg": "audio/ogg",
+        "m4a": "audio/mp4",
+        "aiff": "audio/aiff",
+        "wma": "audio/x-ms-wma"
+    }
+    return mime_map.get(ext.lower(), "application/octet-stream")
+
 # Ensure responses never contain NaN/Inf which can break JSON serialization and hang clients
 def sanitize_for_json(value):
     try:
         if isinstance(value, float):
             if math.isnan(value) or math.isinf(value):
+                return 0.0
+            # Check for out of range values
+            if abs(value) > 1e10:  # Very large numbers
                 return 0.0
             return float(value)
         if isinstance(value, dict):
@@ -60,8 +128,9 @@ def sanitize_for_json(value):
         if isinstance(value, list):
             return [sanitize_for_json(v) for v in value]
         return value
-    except Exception:
-        return value
+    except Exception as e:
+        logger.warning(f"JSON sanitization failed for {type(value)}: {e}")
+        return 0.0
 
 # CORS middleware
 app.add_middleware(
@@ -85,6 +154,22 @@ audio_processor = AudioProcessor()
 ml_engine = MLMasteringEngine()
 storage_manager = StorageManager()
 ffmpeg_converter = FFmpegConverter()
+
+# Startup event to initialize cleanup system
+@app.on_event("startup")
+async def startup_event():
+    """Initialize the audio mastering service"""
+    logger.info("🚀 Audio Mastering Service starting up...")
+    
+    # Create processed files directories
+    for tier in ["free", "professional", "advanced"]:
+        tier_dir = os.path.join(tempfile.gettempdir(), "processed", tier)
+        os.makedirs(tier_dir, exist_ok=True)
+        logger.info(f"📁 Created processed directory: {tier_dir}")
+    
+    # Run initial cleanup
+    cleanup_old_processed_files()
+    logger.info("✅ Audio Mastering Service startup complete")
 # Simple in-memory progress broker keyed by user_id
 progress_queues: Dict[str, asyncio.Queue] = {}
 
@@ -411,6 +496,11 @@ async def master_audio(request: MasteringRequest, background_tasks: BackgroundTa
             bit_depth=wav_bit_depth,
             bitrate_kbps=mp3_bitrate
         )
+        
+        # Validate the converted file is not corrupted
+        is_valid = await ffmpeg_converter.validate_output_file(final_file_path, desired_format)
+        if not is_valid:
+            raise HTTPException(status_code=500, detail="Audio conversion failed - output file is corrupted")
         await progress_emit(request.user_id, 'conversion_done', 85, None)
 
         # Note: All post-conversion processing removed to preserve ML mastering parameters
@@ -551,7 +641,7 @@ async def master_audio_advanced(
         logger.info(f"Custom effects configuration: {custom_effects}")
         
         # Process with advanced customizable pipeline
-        output_path = await ml_engine.process_audio_advanced(
+        processed_path = await ml_engine.process_audio_advanced(
             input_file_path=input_file_path,
             genre=genre,
             tier=tier,
@@ -559,11 +649,26 @@ async def master_audio_advanced(
             custom_effects=custom_effects
         )
         
+        # Apply FFmpeg conversion (same as regular upload)
+        # Default to WAV 44100/24-bit for advanced tier
+        final_output_path = await ffmpeg_converter.convert_audio(
+            input_path=processed_path,
+            output_format="WAV",
+            sample_rate=44100,
+            bit_depth=24
+        )
+        
+        # Save processed file with predictable name for simple download (same as regular upload)
+        import shutil
+        safe_name = file.filename.replace(" ", "_").replace("/", "_") if file.filename else "audio"
+        simple_download_path = os.path.join(tempfile.gettempdir(), f"processed_{user_id}_{safe_name}.wav")
+        shutil.copy2(final_output_path, simple_download_path)
+        
         # Upload to storage
-        file_url = await audio_processor.upload_to_storage(output_path, user_id)
+        file_url = await audio_processor.upload_to_storage(final_output_path, user_id)
         
         # Get metadata
-        metadata = await audio_processor.get_audio_metadata(output_path)
+        metadata = await audio_processor.get_audio_metadata(final_output_path)
         
         # Cleanup only input upload; keep processed file for /proxy-download
         await audio_processor.cleanup_temp_files([input_file_path])
@@ -901,14 +1006,14 @@ async def analyze_ml(audio: UploadFile = File(...), user_id: str = Form("anonymo
         raise HTTPException(status_code=500, detail=f"ML analyze failed: {str(e)}")
 
 @app.get("/proxy-download")
-async def proxy_download(file_url: str):
-    """Simple proxy to download and stream a remote file for CORS-free access"""
+async def proxy_download(file_url: str, format: str = "MP3", sample_rate: int = 44100):
+    """Proxy to download and convert audio files with FFmpeg"""
     try:
         import aiohttp
         import urllib.parse
         from urllib.parse import urlparse
         
-        logger.info(f"Proxy download requested for: {file_url}")
+        logger.info(f"Proxy download requested for: {file_url}, format: {format}, sample_rate: {sample_rate}")
         
         # If the file_url points to our own /files temp mount, read directly from disk
         parsed_fu = urlparse(file_url)
@@ -922,11 +1027,12 @@ async def proxy_download(file_url: str):
             logger.info(f"Looking for local file: {local_path}")
             
             if not os.path.exists(local_path):
-                logger.error(f"Local file not found: {local_path}")
+                logger.error(f"🎵 DEBUG: Local file not found: {local_path}")
                 # Try alternative paths including the actual temp directory and storage manager paths
                 alt_paths = [
                     os.path.join(tempfile.gettempdir(), base_name),
                     os.path.join("/tmp", base_name),
+                    os.path.join("/tmp/audio", base_name),  # 🎵 DEBUG: Check audio storage directory
                     os.path.join(".", base_name),
                     os.path.join("..", "tmp", base_name),
                     os.path.join(os.getcwd(), base_name),
@@ -938,15 +1044,75 @@ async def proxy_download(file_url: str):
                 for alt_path in alt_paths:
                     if os.path.exists(alt_path):
                         local_path = alt_path
-                        logger.info(f"Found file at alternative path: {local_path}")
+                        logger.info(f"🎵 DEBUG: Found file at alternative path: {local_path}")
                         break
                 else:
                     # List files in temp directory for debugging
                     temp_files = os.listdir(tempfile.gettempdir()) if os.path.exists(tempfile.gettempdir()) else []
-                    logger.error(f"Available files in temp dir: {temp_files}")
-                    raise HTTPException(status_code=404, detail=f"Source file not found: {base_name}")
+                    logger.error(f"🎵 DEBUG: Available files in temp dir: {temp_files}")
+                    
+                    # 🎵 DEBUG: Also search for files with similar names
+                    import glob
+                    pattern_matches = []
+                    for ext in ['mp3', 'wav', 'flac', 'aac', 'ogg', 'm4a']:
+                        pattern = os.path.join(tempfile.gettempdir(), f"*{base_name}*.{ext}")
+                        matches = glob.glob(pattern)
+                        pattern_matches.extend(matches)
+                        # Also search without extension
+                        pattern = os.path.join(tempfile.gettempdir(), f"*{base_name}*")
+                        matches = glob.glob(pattern)
+                        pattern_matches.extend(matches)
+                    
+                    logger.error(f"🎵 DEBUG: Pattern matches: {pattern_matches}")
+                    
+                    if pattern_matches:
+                        local_path = pattern_matches[0]
+                        logger.info(f"🎵 DEBUG: Using pattern match: {local_path}")
+                    else:
+                        raise HTTPException(status_code=404, detail=f"Source file not found: {base_name}")
             
-            # Stream the local file directly
+            # 🎵 DEBUG: Log file size before conversion
+            file_size = os.path.getsize(local_path)
+            logger.info(f"🎵 DEBUG: Proxy download input file size: {file_size} bytes")
+            
+            # Convert the file using FFmpeg if format conversion is needed
+            input_ext = os.path.splitext(local_path)[1].lower().lstrip('.')
+            output_ext = format.lower()
+            
+            # Check if conversion is needed
+            if input_ext != output_ext or sample_rate != 44100:
+                logger.info(f"🎵 Converting {input_ext} to {output_ext} at {sample_rate}Hz")
+                
+                # Create output file path
+                output_filename = f"converted_{base_name.rsplit('.', 1)[0]}.{output_ext}"
+                output_path = os.path.join(tempfile.gettempdir(), output_filename)
+                
+                # Use FFmpeg converter for conversion
+                try:
+                    converted_path = await ffmpeg_converter.convert_audio(
+                        input_path=local_path,
+                        output_format=format,
+                        sample_rate=sample_rate,
+                        bit_depth=24 if format == 'WAV' else None,
+                        bitrate_kbps=320 if format == 'MP3' else None
+                    )
+                    
+                    # Use the converted file
+                    local_path = converted_path
+                    base_name = os.path.basename(converted_path)
+                    
+                    # Log converted file size
+                    converted_size = os.path.getsize(converted_path)
+                    logger.info(f"🎵 DEBUG: Proxy download converted file size: {converted_size} bytes")
+                    
+                except Exception as e:
+                    logger.error(f"🎵 FFmpeg conversion failed: {e}")
+                    # Fall back to original file
+                    logger.info("🎵 Falling back to original file without conversion")
+            else:
+                logger.info(f"🎵 No conversion needed: {input_ext} at {sample_rate}Hz")
+            
+            # Stream the file (converted or original)
             def file_iter():
                 try:
                     with open(local_path, 'rb') as f:
@@ -956,14 +1122,18 @@ async def proxy_download(file_url: str):
                                 break
                             yield chunk
                 except Exception as e:
-                    logger.error(f"Error reading local file: {e}")
+                    logger.error(f"Error reading file: {e}")
                     raise
             
-            # Determine content type from file extension
-            if base_name.lower().endswith('.wav'):
+            # Determine content type from format
+            if format.upper() == 'WAV':
                 media_type = "audio/wav"
-            elif base_name.lower().endswith('.mp3'):
+            elif format.upper() == 'MP3':
                 media_type = "audio/mpeg"
+            elif format.upper() == 'FLAC':
+                media_type = "audio/flac"
+            elif format.upper() == 'AAC':
+                media_type = "audio/aac"
             else:
                 media_type = "application/octet-stream"
             
@@ -976,7 +1146,7 @@ async def proxy_download(file_url: str):
                 'Content-Type': media_type
             }
             
-            logger.info(f"Streaming local file: {base_name} ({media_type})")
+            logger.info(f"Streaming file: {base_name} ({media_type})")
             return StreamingResponse(file_iter(), media_type=media_type, headers=headers)
         else:
             # Download from external URL and stream
@@ -1032,6 +1202,88 @@ async def proxy_download_options():
         }
     )
 
+@app.get("/download/{file_id}")
+async def download_processed_audio(file_id: str):
+    """Robust download endpoint using exact file path mapping"""
+    try:
+        from urllib.parse import unquote
+        
+        # URL decode the file_id to handle spaces and special characters
+        decoded_file_id = unquote(file_id)
+        logger.info(f"⬇️ Download request for file_id: {file_id} -> decoded: {decoded_file_id}")
+        
+        # Get the exact file path from our mapping (no guessing!)
+        file_info = get_processed_file_path(decoded_file_id)
+        
+        if not file_info:
+            logger.error(f"❌ Processed file not found in mapping: {decoded_file_id}")
+            raise HTTPException(status_code=404, detail="Processed file not found. Please reprocess.")
+        
+        file_path = file_info["path"]
+        
+        # Verify the file actually exists
+        if not os.path.exists(file_path):
+            logger.error(f"❌ Processed file missing from disk: {file_path}")
+            # Remove from mapping since file is gone
+            with processed_files_lock:
+                if decoded_file_id in processed_files:
+                    del processed_files[decoded_file_id]
+            raise HTTPException(status_code=404, detail="Processed file not found. Please reprocess.")
+        
+        # Get file info
+        file_size = os.path.getsize(file_path)
+        file_ext = os.path.splitext(file_path)[1].lower().lstrip(".")
+        mime_type = get_mime_type_for_extension(file_ext)
+        
+        # 🔍 DEBUG: Log detailed download information
+        logger.info(f"🔍 DEBUG: Download endpoint serving file:")
+        logger.info(f"🔍 DEBUG: - File path: {file_path}")
+        logger.info(f"🔍 DEBUG: - File size: {file_size} bytes ({file_size / (1024*1024):.2f} MB)")
+        logger.info(f"🔍 DEBUG: - File extension: {file_ext}")
+        logger.info(f"🔍 DEBUG: - MIME type: {mime_type}")
+        logger.info(f"🔍 DEBUG: - Directory: {os.path.dirname(file_path)}")
+        logger.info(f"🔍 DEBUG: - Is in /tmp/processed/: {'/tmp/processed/' in file_path}")
+        
+        logger.info(f"⬇️ Serving processed file: {file_path} ({file_size} bytes)")
+        logger.info(f"📁 File extension: {file_ext}, MIME type: {mime_type}")
+        
+        return FileResponse(
+            path=file_path,
+            filename=os.path.basename(file_path),
+            media_type=mime_type
+        )
+        
+    except HTTPException:
+        # Re-raise HTTP exceptions as-is
+        raise
+    except Exception as e:
+        logger.error(f"❌ Download failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Download failed: {str(e)}")
+
+@app.get("/cleanup-processed-files")
+async def cleanup_processed_files_endpoint():
+    """Manually trigger cleanup of old processed files"""
+    try:
+        cleanup_old_processed_files()
+        return {"status": "success", "message": "Cleanup completed"}
+    except Exception as e:
+        logger.error(f"Cleanup failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Cleanup failed: {str(e)}")
+
+@app.get("/processed-files-status")
+async def get_processed_files_status():
+    """Get status of processed files mapping"""
+    try:
+        with processed_files_lock:
+            return {
+                "total_files": len(processed_files),
+                "files": list(processed_files.keys()),
+                "current_time": time.time()
+            }
+    except Exception as e:
+        logger.error(f"Failed to get processed files status: {e}")
+        raise HTTPException(status_code=500, detail=f"Status check failed: {str(e)}")
+
 @app.get("/storage-stats")
 async def get_storage_stats():
     """Get storage statistics including cleanup information"""
@@ -1057,6 +1309,26 @@ async def get_industry_presets():
     except Exception as e:
         logger.error(f"Failed to get industry presets: {e}")
         raise HTTPException(status_code=500, detail="Failed to get industry presets")
+
+@app.get("/supported-formats")
+async def get_supported_formats():
+    """Get list of supported audio formats and sample rates"""
+    try:
+        return {
+            "formats": ffmpeg_converter.get_supported_formats(),
+            "sample_rates": ffmpeg_converter.get_supported_sample_rates(),
+            "format_details": {
+                format_name: {
+                    "extension": ffmpeg_converter.supported_formats[format_name]['ext'],
+                    "mime_type": ffmpeg_converter.get_mime_type(format_name),
+                    "codec": ffmpeg_converter.supported_formats[format_name]['codec']
+                }
+                for format_name in ffmpeg_converter.get_supported_formats()
+            }
+        }
+    except Exception as e:
+        logger.error(f"Failed to get supported formats: {e}")
+        raise HTTPException(status_code=500, detail="Failed to get supported formats")
 
 @app.post("/upload-file")
 async def upload_file(
@@ -1220,6 +1492,12 @@ async def upload_file(
 
             # Step 1: Mastering (noise reduction disabled to preserve original audio characteristics)
             # Note: Noise reduction removed to ensure ML mastering works with original audio
+            
+            # 🔍 DEBUG: Log input file size before ML processing
+            input_file_size = os.path.getsize(temp_file_path)
+            logger.info(f"🔍 DEBUG: Input file size before ML processing: {input_file_size} bytes ({input_file_size / (1024*1024):.2f} MB)")
+            logger.info(f"🔍 DEBUG: Input file path: {temp_file_path}")
+            
             temp_in_path = temp_file_path
 
             mastered_file_path = await ml_engine.process_audio(
@@ -1228,6 +1506,15 @@ async def upload_file(
                 genre=resolved_genre,
                 target_lufs=effective_target_lufs
             )
+            
+            # 🔍 DEBUG: Log ML processing output file size
+            if os.path.exists(mastered_file_path):
+                mastered_file_size = os.path.getsize(mastered_file_path)
+                logger.info(f"🔍 DEBUG: ML processing output file size: {mastered_file_size} bytes ({mastered_file_size / (1024*1024):.2f} MB)")
+                logger.info(f"🔍 DEBUG: ML processing output file path: {mastered_file_path}")
+                logger.info(f"🔍 DEBUG: ML processing size change: {mastered_file_size - input_file_size} bytes")
+            else:
+                logger.error(f"🔍 DEBUG: ML processing output file not found: {mastered_file_path}")
 
             # Step 2: Conversion based on provided params (defaults: WAV 44100/24-bit or MP3 320kbps)
             # Handle new format options: wav16, wav24
@@ -1244,6 +1531,14 @@ async def upload_file(
             
             logger.info(f"Final conversion params - format: {desired_format}, sample_rate: {desired_sr}, mp3_bitrate: {desired_mp3_bitrate}, wav_bit_depth: {desired_wav_bit_depth}")
 
+            # 🔍 DEBUG: Log FFmpeg input file size
+            if os.path.exists(mastered_file_path):
+                ffmpeg_input_size = os.path.getsize(mastered_file_path)
+                logger.info(f"🔍 DEBUG: FFmpeg input file size: {ffmpeg_input_size} bytes ({ffmpeg_input_size / (1024*1024):.2f} MB)")
+                logger.info(f"🔍 DEBUG: FFmpeg input file path: {mastered_file_path}")
+            else:
+                logger.error(f"🔍 DEBUG: FFmpeg input file not found: {mastered_file_path}")
+
             final_file_path = await ffmpeg_converter.convert_audio(
                 input_path=mastered_file_path,
                 output_format=desired_format,
@@ -1251,6 +1546,15 @@ async def upload_file(
                 bit_depth=desired_wav_bit_depth,
                 bitrate_kbps=desired_mp3_bitrate
             )
+            
+            # 🔍 DEBUG: Log FFmpeg output file size
+            if os.path.exists(final_file_path):
+                ffmpeg_output_size = os.path.getsize(final_file_path)
+                logger.info(f"🔍 DEBUG: FFmpeg output file size: {ffmpeg_output_size} bytes ({ffmpeg_output_size / (1024*1024):.2f} MB)")
+                logger.info(f"🔍 DEBUG: FFmpeg output file path: {final_file_path}")
+                logger.info(f"🔍 DEBUG: FFmpeg size change: {ffmpeg_output_size - (ffmpeg_input_size if os.path.exists(mastered_file_path) else 0)} bytes")
+            else:
+                logger.error(f"🔍 DEBUG: FFmpeg output file not found: {final_file_path}")
 
             # Optional LUFS touch-up disabled (no apply_gain function in converter; preserve stereo/levels)
             try:
@@ -1258,7 +1562,37 @@ async def upload_file(
             except Exception as e:
                 logger.warning(f"Upload-file LUFS adjustment skipped: {e}")
 
-            # Step 3: Upload to storage
+            # Step 3: Save processed file with tier-based directory structure
+            import shutil
+            
+            # Create tier-based directory structure
+            tier_dir = os.path.join(tempfile.gettempdir(), "processed", tier.lower())
+            os.makedirs(tier_dir, exist_ok=True)
+            
+            # Use a clean file ID for the processed file
+            clean_file_id = f"{user_id}_{int(time.time())}"
+            simple_download_path = os.path.join(tier_dir, f"{clean_file_id}.{desired_format.lower()}")
+            
+            # 🔍 DEBUG: Log file paths before copying
+            logger.info(f"🔍 DEBUG: Copying from: {final_file_path}")
+            logger.info(f"🔍 DEBUG: Copying to: {simple_download_path}")
+            
+            shutil.copy2(final_file_path, simple_download_path)
+            
+            # 🔍 DEBUG: Log file sizes after processing and copying
+            final_file_size = os.path.getsize(final_file_path)
+            simple_file_size = os.path.getsize(simple_download_path)
+            logger.info(f"🔍 DEBUG: Final processed file size: {final_file_size} bytes ({final_file_size / (1024*1024):.2f} MB)")
+            logger.info(f"🔍 DEBUG: Simple download file size: {simple_file_size} bytes ({simple_file_size / (1024*1024):.2f} MB)")
+            logger.info(f"🔍 DEBUG: Files match: {final_file_size == simple_file_size}")
+            logger.info(f"🔍 DEBUG: Copy successful: {os.path.exists(simple_download_path)}")
+            
+            # ✅ Store the exact file path in our mapping system
+            save_processed_file_path(clean_file_id, simple_download_path, tier)
+            logger.info(f"✅ Processed file saved: {simple_download_path} size={simple_file_size} bytes")
+            logger.info(f"🔍 DEBUG: File ID stored in mapping: {clean_file_id}")
+            
+            # Also upload to storage for backup
             file_url = await storage_manager.upload_file(
                 file_path=final_file_path,
                 user_id=user_id,
@@ -1266,10 +1600,13 @@ async def upload_file(
                 is_preview=False
             )
 
-            # Step 4: Metadata
+            # Step 4: Get actual processed file size
+            processed_file_size_bytes = os.path.getsize(final_file_path)
+            processed_file_size_mb = processed_file_size_bytes / (1024 * 1024)
+            
             metadata = await audio_processor.get_audio_metadata(final_file_path)
 
-            # Cleanup
+            # Cleanup temp files but keep final_file_path for download
             try:
                 if os.path.exists(temp_file_path):
                     os.remove(temp_file_path)
@@ -1280,23 +1617,25 @@ async def upload_file(
                     os.remove(mastered_file_path)
             except Exception:
                 pass
-            try:
-                if os.path.exists(final_file_path) and final_file_path not in (temp_file_path, mastered_file_path):
-                    os.remove(final_file_path)
-            except Exception:
-                pass
+            # Don't delete final_file_path yet - it's needed for download
+            # It will be cleaned up by the storage manager or after download
 
-            return sanitize_for_json({
+            response_data = {
                 "status": "success",
                 "url": file_url,
+                "simple_download_url": f"/download/{clean_file_id}",
+                "file_id": clean_file_id,  # Add the clean file ID for frontend
                 "lufs": metadata.get("lufs", effective_target_lufs),
                 "format": desired_format,
                 "duration": metadata.get("duration", 0),
                 "sample_rate": desired_sr,
-                "file_size": metadata.get("file_size", 0),
-                "processed_file_size_mb": round(metadata.get("file_size", 0) / (1024 * 1024), 2),
-                "processed_file_size_bytes": metadata.get("file_size", 0)
-            })
+                "file_size": processed_file_size_bytes,
+                "processed_file_size_mb": round(processed_file_size_mb, 2),
+                "processed_file_size_bytes": processed_file_size_bytes
+            }
+            logger.info(f"🎵 DEBUG: Actual processed file size: {processed_file_size_bytes} bytes")
+            logger.info(f"🎵 DEBUG: Response data: {response_data}")
+            return sanitize_for_json(response_data)
             
     except Exception as e:
         import traceback as _tb

@@ -60,6 +60,17 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
   const [uploadedFile, setUploadedFile] = useState<AudioFile | null>(null);
   const [selectedGenre, setSelectedGenre] = useState<Genre | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+
+  // Debug: Track uploadedFile state changes
+  useEffect(() => {
+    if (uploadedFile) {
+      console.log('🎵 DEBUG: uploadedFile state updated:', {
+        processedSize: uploadedFile.processedSize,
+        originalSize: uploadedFile.size,
+        hasProcessedSize: !!uploadedFile.processedSize
+      });
+    }
+  }, [uploadedFile]);
   const [processingProgress, setProcessingProgress] = useState(0);
   const [originalStats, setOriginalStats] = useState<AudioStats | null>(null);
   const [masteredStats, setMasteredStats] = useState<AudioStats | null>(null);
@@ -1122,11 +1133,19 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
       console.log('Final processing completed:', result);
 
       // Update uploadedFile with processed file size
+      console.log('🎵 DEBUG: Processing result:', result);
+      console.log('🎵 DEBUG: Processed file size bytes:', result.processed_file_size_bytes);
       if (uploadedFile && result.processed_file_size_bytes) {
-        setUploadedFile({
+        console.log('🎵 DEBUG: Updating uploadedFile with processed size:', result.processed_file_size_bytes);
+        const updatedFile = {
           ...uploadedFile,
           processedSize: result.processed_file_size_bytes
-        });
+        };
+        console.log('🎵 DEBUG: Updated file object:', updatedFile);
+        setUploadedFile(updatedFile);
+        
+        // Force a re-render by updating a dummy state
+        setProcessingProgress(prev => prev + 0.001);
       }
 
       // Keep remote URL for download, create a CORS-safe playable URL for the player
@@ -1189,38 +1208,110 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
     }
   };
 
-  // Download handler
+  // Download handler - using simple direct download
   const handleDownload = async () => {
     const urlForDownload = masteredRemoteUrl || masteredAudioUrl;
     if (!urlForDownload) return;
 
     try {
-      // Use Python proxy to bypass CORS regardless of storage origin
+      console.log('🎵 Simple download starting');
+      console.log('🎵 DEBUG: urlForDownload:', urlForDownload);
+      
+      // Use simple direct download like local server
       const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
-      const proxyBase = isLocal ? 'http://localhost:8002' : 'https://crysgarage.studio';
-      // Only proxy the file_url; conversion is handled server-side during processing
-      const proxyUrl = `${proxyBase}/proxy-download?file_url=${encodeURIComponent(urlForDownload)}`;
-      const res = await fetch(proxyUrl, { method: 'GET' });
-      if (!res.ok) throw new Error(`Proxy HTTP ${res.status}`);
-      const blob = await res.blob();
-      if (!blob || (blob.size !== undefined && blob.size < 1024)) {
-        throw new Error(`Downloaded blob too small (${blob.size || 0} bytes)`);
+      const baseUrl = isLocal ? 'http://localhost:8002' : 'https://crysgarage.studio';
+      
+      // 🎵 DEBUG: Check if it's a blob URL and handle it properly
+      if (urlForDownload.startsWith('blob:')) {
+        console.log('🎵 DEBUG: Blob URL detected, using server URL instead');
+        // For blob URLs, we need to use the server URL from the processing response
+        // This should be the masteredRemoteUrl from the processing result
+        const serverUrl = masteredRemoteUrl; // This should be the server URL, not blob
+        if (serverUrl && !serverUrl.startsWith('blob:')) {
+          const fullFilename = serverUrl.split('/').pop() || 'unknown';
+          const downloadUrl = `${baseUrl}/download/${fullFilename}`;
+          console.log('🎵 Download URL:', downloadUrl);
+          
+          const res = await fetch(downloadUrl, { method: 'GET' });
+          if (!res.ok) throw new Error(`Download HTTP ${res.status}`);
+          
+          // 🎵 DEBUG: Log response headers and content length
+          console.log('🎵 DEBUG: Response headers:', Object.fromEntries(res.headers.entries()));
+          console.log('🎵 DEBUG: Content-Length header:', res.headers.get('content-length'));
+          console.log('🎵 DEBUG: Content-Type header:', res.headers.get('content-type'));
+          
+          const blob = await res.blob();
+          console.log('🎵 DEBUG: Download blob size:', blob.size, 'bytes');
+          console.log('🎵 DEBUG: Blob type:', blob.type);
+          
+          if (blob.size < 1024) {
+            console.error('🎵 DEBUG: Blob too small:', blob.size);
+            throw new Error(`Downloaded file too small (${blob.size} bytes)`);
+          }
+          
+          const objectUrl = URL.createObjectURL(blob);
+          const baseName = (uploadedFile?.name?.replace(/\.[^/.]+$/, '') || 'audio');
+          const ext = downloadFormat === 'mp3' ? 'mp3' : 'wav';
+          
+          const a = document.createElement('a');
+          a.href = objectUrl;
+          a.download = `${baseName}_garage_${selectedGenre?.name?.toLowerCase().replace(/\s+/g, '_')}_mastered_24bit_48k.${ext}`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(objectUrl);
+          
+          console.log('🎵 Download completed successfully');
+          return;
+        } else {
+          throw new Error('No valid server URL available for download');
+        }
       }
+      
+      // Extract file ID from URL or use simple download URL from response
+      let downloadUrl;
+      if (urlForDownload.includes('simple_download_url')) {
+        downloadUrl = `${baseUrl}${urlForDownload}`;
+      } else {
+        // Fallback: try to extract file ID from URL
+        const fileId = urlForDownload.split('/').pop()?.split('.')[0] || 'unknown';
+        // Use the full filename with extension for download
+        const fullFilename = urlForDownload.split('/').pop() || 'unknown';
+        downloadUrl = `${baseUrl}/download/${fullFilename}`;
+      }
+      
+      console.log('🎵 Download URL:', downloadUrl);
+      
+      const res = await fetch(downloadUrl, { method: 'GET' });
+      if (!res.ok) throw new Error(`Download HTTP ${res.status}`);
+      
+      // 🎵 DEBUG: Log response headers and content length
+      console.log('🎵 DEBUG: Response headers:', Object.fromEntries(res.headers.entries()));
+      console.log('🎵 DEBUG: Content-Length header:', res.headers.get('content-length'));
+      console.log('🎵 DEBUG: Content-Type header:', res.headers.get('content-type'));
+      
+      const blob = await res.blob();
+      console.log('🎵 DEBUG: Download blob size:', blob.size, 'bytes');
+      console.log('🎵 DEBUG: Blob type:', blob.type);
+      
+      if (blob.size < 1024) {
+        console.error('🎵 DEBUG: Blob too small:', blob.size);
+        throw new Error(`Downloaded file too small (${blob.size} bytes)`);
+      }
+      
       const objectUrl = URL.createObjectURL(blob);
       const baseName = (uploadedFile?.name?.replace(/\.[^/.]+$/, '') || 'audio');
-      // Choose extension based on known mastered URL or selected format
-      const ext = urlForDownload.toLowerCase().endsWith('.mp3')
-        ? 'mp3'
-        : urlForDownload.toLowerCase().endsWith('.wav')
-        ? 'wav'
-        : downloadFormat === 'mp3' ? 'mp3' : 'wav';
+      const ext = downloadFormat === 'mp3' ? 'mp3' : 'wav';
+      
       const a = document.createElement('a');
       a.href = objectUrl;
-      a.download = `${baseName}_mastered_${(selectedGenre?.name || 'genre').toLowerCase()}.${ext}`;
+      a.download = `${baseName}_garage_${selectedGenre?.name?.toLowerCase().replace(/\s+/g, '_')}_mastered_24bit_48k.${ext}`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(objectUrl);
+      
+      console.log('🎵 Download completed successfully');
     } catch (error) {
       console.error('Download failed:', error);
       setError('Download failed');
