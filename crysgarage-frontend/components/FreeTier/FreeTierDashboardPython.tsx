@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Upload, Play, Pause, Download, ArrowLeft, Music, Settings, CheckCircle, Loader2 } from 'lucide-react';
 import { pythonAudioService } from '../../services/pythonAudioService';
 import { useApp } from '../../contexts/AppContext';
+import { creditService } from '../../services/creditService';
 import DownloadStep from './DownloadStep';
 
 interface AudioFile {
@@ -76,6 +77,24 @@ const FreeTierDashboardPython: React.FC = () => {
 
   const handleProcessAudio = async () => {
     if (!uploadedFile || !selectedGenre) return;
+
+    // Check credits before processing
+    try {
+      const hasCredits = await creditService.hasEnoughCredits(effectiveUser.id.toString(), 1);
+      if (!hasCredits) {
+        alert('Insufficient credits. Please purchase credits to continue processing.');
+        // Show credit exhaustion notification
+        creditService.handleCreditExhaustion(() => {
+          // Navigate to pricing page
+          window.location.href = '/pricing';
+        });
+        return;
+      }
+    } catch (creditError) {
+      console.error('Error checking credits:', creditError);
+      alert('Unable to verify credits. Please try again.');
+      return;
+    }
 
     setIsProcessing(true);
     setProcessingProgress(0);

@@ -1288,14 +1288,349 @@ async def get_processed_files_status():
 async def get_storage_stats():
     """Get storage statistics including cleanup information"""
     try:
-        stats = storage_manager.get_storage_stats()
+        # Get processed files directory size
+        processed_dir = os.path.join(tempfile.gettempdir(), "processed")
+        total_size = 0
+        file_count = 0
+        
+        if os.path.exists(processed_dir):
+            for root, dirs, files in os.walk(processed_dir):
+                for file in files:
+                    file_path = os.path.join(root, file)
+                    if os.path.exists(file_path):
+                        total_size += os.path.getsize(file_path)
+                        file_count += 1
+        
+        # Get disk usage
+        import shutil
+        disk_usage = shutil.disk_usage(tempfile.gettempdir())
+        free_space = disk_usage.free
+        
         return {
-            "status": "success",
-            "data": stats
+            "processed_files_count": file_count,
+            "total_size_bytes": total_size,
+            "total_size_mb": round(total_size / (1024 * 1024), 2),
+            "free_space_bytes": free_space,
+            "free_space_gb": round(free_space / (1024 * 1024 * 1024), 2),
+            "cleanup_last_run": time.time()
         }
     except Exception as e:
         logger.error(f"Failed to get storage stats: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to get storage stats: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Storage stats failed: {str(e)}")
+
+# =============================================================================
+# DEVICE IP TRACKING SYSTEM
+# =============================================================================
+
+# In-memory IP tracking storage (replace with database in production)
+registered_ips = set()
+ip_lock = threading.Lock()
+
+def get_client_ip(request):
+    """Extract client IP address from request"""
+    # Check for forwarded headers first (for proxies/load balancers)
+    forwarded_for = request.headers.get("X-Forwarded-For")
+    if forwarded_for:
+        # X-Forwarded-For can contain multiple IPs, take the first one
+        return forwarded_for.split(",")[0].strip()
+    
+    # Check for real IP header
+    real_ip = request.headers.get("X-Real-IP")
+    if real_ip:
+        return real_ip.strip()
+    
+    # Fallback to direct connection IP
+    if hasattr(request, 'client') and request.client:
+        return request.client.host
+    
+    return "unknown"
+
+def is_ip_registered(ip_address: str) -> bool:
+    """Check if IP address is already registered"""
+    with ip_lock:
+        return ip_address in registered_ips
+
+def register_ip(ip_address: str) -> bool:
+    """Register an IP address"""
+    with ip_lock:
+        if ip_address in registered_ips:
+            return False  # Already registered
+        registered_ips.add(ip_address)
+        logger.info(f"🔒 IP registered: {ip_address}")
+        return True
+
+def get_registered_ips_count() -> int:
+    """Get count of registered IPs"""
+    with ip_lock:
+        return len(registered_ips)
+
+# =============================================================================
+# CREDIT MANAGEMENT SYSTEM
+# =============================================================================
+
+# In-memory credit storage (replace with database in production)
+user_credits = {}
+credit_transactions = {}
+credit_lock = threading.Lock()
+
+def get_user_credits(user_id: str) -> int:
+    """Get user's current credit balance"""
+    with credit_lock:
+        return user_credits.get(user_id, 0)
+
+def add_user_credits(user_id: str, amount: int, description: str = "Credits added") -> int:
+    """Add credits to user's account"""
+    with credit_lock:
+        current = user_credits.get(user_id, 0)
+        new_balance = current + amount
+        user_credits[user_id] = new_balance
+        
+        # Log transaction
+        transaction_id = f"tx_{user_id}_{int(time.time())}"
+        credit_transactions[transaction_id] = {
+            "id": transaction_id,
+            "user_id": user_id,
+            "type": "purchase",
+            "amount": amount,
+            "description": description,
+            "timestamp": time.time(),
+            "balance_after": new_balance
+        }
+        
+        logger.info(f"💰 Credits added: {user_id} +{amount} = {new_balance}")
+        return new_balance
+
+def use_user_credits(user_id: str, amount: int = 1, description: str = "Audio processing") -> bool:
+    """Use credits from user's account"""
+    with credit_lock:
+        current = user_credits.get(user_id, 0)
+        if current < amount:
+            logger.warning(f"❌ Insufficient credits: {user_id} has {current}, needs {amount}")
+            return False
+        
+        new_balance = current - amount
+        user_credits[user_id] = new_balance
+        
+        # Log transaction
+        transaction_id = f"tx_{user_id}_{int(time.time())}"
+        credit_transactions[transaction_id] = {
+            "id": transaction_id,
+            "user_id": user_id,
+            "type": "usage",
+            "amount": -amount,
+            "description": description,
+            "timestamp": time.time(),
+            "balance_after": new_balance
+        }
+        
+        logger.info(f"💸 Credits used: {user_id} -{amount} = {new_balance}")
+        return True
+
+@app.get("/credits/balance/{user_id}")
+async def get_credit_balance(user_id: str):
+    """Get user's credit balance"""
+    try:
+        current = get_user_credits(user_id)
+        
+        # Calculate totals from transactions
+        total_purchased = 0
+        total_used = 0
+        
+        with credit_lock:
+            for tx in credit_transactions.values():
+                if tx["user_id"] == user_id:
+                    if tx["type"] == "purchase":
+                        total_purchased += tx["amount"]
+                    elif tx["type"] == "usage":
+                        total_used += abs(tx["amount"])
+        
+        return {
+            "user_id": user_id,
+            "current": current,
+            "total_purchased": total_purchased,
+            "total_used": total_used,
+            "last_updated": time.time()
+        }
+    except Exception as e:
+        logger.error(f"Failed to get credit balance: {e}")
+        raise HTTPException(status_code=500, detail=f"Credit balance failed: {str(e)}")
+
+@app.post("/credits/use")
+async def use_credits(request: dict):
+    """Use credits for processing"""
+    try:
+        user_id = request.get("user_id")
+        amount = request.get("amount", 1)
+        description = request.get("description", "Audio processing")
+        
+        if not user_id:
+            raise HTTPException(status_code=400, detail="user_id is required")
+        
+        success = use_user_credits(user_id, amount, description)
+        
+        if not success:
+            raise HTTPException(status_code=402, detail="Insufficient credits")
+        
+        return {
+            "success": True,
+            "credits_used": amount,
+            "remaining_credits": get_user_credits(user_id),
+            "message": f"Successfully used {amount} credit(s)"
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to use credits: {e}")
+        raise HTTPException(status_code=500, detail=f"Credit usage failed: {str(e)}")
+
+@app.post("/credits/add")
+async def add_credits(request: dict):
+    """Add credits after payment"""
+    try:
+        user_id = request.get("user_id")
+        amount = request.get("amount")
+        tier = request.get("tier", "free")
+        transaction_id = request.get("transaction_id")
+        description = request.get("description", "Credits purchased")
+        
+        if not user_id or not amount:
+            raise HTTPException(status_code=400, detail="user_id and amount are required")
+        
+        new_balance = add_user_credits(user_id, amount, description)
+        
+        return {
+            "success": True,
+            "credits_added": amount,
+            "new_balance": new_balance,
+            "tier": tier,
+            "transaction_id": transaction_id,
+            "message": f"Successfully added {amount} credit(s)"
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to add credits: {e}")
+        raise HTTPException(status_code=500, detail=f"Credit addition failed: {str(e)}")
+
+@app.get("/credits/history/{user_id}")
+async def get_credit_history(user_id: str, limit: int = 50):
+    """Get user's credit transaction history"""
+    try:
+        user_transactions = []
+        
+        with credit_lock:
+            for tx in credit_transactions.values():
+                if tx["user_id"] == user_id:
+                    user_transactions.append(tx)
+        
+        # Sort by timestamp (newest first)
+        user_transactions.sort(key=lambda x: x["timestamp"], reverse=True)
+        
+        # Apply limit
+        user_transactions = user_transactions[:limit]
+        
+        return {
+            "user_id": user_id,
+            "transactions": user_transactions,
+            "total_count": len(user_transactions)
+        }
+    except Exception as e:
+        logger.error(f"Failed to get credit history: {e}")
+        raise HTTPException(status_code=500, detail=f"Credit history failed: {str(e)}")
+
+# =============================================================================
+# IP TRACKING ENDPOINTS
+# =============================================================================
+
+@app.get("/ip-tracking/status")
+async def get_ip_tracking_status():
+    """Get IP tracking system status (admin only)"""
+    try:
+        return {
+            "total_registered_ips": get_registered_ips_count(),
+            "system_active": True,
+            "message": "IP tracking system is operational"
+        }
+    except Exception as e:
+        logger.error(f"Failed to get IP tracking status: {e}")
+        raise HTTPException(status_code=500, detail=f"IP tracking status failed: {str(e)}")
+
+@app.post("/ip-tracking/check")
+async def check_ip_registration(request: Request):
+    """Check if IP is already registered"""
+    try:
+        client_ip = get_client_ip(request)
+        
+        if client_ip == "unknown":
+            return {
+                "ip": "unknown",
+                "is_registered": False,
+                "message": "Unable to determine IP address"
+            }
+        
+        is_registered = is_ip_registered(client_ip)
+        
+        return {
+            "ip": client_ip,
+            "is_registered": is_registered,
+            "message": "IP check completed"
+        }
+    except Exception as e:
+        logger.error(f"Failed to check IP registration: {e}")
+        raise HTTPException(status_code=500, detail=f"IP check failed: {str(e)}")
+
+@app.post("/ip-tracking/register")
+async def register_ip_address(request: Request):
+    """Register an IP address (called during signup)"""
+    try:
+        client_ip = get_client_ip(request)
+        
+        if client_ip == "unknown":
+            raise HTTPException(status_code=400, detail="Unable to determine IP address")
+        
+        # Check if already registered
+        if is_ip_registered(client_ip):
+            logger.warning(f"🚫 IP already registered: {client_ip}")
+            raise HTTPException(
+                status_code=409, 
+                detail="An account has already been created from this device. Please use your existing account or contact support if you believe this is an error."
+            )
+        
+        # Register the IP
+        success = register_ip(client_ip)
+        
+        if not success:
+            raise HTTPException(
+                status_code=409, 
+                detail="An account has already been created from this device. Please use your existing account or contact support if you believe this is an error."
+            )
+        
+        return {
+            "success": True,
+            "ip": client_ip,
+            "message": "IP registered successfully"
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to register IP: {e}")
+        raise HTTPException(status_code=500, detail=f"IP registration failed: {str(e)}")
+
+@app.delete("/ip-tracking/clear")
+async def clear_ip_tracking():
+    """Clear all registered IPs (admin only - for testing)"""
+    try:
+        with ip_lock:
+            registered_ips.clear()
+        
+        logger.info("🧹 IP tracking cleared")
+        return {
+            "success": True,
+            "message": "All registered IPs cleared"
+        }
+    except Exception as e:
+        logger.error(f"Failed to clear IP tracking: {e}")
+        raise HTTPException(status_code=500, detail=f"IP clearing failed: {str(e)}")
 
 # Removed duplicate /tiers handler; normalized version is defined earlier
 
@@ -1350,6 +1685,26 @@ async def upload_file(
     try:
         logger.info(f"Direct file upload received: {audio.filename}, genre: {genre}, tier: {tier}, preview: {is_preview}")
         logger.info(f"Format params - target_format: {target_format}, target_sample_rate: {target_sample_rate}, mp3_bitrate_kbps: {mp3_bitrate_kbps}, wav_bit_depth: {wav_bit_depth}")
+        
+        # Check credits for non-preview processing
+        if is_preview.lower() != "true":
+            # Check if user has enough credits
+            current_credits = get_user_credits(user_id)
+            if current_credits < 1:
+                logger.warning(f"❌ Insufficient credits for user {user_id}: {current_credits}")
+                raise HTTPException(
+                    status_code=402, 
+                    detail="Insufficient credits. Please purchase credits to continue processing."
+                )
+            
+            # Use 1 credit for processing
+            if not use_user_credits(user_id, 1, f"Audio processing - {audio.filename}"):
+                raise HTTPException(
+                    status_code=402, 
+                    detail="Failed to use credits. Please try again."
+                )
+            
+            logger.info(f"✅ Credits used for user {user_id}: {get_user_credits(user_id)} remaining")
         
         # Validate file type
         if not audio.filename or not audio.filename.lower().endswith(('.wav', '.mp3', '.flac', '.aiff')):

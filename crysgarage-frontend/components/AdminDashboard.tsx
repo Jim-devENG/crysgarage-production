@@ -37,6 +37,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
     processed_files_count: 0,
     cleanup_last_run: null
   });
+  const [ipTrackingStatus, setIpTrackingStatus] = useState({
+    total_registered_ips: 0,
+    system_active: false,
+    message: ''
+  });
 
   const [processingQueue, setProcessingQueue] = useState([]);
 
@@ -107,6 +112,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
         const storageData = await storageResponse.json();
         setStorageStats(storageData);
       }
+
+      // Fetch IP tracking status
+      const ipResponse = await fetch(`${baseUrl}/ip-tracking/status`);
+      if (ipResponse.ok) {
+        const ipData = await ipResponse.json();
+        setIpTrackingStatus(ipData);
+      }
     } catch (error) {
       console.error('Failed to fetch backend data:', error);
     }
@@ -127,6 +139,30 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
     } catch (error) {
       console.error('Cleanup failed:', error);
       alert('Cleanup failed');
+    }
+  };
+
+  // Clear IP tracking function
+  const clearIPTracking = async () => {
+    if (!confirm('Are you sure you want to clear all registered IPs? This will allow all devices to sign up again.')) {
+      return;
+    }
+    
+    try {
+      const baseUrl = window.location.hostname === 'localhost' ? 'http://localhost:8002' : 'https://crysgarage.studio';
+      const response = await fetch(`${baseUrl}/ip-tracking/clear`, {
+        method: 'DELETE'
+      });
+      if (response.ok) {
+        const result = await response.json();
+        alert(`IP tracking cleared: ${result.message}`);
+        fetchBackendData(); // Refresh data
+      } else {
+        alert('Failed to clear IP tracking');
+      }
+    } catch (error) {
+      console.error('Clear IP tracking failed:', error);
+      alert('Failed to clear IP tracking');
     }
   };
 
@@ -468,6 +504,50 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
                     <p className="text-2xl font-semibold text-crys-white">${systemStats.revenue}</p>
                     <p className="text-xs text-crys-gold">+23% this month</p>
                   </div>
+                </div>
+              </div>
+            </div>
+
+            {/* IP Tracking Status */}
+            <div className="bg-audio-panel-bg border border-audio-panel-border rounded-lg shadow-lg p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center">
+                  <div className="p-3 rounded-full bg-crys-gold/20">
+                    <span className="text-crys-gold text-xl">🔒</span>
+                  </div>
+                  <div className="ml-4">
+                    <h3 className="text-lg font-medium text-crys-white">Device Tracking</h3>
+                    <p className="text-sm text-crys-light-grey">IP-based signup prevention</p>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <span className={`px-2 py-1 rounded-full text-xs ${
+                    ipTrackingStatus.system_active 
+                      ? 'bg-green-500/20 text-green-400 border border-green-500/30' 
+                      : 'bg-red-500/20 text-red-400 border border-red-500/30'
+                  }`}>
+                    {ipTrackingStatus.system_active ? 'Active' : 'Inactive'}
+                  </span>
+                  <button
+                    onClick={clearIPTracking}
+                    className="px-3 py-1 bg-red-500/20 text-red-400 border border-red-500/30 rounded text-xs hover:bg-red-500/30 transition-colors"
+                  >
+                    Clear All
+                  </button>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="text-center">
+                  <p className="text-2xl font-semibold text-crys-white">{ipTrackingStatus.total_registered_ips}</p>
+                  <p className="text-sm text-crys-light-grey">Registered Devices</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-semibold text-crys-white">{processedFilesStatus.total_files}</p>
+                  <p className="text-sm text-crys-light-grey">Processed Files</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-semibold text-crys-white">{storageStats.processed_files_count}</p>
+                  <p className="text-sm text-crys-light-grey">Storage Files</p>
                 </div>
               </div>
             </div>

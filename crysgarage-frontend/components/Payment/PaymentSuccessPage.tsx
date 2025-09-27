@@ -45,16 +45,41 @@ export function PaymentSuccessPage({ onNavigate }: PaymentSuccessPageProps) {
           console.log('Payment verification response:', data);
 
           if (data.status && data.data && data.data.status === 'success') {
-            // Payment verified successfully
+            // Payment verified successfully - add credits to user account
+            try {
+              const addCreditsResponse = await fetch(`${import.meta.env.VITE_API_URL || 'https://crysgarage.studio'}/credits/add`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  user_id: user?.id,
+                  amount: parseInt(creditsParam),
+                  tier: tier,
+                  transaction_id: reference,
+                  description: `Credits purchased for ${tier} tier`
+                })
+              });
+
+              if (addCreditsResponse.ok) {
+                const creditData = await addCreditsResponse.json();
+                console.log('Credits added successfully:', creditData);
+                
+                // Update user's local credit balance
+                if (user) {
+                  await updateProfile({
+                    credits: creditData.new_balance
+                  });
+                }
+              } else {
+                console.error('Failed to add credits:', await addCreditsResponse.text());
+              }
+            } catch (creditError) {
+              console.error('Error adding credits:', creditError);
+            }
+
             setStatus('success');
             setMessage(`Payment successful! ${creditsParam} credits have been added to your account.`);
-
-            // Update user credits
-            if (user) {
-              const updatedUser = { ...user, credits: (user.credits || 0) + parseInt(creditsParam) };
-              updateProfile(updatedUser);
-              localStorage.setItem('crysgarage_user', JSON.stringify(updatedUser));
-            }
 
             // Clean up URL
             window.history.replaceState({}, '', '/payment-success');

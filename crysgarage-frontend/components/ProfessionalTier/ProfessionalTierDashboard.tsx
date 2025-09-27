@@ -6,6 +6,7 @@ import RealTimeAnalysisPanel from '../AdvancedTierDashboard/RealTimeAnalysisPane
 import { creditsAPI } from '../../services/api';
 import { pythonAudioService, TierInfo, GenreInfo } from '../../services/pythonAudioService';
 import { useAuth } from '../../contexts/AuthenticationContext';
+import { creditService } from '../../services/creditService';
 
 // Types
 interface AudioFile {
@@ -1080,6 +1081,24 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
       if (!selectedGenre) missing.push('genre');
       if (!effectiveUser) missing.push('user');
       setError(`Missing: ${missing.join(', ')}`);
+      return;
+    }
+
+    // Check credits before processing
+    try {
+      const hasCredits = await creditService.hasEnoughCredits(effectiveUser.id, 1);
+      if (!hasCredits) {
+        setError('Insufficient credits. Please purchase credits to continue processing.');
+        // Show credit exhaustion notification
+        creditService.handleCreditExhaustion(() => {
+          // Navigate to pricing page
+          window.location.href = '/pricing';
+        });
+        return;
+      }
+    } catch (creditError) {
+      console.error('Error checking credits:', creditError);
+      setError('Unable to verify credits. Please try again.');
       return;
     }
 
