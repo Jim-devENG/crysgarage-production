@@ -26,6 +26,7 @@ export function Header({
 }: HeaderProps) {
   const { user, isAuthenticated } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const isDevUser = DEV_MODE || (user?.id === 'dev-user' || user?.email === 'dev@local.test' || (typeof user?.credits === 'number' && !Number.isFinite(user.credits)));
 
 
   const navigationItems = [
@@ -85,7 +86,7 @@ export function Header({
               <>
                 {/* Show credits or Dev Mode badge */}
                 <div className="hidden lg:block">
-                  {DEV_MODE ? (
+                  {isDevUser ? (
                     <span className="px-3 py-2 rounded-lg bg-green-500/10 border border-green-500/20 text-green-400 text-sm">Dev Mode: Unlimited credits</span>
                   ) : (
                     <CreditDisplay 
