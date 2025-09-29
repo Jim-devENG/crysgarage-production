@@ -5,7 +5,7 @@ import { Badge } from './ui/badge';
 import { Coins, Plus, AlertTriangle, ShoppingCart } from 'lucide-react';
 import { useAuth } from '../contexts/AuthenticationContext';
 import { creditService } from '../services/creditService';
-import { DEV_MODE, getDevCreditsResponse } from '../utils/devMode';
+import { DEV_MODE, getDevCreditsResponse, getDevUser } from '../utils/devMode';
 
 interface CreditDisplayProps {
   onPurchaseClick?: () => void;
@@ -20,11 +20,12 @@ export function CreditDisplay({
 }: CreditDisplayProps) {
   const { user } = useAuth();
   const [creditBalance, setCreditBalance] = useState<number>(DEV_MODE ? Number.POSITIVE_INFINITY : 0);
+  const isDevUser = DEV_MODE || (user?.id === 'dev-user' || user?.email === 'dev@local.test' || (typeof user?.credits === 'number' && !Number.isFinite(user.credits)));
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (DEV_MODE) {
+    if (isDevUser) {
       setCreditBalance(Number.POSITIVE_INFINITY);
       setIsLoading(false);
       setError(null);
@@ -36,7 +37,7 @@ export function CreditDisplay({
   }, [user?.id]);
 
   const fetchCreditBalance = async () => {
-    if (DEV_MODE) {
+    if (isDevUser) {
       setCreditBalance(Number.POSITIVE_INFINITY);
       setError(null);
       setIsLoading(false);
@@ -64,7 +65,7 @@ export function CreditDisplay({
       onPurchaseClick();
     } else {
       // Default behavior - navigate to pricing
-          if (!DEV_MODE) {
+          if (!isDevUser) {
             window.location.href = '/pricing';
           }
     }
@@ -96,7 +97,7 @@ export function CreditDisplay({
         bgColor: 'bg-green-500/10',
         borderColor: 'border-green-500/20',
         icon: Coins,
-        message: DEV_MODE ? 'Dev Mode: Unlimited credits' : 'Credits available'
+        message: isDevUser ? 'Dev Mode: Unlimited credits' : 'Credits available'
       };
     }
   };
@@ -143,7 +144,7 @@ export function CreditDisplay({
             </div>
           </div>
           
-          {showPurchaseButton && !DEV_MODE && (
+          {showPurchaseButton && !isDevUser && (
             <Button
               onClick={handlePurchaseClick}
               size="sm"
@@ -155,7 +156,7 @@ export function CreditDisplay({
           )}
         </div>
         
-        {creditBalance === 0 && !DEV_MODE && (
+        {creditBalance === 0 && !isDevUser && (
           <div className="mt-3 p-3 rounded-lg bg-red-500/10 border border-red-500/20">
             <div className="flex items-center gap-2 text-red-400 text-sm">
               <AlertTriangle className="w-4 h-4" />
