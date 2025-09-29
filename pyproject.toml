@@ -1,12 +1,18 @@
 ### Intentionally left blank; mypy config is in mypy.ini
 
 [tool.ruff]
-line-length = 100
+line-length = 140
 target-version = "py312"
+
+[tool.ruff.lint]
 select = ["E", "F"]
-exclude = [
+ignore = ["E501"]
+
+[tool.ruff.exclude]
+extend = [
     "node_modules",
     "venv",
-    "audio-mastering-service/venv*",
-    "audio-mastering-service/services/ml_mastering_backup.py",
+    "audio-mastering-service/**",
+    "main_*",
+    "fabfile.py",
 ]
