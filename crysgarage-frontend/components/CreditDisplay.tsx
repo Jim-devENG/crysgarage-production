@@ -105,6 +105,11 @@ export function CreditDisplay({
   const creditStatus = getCreditStatus();
   const StatusIcon = creditStatus.icon;
 
+  if (isDevUser) {
+    // In Dev Mode (or dev user), suppress credit UI entirely
+    return null;
+  }
+
   if (isLoading) {
     return (
       <Card className={`bg-crys-graphite border-crys-graphite ${className}`}>
