@@ -3,7 +3,7 @@ Audio Mastering Microservice
 FastAPI-based service for professional audio mastering and format conversion
 """
 
-from fastapi import FastAPI, HTTPException, BackgroundTasks, UploadFile, File, Form
+from fastapi import FastAPI, HTTPException, BackgroundTasks, UploadFile, File, Form, Request
 from fastapi.staticfiles import StaticFiles
 import tempfile
 from fastapi.responses import StreamingResponse, FileResponse
@@ -207,7 +207,7 @@ except Exception:
     _NR_AVAILABLE = False
 
 @app.on_event("startup")
-async def startup_event():
+async def _start_background_tasks():
     """Start background tasks when FastAPI starts"""
     storage_manager.start_cleanup_task()
 
@@ -755,7 +755,7 @@ async def preview_genre_effects(request: MasteringRequest):
         raise HTTPException(status_code=500, detail=f"Preview failed: {str(e)}")
 
 @app.get("/formats")
-async def get_supported_formats():
+async def get_supported_formats_legacy():
     """Get list of supported audio formats"""
     return {
         "input_formats": ["WAV", "MP3", "FLAC", "AIFF", "AAC", "OGG"],
@@ -1083,9 +1083,8 @@ async def proxy_download(file_url: str, format: str = "MP3", sample_rate: int = 
             if input_ext != output_ext or sample_rate != 44100:
                 logger.info(f"🎵 Converting {input_ext} to {output_ext} at {sample_rate}Hz")
                 
-                # Create output file path
-                output_filename = f"converted_{base_name.rsplit('.', 1)[0]}.{output_ext}"
-                output_path = os.path.join(tempfile.gettempdir(), output_filename)
+        # Create output file name (path handled by converter)
+        output_filename = f"converted_{base_name.rsplit('.', 1)[0]}.{output_ext}"
                 
                 # Use FFmpeg converter for conversion
                 try:
@@ -1690,21 +1689,23 @@ async def upload_file(
         if is_preview.lower() != "true":
             # Check if user has enough credits
             current_credits = get_user_credits(user_id)
-            if current_credits < 1:
+            if current_credits < 1 and user_id != "dev-user":
                 logger.warning(f"❌ Insufficient credits for user {user_id}: {current_credits}")
                 raise HTTPException(
                     status_code=402, 
                     detail="Insufficient credits. Please purchase credits to continue processing."
                 )
             
-            # Use 1 credit for processing
-            if not use_user_credits(user_id, 1, f"Audio processing - {audio.filename}"):
-                raise HTTPException(
-                    status_code=402, 
-                    detail="Failed to use credits. Please try again."
-                )
-            
-            logger.info(f"✅ Credits used for user {user_id}: {get_user_credits(user_id)} remaining")
+            # Use 1 credit for processing (skip for dev-user)
+            if user_id != "dev-user":
+                if not use_user_credits(user_id, 1, f"Audio processing - {audio.filename}"):
+                    raise HTTPException(
+                        status_code=402, 
+                        detail="Failed to use credits. Please try again."
+                    )
+                logger.info(f"✅ Credits used for user {user_id}: {get_user_credits(user_id)} remaining")
+            else:
+                logger.info(f"✅ Dev-user bypass: skipping credit deduction")
         
         # Validate file type
         if not audio.filename or not audio.filename.lower().endswith(('.wav', '.mp3', '.flac', '.aiff')):
@@ -1992,6 +1993,9 @@ async def upload_file(
             logger.info(f"🎵 DEBUG: Response data: {response_data}")
             return sanitize_for_json(response_data)
             
+    except HTTPException as e:
+        # Re-raise HTTPExceptions as-is (don't convert to 500)
+        raise e
     except Exception as e:
         import traceback as _tb
         err_tb = _tb.format_exc()
