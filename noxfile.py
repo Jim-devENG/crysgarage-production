@@ -20,7 +20,12 @@ def types(session: nox.Session) -> None:
     # Install mypy with minimal dependencies
     session.install("mypy")
     # Run mypy with ignore missing imports and treat as files
-    session.run("mypy", "--ignore-missing-imports", "--follow-imports=skip", "audio-mastering-service/main.py")
+    session.run(
+        "mypy",
+        "--ignore-missing-imports",
+        "--follow-imports=skip",
+        "audio-mastering-service/main.py",
+    )
 
 @nox.session(python="3.12")
 def tests(session: nox.Session) -> None:
