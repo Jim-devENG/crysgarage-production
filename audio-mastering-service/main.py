@@ -1082,10 +1082,10 @@ async def proxy_download(file_url: str, format: str = "MP3", sample_rate: int = 
             # Check if conversion is needed
             if input_ext != output_ext or sample_rate != 44100:
                 logger.info(f"🎵 Converting {input_ext} to {output_ext} at {sample_rate}Hz")
-                
-        # Create output file name (path handled by converter)
-        output_filename = f"converted_{base_name.rsplit('.', 1)[0]}.{output_ext}"
-                
+
+                # Create output file name (path handled by converter)
+                output_filename = f"converted_{base_name.rsplit('.', 1)[0]}.{output_ext}"
+
                 # Use FFmpeg converter for conversion
                 try:
                     converted_path = await ffmpeg_converter.convert_audio(
@@ -1095,15 +1095,15 @@ async def proxy_download(file_url: str, format: str = "MP3", sample_rate: int = 
                         bit_depth=24 if format == 'WAV' else None,
                         bitrate_kbps=320 if format == 'MP3' else None
                     )
-                    
+
                     # Use the converted file
                     local_path = converted_path
                     base_name = os.path.basename(converted_path)
-                    
+
                     # Log converted file size
                     converted_size = os.path.getsize(converted_path)
                     logger.info(f"🎵 DEBUG: Proxy download converted file size: {converted_size} bytes")
-                    
+
                 except Exception as e:
                     logger.error(f"🎵 FFmpeg conversion failed: {e}")
                     # Fall back to original file
