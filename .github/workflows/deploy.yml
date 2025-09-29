@@ -32,6 +32,12 @@ jobs:
         working-directory: crysgarage-frontend
         run: npm run build
 
+      - name: Write deployment version file
+        run: |
+          echo "commit_sha=${{ github.sha }}" > frontend_version.txt
+          echo "ref_name=${GITHUB_REF_NAME:-unknown}" >> frontend_version.txt
+          echo "deployed_at=$(date -u +%FT%TZ)" >> frontend_version.txt
+
       - name: Upload build to VPS (/var/www/frontend_publish)
         uses: appleboy/scp-action@v0.1.7
         with:
@@ -42,6 +48,16 @@ jobs:
           target: "/var/www/frontend_publish/"
           overwrite: true
           strip_components: 1
+
+      - name: Upload version file to VPS
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          source: "frontend_version.txt"
+          target: "/var/www/frontend_publish/version.txt"
+          overwrite: true
 
       - name: Rebuild and restart backend (current setup)
         uses: appleboy/ssh-action@v1.0.3
@@ -82,3 +98,14 @@ jobs:
         run: |
           curl -fsS https://crysgarage.studio/ | head -n 20
           curl -fsSI https://crysgarage.studio/api/ || true
+
+      - name: Verify deployed version on VPS
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            set -e
+            echo "--- /var/www/frontend_publish/version.txt ---"
+            cat /var/www/frontend_publish/version.txt || echo "version.txt not found"
