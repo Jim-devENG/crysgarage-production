@@ -8,8 +8,8 @@ target-version = "py312"
 select = ["E", "F"]
 ignore = ["E501"]
 
-[tool.ruff.exclude]
-extend = [
+[tool.ruff]
+exclude = [
     "node_modules",
     "venv",
     "audio-mastering-service/**",
