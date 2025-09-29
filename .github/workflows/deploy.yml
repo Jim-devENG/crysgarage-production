@@ -1,149 +1,84 @@
-name: Deploy to VPS
+name: Deploy Frontend and Backend to VPS
 
 on:
   push:
-    branches: [ "main", "master" ]
+    branches: [ main, master ]
+  workflow_dispatch:
 
 concurrency:
   group: deploy-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Deploy over SSH
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: crysgarage-frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: crysgarage-frontend
+        run: npm ci --no-audit --no-fund
+
+      - name: Build frontend
+        working-directory: crysgarage-frontend
+        run: npm run build
+
+      - name: Upload build to VPS (/var/www/frontend_publish)
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          source: "crysgarage-frontend/dist/*"
+          target: "/var/www/frontend_publish/"
+          overwrite: true
+          strip_components: 1
+
+      - name: Rebuild and restart backend (current setup)
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_KEY }}
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          key: ${{ secrets.VPS_SSH_KEY }}
           script: |
-            set -euo pipefail
-            REPO_DIR=/var/www/crysgarage
-            FRONT_BUILD_DIR=$REPO_DIR/crysgarage-frontend
-            FRONT_PUBLISH_DIR=/var/www/crysgarage/frontend
-
-            # Ensure repo exists
-            if [ ! -d "$REPO_DIR/.git" ]; then
-              mkdir -p "$REPO_DIR"
-              cd /var/www
-              if [ ! -d crysgarage ]; then
-                git clone https://github.com/${{ github.repository }} crysgarage
-              fi
+            set -e
+            COMPOSE_FILE=/var/www/crysgarage/docker-compose-simple.yml
+            if [ -f "$COMPOSE_FILE" ]; then
+              # Ensure compose exists and rebuild backend image from current server context
+              docker-compose -f "$COMPOSE_FILE" build backend || true
+              docker-compose -f "$COMPOSE_FILE" up -d backend
+            else
+              echo "docker-compose-simple.yml not found; skipping backend build"
             fi
 
-            cd "$REPO_DIR"
-            git fetch --all --prune
-            git reset --hard origin/${GITHUB_REF_NAME:-main} || git reset --hard origin/main || git reset --hard origin/master
-
-            # Build frontend
-            if [ -d "$FRONT_BUILD_DIR" ]; then
-              cd "$FRONT_BUILD_DIR"
-              # Prefer npm ci; fall back to npm i
-              if command -v npm >/dev/null 2>&1; then
-                npm ci --no-audit --no-fund || npm install --no-audit --no-fund
-                npm run build --if-present
-              else
-                echo "npm not found" >&2; exit 1
-              fi
-              # Publish build
-              mkdir -p "$FRONT_PUBLISH_DIR"
-              rm -rf "$FRONT_PUBLISH_DIR"/*
-              if [ -d dist ]; then
-                cp -r dist/* "$FRONT_PUBLISH_DIR"/
-              elif [ -d build ]; then
-                cp -r build/* "$FRONT_PUBLISH_DIR"/
-              else
-                echo "No frontend build output found" >&2; exit 1
-              fi
+      - name: Restart Nginx container (current setup)
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            set -e
+            COMPOSE_FILE=/var/www/crysgarage/docker-compose-simple.yml
+            if [ -f "$COMPOSE_FILE" ]; then
+              docker-compose -f "$COMPOSE_FILE" ps || true
+              docker-compose -f "$COMPOSE_FILE" restart nginx || \
+              (docker-compose -f "$COMPOSE_FILE" up -d nginx)
+            else
+              echo "docker-compose-simple.yml not found; attempting container restart by name"
+              docker ps --format '{{.Names}}' | grep -q '^crysgarage-nginx' && docker restart $(docker ps --format '{{.Names}}' | grep '^crysgarage-nginx') || true
             fi
 
-            # Restart services
-            systemctl restart crysgarage-python || true
-            nginx -t && systemctl reload nginx || true
-
-            # Verify endpoints
-            curl -fsS https://crysgarage.studio/tiers | head -n 3 || true
-
-name: Deploy to VPS
-
-on:
-  push:
-    branches: [ master, main ]
-  pull_request:
-    branches: [ master, main ]
-
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '18'
-        cache: 'npm'
-        cache-dependency-path: crysgarage-frontend/package-lock.json
-        
-    - name: Install frontend dependencies
-      run: |
-        cd crysgarage-frontend
-        npm ci
-        
-    - name: Build frontend
-      run: |
-        cd crysgarage-frontend
-        npm run build
-        
-    - name: Deploy to VPS
-      uses: appleboy/ssh-action@v1.0.3
-      with:
-        host: ${{ secrets.VPS_HOST }}
-        username: ${{ secrets.VPS_USERNAME }}
-        key: ${{ secrets.VPS_SSH_KEY }}
-        port: 22
-        script: |
-          # Update repository
-          cd /opt/crysgarage
-          sudo -u crysgarage git pull origin master
-          
-          # Update Python dependencies if needed
-          cd /opt/crysgarage/audio-mastering-service
-          source .venv/bin/activate
-          pip install -r requirements.txt 2>/dev/null || true
-          deactivate
-          
-          # Restart services
-          sudo systemctl restart crysgarage-python.service
-          sudo systemctl restart nginx
-          
-          echo "Deployment completed successfully!"
-          
-    - name: Upload frontend to VPS
-      uses: appleboy/scp-action@v0.1.7
-      with:
-        host: ${{ secrets.VPS_HOST }}
-        username: ${{ secrets.VPS_USERNAME }}
-        key: ${{ secrets.VPS_SSH_KEY }}
-        port: 22
-        source: "crysgarage-frontend/dist/*"
-        target: "/opt/crysgarage/crysgarage-frontend/dist/"
-        strip_components: 2
-        
-    - name: Restart Nginx
-      uses: appleboy/ssh-action@v1.0.3
-      with:
-        host: ${{ secrets.VPS_HOST }}
-        username: ${{ secrets.VPS_USERNAME }}
-        key: ${{ secrets.VPS_SSH_KEY }}
-        port: 22
-        script: |
-          sudo systemctl restart nginx
-          echo "Frontend updated and Nginx restarted!"
+      - name: Verify homepage and API
+        run: |
+          curl -fsS https://crysgarage.studio/ | head -n 20
+          curl -fsSI https://crysgarage.studio/api/ || true
