@@ -3,6 +3,8 @@
  * Handles credit tracking, usage, and purchase logic
  */
 
+import { DEV_MODE } from '../utils/devMode';
+
 export interface CreditTransaction {
   id: string;
   userId: string;
@@ -34,6 +36,13 @@ class CreditService {
    */
   async getCreditBalance(userId: string): Promise<CreditBalance> {
     try {
+      if (DEV_MODE) {
+        return {
+          current: Number.POSITIVE_INFINITY,
+          total_purchased: 0,
+          total_used: 0,
+        };
+      }
       const response = await fetch(`${this.baseUrl}/credits/balance/${userId}`);
       if (!response.ok) {
         throw new Error('Failed to fetch credit balance');
@@ -43,7 +52,7 @@ class CreditService {
       console.error('Error fetching credit balance:', error);
       // Return default balance if API fails
       return {
-        current: 0,
+        current: DEV_MODE ? Number.POSITIVE_INFINITY : 0,
         total_purchased: 0,
         total_used: 0
       };
@@ -55,6 +64,16 @@ class CreditService {
    */
   async useCredits(userId: string, amount: number = 1, description: string = 'Audio processing'): Promise<CreditTransaction> {
     try {
+      if (DEV_MODE) {
+        return {
+          id: `dev-${Date.now()}`,
+          userId,
+          type: 'usage',
+          amount: 0,
+          description: `DEV_MODE bypass: ${description}`,
+          timestamp: new Date(),
+        };
+      }
       const response = await fetch(`${this.baseUrl}/credits/use`, {
         method: 'POST',
         headers: {
@@ -84,6 +103,17 @@ class CreditService {
    */
   async addCredits(userId: string, amount: number, tier: string, transactionId: string): Promise<CreditTransaction> {
     try {
+      if (DEV_MODE) {
+        return {
+          id: `dev-add-${Date.now()}`,
+          userId,
+          type: 'bonus',
+          amount,
+          description: `DEV_MODE: added credits for ${tier}`,
+          timestamp: new Date(),
+          tier,
+        };
+      }
       const response = await fetch(`${this.baseUrl}/credits/add`, {
         method: 'POST',
         headers: {
@@ -115,11 +145,12 @@ class CreditService {
    */
   async hasEnoughCredits(userId: string, required: number = 1): Promise<boolean> {
     try {
+      if (DEV_MODE) return true;
       const balance = await this.getCreditBalance(userId);
       return balance.current >= required;
     } catch (error) {
       console.error('Error checking credits:', error);
-      return false;
+      return DEV_MODE ? true : false;
     }
   }
 
@@ -143,6 +174,10 @@ class CreditService {
    * Handle credit exhaustion - redirect to purchase
    */
   handleCreditExhaustion(onPurchaseRedirect: () => void) {
+    if (DEV_MODE) {
+      // Suppress exhaustion notifications in Dev Mode
+      return;
+    }
     // Show notification about credit exhaustion
     const notification = {
       type: 'warning',
