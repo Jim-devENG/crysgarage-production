@@ -1,9 +1,9 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { Upload, Play, Pause, Download, ArrowLeft, Music, Settings, CheckCircle, Loader2 } from 'lucide-react';
+import { Upload, Play, Pause, Download, ArrowLeft, Music, Settings, CheckCircle, Loader2, Volume2, VolumeX, Activity } from 'lucide-react';
 import { pythonAudioService } from '../../services/pythonAudioService';
 import { useApp } from '../../contexts/AppContext';
-import { creditService } from '../../services/creditService';
 import DownloadStep from './DownloadStep';
+import RealTimeAnalysisPanel from '../AdvancedTierDashboard/RealTimeAnalysisPanel';
 
 interface AudioFile {
   id: string;
@@ -35,21 +35,469 @@ const FreeTierDashboardPython: React.FC = () => {
   const [downloadFormat, setDownloadFormat] = useState<'mp3' | 'wav24'>('wav24');
   const [downloadSampleRate, setDownloadSampleRate] = useState<number>(44100);
 
+  // Real-time audio player state
+  const [isPlayingOriginal, setIsPlayingOriginal] = useState(false);
+  const [isApplyingEffects, setIsApplyingEffects] = useState(false);
+  const [audioContextInitialized, setAudioContextInitialized] = useState(false);
+  const [originalProgress, setOriginalProgress] = useState(0);
+  const [originalDuration, setOriginalDuration] = useState(0);
+  
+  // Web Audio API refs
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const originalAudioRef = useRef<HTMLAudioElement | null>(null);
+  const originalChainRef = useRef<any>(null);
+  const basePreviewGainRef = useRef<number>(1.0);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const peaksRef = useRef<Float32Array | null>(null);
+  const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
   // Free tier genres (2 genres only)
   const freeTierGenres: Genre[] = [
     {
-      id: 'pop',
-      name: 'Pop',
+      id: 'hiphop',
+      name: 'Hip Hop',
       color: '#FF6B6B',
-      description: 'Bright, punchy sound with emphasis on vocals and modern production'
+      description: 'Bass-heavy sound with punchy drums and clear vocals'
     },
     {
-      id: 'rock',
-      name: 'Rock',
+      id: 'afrobeats',
+      name: 'Afrobeats',
       color: '#4ECDC4',
-      description: 'Aggressive, powerful sound with heavy guitars and driving rhythm'
+      description: 'West African pop blend with infectious rhythms and warm tones'
     }
   ];
+
+  // Auto-initialize audio context on component mount
+  useEffect(() => {
+    if (typeof window !== 'undefined' && !audioContextRef.current) {
+      audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+      setAudioContextInitialized(true);
+      console.log('Audio context initialized for instant effects');
+    }
+  }, []);
+
+  // Track audio progress
+  useEffect(() => {
+    const audio = originalAudioRef.current;
+    if (!audio) return;
+
+    const updateProgress = () => {
+      setOriginalProgress(audio.currentTime);
+    };
+
+    const updateDuration = () => {
+      setOriginalDuration(audio.duration || 0);
+    };
+
+    audio.addEventListener('timeupdate', updateProgress);
+    audio.addEventListener('loadedmetadata', updateDuration);
+    audio.addEventListener('durationchange', updateDuration);
+
+    return () => {
+      audio.removeEventListener('timeupdate', updateProgress);
+      audio.removeEventListener('loadedmetadata', updateDuration);
+      audio.removeEventListener('durationchange', updateDuration);
+    };
+  }, [uploadedFile]);
+
+  // Waveform computation and drawing
+  useEffect(() => {
+    if (!uploadedFile || !canvasRef.current) return;
+
+    let cancelled = false;
+    const compute = async () => {
+      if (!uploadedFile) { peaksRef.current = null; drawWaveform(); return; }
+      try {
+        const arrayBuffer = await uploadedFile.file.arrayBuffer();
+        const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+        const audioBuffer = await ctx.decodeAudioData(arrayBuffer.slice(0));
+        const numChannels = audioBuffer.numberOfChannels;
+        const dataL = audioBuffer.getChannelData(0);
+        const dataR = numChannels > 1 ? audioBuffer.getChannelData(1) : null;
+        const desiredBuckets = 1000;
+        const bucketSize = Math.floor(dataL.length / desiredBuckets);
+        const peaks = new Float32Array(desiredBuckets);
+        
+        for (let i = 0; i < desiredBuckets; i++) {
+          if (cancelled) return;
+          const start = i * bucketSize;
+          const end = Math.min(start + bucketSize, dataL.length);
+          let max = 0;
+          for (let j = start; j < end; j++) {
+            const l = Math.abs(dataL[j]);
+            const r = dataR ? Math.abs(dataR[j]) : l;
+            max = Math.max(max, l, r);
+          }
+          peaks[i] = max;
+        }
+        
+        if (!cancelled) {
+          peaksRef.current = peaks;
+          drawWaveform();
+        }
+      } catch (error) {
+        console.error('Failed to compute waveform:', error);
+      }
+    };
+    
+    compute();
+    return () => { cancelled = true; };
+  }, [uploadedFile]);
+
+  // Draw waveform on canvas
+  const drawWaveform = () => {
+    const canvas = canvasRef.current;
+    if (!canvas || !peaksRef.current) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width * window.devicePixelRatio;
+    canvas.height = rect.height * window.devicePixelRatio;
+    ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+
+    const width = rect.width;
+    const height = rect.height;
+    const peaks = peaksRef.current;
+    const progress = originalDuration > 0 ? originalProgress / originalDuration : 0;
+
+    // Clear canvas
+    ctx.fillStyle = '#1f1f23';
+    ctx.fillRect(0, 0, width, height);
+
+    // Draw waveform
+    ctx.strokeStyle = '#4a5568';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    
+    for (let i = 0; i < peaks.length; i++) {
+      const x = (i / peaks.length) * width;
+      const peak = peaks[i];
+      const y = height / 2;
+      const barHeight = peak * (height / 2) * 0.8;
+      
+      ctx.moveTo(x, y - barHeight);
+      ctx.lineTo(x, y + barHeight);
+    }
+    ctx.stroke();
+
+    // Draw progress
+    if (progress > 0) {
+      ctx.strokeStyle = '#fbbf24';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      
+      for (let i = 0; i < peaks.length * progress; i++) {
+        const x = (i / peaks.length) * width;
+        const peak = peaks[i];
+        const y = height / 2;
+        const barHeight = peak * (height / 2) * 0.8;
+        
+        ctx.moveTo(x, y - barHeight);
+        ctx.lineTo(x, y + barHeight);
+      }
+      ctx.stroke();
+    }
+  };
+
+  // Redraw waveform on resize
+  useEffect(() => {
+    const onResize = () => drawWaveform();
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, [originalProgress, originalDuration]);
+
+  // Build audio processing chain
+  const buildPreviewChain = () => {
+    if (!audioContextRef.current || !originalAudioRef.current) return false;
+    
+    // Check if chain already exists
+    if (originalChainRef.current?.source) {
+      console.log('Audio chain already exists, skipping creation');
+      return true;
+    }
+    
+    const ctx = audioContextRef.current;
+
+    // Route audio exclusively through Web Audio graph so effects are audible on live
+    try {
+      originalAudioRef.current.crossOrigin = 'anonymous';
+      (originalAudioRef.current as any).playsInline = true;
+    } catch {}
+
+    try {
+      // Create processing chain
+    const source = ctx.createMediaElementSource(originalAudioRef.current);
+    const analyser = ctx.createAnalyser();
+    const lowShelf = ctx.createBiquadFilter();
+    const lowMidPeaking = ctx.createBiquadFilter();
+    const midPeaking = ctx.createBiquadFilter();
+    const highMidPeaking = ctx.createBiquadFilter();
+    const highShelf = ctx.createBiquadFilter();
+    const compressor = ctx.createDynamicsCompressor();
+    const limiter = ctx.createDynamicsCompressor();
+    const outputGain = ctx.createGain();
+
+    // Configure filters
+    lowShelf.type = 'lowshelf';
+    lowMidPeaking.type = 'peaking';
+    midPeaking.type = 'peaking';
+    highMidPeaking.type = 'peaking';
+    highShelf.type = 'highshelf';
+
+    // Configure compressor
+    compressor.threshold.value = -20;
+    compressor.knee.value = 30;
+    compressor.ratio.value = 4;
+    compressor.attack.value = 0.003;
+    compressor.release.value = 0.25;
+
+    // Configure limiter
+    limiter.threshold.value = -1;
+    limiter.knee.value = 0;
+    limiter.ratio.value = 20;
+    limiter.attack.value = 0.001;
+    limiter.release.value = 0.01;
+
+    // Connect the chain
+    source.connect(lowShelf);
+    lowShelf.connect(lowMidPeaking);
+    lowMidPeaking.connect(midPeaking);
+    midPeaking.connect(highMidPeaking);
+    highMidPeaking.connect(highShelf);
+    highShelf.connect(compressor);
+    compressor.connect(limiter);
+    limiter.connect(outputGain);
+    outputGain.connect(analyser);
+    analyser.connect(ctx.destination);
+
+    // Store chain reference
+    originalChainRef.current = {
+      source,
+      analyser,
+      lowShelf,
+      lowMidPeaking,
+      midPeaking,
+      highMidPeaking,
+      highShelf,
+      compressor,
+      limiter,
+      outputGain
+    };
+
+    console.log('Audio chain created successfully');
+    return true;
+  } catch (error) {
+    console.error('Failed to create audio chain:', error);
+    return false;
+  }
+};
+
+  // Apply instant genre effects for real-time preview
+  const applyInstantGenreEffects = async (genre: Genre) => {
+    if (!audioContextRef.current || !originalAudioRef.current) {
+      console.log('Audio context or audio element not available');
+      return;
+    }
+
+    try {
+      setIsApplyingEffects(true);
+      console.log(`Applying ${genre.name.toUpperCase()} instant effects`);
+      
+      // Resume audio context if suspended
+      if (audioContextRef.current.state === 'suspended') {
+        await audioContextRef.current.resume();
+      }
+      
+      // Build chain if needed
+      if (!originalChainRef.current?.source) {
+        buildPreviewChain();
+        console.log('Audio chain created successfully');
+      }
+
+      // Apply genre-specific settings
+      const { outputGain, lowShelf, lowMidPeaking, midPeaking, highMidPeaking, highShelf, compressor } = originalChainRef.current;
+      
+      // Get genre preset
+      const preset = getGenrePreset(genre.name);
+      
+      if (preset) {
+        const currentTime = audioContextRef.current.currentTime;
+        const exaggerate = 2.5; // Strong enough to hear clear EQ differences
+        
+        // Apply EQ settings
+        lowShelf.frequency.setValueAtTime(preset.eq_curve.low_shelf.freq, currentTime);
+        lowShelf.gain.setValueAtTime(preset.eq_curve.low_shelf.gain * exaggerate, currentTime);
+        
+        lowMidPeaking.frequency.setValueAtTime(preset.eq_curve.low_mid?.freq ?? 250, currentTime);
+        lowMidPeaking.Q.setValueAtTime(1.0, currentTime);
+        lowMidPeaking.gain.setValueAtTime((preset.eq_curve.low_mid?.gain ?? 0) * exaggerate, currentTime);
+        
+        midPeaking.frequency.setValueAtTime(preset.eq_curve.mid.freq, currentTime);
+        midPeaking.Q.setValueAtTime(1.0, currentTime);
+        midPeaking.gain.setValueAtTime(preset.eq_curve.mid.gain * exaggerate, currentTime);
+        
+        highMidPeaking.frequency.setValueAtTime(preset.eq_curve.high_mid?.freq ?? 3500, currentTime);
+        highMidPeaking.Q.setValueAtTime(1.0, currentTime);
+        highMidPeaking.gain.setValueAtTime((preset.eq_curve.high_mid?.gain ?? 0) * exaggerate, currentTime);
+        
+        highShelf.frequency.setValueAtTime(preset.eq_curve.high_shelf.freq, currentTime);
+        highShelf.gain.setValueAtTime(preset.eq_curve.high_shelf.gain * exaggerate, currentTime);
+
+        // Apply compression
+        const thr = preset.compression.threshold - 4;
+        const ratio = Math.min(preset.compression.ratio * 1.35, 10);
+        compressor.threshold.setValueAtTime(thr, currentTime);
+        compressor.knee.setValueAtTime(20, currentTime);
+        compressor.ratio.setValueAtTime(ratio, currentTime);
+        compressor.attack.setValueAtTime(Math.max(0.001, preset.compression.attack), currentTime);
+        compressor.release.setValueAtTime(preset.compression.release, currentTime);
+
+        // Apply output gain - genre-specific for audible differences
+        const targetGain = genre.name === 'Hip Hop' ? 1.4 : 1.1; // Hip Hop louder, Afrobeats softer
+        try { outputGain.gain.cancelScheduledValues(currentTime); } catch {}
+        const pre = Math.max(0.7, Math.min(1.3, targetGain * 0.9));
+        try { outputGain.gain.setValueAtTime(pre, currentTime); } catch {}
+        outputGain.gain.linearRampToValueAtTime(targetGain, currentTime + 0.08);
+        
+        console.log(`Applied ${genre.name} effects successfully!`, {
+          lowShelf: { freq: lowShelf.frequency.value, gain: lowShelf.gain.value },
+          mid: { freq: midPeaking.frequency.value, gain: midPeaking.gain.value },
+          highShelf: { freq: highShelf.frequency.value, gain: highShelf.gain.value },
+          compressor: { threshold: compressor.threshold.value, ratio: compressor.ratio.value },
+          targetGain
+        });
+      } else {
+        console.warn(`No preset found for genre: ${genre.name}`);
+      }
+      
+      console.log(`Instant ${genre.name} effects applied successfully!`);
+    } catch (error) {
+      console.error('Failed to apply instant effects:', error);
+    } finally {
+      setIsApplyingEffects(false);
+    }
+  };
+
+  // Get genre preset (dramatically different for clear audible differences)
+  const getGenrePreset = (genreName: string) => {
+    const presets: any = {
+      'Hip Hop': {
+        eq_curve: {
+          low_shelf: { freq: 60, gain: 4.0 },      // Much more bass
+          low_mid: { freq: 300, gain: -2.0 },     // Cut low mids
+          mid: { freq: 1000, gain: -1.0 },        // Cut mids
+          high_mid: { freq: 4000, gain: 2.0 },    // Boost high mids
+          high_shelf: { freq: 8000, gain: 1.0 }   // Slight high boost
+        },
+        compression: {
+          threshold: -20,    // More aggressive compression
+          ratio: 3.5,        // Higher ratio
+          attack: 0.001,     // Very fast attack
+          release: 0.1       // Fast release
+        }
+      },
+      'Afrobeats': {
+        eq_curve: {
+          low_shelf: { freq: 100, gain: 3.0 },    // Strong bass
+          low_mid: { freq: 300, gain: 1.5 },      // Boost low mids
+          mid: { freq: 1000, gain: 2.0 },         // Boost mids
+          high_mid: { freq: 4000, gain: 3.0 },    // Strong high mid boost
+          high_shelf: { freq: 8000, gain: 2.5 }   // Strong high boost
+        },
+        compression: {
+          threshold: -18,    // Less aggressive
+          ratio: 2.0,        // Lower ratio
+          attack: 0.005,     // Slower attack
+          release: 0.2       // Slower release
+        }
+      }
+    };
+    
+    return presets[genreName] || presets['Hip Hop'];
+  };
+
+  // Format time helper
+  const formatTime = (seconds: number): string => {
+    if (!isFinite(seconds)) return '0:00';
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  // Handle play/pause for original audio
+  const handlePlayPauseOriginal = () => {
+    if (!originalAudioRef.current) return;
+    // Ensure processing chain exists before playback toggles
+    buildPreviewChain();
+    // Resume context proactively for reliable playback
+    try { if (audioContextRef.current?.state === 'suspended') audioContextRef.current.resume(); } catch {}
+    if (isPlayingOriginal) {
+      originalAudioRef.current.pause();
+      setIsPlayingOriginal(false);
+    } else {
+      originalAudioRef.current.play();
+      setIsPlayingOriginal(true);
+      if (audioContextRef.current && audioContextRef.current.state === 'suspended') {
+        audioContextRef.current.resume();
+      }
+    }
+  };
+
+  // Handle instant preview play/pause (for genre effects)
+  const handlePlayPauseInstant = () => {
+    if (!originalAudioRef.current) return;
+    if (isPlayingOriginal) {
+      originalAudioRef.current.pause();
+      setIsPlayingOriginal(false);
+    } else {
+      // Resume context and play; ensure element not stalled
+      try { if (audioContextRef.current?.state === 'suspended') audioContextRef.current.resume(); } catch {}
+      // Ensure the chain exists before play (only if not already created)
+      if (!originalChainRef.current?.source) {
+        buildPreviewChain();
+      }
+      // Slight nudge to retrigger playback capture
+      try { originalAudioRef.current.currentTime = Math.max(0, originalAudioRef.current.currentTime - 0.001); } catch {}
+      originalAudioRef.current.play().catch(()=>{});
+      setIsPlayingOriginal(true);
+      if (audioContextRef.current && audioContextRef.current.state === 'suspended') {
+        audioContextRef.current.resume();
+      }
+    }
+  };
+
+  // Handle genre selection with instant effects
+  const handleGenreSelect = async (genre: Genre) => {
+    setSelectedGenre(genre);
+    if (!originalAudioRef.current) {
+      console.log('No uploaded file or audio element available for preview');
+      return;
+    }
+    // Ensure chain exists and context is running (without recreating source)
+    buildPreviewChain();
+    try { if (audioContextRef.current?.state === 'suspended') await audioContextRef.current.resume(); } catch {}
+    // Start playback so changes are audible
+    try {
+      if (originalAudioRef.current.paused) {
+        await originalAudioRef.current.play();
+        setIsPlayingOriginal(true);
+      }
+    } catch {}
+    console.log('Applying instant effects for genre:', genre.name);
+    await applyInstantGenreEffects(genre);
+    // Nudge output gain briefly to force audible state update in some browsers
+    try {
+      const g = originalChainRef.current?.outputGain;
+      const ctx = audioContextRef.current;
+      if (g && ctx) {
+        const v = g.gain.value;
+        g.gain.setValueAtTime(v * 0.9, ctx.currentTime);
+        g.gain.linearRampToValueAtTime(v, ctx.currentTime + 0.05);
+      }
+    } catch {}
+  };
 
   const processingSteps = useMemo(
     () => [
@@ -78,27 +526,15 @@ const FreeTierDashboardPython: React.FC = () => {
   const handleProcessAudio = async () => {
     if (!uploadedFile || !selectedGenre) return;
 
-    // Check credits before processing
-    try {
-      const hasCredits = await creditService.hasEnoughCredits(effectiveUser.id.toString(), 1);
-      if (!hasCredits) {
-        alert('Insufficient credits. Please purchase credits to continue processing.');
-        // Show credit exhaustion notification
-        creditService.handleCreditExhaustion(() => {
-          // Navigate to pricing page
-          window.location.href = '/pricing';
-        });
-        return;
-      }
-    } catch (creditError) {
-      console.error('Error checking credits:', creditError);
-      alert('Unable to verify credits. Please try again.');
+    // Free tier - no credit checking required
+    if (!effectiveUser || !effectiveUser.id) {
+      console.error('User not authenticated or missing ID');
+      alert('Please log in to process audio');
       return;
     }
 
     setIsProcessing(true);
     setProcessingProgress(0);
-    const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
     try {
       // Simulate progress updates
@@ -158,7 +594,9 @@ const FreeTierDashboardPython: React.FC = () => {
       setActiveTab('download');
     } catch (error) {
       console.error('Processing failed:', error);
-      alert(`Processing failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error('Full error details:', error);
+      alert(`Processing failed: ${errorMessage}`);
     } finally {
       setIsProcessing(false);
       if (progressIntervalRef.current) {
@@ -303,33 +741,88 @@ const FreeTierDashboardPython: React.FC = () => {
 
         {/* Processing Tab */}
         {activeTab === 'processing' && uploadedFile && (
-          <div className="max-w-4xl mx-auto">
+          <div className="max-w-6xl mx-auto">
             {/* File Info */}
-            <div className="bg-crys-charcoal rounded-lg p-6 mb-6">
-              <h3 className="text-crys-white font-medium mb-4">Uploaded File</h3>
-              <div className="flex items-center space-x-4">
-                <Music size={24} className="text-crys-gold" />
-                <div>
-                  <p className="text-crys-white font-medium">{uploadedFile.name}</p>
-                  <p className="text-crys-light-grey text-sm">
-                    {(uploadedFile.size / (1024 * 1024)).toFixed(2)} MB
-                  </p>
+            <div className="bg-audio-panel-bg border border-audio-panel-border rounded-xl p-6 mb-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-4">
+                  <div className="w-12 h-12 bg-crys-gold/20 rounded-lg flex items-center justify-center">
+                    <Music className="w-6 h-6 text-crys-gold" />
+                  </div>
+                  <div>
+                    <h3 className="text-crys-white font-medium">{uploadedFile.name}</h3>
+                    <p className="text-crys-light-grey text-sm">{(uploadedFile.size / (1024 * 1024)).toFixed(2)} MB</p>
+                  </div>
                 </div>
+                
+                <button
+                  onClick={handlePlayPauseInstant}
+                  className="flex items-center space-x-2 bg-crys-blue/20 hover:bg-crys-blue/30 text-crys-blue px-4 py-2 rounded-lg transition-colors"
+                >
+                  {isPlayingOriginal ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+                  <span className="text-sm">Instant Preview</span>
+                </button>
               </div>
             </div>
 
-            {/* Genre Selection */}
-            <div className="bg-crys-charcoal rounded-lg p-6 mb-6">
-              <h3 className="text-crys-white font-medium mb-4">Select Genre</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Hidden Audio Element for Instant Preview */}
+            <audio ref={originalAudioRef} src={uploadedFile.url} preload="metadata" className="hidden" />
+
+            {/* Static Waveform Seekbar (canvas) */}
+            <div className="mt-4">
+              <div className="flex items-center space-x-2 mb-1">
+                <span className="text-xs text-crys-light-grey w-8">{formatTime(originalProgress)}</span>
+                <div className="flex-1">
+                  <canvas
+                    ref={canvasRef}
+                    className="w-full h-20 rounded-md cursor-pointer select-none bg-[#1f1f23]"
+                    onMouseDown={(e) => {
+                      if (!originalAudioRef.current || !originalDuration) return;
+                      const rect = (e.currentTarget as HTMLCanvasElement).getBoundingClientRect();
+                      const ratio = Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width));
+                      originalAudioRef.current.currentTime = ratio * originalDuration;
+                    }}
+                  />
+                </div>
+                <span className="text-xs text-crys-light-grey w-8">{formatTime(originalDuration)}</span>
+              </div>
+            </div>
+
+            {/* Real-time Analysis directly under waveform */}
+            <div className="mt-3">
+              <RealTimeAnalysisPanel analyser={originalChainRef.current?.analyser || null} isPlaying={isPlayingOriginal} />
+            </div>
+
+            {/* Genre Selection - Directly Beneath Player */}
+            <div className="bg-crys-graphite rounded-xl p-6 mb-6">
+              <h3 className="text-xl font-bold mb-4 flex items-center justify-center">
+                <Activity className="w-5 h-5 mr-2 text-crys-gold" />
+                Select Genre (2 Free Options)
+                {isApplyingEffects && (
+                  <div className="ml-2 flex items-center text-sm text-crys-gold">
+                    <Loader2 className="w-4 h-4 animate-spin mr-1" />
+                    Applying effects...
+                  </div>
+                )}
+              </h3>
+              
+              {/* Instructions - Centered */}
+              <div className="mb-6 p-4 bg-crys-dark rounded-lg text-center">
+                <p className="text-sm text-crys-light-grey">
+                  💡 <strong>Real-time Preview:</strong> Click any genre to hear instant effects. Make sure your audio is playing.
+                </p>
+              </div>
+
+              {/* Genre Grid - Centered */}
+              <div className="grid grid-cols-2 gap-3 max-w-2xl mx-auto">
                 {freeTierGenres.map((genre) => (
                   <button
                     key={genre.id}
-                    onClick={() => setSelectedGenre(genre)}
-                    className={`p-4 rounded-lg border-2 transition-colors text-left ${
+                    onClick={() => handleGenreSelect(genre)}
+                    className={`p-3 rounded-lg text-left transition-all hover:scale-105 focus:outline-none ${
                       selectedGenre?.id === genre.id
-                        ? 'border-crys-gold bg-crys-gold/20 text-crys-gold'
-                        : 'border-crys-graphite bg-crys-charcoal text-crys-light-grey hover:border-crys-gold/50'
+                        ? 'bg-crys-gold/20 border-2 border-crys-gold text-crys-gold'
+                        : 'bg-crys-charcoal border-2 border-crys-graphite text-crys-light-grey hover:border-crys-gold/50 hover:bg-crys-graphite'
                     }`}
                   >
                     <div className="flex items-center space-x-3 mb-2">

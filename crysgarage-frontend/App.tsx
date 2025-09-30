@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { AuthenticationProvider, useAuth } from './contexts/AuthenticationContext';
+import { AppProvider } from './contexts/AppContext';
 import { LandingPage } from './components/LandingPage';
 import { FreeTierDashboard } from './components/FreeTier';
 import FreeTierDashboardPython from './components/FreeTier/FreeTierDashboardPython';
@@ -45,8 +46,10 @@ function AppContent() {
   // Handle URL routing
   useEffect(() => {
     const handlePopState = () => {
-      const path = window.location.pathname.substring(1) || 'landing';
-      setCurrentPage(path);
+      const path = window.location.pathname.substring(1);
+      // If path is empty (root URL), set to 'home'
+      const page = path === '' ? 'home' : path;
+      setCurrentPage(page);
     };
 
     window.addEventListener('popstate', handlePopState);
@@ -67,7 +70,13 @@ function AppContent() {
   const handleNavigation = (page: string) => {
     console.log('Navigating to:', page);
     setCurrentPage(page);
-    window.history.pushState({}, '', `/${page}`);
+    
+    // For landing page, use root URL (crysgarage.studio)
+    if (page === 'landing') {
+      window.history.pushState({}, '', '/');
+    } else {
+      window.history.pushState({}, '', `/${page}`);
+    }
   };
 
   const handleTierSelection = (tierId: string) => {
@@ -173,7 +182,7 @@ function AppContent() {
         {currentPage === 'dev' && (
           <DevAccess />
         )}
-        {(currentPage === 'landing' || currentPage === 'home') && (
+        {currentPage === 'landing' && (
           <LandingPage 
             onGetStarted={() => handleNavigation('studio')}
             onTryMastering={() => handleNavigation('studio')}
@@ -310,7 +319,9 @@ function AppContent() {
 function App() {
   return (
     <AuthenticationProvider>
-      <AppContent />
+      <AppProvider>
+        <AppContent />
+      </AppProvider>
     </AuthenticationProvider>
   );
 }

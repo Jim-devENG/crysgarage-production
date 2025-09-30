@@ -673,7 +673,7 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
         });
       };
       const tierData = await withTimeout(pythonAudioService.getTierInformation(), 8000);
-      const proTierInfo = (tierData as any).pro || (tierData as any).professional;
+      const proTierInfo = (tierData as any).professional;
       if (proTierInfo) setTierInfo(proTierInfo);
       
     } catch (error) {

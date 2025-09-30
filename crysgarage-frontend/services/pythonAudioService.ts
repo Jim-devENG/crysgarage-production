@@ -7,18 +7,19 @@ import axios from 'axios';
 
 // Determine Python base URL at runtime to avoid accidental root-relative calls in production
 const isLocal = typeof window !== 'undefined'
+  && window.location
   && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
 
 const computePythonBaseUrl = (): string => {
   // Prefer explicit localhost for dev; otherwise, route through the public Nginx proxy
-  if (typeof window === 'undefined') {
+  if (typeof window === 'undefined' || !window.location) {
     return 'https://crysgarage.studio';
   }
   const { hostname, origin } = window.location;
   if (hostname === 'localhost' || hostname === '127.0.0.1') {
     return 'http://localhost:8002';
   }
-  return origin;
+  return origin || 'https://crysgarage.studio';
 };
 
 const PYTHON_SERVICE_URL = computePythonBaseUrl();
@@ -267,7 +268,8 @@ class PythonAudioService {
         formData.append('tier', tier);
         formData.append('genre', genre);
         formData.append('user_id', userId);
-        formData.append('is_preview', 'false');
+        // Free tier should use preview mode to bypass credit checks
+        formData.append('is_preview', tier === 'free' ? 'true' : 'false');
         formData.append('target_format', format.toUpperCase());
         formData.append('target_sample_rate', '44100');
         if (typeof targetLufs === 'number') {
@@ -318,7 +320,8 @@ class PythonAudioService {
         formData.append('tier', tier);
         formData.append('genre', genre);
         formData.append('user_id', userId);
-        formData.append('is_preview', 'false');
+        // Free tier should use preview mode to bypass credit checks
+        formData.append('is_preview', tier === 'free' ? 'true' : 'false');
         formData.append('target_format', format.toUpperCase());
         formData.append('target_sample_rate', '44100');
         if (typeof targetLufs === 'number') {

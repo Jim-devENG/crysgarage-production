@@ -1,0 +1,9 @@
+services:
+  backend:
+    build:
+      context: ./crysgarage-backend-fresh
+  nginx:
+    volumes:
+      - ./nginx-static.conf:/etc/nginx/nginx.conf:ro
+      - ./frontend_publish:/usr/share/nginx/html:ro
+

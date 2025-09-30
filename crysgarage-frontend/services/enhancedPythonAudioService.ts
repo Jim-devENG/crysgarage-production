@@ -6,10 +6,10 @@
 import axios from 'axios';
 import AudioFormatService from './audioFormatService';
 
-const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+const isLocal = typeof window !== 'undefined' && window.location && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
 
 const computePythonBaseUrl = (): string => {
-  if (typeof window !== 'undefined') {
+  if (typeof window !== 'undefined' && window.location) {
     const origin = window.location.origin;
     if (origin.includes('crysgarage.studio')) {
       return 'https://crysgarage.studio';

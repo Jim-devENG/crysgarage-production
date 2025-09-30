@@ -123,7 +123,7 @@ class AdvancedAudioService {
       const response = await axios.get(`${this.baseURL}/tiers`, { headers: { 'Accept': 'application/json' } });
       const data = response.data || {};
       // Support both shapes: {free, pro, advanced} or {tiers: {...}}
-      const tiers = (data && (data.free || data.pro || data.advanced)) ? data : (data.tiers || {});
+      const tiers = (data && (data.free || data.professional || data.advanced)) ? data : (data.tiers || {});
       // If still empty, throw to trigger fallback
       if (!tiers || Object.keys(tiers).length === 0) {
         throw new Error('Empty tiers from backend');

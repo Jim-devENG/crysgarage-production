@@ -492,17 +492,17 @@ const FreeTierDashboard: React.FC<FreeTierDashboardProps> = ({ onDownloadAttempt
       originalAudioRef.current.onended = () => setIsPlayingOriginal(false);
     }
 
-    if (isPlayingOriginal) {
+      if (isPlayingOriginal) {
       originalAudioRef.current.pause();
-      setIsPlayingOriginal(false);
-    } else {
+        setIsPlayingOriginal(false);
+      } else {
       if (originalAudioElement && isPlayingMastered) {
         originalAudioElement.pause();
         setIsPlayingMastered(false);
       }
       originalAudioRef.current.play();
-      setIsPlayingOriginal(true);
-    }
+        setIsPlayingOriginal(true);
+      }
   };
 
     // Download mastered audio with MediaRecorder capture (copied from Advanced Tier)
@@ -709,7 +709,7 @@ const FreeTierDashboard: React.FC<FreeTierDashboardProps> = ({ onDownloadAttempt
             chunkCount++;
             
             console.log('🎵 DEBUG: Audio chunk captured:', event.data.size, 'bytes, Total:', totalChunksSize, 'bytes, Chunk:', chunkCount);
-          } else {
+      } else {
             console.log('⚠️ DEBUG: Empty chunk received');
           }
         };
@@ -898,7 +898,7 @@ const FreeTierDashboard: React.FC<FreeTierDashboardProps> = ({ onDownloadAttempt
         
         if (bitDepth === 16) {
           view.setInt16(offset, value, true);
-          offset += 2;
+        offset += 2;
         } else if (bitDepth === 24) {
           const intValue = Math.round(value);
           view.setInt8(offset, intValue & 0xFF);
@@ -939,16 +939,16 @@ const FreeTierDashboard: React.FC<FreeTierDashboardProps> = ({ onDownloadAttempt
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
               return (
-                                 <button
-                   key={tab.id}
+                <button
+                  key={tab.id}
                    onClick={() => handleTabChange(tab.id as TabType)}
                    disabled={tab.id === 'processing' && !uploadedFile}
-                   className={`flex items-center gap-2 px-4 py-2 rounded-t-lg font-medium transition-all ${
-                     isActive 
-                       ? 'border border-amber-500 border-b-0 text-amber-400 bg-black/50' 
-                       : 'text-gray-400 hover:text-amber-400 hover:bg-black/30'
+                  className={`flex items-center gap-2 px-4 py-2 rounded-t-lg font-medium transition-all ${
+                    isActive 
+                      ? 'border border-amber-500 border-b-0 text-amber-400 bg-black/50' 
+                      : 'text-gray-400 hover:text-amber-400 hover:bg-black/30'
                    } ${tab.id === 'processing' && !uploadedFile ? 'opacity-50 cursor-not-allowed' : ''}`}
-                 >
+                >
                   <Icon className="w-4 h-4" />
                   {tab.label}
                 </button>
@@ -988,8 +988,8 @@ const FreeTierDashboard: React.FC<FreeTierDashboardProps> = ({ onDownloadAttempt
       <div className="flex-1 p-6">
         <div className="max-w-4xl mx-auto">
 
-          {/* Upload Tab */}
-          {activeTab === 'upload' && (
+        {/* Upload Tab */}
+        {activeTab === 'upload' && (
             <div className="space-y-8">
               <div className="text-center">
                 <h1 className="text-3xl font-bold text-amber-400 mb-2">Free Tier Mastering</h1>
@@ -998,8 +998,8 @@ const FreeTierDashboard: React.FC<FreeTierDashboardProps> = ({ onDownloadAttempt
                 {/* Free Mastering Badge */}
                 <div className="mt-3 inline-flex items-center gap-2 bg-green-500/20 border border-green-500/30 rounded-lg px-3 py-1">
                   <span className="text-green-400 text-sm font-medium">🎵 Mastering: FREE</span>
-                </div>
-              </div>
+                      </div>
+            </div>
 
               {/* Mastering Requirements */}
               <div className="bg-gradient-to-r from-amber-500/10 to-amber-500/5 border border-amber-500/20 rounded-xl p-6 max-w-4xl mx-auto">
@@ -1015,7 +1015,7 @@ const FreeTierDashboard: React.FC<FreeTierDashboardProps> = ({ onDownloadAttempt
                       <div className="flex items-center justify-between">
                         <span className="text-gray-300">Minimum:</span>
                         <span className="px-2 py-1 bg-red-500/20 text-red-400 rounded border border-red-500/30">-8 dB</span>
-                      </div>
+                </div>
                       <div className="flex items-center justify-between">
                         <span className="text-gray-300">Maximum:</span>
                         <span className="px-2 py-1 bg-yellow-500/20 text-yellow-400 rounded border border-yellow-500/30">-4 dB</span>
@@ -1042,13 +1042,13 @@ const FreeTierDashboard: React.FC<FreeTierDashboardProps> = ({ onDownloadAttempt
                       <div className="flex items-center gap-2 text-gray-300">
                         <div className="w-2 h-2 bg-green-400 rounded-full"></div>
                         <span>Maintain dynamics</span>
-                      </div>
+                    </div>
                       <div className="flex items-center gap-2 text-gray-300">
                         <div className="w-2 h-2 bg-green-400 rounded-full"></div>
                         <span>WAV/MP3 format</span>
-                      </div>
-                    </div>
                   </div>
+                </div>
+          </div>
                 </div>
                 <div className="mt-4 p-3 bg-amber-500/10 rounded-lg border border-amber-500/20">
                   <p className="text-xs text-amber-300 text-center">
@@ -1059,25 +1059,25 @@ const FreeTierDashboard: React.FC<FreeTierDashboardProps> = ({ onDownloadAttempt
                 
                 {/* Pricing Notice */}
                 <div className="mt-4 p-4 bg-gradient-to-r from-green-500/10 to-green-400/10 border border-green-500/20 rounded-lg">
-                  <div className="text-center">
+            <div className="text-center">
                     <h4 className="text-green-400 font-semibold mb-2 text-sm">💰 Pricing Model</h4>
                     <div className="flex flex-wrap justify-center gap-4 text-xs text-green-300">
                       <div className="flex items-center gap-1">
                         <span className="w-2 h-2 bg-green-400 rounded-full"></span>
                         <span>Mastering: FREE</span>
-                      </div>
+            </div>
                       <div className="flex items-center gap-1">
                         <span className="w-2 h-2 bg-amber-400 rounded-full"></span>
                         <span>Download: $2.99 for 1 download</span>
-                      </div>
+                  </div>
                       <div className="flex items-center gap-1">
                         <span className="w-2 h-2 bg-blue-400 rounded-full"></span>
                         <span>1 credit = 1 download</span>
-                      </div>
-                    </div>
                   </div>
                 </div>
-              </div>
+                          </div>
+                        </div>
+                    </div>
 
               {/* Upload Area */}
               <div 
@@ -1096,7 +1096,7 @@ const FreeTierDashboard: React.FC<FreeTierDashboardProps> = ({ onDownloadAttempt
                   onChange={handleFileUpload}
                   className="hidden"
                 />
-              </div>
+                        </div>
 
               {/* Uploaded File */}
               {uploadedFile && (
@@ -1105,31 +1105,31 @@ const FreeTierDashboard: React.FC<FreeTierDashboardProps> = ({ onDownloadAttempt
                     <div className="flex items-center gap-4">
                       <div className="w-12 h-12 bg-amber-500/20 rounded-lg flex items-center justify-center">
                         <Music className="w-6 h-6 text-amber-400" />
-                      </div>
+                        </div>
                       <div>
                         <h4 className="font-semibold">{uploadedFile.name}</h4>
                         <p className="text-sm text-gray-400">{formatFileSize(uploadedFile.processedSize || uploadedFile.size)}</p>
-                      </div>
-                    </div>
+                        </div>
+                        </div>
                     <button
                       onClick={startProcessing}
                       className="bg-amber-500 hover:bg-amber-600 text-black px-6 py-2 rounded-lg font-semibold transition-colors"
                     >
                       Start Mastering
                     </button>
-                  </div>
-                </div>
+                      </div>
+                    </div>
               )}
-            </div>
-          )}
+          </div>
+        )}
 
           {/* Processing Tab */}
           {activeTab === 'processing' && (
-            <div className="space-y-8">
-              <div className="text-center">
+          <div className="space-y-8">
+            <div className="text-center">
                 <h1 className="text-3xl font-bold text-amber-400 mb-2">Real-Time Processing</h1>
                 <p className="text-gray-400">Select genres and hear instant changes while playing</p>
-              </div>
+            </div>
 
               {/* File Info */}
               {uploadedFile && (
@@ -1139,11 +1139,11 @@ const FreeTierDashboard: React.FC<FreeTierDashboardProps> = ({ onDownloadAttempt
                       <h3 className="text-lg font-semibold mb-2">Selected File</h3>
                       <p className="text-gray-400">{uploadedFile.name}</p>
                       <p className="text-sm text-gray-500">{formatFileSize(uploadedFile.processedSize || uploadedFile.size)}</p>
-                    </div>
+                  </div>
                     <div className="text-right">
                       <span className="text-sm text-gray-400">Ready for real-time processing</span>
                     </div>
-                  </div>
+                    </div>
                 </div>
               )}
 
@@ -1165,15 +1165,15 @@ const FreeTierDashboard: React.FC<FreeTierDashboardProps> = ({ onDownloadAttempt
                        <span className="font-medium text-sm">{genre.name}</span>
                      </button>
                    ))}
-                 </div>
-                
+                  </div>
+
                                  {!selectedGenre && (
                    <div className="mt-4 text-center">
                      <p className="text-sm text-gray-400">
                        Select a genre above to start real-time processing
                      </p>
-                   </div>
-                 )}
+                        </div>
+                      )}
               </div>
 
               {/* Real-Time Audio Player */}
@@ -1184,7 +1184,7 @@ const FreeTierDashboard: React.FC<FreeTierDashboardProps> = ({ onDownloadAttempt
                   <div className="text-center">
                     <div className="w-12 h-12 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-3">
                       <span className="text-xl">⚠️</span>
-                    </div>
+                  </div>
                     <p className="text-sm text-red-400 mb-2">Audio Error</p>
                     <p className="text-xs text-gray-400">{error}</p>
                     <button
@@ -1196,7 +1196,7 @@ const FreeTierDashboard: React.FC<FreeTierDashboardProps> = ({ onDownloadAttempt
                     >
                       Retry
                     </button>
-                  </div>
+                    </div>
                 ) : isProcessingReady ? (
                   <div className="space-y-4">
                     {/* Mastered audio controls */}
@@ -1210,8 +1210,8 @@ const FreeTierDashboard: React.FC<FreeTierDashboardProps> = ({ onDownloadAttempt
                               ? 'bg-red-500 hover:bg-red-600 text-white'
                               : 'bg-amber-500 hover:bg-amber-600 text-black'
                           } disabled:bg-gray-500 disabled:cursor-not-allowed`}
-                        >
-                          {isPlayingMastered ? (
+                    >
+                      {isPlayingMastered ? (
                             <Pause className="w-6 h-6" />
                           ) : (
                             <Play className="w-6 h-6" />
@@ -1222,17 +1222,17 @@ const FreeTierDashboard: React.FC<FreeTierDashboardProps> = ({ onDownloadAttempt
                           <div className="flex items-center space-x-2">
                             <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
                             <span className="text-sm text-green-400 font-medium">Live Processing</span>
-                          </div>
+                  </div>
                         )}
                         
                         {isApplyingPreset && (
                           <div className="flex items-center space-x-2">
                             <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse"></div>
                             <span className="text-sm text-amber-500 font-medium">Applying Preset...</span>
-                          </div>
-                        )}
-                      </div>
-                      
+                    </div>
+                  )}
+            </div>
+
                       <div className="mt-3 text-center">
                         <p className="text-xs text-gray-400">
                           {isApplyingPreset 
@@ -1250,8 +1250,8 @@ const FreeTierDashboard: React.FC<FreeTierDashboardProps> = ({ onDownloadAttempt
                               <span>Gain: {gainNode.gain.value.toFixed(1)}</span>
                               <span>Threshold: {compressorNode.threshold.value.toFixed(1)}dB</span>
                               <span>Ratio: {compressorNode.ratio.value.toFixed(1)}:1</span>
-                            </div>
-                          </div>
+                  </div>
+                        </div>
                         )}
                       </div>
                     </div>
@@ -1260,15 +1260,15 @@ const FreeTierDashboard: React.FC<FreeTierDashboardProps> = ({ onDownloadAttempt
                       <p className="text-xs text-amber-500">
                         {selectedGenre ? `Real-time ${selectedGenre.name} mastering` : 'Real-time audio processing'}
                       </p>
-                    </div>
                   </div>
+                        </div>
                 ) : (
                   <div className="bg-gray-700 rounded-lg p-6 text-center">
                     <div className="w-6 h-6 border-2 border-amber-500 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
                     <p className="text-xs text-gray-400">Initializing audio processing...</p>
-                  </div>
+                        </div>
                 )}
-              </div>
+            </div>
 
               {/* Instructions */}
               <div className="bg-gray-800/50 rounded-lg p-6">
@@ -1277,25 +1277,25 @@ const FreeTierDashboard: React.FC<FreeTierDashboardProps> = ({ onDownloadAttempt
                   <div className="space-y-2">
                     <div className="w-12 h-12 bg-amber-500/20 rounded-full flex items-center justify-center mx-auto">
                       <span className="text-xl">🎵</span>
-                    </div>
+                  </div>
                     <h4 className="font-medium">1. Choose Your Style</h4>
                     <p className="text-sm text-gray-400">Select from our premium mastering styles</p>
                   </div>
                   <div className="space-y-2">
                     <div className="w-12 h-12 bg-amber-500/20 rounded-full flex items-center justify-center mx-auto">
                       <span className="text-xl">▶️</span>
-                    </div>
+                </div>
                     <h4 className="font-medium">2. Experience the Magic</h4>
                     <p className="text-sm text-gray-400">Click play to hear your audio transformed instantly</p>
-                  </div>
+          </div>
                   <div className="space-y-2">
                     <div className="w-12 h-12 bg-amber-500/20 rounded-full flex items-center justify-center mx-auto">
                       <span className="text-xl">⚡</span>
-                    </div>
+            </div>
                     <h4 className="font-medium">3. Switch Styles Live</h4>
                     <p className="text-sm text-gray-400">Change mastering styles while playing to hear real-time differences</p>
                   </div>
-                </div>
+                          </div>
                 
                 {/* Real-time switching instructions */}
                 {selectedGenre && (
@@ -1305,10 +1305,10 @@ const FreeTierDashboard: React.FC<FreeTierDashboardProps> = ({ onDownloadAttempt
                       Click on any mastering style above while your audio is playing to hear instant changes. 
                       The effects will apply immediately without stopping the playback.
                     </p>
-                  </div>
+                          </div>
                 )}
-              </div>
-
+                        </div>
+                        
                              {/* Next Button */}
                {selectedGenre && (
                  <div className="flex justify-center">
@@ -1329,10 +1329,10 @@ const FreeTierDashboard: React.FC<FreeTierDashboardProps> = ({ onDownloadAttempt
                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                      </svg>
                    </button>
-                 </div>
-               )}
-            </div>
-          )}
+              </div>
+            )}
+          </div>
+        )}
 
                                 {/* Download Tab */}
                           {activeTab === 'download' && (
