@@ -59,25 +59,16 @@ jobs:
           target: "/var/www/frontend_publish/version.txt"
           overwrite: true
 
-      - name: Update backend and restart services
+      - name: Restart nginx service
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USERNAME }}
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
-            set -euo pipefail
-            REPO_DIR=/var/www/crysgarage
-            
-            echo "Updating repository on VPS..."
-            cd "$REPO_DIR"
-            git fetch --all --prune
-            git reset --hard origin/${GITHUB_REF_NAME:-main} || git reset --hard origin/main || git reset --hard origin/master
-            
             echo "Restarting nginx container..."
             docker restart nginx-ssl || docker restart nginx-static || true
-            
-            echo "Deployment completed successfully!"
+            echo "Frontend deployment completed successfully!"
 
       - name: Verify deployment
         run: |
