@@ -526,10 +526,19 @@ const FreeTierDashboardPython: React.FC = () => {
   const handleProcessAudio = async () => {
     if (!uploadedFile || !selectedGenre) return;
 
-    // Free tier - no credit checking required
-    if (!effectiveUser || !effectiveUser.id) {
+    // Free tier - no credit checking required; in Dev Mode, auto-use dev user id
+    // Resolve a safe user id string
+    let userId: string | null = null;
+    try {
+      // Lazy import to avoid bundling cycles
+      const { DEV_MODE, DEV_USER } = await import('../../utils/devMode');
+      userId = DEV_MODE ? (DEV_USER?.id || 'dev-user') : (effectiveUser?.id ? String(effectiveUser.id) : null);
+    } catch (_e) {
+      // Fallback if dynamic import fails
+      userId = effectiveUser?.id ? String(effectiveUser.id) : 'dev-user';
+    }
+    if (!userId) {
       console.error('User not authenticated or missing ID');
-      alert('Please log in to process audio');
       return;
     }
 
@@ -561,7 +570,7 @@ const FreeTierDashboardPython: React.FC = () => {
         uploadedFile.file,
         'free',
         selectedGenre.id || selectedGenre.name,
-        effectiveUser.id.toString(),
+        userId,
         backendFormat,
         downloadSampleRate
       );

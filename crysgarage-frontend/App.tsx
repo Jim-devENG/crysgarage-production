@@ -3,7 +3,7 @@ import { AuthenticationProvider, useAuth } from './contexts/AuthenticationContex
 import { AppProvider } from './contexts/AppContext';
 import { LandingPage } from './components/LandingPage';
 import { FreeTierDashboard } from './components/FreeTier';
-import FreeTierDashboardPython from './components/FreeTier/FreeTierDashboardPython';
+// import FreeTierDashboardPython from './components/FreeTier/FreeTierDashboardPython';
 import ProfessionalTierDashboard from './components/ProfessionalTier/ProfessionalTierDashboard';
 import AdvancedTierDashboard from './components/AdvancedTierDashboard/index';
 import { Header } from './components/Header';
@@ -34,6 +34,10 @@ import CookiePolicy from './components/CookiePolicy';
 import Support from './components/Support';
 import Careers from './components/Careers';
 import DevAccess from './components/DevAccess';
+import MatcheringTierOne from './components/MatcheringTierOne';
+import UploadPage from './components/matchering/UploadPage';
+import BeforeAfterPage from './components/matchering/BeforeAfterPage';
+import DownloadPage from './components/matchering/DownloadPage';
 
 function AppContent() {
   const { user, isAuthenticated, isLoading } = useAuth();
@@ -125,7 +129,7 @@ function AppContent() {
     
     // Navigate to appropriate dashboard based on tier
     if (selectedTier === 'free') {
-      handleNavigation('dashboard');
+      handleNavigation('matchering-upload');
     } else if (selectedTier === 'professional') {
       handleNavigation('professional');
     } else if (selectedTier === 'advanced') {
@@ -197,7 +201,7 @@ function AppContent() {
         )}
 
         {currentPage === 'dashboard' && (
-          <FreeTierDashboardPython />
+          <MatcheringTierOne />
         )}
 
         {currentPage === 'professional' && (
@@ -208,6 +212,22 @@ function AppContent() {
 
         {currentPage === 'advanced' && (
           <AdvancedTierDashboard />
+        )}
+
+        {currentPage === 'matchering' && (
+          <MatcheringTierOne />
+        )}
+
+        {currentPage === 'matchering-upload' && (
+          <UploadPage onNext={() => handleNavigation('matchering-compare')} />
+        )}
+
+        {currentPage === 'matchering-compare' && (
+          <BeforeAfterPage onBack={() => handleNavigation('matchering-upload')} onNext={() => handleNavigation('matchering-download')} />
+        )}
+
+        {currentPage === 'matchering-download' && (
+          <DownloadPage onBack={() => handleNavigation('matchering-compare')} />
         )}
 
         {currentPage === 'profile' && (

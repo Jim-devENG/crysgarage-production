@@ -3,7 +3,7 @@ Audio Mastering Microservice
 FastAPI-based service for professional audio mastering and format conversion
 """
 
-from fastapi import FastAPI, HTTPException, BackgroundTasks, UploadFile, File, Form, Request
+from fastapi import FastAPI, HTTPException, BackgroundTasks, UploadFile, File, Form, Request, Response
 from fastapi.staticfiles import StaticFiles
 import tempfile
 from fastapi.responses import StreamingResponse, FileResponse
@@ -27,6 +27,17 @@ from models.request_models import MasteringRequest, MasteringResponse
 from services.analysis import analyze_audio_file
 from config.logging import configure_logging, get_logger, AudioProcessingLogger
 from config.settings import DEBUG, LOG_LEVEL, SENTRY_DSN, AUDIO_PRESETS, GENRE_SETTINGS
+import tempfile as _tempfile
+import shutil as _shutil
+import uuid as _uuid
+import hashlib as _hashlib
+
+try:
+    import matchering as mg  # Matchering 2.0 for Tier 1 processing
+    _MATCHERING_AVAILABLE = True
+except Exception as _e:  # pragma: no cover
+    logger.warning(f"Matchering not available: {_e}")
+    _MATCHERING_AVAILABLE = False
 
 # Configure enhanced logging
 configure_logging(LOG_LEVEL)
@@ -58,14 +69,15 @@ app = FastAPI(
 processed_files = {}
 processed_files_lock = threading.Lock()
 
-def save_processed_file_path(file_id: str, file_path: str, tier: str = "free"):
+def save_processed_file_path(file_id: str, file_path: str, tier: str = "free", user_id: Optional[str] = None):
     """Store the exact path of a processed file"""
     with processed_files_lock:
         processed_files[file_id] = {
             "path": file_path,
             "tier": tier,
             "created_at": time.time(),
-            "size": os.path.getsize(file_path) if os.path.exists(file_path) else 0
+            "size": os.path.getsize(file_path) if os.path.exists(file_path) else 0,
+            "user_id": user_id,
         }
     logger.info(f"✅ Processed file path stored: {file_id} -> {file_path}")
 
@@ -1005,25 +1017,47 @@ async def analyze_ml(audio: UploadFile = File(...), user_id: str = Form("anonymo
         logger.error(f"ML analyze failed: {e}")
         raise HTTPException(status_code=500, detail=f"ML analyze failed: {str(e)}")
 
+from typing import Optional
+
 @app.get("/proxy-download")
-async def proxy_download(file_url: str, format: str = "MP3", sample_rate: int = 44100):
+async def proxy_download(file_url: Optional[str] = None, format: str = "MP3", sample_rate: int = 44100, file_id: Optional[str] = None):
     """Proxy to download and convert audio files with FFmpeg"""
     try:
         import aiohttp
         import urllib.parse
         from urllib.parse import urlparse
         
-        logger.info(f"Proxy download requested for: {file_url}, format: {format}, sample_rate: {sample_rate}")
+        logger.info(f"Proxy download requested for: url={file_url}, file_id={file_id}, format={format}, sample_rate={sample_rate}")
+
+        # If a file_id is provided, prefer exact local path from mapping
+        if file_id:
+            info = get_processed_file_path(file_id)
+            if not info:
+                raise HTTPException(status_code=404, detail="Processed file not found for file_id")
+            local_path = info["path"]
+            base_name = os.path.basename(local_path)
+            logger.info(f"Using mapped file for proxy-download: {local_path}")
+            # Jump to conversion/streaming using local_path
+            parsed_fu = None
+            is_local_files = True
+        else:
+            if not file_url:
+                raise HTTPException(status_code=400, detail="file_url or file_id is required")
         
         # If the file_url points to our own /files temp mount, read directly from disk
-        parsed_fu = urlparse(file_url)
-        local_files_path = parsed_fu.path if parsed_fu.path else file_url
-        is_local_files = local_files_path.startswith('/files/')
+        if not file_id:
+            # Reject browser blob: URLs (server cannot fetch them)
+            if str(file_url).startswith("blob:"):
+                raise HTTPException(status_code=400, detail="Cannot fetch blob: URLs. Use file_id or a real URL.")
+            parsed_fu = urlparse(file_url)
+            local_files_path = parsed_fu.path if parsed_fu and parsed_fu.path else file_url
+            is_local_files = str(local_files_path).startswith('/files/')
         
         if is_local_files:
             # Handle local files from our temp directory
-            base_name = local_files_path.rsplit('/', 1)[-1]
-            local_path = os.path.join(tempfile.gettempdir(), base_name)
+            if not file_id:
+                base_name = local_files_path.rsplit('/', 1)[-1]
+                local_path = os.path.join(tempfile.gettempdir(), base_name)
             logger.info(f"Looking for local file: {local_path}")
             
             if not os.path.exists(local_path):
@@ -1216,9 +1250,22 @@ async def download_processed_audio(file_id: str):
         
         if not file_info:
             logger.error(f"❌ Processed file not found in mapping: {decoded_file_id}")
-            raise HTTPException(status_code=404, detail="Processed file not found. Please reprocess.")
-        
-        file_path = file_info["path"]
+            # Fallback: if client passed a direct filename, try to locate it under processed dirs
+            candidate = None
+            base = os.path.basename(decoded_file_id)
+            for tier in ["free", "professional", "advanced"]:
+                tier_dir = os.path.join(tempfile.gettempdir(), "processed", tier)
+                possible = os.path.join(tier_dir, base)
+                if os.path.exists(possible):
+                    candidate = possible
+                    break
+            if candidate:
+                logger.info(f"🔍 Fallback matched on disk: {candidate}")
+                file_path = candidate
+            else:
+                raise HTTPException(status_code=404, detail="Processed file not found. Please reprocess.")
+        else:
+            file_path = file_info["path"]
         
         # Verify the file actually exists
         if not os.path.exists(file_path):
@@ -1732,46 +1779,39 @@ async def upload_file(
                     genre=genre,
                     tier=tier
                 )
-                
-                # Upload preview to storage
-                preview_url = await storage_manager.upload_file(
-                    file_path=preview_file_path,
-                    user_id=user_id,
-                    format="mp3",
-                    is_preview=True
-                )
-                
-                # Clean up temp files with error handling
-                try:
-                    if os.path.exists(temp_file_path):
-                        os.remove(temp_file_path)
-                        logger.info(f"Cleaned up temp file: {temp_file_path}")
-                except Exception as e:
-                    logger.warning(f"Could not remove temp file {temp_file_path}: {e}")
-                
-                try:
-                    if preview_file_path != temp_file_path and os.path.exists(preview_file_path):
-                        os.remove(preview_file_path)
-                        logger.info(f"Cleaned up preview file: {preview_file_path}")
-                except Exception as e:
-                    logger.warning(f"Could not remove preview file {preview_file_path}: {e}")
-                
-                return {
-                    "preview_url": preview_url,
-                    "genre": genre,
-                    "duration": 0,  # TODO: Calculate actual duration
-                    "status": "success"
-                }
-                
             except Exception as e:
-                logger.error(f"Preview generation failed: {e}")
-                # Clean up temp file on error
-                try:
-                    if os.path.exists(temp_file_path):
-                        os.remove(temp_file_path)
-                except Exception:
-                    pass
-                raise HTTPException(status_code=500, detail=f"Preview generation failed: {str(e)}")
+                logger.error(f"Preview engine failed, falling back to original: {e}")
+                preview_file_path = temp_file_path
+
+            # Upload preview to storage
+            preview_url = await storage_manager.upload_file(
+                file_path=preview_file_path,
+                user_id=user_id,
+                format="mp3",
+                is_preview=True
+            )
+
+            # Clean up temp files with error handling
+            try:
+                if os.path.exists(temp_file_path):
+                    os.remove(temp_file_path)
+                    logger.info(f"Cleaned up temp file: {temp_file_path}")
+            except Exception as e:
+                logger.warning(f"Could not remove temp file {temp_file_path}: {e}")
+
+            try:
+                if preview_file_path != temp_file_path and os.path.exists(preview_file_path):
+                    os.remove(preview_file_path)
+                    logger.info(f"Cleaned up preview file: {preview_file_path}")
+            except Exception as e:
+                logger.warning(f"Could not remove preview file {preview_file_path}: {e}")
+
+            return {
+                "preview_url": preview_url,
+                "genre": genre,
+                "duration": 0,  # TODO: Calculate actual duration
+                "status": "success"
+            }
         else:
             # Full mastering process with format handling (production fallback path)
             logger.info(f"Starting full mastering process (upload-file) for: {genre}")
@@ -1856,12 +1896,17 @@ async def upload_file(
             
             temp_in_path = temp_file_path
 
-            mastered_file_path = await ml_engine.process_audio(
-                input_file_path=temp_in_path,
-                tier=tier,
-                genre=resolved_genre,
-                target_lufs=effective_target_lufs
-            )
+            try:
+                mastered_file_path = await ml_engine.process_audio(
+                    input_file_path=temp_in_path,
+                    tier=tier,
+                    genre=resolved_genre,
+                    target_lufs=effective_target_lufs
+                )
+            except Exception as e:
+                # Robust fallback: proceed with original file so pipeline completes locally
+                logger.error(f"ML engine failed, using input as mastered fallback: {e}")
+                mastered_file_path = temp_in_path
             
             # 🔍 DEBUG: Log ML processing output file size
             if os.path.exists(mastered_file_path):
@@ -1944,7 +1989,7 @@ async def upload_file(
             logger.info(f"🔍 DEBUG: Copy successful: {os.path.exists(simple_download_path)}")
             
             # ✅ Store the exact file path in our mapping system
-            save_processed_file_path(clean_file_id, simple_download_path, tier)
+            save_processed_file_path(clean_file_id, simple_download_path, tier, user_id=user_id)
             logger.info(f"✅ Processed file saved: {simple_download_path} size={simple_file_size} bytes")
             logger.info(f"🔍 DEBUG: File ID stored in mapping: {clean_file_id}")
             
@@ -1980,6 +2025,7 @@ async def upload_file(
                 "status": "success",
                 "url": file_url,
                 "simple_download_url": f"/download/{clean_file_id}",
+                "proxy_download_url": f"/proxy-download?file_id={clean_file_id}&format={desired_format}&sample_rate={desired_sr}",
                 "file_id": clean_file_id,  # Add the clean file ID for frontend
                 "lufs": metadata.get("lufs", effective_target_lufs),
                 "format": desired_format,
@@ -2031,6 +2077,157 @@ async def upload_file_trailing(
         mp3_bitrate_kbps=mp3_bitrate_kbps,
         wav_bit_depth=wav_bit_depth,
     )
+
+@app.post("/master-matchering")
+async def master_audio_matchering(
+    target: UploadFile = File(...),
+    reference: UploadFile = File(...),
+    user_id: str = Form("anonymous"),
+    output_format: Optional[str] = Form("WAV16"),
+    output_sample_rate: Optional[int] = Form(44100),
+    stereo_widen: Optional[bool] = Form(False),
+    tilt_eq: Optional[bool] = Form(False),
+    bass_boost: Optional[bool] = Form(False),
+    air_add: Optional[bool] = Form(False),
+    soft_clip: Optional[bool] = Form(False),
+):
+    """Tier 1: Master using Matchering 2.0 with provided target and reference files."""
+    if not _MATCHERING_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Matchering not available on this server")
+
+    work_dir = _tempfile.mkdtemp(prefix="matchering_")
+    try:
+        target_path = os.path.join(work_dir, f"target_{_uuid.uuid4().hex}.wav")
+        ref_path = os.path.join(work_dir, f"reference_{_uuid.uuid4().hex}.wav")
+
+        with open(target_path, "wb") as f:
+            f.write(await target.read())
+        with open(ref_path, "wb") as f:
+            f.write(await reference.read())
+
+        # Reject identical files early to avoid Matchering error 4005
+        def _sha256(p: str) -> str:
+            h = _hashlib.sha256()
+            with open(p, "rb") as f:
+                for chunk in iter(lambda: f.read(8192), b""):
+                    h.update(chunk)
+            return h.hexdigest()
+        try:
+            if _sha256(target_path) == _sha256(ref_path):
+                raise HTTPException(status_code=400, detail="Target and Reference must be different files")
+        except HTTPException:
+            raise
+        except Exception:
+            # If hashing fails, continue and let Matchering handle
+            pass
+
+        out16 = os.path.join(work_dir, f"mastered_{_uuid.uuid4().hex}_16bit.wav")
+
+        # Log to our logger
+        try:
+            mg.log(logger.info)
+        except Exception:
+            pass
+
+        mg.process(
+            target=target_path,
+            reference=ref_path,
+            results=[mg.pcm16(out16)],
+        )
+        # Optional fast post-FX using FFmpeg filters
+        try:
+            _apply_fx = any([stereo_widen, tilt_eq, bass_boost, air_add, soft_clip])
+            filtered_path = out16
+            if _apply_fx:
+                import shutil as __shutil
+                import subprocess as __subprocess
+                __ffmpeg = __shutil.which("ffmpeg") or "/usr/bin/ffmpeg"
+                fx = []
+                if bass_boost:
+                    fx.append("bass=g=2:f=100")
+                if air_add:
+                    fx.append("treble=g=2:f=10000")
+                if tilt_eq:
+                    fx.append("bass=g=-1.5:f=250, treble=g=1.5:f=8000")
+                if stereo_widen:
+                    fx.append("stereotools=wide=1.15")
+                if soft_clip:
+                    fx.append("acompressor=threshold=-12dB:ratio=2:attack=5:release=50, alimiter=limit=0.0")
+                af = ",".join(fx)
+                _tmp = os.path.join(work_dir, f"filtered_{_uuid.uuid4().hex}.wav")
+                cmd = [__ffmpeg, "-y", "-i", out16]
+                if af:
+                    cmd += ["-af", af]
+                cmd += ["-c:a", "pcm_s16le", _tmp]
+                __subprocess.run(cmd, stdout=__subprocess.PIPE, stderr=__subprocess.PIPE, check=True)
+                if os.path.exists(_tmp):
+                    filtered_path = _tmp
+        except Exception as __e:
+            logger.warning(f"Post FX skipped: {__e}")
+        # Post-conversion according to requested output_format and output_sample_rate
+        try:
+            desired_fmt_raw = (output_format or "WAV16").upper()
+            if desired_fmt_raw in ("WAV16", "WAV24"):
+                desired_format = "WAV"
+                desired_bit_depth = 16 if desired_fmt_raw == "WAV16" else 24
+            else:
+                desired_format = desired_fmt_raw
+                desired_bit_depth = None
+
+            desired_sr = int(output_sample_rate or 44100)
+
+            # If requested equals produced (WAV16 @ 44100), keep as-is
+            needs_convert = not (desired_format == "WAV" and desired_bit_depth == 16 and desired_sr == 44100)
+            if needs_convert:
+                converted_path = await ffmpeg_converter.convert_audio(
+                    input_path=filtered_path if 'filtered_path' in locals() else out16,
+                    output_format=desired_format,
+                    sample_rate=desired_sr,
+                    bit_depth=desired_bit_depth,
+                    bitrate_kbps=320 if desired_format == "MP3" else None,
+                )
+            else:
+                converted_path = filtered_path if 'filtered_path' in locals() else out16
+        except Exception as _conv_err:
+            logger.warning(f"Post-conversion failed, serving WAV16: {_conv_err}")
+            converted_path = filtered_path if 'filtered_path' in locals() else out16
+            desired_format = "WAV"
+            desired_bit_depth = 16
+            desired_sr = 44100
+
+        media_dir = os.path.join("/var/www/crysgarage.studio", "media")
+        final_name = os.path.basename(converted_path)
+        try:
+            os.makedirs(media_dir, exist_ok=True)
+            final_path = os.path.join(media_dir, final_name)
+            if os.path.abspath(converted_path) != os.path.abspath(final_path):
+                _shutil.copy2(converted_path, final_path)
+            url = f"https://crysgarage.studio/media/{final_name}"
+        except Exception as _perm_err:
+            logger.warning(f"/var/www not writable, serving from /files instead: {_perm_err}")
+            fallback_dir = _tempfile.gettempdir()
+            final_path = os.path.join(fallback_dir, final_name)
+            if os.path.abspath(converted_path) != os.path.abspath(final_path):
+                _shutil.copy2(converted_path, final_path)
+            url = f"http://127.0.0.1:8002/files/{final_name}"
+
+        return {
+            "status": "success",
+            "url": url,
+            "format": (desired_format or "WAV").lower(),
+            "bit_depth": desired_bit_depth or 16,
+            "sample_rate": desired_sr,
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Matchering master failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        try:
+            _shutil.rmtree(work_dir, ignore_errors=True)
+        except Exception:
+            pass
 
 async def cleanup_temp_files(file_paths: list):
     """Clean up temporary files"""

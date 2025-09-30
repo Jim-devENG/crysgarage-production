@@ -4,6 +4,7 @@
  */
 
 import axios from 'axios';
+// Note: Dev Mode should still exercise the Python backend to match real behavior
 
 // Determine Python base URL at runtime to avoid accidental root-relative calls in production
 const isLocal = typeof window !== 'undefined'
@@ -17,7 +18,7 @@ const computePythonBaseUrl = (): string => {
   }
   const { hostname, origin } = window.location;
   if (hostname === 'localhost' || hostname === '127.0.0.1') {
-    return 'http://localhost:8002';
+    return 'http://127.0.0.1:8002';
   }
   return origin || 'https://crysgarage.studio';
 };
@@ -258,6 +259,7 @@ class PythonAudioService {
     targetLufs?: number
   ): Promise<MasteringResponse> {
     try {
+      // Always use server processing even in Dev Mode so behavior matches production
       if (isLocal) {
         // Local dev mirrors production: direct to Python upload-file
         if (!this.baseURL || !this.baseURL.startsWith('http')) {
