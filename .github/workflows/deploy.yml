@@ -66,9 +66,8 @@ jobs:
           username: ${{ secrets.VPS_USERNAME }}
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
-            echo "Restarting nginx container..."
-            docker restart nginx-ssl || docker restart nginx-static || true
-            echo "Frontend deployment completed successfully!"
+            echo "Frontend files uploaded successfully!"
+            echo "Deployment completed!"
 
       - name: Verify deployment
         run: |
