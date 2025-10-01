@@ -65,6 +65,12 @@ class FFmpegConverter:
             str: Path to converted audio file
         """
         try:
+            logger.info(f"🔍 DEBUG: FFmpegConverter.convert_audio called with:")
+            logger.info(f"🔍 DEBUG: - input_path: {input_path}")
+            logger.info(f"🔍 DEBUG: - output_format: {output_format}")
+            logger.info(f"🔍 DEBUG: - sample_rate: {sample_rate}")
+            logger.info(f"🔍 DEBUG: - bit_depth: {bit_depth}")
+            logger.info(f"🔍 DEBUG: - bitrate_kbps: {bitrate_kbps}")
             logger.info(f"Converting audio: {input_path} -> {output_format} @ {sample_rate}Hz")
             
             # Validate inputs
@@ -86,6 +92,8 @@ class FFmpegConverter:
             cmd = self._build_ffmpeg_command(
                 input_path, output_path, output_format, sample_rate, bit_depth, bitrate_kbps
             )
+            
+            logger.info(f"🔍 DEBUG: FFmpeg command: {' '.join(cmd)}")
             
             # Execute conversion
             await self._execute_ffmpeg(cmd)
@@ -148,14 +156,19 @@ class FFmpegConverter:
             if bit_depth:
                 if bit_depth == 16:
                     cmd.extend(['-acodec', 'pcm_s16le'])
+                    logger.info(f"🔍 DEBUG: WAV 16-bit conversion")
                 elif bit_depth == 24:
                     cmd.extend(['-acodec', 'pcm_s24le'])
+                    logger.info(f"🔍 DEBUG: WAV 24-bit conversion")
                 elif bit_depth == 32:
                     cmd.extend(['-acodec', 'pcm_s32le'])
+                    logger.info(f"🔍 DEBUG: WAV 32-bit conversion")
                 else:
                     cmd.extend(['-acodec', 'pcm_s24le'])
+                    logger.info(f"🔍 DEBUG: WAV default 24-bit conversion")
             else:
                 cmd.extend(['-acodec', 'pcm_s24le'])
+                logger.info(f"🔍 DEBUG: WAV default 24-bit conversion (no bit_depth specified)")
         
         elif output_format == 'MP3':
             cmd.extend([

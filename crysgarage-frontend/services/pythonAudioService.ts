@@ -305,6 +305,7 @@ class PythonAudioService {
         return {
           status: 'done',
           url: masteredUrl,
+          file_id: resp.data?.file_id,
           lufs: -8,
           format: resolvedFormat,
           duration: 0,
@@ -357,6 +358,7 @@ class PythonAudioService {
         return {
           status: 'done',
           url: masteredUrl,
+          file_id: resp.data?.file_id,
           lufs: -8,
           format: resolvedFormat,
           duration: 0,

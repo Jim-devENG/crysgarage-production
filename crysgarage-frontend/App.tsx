@@ -51,8 +51,8 @@ function AppContent() {
   useEffect(() => {
     const handlePopState = () => {
       const path = window.location.pathname.substring(1);
-      // If path is empty (root URL), set to 'home'
-      const page = path === '' ? 'home' : path;
+      // If path is empty (root URL), set to 'landing'
+      const page = path === '' ? 'landing' : path;
       setCurrentPage(page);
     };
 
@@ -129,7 +129,7 @@ function AppContent() {
     
     // Navigate to appropriate dashboard based on tier
     if (selectedTier === 'free') {
-      handleNavigation('matchering-upload');
+      handleNavigation('dashboard');
     } else if (selectedTier === 'professional') {
       handleNavigation('professional');
     } else if (selectedTier === 'advanced') {
@@ -188,8 +188,8 @@ function AppContent() {
         )}
         {currentPage === 'landing' && (
           <LandingPage 
-            onGetStarted={() => handleNavigation('studio')}
-            onTryMastering={() => handleNavigation('studio')}
+            onGetStarted={() => handleNavigation('dashboard')}
+            onTryMastering={() => handleNavigation('dashboard')}
           />
         )}
 
@@ -201,7 +201,7 @@ function AppContent() {
         )}
 
         {currentPage === 'dashboard' && (
-          <MatcheringTierOne />
+          <UploadPage onNext={() => handleNavigation('matchering-compare')} />
         )}
 
         {currentPage === 'professional' && (

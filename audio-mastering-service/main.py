@@ -1111,11 +1111,25 @@ async def proxy_download(file_url: Optional[str] = None, format: str = "MP3", sa
             
             # Convert the file using FFmpeg if format conversion is needed
             input_ext = os.path.splitext(local_path)[1].lower().lstrip('.')
-            output_ext = format.lower()
+            
+            # Handle WAV16/WAV24 format conversion
+            if format.upper() in ["WAV16", "WAV24"]:
+                desired_format = "WAV"
+                wav_bit_depth = 16 if "16" in format.upper() else 24
+                output_ext = "wav"
+                logger.info(f"🎵 DEBUG: WAV conversion - format={format}, bit_depth={wav_bit_depth}")
+            else:
+                desired_format = format
+                wav_bit_depth = None
+                output_ext = format.lower()
             
             # Check if conversion is needed
-            if input_ext != output_ext or sample_rate != 44100:
-                logger.info(f"🎵 Converting {input_ext} to {output_ext} at {sample_rate}Hz")
+            # Always convert for WAV16/WAV24 to ensure correct bit depth
+            needs_conversion = (input_ext != output_ext or sample_rate != 44100 or 
+                               (format.upper() in ["WAV16", "WAV24"]))
+            
+            if needs_conversion:
+                logger.info(f"🎵 Converting {input_ext} to {output_ext} at {sample_rate}Hz (bit_depth={wav_bit_depth if format.upper() in ['WAV16', 'WAV24'] else 'default'})")
 
                 # Create output file name (path handled by converter)
                 output_filename = f"converted_{base_name.rsplit('.', 1)[0]}.{output_ext}"
@@ -1124,10 +1138,10 @@ async def proxy_download(file_url: Optional[str] = None, format: str = "MP3", sa
                 try:
                     converted_path = await ffmpeg_converter.convert_audio(
                         input_path=local_path,
-                        output_format=format,
+                        output_format=desired_format,
                         sample_rate=sample_rate,
-                        bit_depth=24 if format == 'WAV' else None,
-                        bitrate_kbps=320 if format == 'MP3' else None
+                        bit_depth=wav_bit_depth,
+                        bitrate_kbps=320 if desired_format == 'MP3' else None
                     )
 
                     # Use the converted file
@@ -1158,14 +1172,14 @@ async def proxy_download(file_url: Optional[str] = None, format: str = "MP3", sa
                     logger.error(f"Error reading file: {e}")
                     raise
             
-            # Determine content type from format
-            if format.upper() == 'WAV':
+            # Determine content type from desired_format (after conversion)
+            if desired_format.upper() == 'WAV':
                 media_type = "audio/wav"
-            elif format.upper() == 'MP3':
+            elif desired_format.upper() == 'MP3':
                 media_type = "audio/mpeg"
-            elif format.upper() == 'FLAC':
+            elif desired_format.upper() == 'FLAC':
                 media_type = "audio/flac"
-            elif format.upper() == 'AAC':
+            elif desired_format.upper() == 'AAC':
                 media_type = "audio/aac"
             else:
                 media_type = "application/octet-stream"
@@ -2085,11 +2099,6 @@ async def master_audio_matchering(
     user_id: str = Form("anonymous"),
     output_format: Optional[str] = Form("WAV16"),
     output_sample_rate: Optional[int] = Form(44100),
-    stereo_widen: Optional[bool] = Form(False),
-    tilt_eq: Optional[bool] = Form(False),
-    bass_boost: Optional[bool] = Form(False),
-    air_add: Optional[bool] = Form(False),
-    soft_clip: Optional[bool] = Form(False),
 ):
     """Tier 1: Master using Matchering 2.0 with provided target and reference files."""
     if not _MATCHERING_AVAILABLE:
@@ -2134,36 +2143,9 @@ async def master_audio_matchering(
             reference=ref_path,
             results=[mg.pcm16(out16)],
         )
-        # Optional fast post-FX using FFmpeg filters
-        try:
-            _apply_fx = any([stereo_widen, tilt_eq, bass_boost, air_add, soft_clip])
-            filtered_path = out16
-            if _apply_fx:
-                import shutil as __shutil
-                import subprocess as __subprocess
-                __ffmpeg = __shutil.which("ffmpeg") or "/usr/bin/ffmpeg"
-                fx = []
-                if bass_boost:
-                    fx.append("bass=g=2:f=100")
-                if air_add:
-                    fx.append("treble=g=2:f=10000")
-                if tilt_eq:
-                    fx.append("bass=g=-1.5:f=250, treble=g=1.5:f=8000")
-                if stereo_widen:
-                    fx.append("stereotools=wide=1.15")
-                if soft_clip:
-                    fx.append("acompressor=threshold=-12dB:ratio=2:attack=5:release=50, alimiter=limit=0.0")
-                af = ",".join(fx)
-                _tmp = os.path.join(work_dir, f"filtered_{_uuid.uuid4().hex}.wav")
-                cmd = [__ffmpeg, "-y", "-i", out16]
-                if af:
-                    cmd += ["-af", af]
-                cmd += ["-c:a", "pcm_s16le", _tmp]
-                __subprocess.run(cmd, stdout=__subprocess.PIPE, stderr=__subprocess.PIPE, check=True)
-                if os.path.exists(_tmp):
-                    filtered_path = _tmp
-        except Exception as __e:
-            logger.warning(f"Post FX skipped: {__e}")
+        # No effects processing for free tier
+        filtered_path = out16
+        logger.info("Free tier: No effects processing applied")
         # Post-conversion according to requested output_format and output_sample_rate
         try:
             desired_fmt_raw = (output_format or "WAV16").upper()
@@ -2211,13 +2193,25 @@ async def master_audio_matchering(
                 _shutil.copy2(converted_path, final_path)
             url = f"http://127.0.0.1:8002/files/{final_name}"
 
-        return {
+        # Generate a file_id for the processed file
+        import uuid
+        file_id = str(uuid.uuid4())
+        logger.info(f"🎵 DEBUG: Generated file_id: {file_id}")
+        
+        # Store the file path in our mapping system for proxy-download
+        save_processed_file_path(file_id, converted_path, "free", user_id=user_id)
+        logger.info(f"🎵 DEBUG: Stored file_id in mapping: {file_id}")
+        
+        response_data = {
             "status": "success",
             "url": url,
+            "file_id": file_id,
             "format": (desired_format or "WAV").lower(),
             "bit_depth": desired_bit_depth or 16,
             "sample_rate": desired_sr,
         }
+        logger.info(f"🎵 DEBUG: Returning response: {response_data}")
+        return response_data
     except HTTPException:
         raise
     except Exception as e:
