@@ -4,12 +4,23 @@
  * while preserving production authentication and payment logic
  */
 
-// Dev Mode is enabled strictly via env var AND only on localhost to prevent prod auto-dev behavior
+// Dev Mode detection
+// Enabled when:
+// 1) Local dev with env flag, OR
+// 2) Explicit prod override via /dev route or ?dev=1, OR
+// 3) Manual unlock flag in localStorage
 const envDev = import.meta.env.VITE_DEV_MODE === 'true';
 const isLocalhost = typeof window !== 'undefined' && window.location && (
   window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
 );
-export const DEV_MODE = envDev && isLocalhost;
+const urlForcesDev = typeof window !== 'undefined' && window.location && (
+  window.location.pathname === '/dev' ||
+  new URLSearchParams(window.location.search).get('dev') === '1'
+);
+const localUnlock = typeof window !== 'undefined' && (() => {
+  try { return localStorage.getItem('CRG_DEV_UNLOCK') === '1'; } catch { return false; }
+})();
+export const DEV_MODE = (envDev && isLocalhost) || urlForcesDev || localUnlock;
 
 // Dev Mode User Object
 export const DEV_USER = {
@@ -59,6 +70,10 @@ export function logDevAction(action: string, data?: any): void {
  */
 export function isDevMode(): boolean {
   return DEV_MODE;
+}
+
+export function enableDevUnlock(): void {
+  try { localStorage.setItem('CRG_DEV_UNLOCK', '1'); } catch {}
 }
 
 /**

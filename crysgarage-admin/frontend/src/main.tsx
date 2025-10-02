@@ -38,6 +38,22 @@ type DevLoginAudit = {
   location?: string
 }
 
+type Payment = {
+  id: number
+  user_id: string
+  user_email: string
+  amount: number
+  currency: string
+  tier: string
+  credits: number
+  payment_reference?: string
+  payment_provider: string
+  status: string
+  created_at: string
+  completed_at?: string
+  metadata?: string
+}
+
 type Metrics = {
   users: number
   active_users: number
@@ -97,10 +113,13 @@ function useAuth() {
   const login = async (username: string, password: string) => {
     setIsLoading(true)
     try {
-      const response = await fetch('https://crysgarage.studio/admin/api/auth/login', {
+      const form = new URLSearchParams()
+      form.set('username', username)
+      form.set('password', password)
+      const response = await fetch('https://crysgarage.studio/admin/api/v1/auth/login', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password })
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: form.toString()
       })
       
       if (response.ok) {
@@ -220,7 +239,7 @@ function Login({ onLogin }: { onLogin: (username: string, password: string) => P
 // Main App Component
 function App() {
   const { token, user, login, logout, isLoading } = useAuth()
-  const [tab, setTab] = React.useState<'metrics' | 'users' | 'masters' | 'logs' | 'access' | 'visitors' | 'waitlist'>('metrics')
+  const [tab, setTab] = React.useState<'metrics' | 'users' | 'masters' | 'logs' | 'access' | 'visitors' | 'waitlist' | 'payments'>('metrics')
   
   if (isLoading) {
     return (
@@ -323,6 +342,16 @@ function App() {
               </svg>
               Waitlist
             </button>
+            
+            <button 
+              className={`nav-item w-full ${tab === 'payments' ? 'nav-item-active' : ''}`}
+              onClick={() => setTab('payments')}
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+              </svg>
+              Payments
+            </button>
           </div>
         </nav>
       </aside>
@@ -354,6 +383,7 @@ function App() {
           {tab === 'access' && <AccessPanel token={token} />}
           {tab === 'visitors' && <VisitorsPanel token={token} />}
           {tab === 'waitlist' && <WaitlistPanel token={token} />}
+          {tab === 'payments' && <PaymentsPanel token={token} />}
         </main>
       </div>
     </div>
@@ -1020,6 +1050,144 @@ function WaitlistPanel({ token }: { token: string | null }) {
           </tbody>
         </table>
       </div>
+    </div>
+  )
+}
+
+function PaymentsPanel({ token }: { token: string | null }) {
+  const base = useAdminBase()
+  const authFetch = useAuthenticatedFetch(token)
+  const [payments, setPayments] = React.useState<Payment[] | null>(null)
+  const [analytics, setAnalytics] = React.useState<any>(null)
+  const [error, setError] = React.useState<string>()
+  const [page, setPage] = React.useState(0)
+  const pageSize = 10
+
+  const fetchPayments = React.useCallback(async () => {
+    if (!token) return
+    try {
+      const response = await authFetch(`${base}/api/v1/payments?limit=${pageSize}&offset=${page * pageSize}`)
+      if (response.ok) {
+        const data = await response.json()
+        setPayments(data.payments || [])
+      } else {
+        setError('Failed to fetch payments')
+      }
+    } catch (err) {
+      setError('Error fetching payments')
+    }
+  }, [authFetch, base, token, page, pageSize])
+
+  const fetchAnalytics = React.useCallback(async () => {
+    if (!token) return
+    try {
+      const response = await authFetch(`${base}/api/v1/payments/analytics`)
+      if (response.ok) {
+        const data = await response.json()
+        setAnalytics(data)
+      }
+    } catch (err) {
+      console.error('Error fetching payment analytics:', err)
+    }
+  }, [authFetch, base, token])
+
+  React.useEffect(() => {
+    fetchPayments()
+    fetchAnalytics()
+    const interval = setInterval(() => {
+      fetchPayments()
+      fetchAnalytics()
+    }, 60000)
+    return () => clearInterval(interval)
+  }, [fetchPayments, fetchAnalytics])
+
+  if (error) return <div className="text-red-400">{error}</div>
+  if (!payments || !analytics) return <div className="text-white/70">Loading...</div>
+
+  return (
+    <div>
+      <h1 className="text-2xl font-bold text-white mb-6">Payments</h1>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <MetricCard title="Total Revenue" value={`$${analytics.total_revenue?.toFixed(2) || '0.00'}`} />
+        <MetricCard title="Total Transactions" value={analytics.total_transactions || 0} />
+        <MetricCard title="Today's Revenue" value={`$${analytics.today_revenue?.toFixed(2) || '0.00'}`} />
+        <MetricCard title="Today's Transactions" value={analytics.today_transactions || 0} />
+      </div>
+
+      {analytics.tier_breakdown && Object.keys(analytics.tier_breakdown).length > 0 && (
+        <div className="mb-6">
+          <h3 className="text-lg font-semibold text-white mb-4">Revenue by Tier</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {Object.entries(analytics.tier_breakdown).map(([tier, data]: [string, any]) => (
+              <div key={tier} className="metric-card">
+                <div className="text-sm text-white/70 mb-2">{tier.charAt(0).toUpperCase() + tier.slice(1)}</div>
+                <div className="text-xl font-bold text-white">${data.revenue?.toFixed(2) || '0.00'}</div>
+                <div className="text-sm text-white/50">{data.count} transactions</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="overflow-x-auto">
+        <table className="table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>User Email</th>
+              <th>Amount</th>
+              <th>Tier</th>
+              <th>Credits</th>
+              <th>Status</th>
+              <th>Provider</th>
+              <th>Date</th>
+            </tr>
+          </thead>
+          <tbody>
+            {payments.map(payment => (
+              <tr key={payment.id}>
+                <td>{payment.id}</td>
+                <td>{payment.user_email}</td>
+                <td>${payment.amount.toFixed(2)}</td>
+                <td>{payment.tier}</td>
+                <td>{payment.credits}</td>
+                <td>
+                  <span className={`px-2 py-1 rounded text-xs ${
+                    payment.status === 'completed' 
+                      ? 'bg-green-500/20 text-green-400' 
+                      : 'bg-yellow-500/20 text-yellow-400'
+                  }`}>
+                    {payment.status}
+                  </span>
+                </td>
+                <td>{payment.payment_provider}</td>
+                <td>{new Date(payment.created_at).toLocaleDateString()}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {payments.length >= pageSize && (
+        <div className="flex justify-between items-center mt-4">
+          <button 
+            onClick={() => setPage(p => Math.max(0, p - 1))}
+            disabled={page === 0}
+            className="btn-secondary disabled:opacity-50"
+          >
+            Previous
+          </button>
+          <span className="text-white/70">Page {page + 1}</span>
+          <button 
+            onClick={() => setPage(p => p + 1)}
+            disabled={payments.length < pageSize}
+            className="btn-secondary disabled:opacity-50"
+          >
+            Next
+          </button>
+        </div>
+      )}
     </div>
   )
 }

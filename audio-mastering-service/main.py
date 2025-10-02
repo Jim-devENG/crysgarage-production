@@ -87,9 +87,9 @@ def get_processed_file_path(file_id: str) -> Optional[Dict[str, Any]]:
         return processed_files.get(file_id)
 
 def cleanup_old_processed_files():
-    """Clean up processed files older than 12 hours"""
+    """Clean up processed files older than 10 minutes"""
     current_time = time.time()
-    cleanup_threshold = 12 * 60 * 60  # 12 hours in seconds
+    cleanup_threshold = 10 * 60  # 10 minutes in seconds
     
     with processed_files_lock:
         to_remove = []
@@ -99,7 +99,7 @@ def cleanup_old_processed_files():
                 try:
                     if os.path.exists(file_info["path"]):
                         os.remove(file_info["path"])
-                        logger.info(f"🗑️ Cleaned up old processed file: {file_info['path']}")
+                        logger.info(f"🗑️ Deleted expired processed file: {file_info['path']}")
                 except Exception as e:
                     logger.warning(f"Failed to delete old file {file_info['path']}: {e}")
                 to_remove.append(file_id)
@@ -109,7 +109,7 @@ def cleanup_old_processed_files():
             del processed_files[file_id]
         
         if to_remove:
-            logger.info(f"🧹 Cleaned up {len(to_remove)} old processed files")
+            logger.info(f"🧹 Cleaned up {len(to_remove)} expired processed files")
 
 def get_mime_type_for_extension(ext: str) -> str:
     """Get correct MIME type for audio file extension"""
@@ -2198,8 +2198,8 @@ async def master_audio_matchering(
         file_id = str(uuid.uuid4())
         logger.info(f"🎵 DEBUG: Generated file_id: {file_id}")
         
-        # Store the file path in our mapping system for proxy-download
-        save_processed_file_path(file_id, converted_path, "free", user_id=user_id)
+        # Store the exact served file path (public media) for timed cleanup & proxy-download
+        save_processed_file_path(file_id, final_path, "free", user_id=user_id)
         logger.info(f"🎵 DEBUG: Stored file_id in mapping: {file_id}")
         
         response_data = {

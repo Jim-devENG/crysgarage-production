@@ -1,11 +1,16 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func
-from typing import Optional
+from sqlalchemy import select, func, desc
+from typing import Optional, List
 from pydantic import BaseModel
-from datetime import datetime
+from datetime import datetime, timedelta
+try:
+    import requests as _http
+except Exception:  # pragma: no cover
+    _http = None
 from app.db.base import get_session
 from app.models.models import User, Master, Upload, ErrorLog, ReferrerSlot, DevLoginAudit, AdminUser, Visitor
+from app.models.payment_models import Payment, PaymentAnalytics
 from app.services.firebase_sync import sync_users_from_firebase
 from app.core.auth import get_current_user
 
@@ -338,12 +343,13 @@ async def track_visitor(
 ):
     """Track a website visitor - called from frontend JavaScript"""
     try:
-        # Get client IP
-        client_ip = request.client.host
-        if request.headers.get("x-forwarded-for"):
-            client_ip = request.headers.get("x-forwarded-for").split(",")[0].strip()
-        elif request.headers.get("x-real-ip"):
-            client_ip = request.headers.get("x-real-ip")
+        # Get real client IP (Cloudflare/Proxy aware)
+        client_ip = (
+            request.headers.get("cf-connecting-ip")
+            or (request.headers.get("x-forwarded-for") or "").split(",")[0].strip()
+            or request.headers.get("x-real-ip")
+            or request.client.host
+        )
         
         # Get user agent
         user_agent = request.headers.get("user-agent", "")
@@ -405,31 +411,25 @@ async def track_visitor(
             else:
                 device_type = 'Desktop'
         
-        # Get location from IP (simplified - in production you'd use a proper geolocation service)
+        # Real geolocation
         country = "Unknown"
         region = "Unknown"
         city = "Unknown"
-        
-        # Simple IP-based location detection (for demo purposes)
-        if client_ip:
+        latitude = None
+        longitude = None
+        if client_ip and not (client_ip.startswith('127.') or client_ip.startswith('192.168.') or client_ip.startswith('10.')):
             try:
-                # This is a simplified approach - in production you'd use a proper geolocation API
-                if client_ip.startswith('127.') or client_ip.startswith('192.168.') or client_ip.startswith('10.'):
-                    country = "Local"
-                    region = "Local Network"
-                    city = "Local"
-                else:
-                    # For demo purposes, assign some sample locations
-                    import random
-                    sample_locations = [
-                        ("United States", "California", "Los Angeles"),
-                        ("United Kingdom", "England", "London"),
-                        ("Nigeria", "Lagos", "Lagos"),
-                        ("Germany", "Berlin", "Berlin"),
-                        ("Canada", "Ontario", "Toronto")
-                    ]
-                    country, region, city = random.choice(sample_locations)
-            except:
+                if _http is not None:
+                    resp = _http.get(f"http://ip-api.com/json/{client_ip}", timeout=3)
+                    if resp.ok:
+                        data = resp.json() or {}
+                        if data.get("status") == "success":
+                            country = data.get("country") or country
+                            region = data.get("regionName") or region
+                            city = data.get("city") or city
+                            latitude = data.get("lat")
+                            longitude = data.get("lon")
+            except Exception:
                 pass
         
         # Generate session ID (simple hash of IP + User Agent)
@@ -465,7 +465,9 @@ async def track_visitor(
                 is_bot=is_bot,
                 country=country,
                 region=region,
-                city=city
+                city=city,
+                latitude=latitude,
+                longitude=longitude
             )
             session.add(visitor)
             await session.commit()
@@ -577,3 +579,161 @@ async def get_visitor_analytics(
         "browser_distribution": browser_distribution,
         "device_distribution": device_distribution
     }
+
+# Payment endpoints
+@router.get("/payments")
+async def get_payments(
+    limit: int = 25,
+    offset: int = 0,
+    session: AsyncSession = Depends(get_session),
+    current_user: AdminUser = Depends(get_current_user)
+):
+    """Get paginated list of payments"""
+    try:
+        payments_q = await session.execute(
+            select(Payment)
+            .order_by(desc(Payment.created_at))
+            .limit(limit)
+            .offset(offset)
+        )
+        payments = payments_q.scalars().all()
+        
+        return {
+            "payments": [
+                {
+                    "id": payment.id,
+                    "user_id": payment.user_id,
+                    "user_email": payment.user_email,
+                    "amount": payment.amount,
+                    "currency": payment.currency,
+                    "tier": payment.tier,
+                    "credits": payment.credits,
+                    "payment_reference": payment.payment_reference,
+                    "payment_provider": payment.payment_provider,
+                    "status": payment.status,
+                    "created_at": payment.created_at.isoformat() if payment.created_at else None,
+                    "completed_at": payment.completed_at.isoformat() if payment.completed_at else None,
+                    "metadata": payment.payment_metadata
+                }
+                for payment in payments
+            ]
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching payments: {str(e)}")
+
+@router.get("/payments/analytics")
+async def get_payment_analytics(
+    session: AsyncSession = Depends(get_session),
+    current_user: AdminUser = Depends(get_current_user)
+):
+    """Get payment analytics and revenue data"""
+    try:
+        # Total revenue
+        total_revenue_q = await session.execute(
+            select(func.sum(Payment.amount)).where(Payment.status == "completed")
+        )
+        total_revenue = total_revenue_q.scalar() or 0
+        
+        # Total transactions
+        total_transactions_q = await session.execute(
+            select(func.count(Payment.id)).where(Payment.status == "completed")
+        )
+        total_transactions = total_transactions_q.scalar() or 0
+        
+        # Today's revenue
+        today = datetime.utcnow().date()
+        today_revenue_q = await session.execute(
+            select(func.sum(Payment.amount))
+            .where(Payment.status == "completed")
+            .where(func.date(Payment.created_at) == today)
+        )
+        today_revenue = today_revenue_q.scalar() or 0
+        
+        # Today's transactions
+        today_transactions_q = await session.execute(
+            select(func.count(Payment.id))
+            .where(Payment.status == "completed")
+            .where(func.date(Payment.created_at) == today)
+        )
+        today_transactions = today_transactions_q.scalar() or 0
+        
+        # Tier breakdown
+        tier_breakdown_q = await session.execute(
+            select(Payment.tier, func.count(Payment.id), func.sum(Payment.amount))
+            .where(Payment.status == "completed")
+            .group_by(Payment.tier)
+        )
+        tier_breakdown = {
+            row[0]: {"count": row[1], "revenue": row[2] or 0}
+            for row in tier_breakdown_q.fetchall()
+        }
+        
+        # Recent payments (last 10)
+        recent_payments_q = await session.execute(
+            select(Payment)
+            .where(Payment.status == "completed")
+            .order_by(desc(Payment.created_at))
+            .limit(10)
+        )
+        recent_payments = recent_payments_q.scalars().all()
+        
+        return {
+            "total_revenue": total_revenue,
+            "total_transactions": total_transactions,
+            "today_revenue": today_revenue,
+            "today_transactions": today_transactions,
+            "tier_breakdown": tier_breakdown,
+            "recent_payments": [
+                {
+                    "id": payment.id,
+                    "user_email": payment.user_email,
+                    "amount": payment.amount,
+                    "tier": payment.tier,
+                    "created_at": payment.created_at.isoformat() if payment.created_at else None
+                }
+                for payment in recent_payments
+            ]
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching payment analytics: {str(e)}")
+
+@router.post("/payments/track")
+async def track_payment(
+    user_id: str,
+    user_email: str,
+    amount: float,
+    tier: str,
+    credits: int,
+    payment_reference: Optional[str] = None,
+    payment_provider: str = "paystack",
+    payment_metadata: Optional[str] = None,
+    session: AsyncSession = Depends(get_session),
+    current_user: AdminUser = Depends(get_current_user)
+):
+    """Track a new payment"""
+    try:
+        payment = Payment(
+            user_id=user_id,
+            user_email=user_email,
+            amount=amount,
+            tier=tier,
+            credits=credits,
+            payment_reference=payment_reference,
+            payment_provider=payment_provider,
+            status="completed",
+            completed_at=datetime.utcnow(),
+            payment_metadata=payment_metadata
+        )
+        
+        session.add(payment)
+        await session.commit()
+        await session.refresh(payment)
+        
+        return {
+            "success": True,
+            "payment_id": payment.id,
+            "message": "Payment tracked successfully"
+        }
+    except Exception as e:
+        await session.rollback()
+        raise HTTPException(status_code=500, detail=f"Error tracking payment: {str(e)}")
