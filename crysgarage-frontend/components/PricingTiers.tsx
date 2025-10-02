@@ -26,9 +26,9 @@ export function PricingTiers({ onTierSelect, selectedTier }: PricingTiersProps) 
     {
       id: "free",
       name: "Pay Per Download",
-      price: "$3.00",
+      price: "$5.00",
       credits: "1 download",
-      description: "$3 for 1 download",
+      description: "$5 for 1 download",
       features: [
         "1 download credit",
         "MP3/WAV upload",

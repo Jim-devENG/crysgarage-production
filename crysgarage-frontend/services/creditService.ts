@@ -218,7 +218,7 @@ class CreditService {
       free: {
         initialCredits: 0,
         description: 'Pay per download',
-        costPerCredit: 3.00
+        costPerCredit: 5.00
       },
       pro: {
         initialCredits: 2,

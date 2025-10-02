@@ -29,3 +29,4 @@ php artisan key:generate || true
 php artisan config:cache || true
 echo "SANCTUM_FIX_DONE"
 
+

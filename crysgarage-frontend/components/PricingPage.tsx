@@ -33,7 +33,7 @@ export function PricingPage({ onSelectTier, onGoToDashboard }: PricingPageProps)
 
   const startDirectPayment = async (tierId: string) => {
     try {
-      const priceMap: Record<string, number> = { professional: 15.00, advanced: 25.00, free: 3.00 };
+      const priceMap: Record<string, number> = { professional: 15.00, advanced: 25.00, free: 5.00 };
       const creditsMap: Record<string, number> = { professional: 5, advanced: 6, free: 1 };
       const price = priceMap[tierId] ?? 0;
       const credits = creditsMap[tierId] ?? 0;
@@ -77,9 +77,9 @@ export function PricingPage({ onSelectTier, onGoToDashboard }: PricingPageProps)
     {
       id: "free",
       name: "Pay Per Download",
-      price: "$3.00",
-      priceNGN: formatNGN(convertUSDToNGN(3.00).ngn),
-      subtitle: "$3 for 1 download",
+      price: "$5.00",
+      priceNGN: formatNGN(convertUSDToNGN(5.00).ngn),
+      subtitle: "$5 for 1 download",
       description: "Perfect for occasional users",
       features: [
         "1 download credit",

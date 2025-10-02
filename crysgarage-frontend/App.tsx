@@ -83,6 +83,16 @@ function AppContent() {
     }
   };
 
+  const requireAuthForTier = (tierId: string) => {
+    if (DEV_MODE) return false;
+    if ((tierId === 'professional' || tierId === 'advanced') && !isAuthenticated) {
+      setPendingTierAccess(tierId);
+      setShowAuthModal(true);
+      return true; // blocked
+    }
+    return false;
+  };
+
   const handleTierSelection = (tierId: string) => {
     console.log('App.tsx: handleTierSelection called with tierId:', tierId);
     console.log('App.tsx: isAuthenticated:', isAuthenticated);
@@ -95,15 +105,20 @@ function AppContent() {
       return;
     }
     
-    if (!isAuthenticated) {
-      // User needs to authenticate first
-      console.log('App.tsx: User not authenticated, showing AuthModal');
+    // Enforce auth for non-free tiers
+    if (requireAuthForTier(tierId)) return;
+    
+    if (!isAuthenticated && tierId !== 'free') {
       setPendingTierAccess(tierId);
       setShowAuthModal(true);
-    } else {
-      // User is authenticated, show payment modal
-      console.log('App.tsx: User authenticated, showing PaymentModal');
+      return;
+    }
+
+    // Authenticated: show payment modal for paid tiers
+    if (tierId === 'professional' || tierId === 'advanced') {
       setShowPaymentModal(true);
+    } else {
+      handleNavigation('dashboard');
     }
   };
 
@@ -227,7 +242,13 @@ function AppContent() {
         )}
 
         {currentPage === 'matchering-download' && (
-          <DownloadPage onBack={() => handleNavigation('matchering-compare')} />
+          <DownloadPage 
+            onBack={() => handleNavigation('matchering-compare')}
+            onRequirePayment={() => {
+              setSelectedTier('free');
+              setShowPaymentModal(true);
+            }}
+          />
         )}
 
         {currentPage === 'profile' && (

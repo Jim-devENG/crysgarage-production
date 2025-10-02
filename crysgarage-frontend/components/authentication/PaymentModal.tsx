@@ -36,9 +36,9 @@ export function PaymentModal({
     free: {
       id: 'free',
       name: 'Pay Per Download',
-      price: 3.00,
+      price: 5.00,
       credits: 1,
-      description: '$3 for 1 download',
+      description: '$5 for 1 download',
       features: [
         '1 download credit',
         'High-quality mastered track',

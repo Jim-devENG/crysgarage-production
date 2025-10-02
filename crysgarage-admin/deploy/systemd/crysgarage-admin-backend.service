@@ -1,0 +1,17 @@
+[Unit]
+Description=CrysGarage Admin Backend
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+WorkingDirectory=/var/www/crysgarage-admin/backend
+Environment="APP_ENV=production"
+Environment="DATABASE_URL=postgresql+asyncpg://$DB_USER:$DB_PASS@127.0.0.1:5432/crysgarage_admin"
+Environment="ADMIN_WEBHOOK_SECRET=${ADMIN_WEBHOOK_SECRET}"
+ExecStart=/var/www/crysgarage-admin/backend/.venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8082
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

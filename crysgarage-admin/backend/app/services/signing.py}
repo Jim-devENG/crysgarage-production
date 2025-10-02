@@ -1,0 +1,23 @@
+import hmac, hashlib, json
+
+def sign_payload(secret: str, body: bytes) -> str:
+    return hmac.new(secret.encode(), body, hashlib.sha256).hexdigest()
+
+# simple test helper to craft a master.finished event
+EXAMPLE_BODY = {
+    "type": "master.finished",
+    "timestamp": 1690000000,
+    "file_id": "abc123",
+    "user_id": "uid123",
+    "tier": "free",
+    "genre": "hip-hop",
+    "preset": "chill-vibes",
+    "input_size": 6406186,
+    "output_size": 1245678,
+    "format": "mp3",
+    "sample_rate": 44100,
+    "status": "success",
+    "ffmpeg_stderr": "",
+    "location": "Nigeria",
+    "referrer_code": "SLOT1"
+}

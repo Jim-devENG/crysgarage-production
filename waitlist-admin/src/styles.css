@@ -1,0 +1,25 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* CrysGarage brand palette */
+:root {
+  --brand: 212 175 55;            /* #D4AF37 - gold */
+  --brand-foreground: 0 0 0;      /* #000000 - black text on gold */
+  --brand-600: 191 155 48;        /* #BF9B30 - darker gold */
+  --brand-700: 170 140 42;        /* #AA8C2A - darkest gold */
+  --surface: 0 0 0;               /* pure black */
+  --panel: 8 8 8;                 /* near-black panel */
+  --muted: 255 255 255;           /* white as base for alpha */
+}
+
+@layer base {
+  html { @apply bg-neutral-950 text-white; }
+}
+
+@layer components {
+  .btn { @apply px-4 py-2 rounded transition-colors font-medium; }
+  .btn-brand { @apply bg-brand text-brand-foreground hover:bg-brand-600; }
+  .btn-muted { @apply bg-white/10 hover:bg-white/20; }
+  .card { @apply rounded border border-white/10 p-6 bg-white/5; }
+}

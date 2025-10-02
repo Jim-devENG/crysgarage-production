@@ -86,6 +86,7 @@ export interface MasteringResponse {
   file_size?: number;
   processed_file_size_mb?: number;
   processed_file_size_bytes?: number;
+  file_id?: string; // optional unique id from backend for proxy-download
   // ML extras
   ml_summary?: Array<{ area: string; action: string; reason?: string }>;
   applied_params?: Record<string, any>;

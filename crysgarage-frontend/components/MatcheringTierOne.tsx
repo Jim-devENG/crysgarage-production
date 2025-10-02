@@ -22,7 +22,7 @@ export default function MatcheringTierOne() {
   const [abSource, setAbSource] = useState<'target'|'reference'|'mastered'>('mastered');
   const audioCtxRef = useRef<AudioContext | null>(null);
   const nodeCacheRef = useRef<Record<string, any>>({});
-  const apiBase = useMemo(() => (window.location.origin.includes('localhost') || window.location.origin.includes('127.0.0.1')) ? 'http://127.0.0.1:8002' : '', []);
+  const apiBase = useMemo(() => (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) ? 'http://127.0.0.1:8002' : '', []);
   
   const rebuildGraph = () => {
     try {

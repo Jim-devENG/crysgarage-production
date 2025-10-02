@@ -4,18 +4,12 @@
  * while preserving production authentication and payment logic
  */
 
-// Check if Dev Mode is enabled via environment variable
-export const DEV_MODE = import.meta.env.VITE_DEV_MODE === 'true' || (() => {
-  try {
-    // cookie-based dev mode set by backend
-    const cookieOn = document.cookie.split(';').some(c => c.trim().startsWith('cg_dev_mode='));
-    // local override (frontend-only) for super-simple dev access
-    const localOn = (typeof localStorage !== 'undefined' && localStorage.getItem('cg_dev_mode') === '1');
-    return cookieOn || localOn;
-  } catch (_) {
-    return false;
-  }
-})();
+// Dev Mode is enabled strictly via env var AND only on localhost to prevent prod auto-dev behavior
+const envDev = import.meta.env.VITE_DEV_MODE === 'true';
+const isLocalhost = typeof window !== 'undefined' && window.location && (
+  window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+);
+export const DEV_MODE = envDev && isLocalhost;
 
 // Dev Mode User Object
 export const DEV_USER = {

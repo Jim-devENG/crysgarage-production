@@ -4,9 +4,10 @@ import { Label } from '../ui/label';
 
 interface Props {
   onBack: () => void;
+  onRequirePayment: () => void;
 }
 
-const DownloadPage: React.FC<Props> = ({ onBack }) => {
+const DownloadPage: React.FC<Props> = ({ onBack, onRequirePayment }) => {
   const [format, setFormat] = useState<'WAV16'|'WAV24'|'MP3'|'FLAC'>('WAV16');
   const [sr, setSr] = useState<44100|48000>(44100);
   const [fileId, setFileId] = useState<string | null>(null);
@@ -19,64 +20,8 @@ const DownloadPage: React.FC<Props> = ({ onBack }) => {
   }, []);
 
   const handleDownload = () => {
-    console.log('Download clicked, format:', format, 'sample_rate:', sr);
-    
-    // Get the mastered URL from localStorage
-    const masteredUrl = localStorage.getItem('matchering.mastered_url');
-    
-    if (!masteredUrl) {
-      console.error('No mastered file URL found');
-      return;
-    }
-    
-    console.log('Using mastered URL for conversion:', masteredUrl);
-    
-    // Use proxy-download endpoint to convert and download with desired format/sample rate
-    const apiBase = (typeof window !== 'undefined' && (window.location.origin.includes('localhost') || window.location.origin.includes('127.0.0.1')))
-      ? 'http://127.0.0.1:8002' : '';
-    const timestamp = Date.now(); // Add timestamp to prevent caching
-    const url = `${apiBase}/proxy-download?file_url=${encodeURIComponent(masteredUrl)}&format=${format}&sample_rate=${sr}&t=${timestamp}`;
-    console.log('Download URL:', url);
-    
-    // Create a temporary link element for proper download
-    const link = document.createElement('a');
-    link.href = url;
-    
-    // Fix: Use proper file extensions based on format
-    const getFileExtension = (format: string) => {
-      switch (format) {
-        case 'MP3': return 'mp3';
-        case 'WAV16': 
-        case 'WAV24': return 'wav';
-        case 'FLAC': return 'flac';
-        default: return 'wav';
-      }
-    };
-    
-    const extension = getFileExtension(format);
-    const bitDepth = format === 'WAV16' ? '16bit' : format === 'WAV24' ? '24bit' : '';
-    const sampleRate = sr === 48000 ? '48k' : '44k';
-    
-    link.download = `mastered_track_${bitDepth}_${sampleRate}.${extension}`;
-    link.target = '_blank'; // Open in new tab to avoid caching issues
-    
-    // Add proper MIME type handling
-    const getMimeType = (format: string) => {
-      switch (format) {
-        case 'MP3': return 'audio/mpeg';
-        case 'WAV16': 
-        case 'WAV24': return 'audio/wav';
-        case 'FLAC': return 'audio/flac';
-        default: return 'audio/wav';
-      }
-    };
-    
-    // Set the MIME type
-    link.type = getMimeType(format);
-    
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    // For Free tier: trigger payment gateway first ($5)
+    onRequirePayment();
   };
 
   return (

@@ -65,7 +65,8 @@ const UploadPage: React.FC<Props> = ({ onNext }) => {
       formData.append('reference', referenceFile);
       formData.append('user_id', 'dev-user');
 
-      const response = await fetch('http://127.0.0.1:8002/master-matchering', {
+      const base = (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) ? 'http://127.0.0.1:8002' : '';
+      const response = await fetch(`${base}/master-matchering`, {
         method: 'POST',
         body: formData,
       });

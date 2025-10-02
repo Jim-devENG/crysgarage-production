@@ -161,3 +161,4 @@ print_status "✅ Proper permissions and service configuration"
 
 print_status "To run the installation on the VPS, execute:"
 print_status "bash install_deps_script.sh"
+

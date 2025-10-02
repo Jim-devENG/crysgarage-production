@@ -132,3 +132,4 @@ export const FileDropCard: React.FC<FileDropCardProps> = ({
     </div>
   );
 };
+
