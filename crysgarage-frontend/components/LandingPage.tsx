@@ -639,6 +639,137 @@ export function LandingPage({ onGetStarted, onTryMastering }: LandingPageProps) 
         </div>
       </section>
 
+      {/* Free Tools Section */}
+      <section className="bg-crys-black relative py-20">
+        <div className="max-w-7xl mx-auto px-6">
+          <motion.div 
+            className="text-center mb-16"
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            viewport={{ once: true }}
+          >
+            <h2 className="text-4xl md:text-5xl font-bold text-crys-white mb-6">
+              Free Professional Tools
+            </h2>
+            <p className="text-xl text-crys-light-grey max-w-3xl mx-auto">
+              Access our powerful audio analysis and normalization tools completely free. 
+              Perfect for preparing your tracks before mastering.
+            </p>
+          </motion.div>
+
+          <div className="grid md:grid-cols-2 gap-12">
+            {/* Audio Analyzer */}
+            <motion.div
+              className="bg-gradient-to-br from-crys-charcoal to-crys-graphite rounded-2xl p-8 border border-crys-gold/20 hover:border-crys-gold/40 transition-all duration-300"
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.2 }}
+              viewport={{ once: true }}
+            >
+              <div className="flex items-center mb-6">
+                <div className="w-12 h-12 bg-crys-gold/20 rounded-xl flex items-center justify-center mr-4">
+                  <Waves className="w-6 h-6 text-crys-gold" />
+                </div>
+                <div>
+                  <h3 className="text-2xl font-bold text-crys-white">Audio Analyzer</h3>
+                  <p className="text-crys-gold text-sm font-medium">Free Professional Tool</p>
+                </div>
+              </div>
+              
+              <p className="text-crys-light-grey mb-6">
+                Professional real-time audio analysis with ITU-R BS.1770 LUFS measurement, 
+                frequency content analysis, and comprehensive audio insights.
+              </p>
+              
+              <div className="space-y-3 mb-6">
+                <div className="flex items-center text-crys-light-grey">
+                  <CheckCircle className="w-5 h-5 text-crys-gold mr-3" />
+                  <span>ITU-R BS.1770 LUFS measurement</span>
+                </div>
+                <div className="flex items-center text-crys-light-grey">
+                  <CheckCircle className="w-5 h-5 text-crys-gold mr-3" />
+                  <span>Real-time frequency content (Bass/Mid/High)</span>
+                </div>
+                <div className="flex items-center text-crys-light-grey">
+                  <CheckCircle className="w-5 h-5 text-crys-gold mr-3" />
+                  <span>Professional waveform display</span>
+                </div>
+                <div className="flex items-center text-crys-light-grey">
+                  <CheckCircle className="w-5 h-5 text-crys-gold mr-3" />
+                  <span>3-second meter hold system</span>
+                </div>
+                <div className="flex items-center text-crys-light-grey">
+                  <CheckCircle className="w-5 h-5 text-crys-gold mr-3" />
+                  <span>RMS, Peak, and Stereo width analysis</span>
+                </div>
+              </div>
+              
+              <Button 
+                onClick={onTryMastering}
+                className="w-full bg-crys-gold hover:bg-crys-gold/90 text-crys-black font-semibold py-3 rounded-xl transition-all duration-300"
+              >
+                Try Audio Analyzer
+              </Button>
+            </motion.div>
+
+            {/* Audio Normalizer */}
+            <motion.div
+              className="bg-gradient-to-br from-crys-charcoal to-crys-graphite rounded-2xl p-8 border border-crys-gold/20 hover:border-crys-gold/40 transition-all duration-300"
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.4 }}
+              viewport={{ once: true }}
+            >
+              <div className="flex items-center mb-6">
+                <div className="w-12 h-12 bg-crys-gold/20 rounded-xl flex items-center justify-center mr-4">
+                  <Volume2 className="w-6 h-6 text-crys-gold" />
+                </div>
+                <div>
+                  <h3 className="text-2xl font-bold text-crys-white">Audio Normalizer</h3>
+                  <p className="text-crys-gold text-sm font-medium">Free Professional Tool</p>
+                </div>
+              </div>
+              
+              <p className="text-crys-light-grey mb-6">
+                Professional audio normalization with customizable target levels (-3dB, -6dB, -9dB). 
+                Perfect for preparing tracks before mastering.
+              </p>
+              
+              <div className="space-y-3 mb-6">
+                <div className="flex items-center text-crys-light-grey">
+                  <CheckCircle className="w-5 h-5 text-crys-gold mr-3" />
+                  <span>Customizable target levels (-3dB, -6dB, -9dB)</span>
+                </div>
+                <div className="flex items-center text-crys-light-grey">
+                  <CheckCircle className="w-5 h-5 text-crys-gold mr-3" />
+                  <span>Professional peak normalization</span>
+                </div>
+                <div className="flex items-center text-crys-light-grey">
+                  <CheckCircle className="w-5 h-5 text-crys-gold mr-3" />
+                  <span>Dynamic range preservation</span>
+                </div>
+                <div className="flex items-center text-crys-light-grey">
+                  <CheckCircle className="w-5 h-5 text-crys-gold mr-3" />
+                  <span>Multiple format support</span>
+                </div>
+                <div className="flex items-center text-crys-light-grey">
+                  <CheckCircle className="w-5 h-5 text-crys-gold mr-3" />
+                  <span>Instant processing and download</span>
+                </div>
+              </div>
+              
+              <Button 
+                onClick={onTryMastering}
+                className="w-full bg-crys-gold hover:bg-crys-gold/90 text-crys-black font-semibold py-3 rounded-xl transition-all duration-300"
+              >
+                Try Audio Normalizer
+              </Button>
+            </motion.div>
+          </div>
+        </div>
+      </section>
+
       {/* Why Us Section */}
       <WhyUsSection 
         onGetStarted={onGetStarted}

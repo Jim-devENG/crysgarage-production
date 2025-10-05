@@ -38,6 +38,8 @@ import MatcheringTierOne from './components/MatcheringTierOne';
 import UploadPage from './components/matchering/UploadPage';
 import BeforeAfterPage from './components/matchering/BeforeAfterPage';
 import DownloadPage from './components/matchering/DownloadPage';
+import { NormalizerPage } from './components/NormalizerPage';
+import { AnalyzerPage } from './components/AnalyzerPage';
 
 function AppContent() {
   const { user, isAuthenticated, isLoading } = useAuth();
@@ -97,6 +99,18 @@ function AppContent() {
     console.log('App.tsx: handleTierSelection called with tierId:', tierId);
     console.log('App.tsx: isAuthenticated:', isAuthenticated);
     setSelectedTier(tierId);
+    
+    // Handle normalizer (free, no auth required)
+    if (tierId === 'normalizer') {
+      handleNavigation('normalizer');
+      return;
+    }
+    
+    // Handle analyzer (free, no auth required)
+    if (tierId === 'analyzer') {
+      handleNavigation('analyzer');
+      return;
+    }
     
     if (DEV_MODE) {
       // In Dev Mode, bypass authentication and payment
@@ -214,6 +228,18 @@ function AppContent() {
             onGoToDashboard={() => handleNavigation('dashboard')}
           />
         )}
+
+    {currentPage === 'normalizer' && (
+      <NormalizerPage 
+        onBack={() => handleNavigation('studio')}
+      />
+    )}
+    
+    {currentPage === 'analyzer' && (
+      <AnalyzerPage 
+        onBack={() => handleNavigation('studio')}
+      />
+    )}
 
         {currentPage === 'dashboard' && (
           <UploadPage onNext={() => handleNavigation('matchering-compare')} />

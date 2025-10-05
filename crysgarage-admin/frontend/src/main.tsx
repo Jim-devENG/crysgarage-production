@@ -869,6 +869,8 @@ function VisitorsPanel({ token }: { token: string | null }) {
   const [analytics, setAnalytics] = React.useState<any>(null)
   const [visitors, setVisitors] = React.useState<Visitor[] | null>(null)
   const [error, setError] = React.useState<string>()
+  const [page, setPage] = React.useState(0)
+  const pageSize = 10
 
   const fetchAnalytics = React.useCallback(async () => {
     try {
@@ -887,7 +889,7 @@ function VisitorsPanel({ token }: { token: string | null }) {
 
   const fetchVisitors = React.useCallback(async () => {
     try {
-      const response = await authFetch('https://crysgarage.studio/admin/api/v1/visitors', { cache: 'no-store' })
+      const response = await authFetch(`https://crysgarage.studio/admin/api/v1/visitors?limit=${pageSize}&offset=${page * pageSize}`, { cache: 'no-store' })
       if (response.ok) {
         const data = await response.json()
         setVisitors(data)
@@ -898,7 +900,7 @@ function VisitorsPanel({ token }: { token: string | null }) {
     } catch (e) {
       setError(String(e))
     }
-  }, [authFetch])
+  }, [authFetch, page, pageSize])
 
   React.useEffect(() => {
     fetchAnalytics()
@@ -952,6 +954,26 @@ function VisitorsPanel({ token }: { token: string | null }) {
           </tbody>
         </table>
       </div>
+
+      {visitors.length >= pageSize && (
+        <div className="flex justify-between items-center mt-4">
+          <button 
+            onClick={() => setPage(p => Math.max(0, p - 1))}
+            disabled={page === 0}
+            className="btn-secondary disabled:opacity-50"
+          >
+            Previous
+          </button>
+          <span className="text-white/70">Page {page + 1}</span>
+          <button 
+            onClick={() => setPage(p => p + 1)}
+            disabled={visitors.length < pageSize}
+            className="btn-secondary disabled:opacity-50"
+          >
+            Next
+          </button>
+        </div>
+      )}
     </div>
   )
 }

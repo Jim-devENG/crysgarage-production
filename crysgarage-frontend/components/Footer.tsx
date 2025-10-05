@@ -84,7 +84,7 @@ export function Footer({ onNavigate }: FooterProps) {
     {
       icon: <MapPin className="w-4 h-4" />,
       label: "Location",
-      value: "Plateau, Nigeria",
+      value: "Nigeria",
       href: "#"
     }
   ];

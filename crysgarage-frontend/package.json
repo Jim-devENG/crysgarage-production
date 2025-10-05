@@ -68,7 +68,9 @@
     "standardized-audio-context": "^25.3.77",
     "tailwind-merge": "^1.14.0",
     "tailwindcss-animate": "^1.0.7",
+    "tone": "^15.1.22",
     "vaul": "^1.1.2",
+    "web-audio-beat-detector": "^8.2.31",
     "zod": "^3.22.4",
     "zustand": "^4.4.1"
   },

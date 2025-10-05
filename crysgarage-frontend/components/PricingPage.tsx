@@ -248,6 +248,84 @@ export function PricingPage({ onSelectTier, onGoToDashboard }: PricingPageProps)
           </div>
         </div>
 
+        {/* Free Normalizer Section */}
+        <div className="max-w-4xl mx-auto mb-12">
+          <Card className="border-2 border-crys-gold bg-gradient-to-b from-crys-gold/10 to-transparent shadow-lg shadow-crys-gold/20">
+            <CardHeader className="text-center pb-4">
+              <div className="w-12 h-12 bg-crys-gold/20 rounded-xl flex items-center justify-center mx-auto mb-4">
+                <Zap className="w-6 h-6 text-crys-gold" />
+              </div>
+              <h2 className="text-2xl font-bold text-crys-white mb-2">
+                🎵 Free Crys Garage Engine Normalizer
+              </h2>
+              <p className="text-crys-light-grey">
+                Professional audio normalization with customizable target levels (-3dB, -6dB, -9dB). Perfect for preparing tracks before mastering.
+              </p>
+            </CardHeader>
+            
+            <CardContent className="px-6 pb-4">
+              <div className="grid md:grid-cols-2 gap-6 mb-6">
+                <div className="space-y-3">
+                  <h4 className="text-crys-white font-semibold">What it does:</h4>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Check className="w-4 h-4 text-crys-gold flex-shrink-0" />
+                      <span className="text-crys-light-grey text-sm">Customizable target levels (-3dB, -6dB, -9dB)</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Check className="w-4 h-4 text-crys-gold flex-shrink-0" />
+                      <span className="text-crys-light-grey text-sm">Professional peak normalization</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Check className="w-4 h-4 text-crys-gold flex-shrink-0" />
+                      <span className="text-crys-light-grey text-sm">Dynamic range preservation</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Check className="w-4 h-4 text-crys-gold flex-shrink-0" />
+                      <span className="text-crys-light-grey text-sm">Multiple format support</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="space-y-3">
+                  <h4 className="text-crys-white font-semibold">Perfect for:</h4>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Music className="w-4 h-4 text-crys-gold flex-shrink-0" />
+                      <span className="text-crys-light-grey text-sm">Pre-mastering preparation</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Download className="w-4 h-4 text-crys-gold flex-shrink-0" />
+                      <span className="text-crys-light-grey text-sm">Level consistency across tracks</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Clock className="w-4 h-4 text-crys-gold flex-shrink-0" />
+                      <span className="text-crys-light-grey text-sm">Quick audio cleanup</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Star className="w-4 h-4 text-crys-gold flex-shrink-0" />
+                      <span className="text-crys-light-grey text-sm">Professional results</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="text-center">
+                <Button 
+                  onClick={() => onSelectTier('normalizer')}
+                  className="bg-crys-gold hover:bg-crys-gold-muted text-crys-black font-bold px-8 py-3 rounded-lg transition-all duration-300 hover:scale-105"
+                >
+                  <Zap className="w-5 h-5 mr-2" />
+                  Try Free Normalizer
+                </Button>
+                <p className="text-crys-light-grey text-xs mt-2">
+                  No registration required • Instant processing
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
         {/* Pricing Cards */}
         <div className="grid lg:grid-cols-3 gap-4 max-w-4xl mx-auto mb-12">
           {pricingTiers.map((tier) => (
@@ -344,6 +422,88 @@ export function PricingPage({ onSelectTier, onGoToDashboard }: PricingPageProps)
               </CardFooter>
             </Card>
           ))}
+        </div>
+
+        {/* Free Audio Analyzer Section */}
+        <div className="max-w-4xl mx-auto mb-12">
+          <Card className="border-2 border-crys-gold bg-gradient-to-b from-crys-gold/10 to-transparent shadow-lg shadow-crys-gold/20">
+            <CardHeader className="text-center pb-4">
+              <div className="w-12 h-12 bg-crys-gold/20 rounded-xl flex items-center justify-center mx-auto mb-4">
+                <Zap className="w-6 h-6 text-crys-gold" />
+              </div>
+              <h2 className="text-2xl font-bold text-crys-white mb-2">
+                📊 Free Audio Analyzer
+              </h2>
+              <p className="text-crys-light-grey">
+                Professional real-time audio analysis with ITU-R BS.1770 LUFS measurement, frequency content analysis, and comprehensive audio insights.
+              </p>
+            </CardHeader>
+            
+            <CardContent className="px-6 pb-4">
+              <div className="grid md:grid-cols-2 gap-6 mb-6">
+                <div className="space-y-3">
+                  <h4 className="text-crys-white font-semibold">Analysis Features:</h4>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Check className="w-4 h-4 text-crys-gold flex-shrink-0" />
+                      <span className="text-crys-light-grey text-sm">ITU-R BS.1770 LUFS measurement</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Check className="w-4 h-4 text-crys-gold flex-shrink-0" />
+                      <span className="text-crys-light-grey text-sm">Real-time frequency content (Bass/Mid/High)</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Check className="w-4 h-4 text-crys-gold flex-shrink-0" />
+                      <span className="text-crys-light-grey text-sm">Professional waveform display</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Check className="w-4 h-4 text-crys-gold flex-shrink-0" />
+                      <span className="text-crys-light-grey text-sm">3-second meter hold system</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Check className="w-4 h-4 text-crys-gold flex-shrink-0" />
+                      <span className="text-crys-light-grey text-sm">RMS, Peak, and Stereo width analysis</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="space-y-3">
+                  <h4 className="text-crys-white font-semibold">Perfect for:</h4>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Music className="w-4 h-4 text-crys-gold flex-shrink-0" />
+                      <span className="text-crys-light-grey text-sm">Pre-mastering analysis</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Download className="w-4 h-4 text-crys-gold flex-shrink-0" />
+                      <span className="text-crys-light-grey text-sm">Audio quality assessment</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Clock className="w-4 h-4 text-crys-gold flex-shrink-0" />
+                      <span className="text-crys-light-grey text-sm">Educational purposes</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Star className="w-4 h-4 text-crys-gold flex-shrink-0" />
+                      <span className="text-crys-light-grey text-sm">Professional insights</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="text-center">
+                <Button 
+                  onClick={() => onSelectTier('analyzer')}
+                  className="bg-crys-gold hover:bg-crys-gold-muted text-crys-black font-bold px-8 py-3 rounded-lg transition-all duration-300 hover:scale-105"
+                >
+                  <Zap className="w-5 h-5 mr-2" />
+                  Analyze Audio
+                </Button>
+                <p className="text-crys-light-grey text-xs mt-2">
+                  No registration required • Instant analysis
+                </p>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Confirm Modal */}
