@@ -36,6 +36,12 @@ type DevLoginAudit = {
   ip_address?: string
   user_agent?: string
   location?: string
+  // Optional fields returned by backend for richer display
+  created_at?: string
+  city?: string
+  country?: string
+  device_type?: string
+  browser?: string
 }
 
 type Payment = {
@@ -153,7 +159,7 @@ function useAuthenticatedFetch(token: string | null) {
   return React.useCallback(async (url: string, options: RequestInit = {}) => {
     if (!token) throw new Error('No token')
     
-    return fetch(url, {
+    const response = await fetch(url, {
       ...options,
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -161,6 +167,30 @@ function useAuthenticatedFetch(token: string | null) {
         ...options.headers,
       },
     })
+    
+    // Auto-recover on unauthorized: clear token and force re-login
+    if (response.status === 401) {
+      try { localStorage.removeItem('admin_token') } catch {}
+      // Force a quick redirect to login screen
+      setTimeout(() => window.location.reload(), 50)
+    }
+    
+    // Guard against server sending HTML (e.g., index.html or login page) with 200
+    try {
+      const ct = response.headers.get('content-type') || ''
+      if (response.ok && !ct.includes('application/json')) {
+        const preview = await response.clone().text()
+        // If we detect HTML, surface a helpful error
+        if (preview.trim().startsWith('<!DOCTYPE') || preview.trim().startsWith('<html')) {
+          throw new Error('Unexpected HTML response from API. You may need to re-login.')
+        }
+      }
+    } catch (e) {
+      // Re-throw to caller for display
+      throw e
+    }
+    
+    return response
   }, [token])
 }
 
@@ -400,13 +430,20 @@ function MetricsPanel({ token }: { token: string | null }) {
   const fetchMetrics = React.useCallback(async () => {
     try {
       const response = await authFetch(base + '/api/v1/metrics', { cache: 'no-store' })
-      if (response.ok) {
-        const metricsData = await response.json()
-        setData(metricsData)
-        setError(undefined)
-      } else {
-        setError('Failed to fetch metrics')
+      if (!response.ok) {
+        const body = await response.text()
+        setError(`Failed to fetch metrics (${response.status}): ${body.slice(0, 200)}`)
+        return
       }
+      const ct = response.headers.get('content-type') || ''
+      if (!ct.includes('application/json')) {
+        const body = await response.text()
+        setError(`Unexpected response (not JSON): ${body.slice(0, 200)}`)
+        return
+      }
+      const metricsData = await response.json()
+      setData(metricsData)
+      setError(undefined)
     } catch (e) {
       setError(String(e))
     }
@@ -848,7 +885,7 @@ function AccessPanel({ token }: { token: string | null }) {
                 <tr key={a.id}>
                   <td className="font-mono text-xs">{a.user_id}</td>
                   <td>{a.role}</td>
-                  <td>{new Date(a.created_at).toLocaleString()}</td>
+                  <td>{a.created_at ? new Date(a.created_at).toLocaleString() : '-'}</td>
                   <td>{a.ip_address || '-'}</td>
                   <td>{a.city && a.country ? `${a.city}, ${a.country}` : '-'}</td>
                   <td>{a.device_type || '-'}</td>
@@ -874,7 +911,7 @@ function VisitorsPanel({ token }: { token: string | null }) {
 
   const fetchAnalytics = React.useCallback(async () => {
     try {
-      const response = await authFetch('https://crysgarage.studio/admin/api/v1/visitors/analytics', { cache: 'no-store' })
+      const response = await authFetch(`${base}/api/v1/visitors/analytics`, { cache: 'no-store' })
       if (response.ok) {
         const data = await response.json()
         setAnalytics(data)
@@ -885,11 +922,11 @@ function VisitorsPanel({ token }: { token: string | null }) {
     } catch (e) {
       setError(String(e))
     }
-  }, [authFetch])
+  }, [authFetch, base])
 
   const fetchVisitors = React.useCallback(async () => {
     try {
-      const response = await authFetch(`https://crysgarage.studio/admin/api/v1/visitors?limit=${pageSize}&offset=${page * pageSize}`, { cache: 'no-store' })
+      const response = await authFetch(`${base}/api/v1/visitors?limit=${pageSize}&offset=${page * pageSize}`, { cache: 'no-store' })
       if (response.ok) {
         const data = await response.json()
         setVisitors(data)
@@ -900,7 +937,7 @@ function VisitorsPanel({ token }: { token: string | null }) {
     } catch (e) {
       setError(String(e))
     }
-  }, [authFetch, page, pageSize])
+  }, [authFetch, page, pageSize, base])
 
   React.useEffect(() => {
     fetchAnalytics()
@@ -984,14 +1021,15 @@ function WaitlistPanel({ token }: { token: string | null }) {
   const [analytics, setAnalytics] = React.useState<WaitlistAnalytics | null>(null)
   const [users, setUsers] = React.useState<WaitlistUser[] | null>(null)
   const [error, setError] = React.useState<string>()
+  const [isExporting, setIsExporting] = React.useState(false)
 
   const fetchAnalytics = React.useCallback(async () => {
     try {
-      const response = await authFetch('https://crysgarage.studio/waitlist-api/api/waitlist/count', { cache: 'no-store' })
+      const response = await authFetch('https://crysgarage.studio/api/waitlist/count', { cache: 'no-store' })
       if (response.ok) {
         const countData = await response.json()
         
-        const categoryResponse = await authFetch('https://crysgarage.studio/waitlist-api/api/waitlist/categories', { cache: 'no-store' })
+        const categoryResponse = await authFetch('https://crysgarage.studio/api/waitlist/categories', { cache: 'no-store' })
         const categoryData = categoryResponse.ok ? await categoryResponse.json() : {}
         
         setAnalytics({
@@ -1010,7 +1048,7 @@ function WaitlistPanel({ token }: { token: string | null }) {
 
   const fetchUsers = React.useCallback(async () => {
     try {
-      const response = await authFetch('https://crysgarage.studio/waitlist-api/api/waitlist/list', { cache: 'no-store' })
+      const response = await authFetch('https://crysgarage.studio/api/waitlist/list', { cache: 'no-store' })
       if (response.ok) {
         const usersData = await response.json()
         setUsers(usersData)
@@ -1033,12 +1071,41 @@ function WaitlistPanel({ token }: { token: string | null }) {
     return () => clearInterval(interval)
   }, [fetchAnalytics, fetchUsers])
 
+  const onExportExcel = React.useCallback(async () => {
+    if (!users || users.length === 0) return
+    setIsExporting(true)
+    try {
+      const rows = users.map(u => ({
+        ID: u.id,
+        Name: u.name,
+        Email: u.email,
+        Phone: u.phone,
+        Location: u.location,
+        Category: u.category,
+        Date: new Date(u.created_at).toLocaleString(),
+      }))
+      const { utils, writeFile } = await import('xlsx')
+      const ws = utils.json_to_sheet(rows)
+      const wb = utils.book_new()
+      utils.book_append_sheet(wb, ws, 'Waitlist')
+      writeFile(wb, `crysgarage-waitlist-${new Date().toISOString().slice(0,10)}.xlsx`)
+    } finally {
+      setIsExporting(false)
+    }
+  }, [users])
+
   if (error) return <div className="text-red-400">{error}</div>
   if (!analytics || !users) return <div className="text-white/70">Loading...</div>
 
   return (
     <div>
       <h1 className="text-2xl font-bold text-white mb-6">Waitlist</h1>
+      <div className="flex items-center justify-between mb-4">
+        <div className="text-white/70 text-sm">Export your waitlist catalogue as Excel.</div>
+        <button onClick={onExportExcel} disabled={!users?.length || isExporting} className="btn btn-brand">
+          {isExporting ? 'Exporting…' : 'Export to Excel'}
+        </button>
+      </div>
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
         <MetricCard title="Total Registrations" value={analytics.total_registrations} />

@@ -26,10 +26,11 @@ import {
 
 interface LandingPageProps {
   onGetStarted: () => void;
-  onTryMastering: () => void;
+  onTryAnalyzer: () => void;
+  onTryNormalizer: () => void;
 }
 
-export function LandingPage({ onGetStarted, onTryMastering }: LandingPageProps) {
+export function LandingPage({ onGetStarted, onTryAnalyzer, onTryNormalizer }: LandingPageProps) {
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
@@ -336,7 +337,7 @@ export function LandingPage({ onGetStarted, onTryMastering }: LandingPageProps) 
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 1, delay: 0.4 }}
                 >
-                  Unleash the Realm
+                  Unleash the Future
                 </motion.span>
               </motion.h1>
               
@@ -363,7 +364,7 @@ export function LandingPage({ onGetStarted, onTryMastering }: LandingPageProps) 
                 >
                   <Button 
                     size="lg"
-                    onClick={onTryMastering}
+                    onClick={onGetStarted}
                     className="bg-crys-gold hover:bg-crys-gold-muted text-crys-black px-8 py-4 text-lg"
                   >
                     <PlayCircle className="w-5 h-5 mr-2" />
@@ -705,8 +706,8 @@ export function LandingPage({ onGetStarted, onTryMastering }: LandingPageProps) 
                 </div>
               </div>
               
-              <Button 
-                onClick={onTryMastering}
+            <Button 
+              onClick={onTryAnalyzer}
                 className="w-full bg-crys-gold hover:bg-crys-gold/90 text-crys-black font-semibold py-3 rounded-xl transition-all duration-300"
               >
                 Try Audio Analyzer
@@ -759,8 +760,8 @@ export function LandingPage({ onGetStarted, onTryMastering }: LandingPageProps) 
                 </div>
               </div>
               
-              <Button 
-                onClick={onTryMastering}
+            <Button 
+              onClick={onTryNormalizer}
                 className="w-full bg-crys-gold hover:bg-crys-gold/90 text-crys-black font-semibold py-3 rounded-xl transition-all duration-300"
               >
                 Try Audio Normalizer
@@ -773,7 +774,7 @@ export function LandingPage({ onGetStarted, onTryMastering }: LandingPageProps) 
       {/* Why Us Section */}
       <WhyUsSection 
         onGetStarted={onGetStarted}
-        onTryMastering={onTryMastering}
+        onTryMastering={onGetStarted}
       />
 
       {/* Perfect For Section */}
@@ -920,7 +921,7 @@ export function LandingPage({ onGetStarted, onTryMastering }: LandingPageProps) 
             >
               <span className="text-crys-gold">♪</span> Can you make it? 
               <span className="text-crys-gold">♫</span> Craft the sound, 
-              <span className="text-crys-gold">♪</span> Unleash the realm 
+              <span className="text-crys-gold">♪</span> Unleash the future 
               <span className="text-crys-gold">♫</span>
             </motion.p>
             
@@ -935,9 +936,9 @@ export function LandingPage({ onGetStarted, onTryMastering }: LandingPageProps) 
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
               >
-                <Button 
+                  <Button 
                   size="lg"
-                  onClick={onTryMastering}
+                  onClick={onGetStarted}
                   className="bg-crys-gold hover:bg-crys-gold-muted text-crys-black px-8 py-4 text-lg"
                 >
                   <PlayCircle className="w-5 h-5 mr-2" />

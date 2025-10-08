@@ -234,7 +234,7 @@ export function AnalyzerPage({ onBack }: AnalyzerPageProps) {
         // Keep element unmuted and with low volume so MediaElementSource is reliably fed,
         // but direct element output is minimally audible
         audioRef.current.muted = false;
-        audioRef.current.volume = 0.4; // x2 louder direct path for reliable capture
+        audioRef.current.volume = 1.0;
         
         // Initialize audio connections after audio element is ready
         audioRef.current.addEventListener('loadedmetadata', () => {
@@ -251,7 +251,7 @@ export function AnalyzerPage({ onBack }: AnalyzerPageProps) {
               
               // Create output gain
               const outputGain = audioContext.createGain();
-              outputGain.gain.value = 1.0;
+              outputGain.gain.value = 1.2;
               
               // Connect audio through Web Audio chain like professional tier
               // source -> analyser -> outputGain -> destination
@@ -259,8 +259,8 @@ export function AnalyzerPage({ onBack }: AnalyzerPageProps) {
               analyser.connect(outputGain);
               outputGain.connect(audioContext.destination);
               
-              // Set output gain for audibility (same as professional tier)
-              outputGain.gain.value = 1.0;
+              // Ensure output is clearly audible
+              outputGain.gain.value = 1.2;
               
               sourceRef.current = source;
               

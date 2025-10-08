@@ -77,7 +77,8 @@ const AppContent: React.FC = () => {
       case 'landing':
         return <LandingPage 
           onGetStarted={() => setCurrentPage('pricing')} 
-          onTryMastering={() => setCurrentPage('dashboard')} 
+          onTryAnalyzer={() => setCurrentPage('analyzer')} 
+          onTryNormalizer={() => setCurrentPage('normalizer')} 
         />;
       case 'pricing':
         return <PricingPage 
@@ -106,7 +107,8 @@ const AppContent: React.FC = () => {
       default:
         return <LandingPage 
           onGetStarted={() => setCurrentPage('pricing')} 
-          onTryMastering={() => setCurrentPage('dashboard')} 
+          onTryAnalyzer={() => setCurrentPage('analyzer')} 
+          onTryNormalizer={() => setCurrentPage('normalizer')} 
         />;
     }
   };

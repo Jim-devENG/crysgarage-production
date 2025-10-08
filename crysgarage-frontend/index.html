@@ -89,6 +89,58 @@
     <div id="root"></div>
     <script type="module" src="/main.tsx"></script>
     
+    <!-- Lightweight DevTools deterrent: detects open devtools and overlays a warning -->
+    <script>
+      (function(){
+        try {
+          var overlay = null;
+          function showOverlay(){
+            if (overlay) return; 
+            overlay = document.createElement('div');
+            overlay.id = 'cg-devtools-overlay';
+            overlay.style.position = 'fixed';
+            overlay.style.inset = '0';
+            overlay.style.background = 'rgba(0,0,0,0.92)';
+            overlay.style.color = '#fff';
+            overlay.style.display = 'flex';
+            overlay.style.alignItems = 'center';
+            overlay.style.justifyContent = 'center';
+            overlay.style.zIndex = '999999';
+            overlay.style.fontFamily = 'Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif';
+            overlay.innerHTML = '<div style="text-align:center;padding:24px;max-width:720px">\
+              <div style="font-size:28px;font-weight:800;color:#d4af37;letter-spacing:.5px;margin-bottom:8px;">Crys Garage</div>\
+              <div style="font-size:18px;opacity:.9;margin-bottom:16px;">Protected Environment</div>\
+              <div style="font-size:14px;opacity:.85;line-height:1.6">Developer tools are open. For security, source inspection is disabled in production.\
+              Please close dev tools to continue using the app.</div>\
+            </div>';
+            document.body.appendChild(overlay);
+          }
+          function hideOverlay(){
+            if (!overlay) return; 
+            try { overlay.remove(); } catch(e){}
+            overlay = null;
+          }
+          var threshold = 160; // px; if devtools docked, inner dims shrink
+          function detect(){
+            var w = window.outerWidth - window.innerWidth > threshold;
+            var h = window.outerHeight - window.innerHeight > threshold;
+            if (w || h) showOverlay(); else hideOverlay();
+          }
+          window.addEventListener('resize', detect);
+          setInterval(detect, 1000);
+          detect();
+          // Disable common open-shortcuts
+          window.addEventListener('keydown', function(e){
+            if ((e.ctrlKey||e.metaKey) && (e.key==='u' || e.key==='U')) { e.preventDefault(); }
+            if ((e.ctrlKey||e.metaKey) && (e.shiftKey) && (e.key==='i' || e.key==='I' || e.key==='J' || e.key==='C')) { e.preventDefault(); }
+            if (e.key === 'F12') { e.preventDefault(); }
+          }, { capture:true });
+          // Disable right click (soft)
+          window.addEventListener('contextmenu', function(e){ e.preventDefault(); }, { capture:true });
+        } catch(e) {}
+      })();
+    </script>
+    
     <!-- Visitor Tracking Script -->
     <script>
       // CrysGarage Visitor Tracking Script

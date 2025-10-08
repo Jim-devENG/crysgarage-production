@@ -33,10 +33,19 @@ export function PricingPage({ onSelectTier, onGoToDashboard }: PricingPageProps)
 
   const startDirectPayment = async (tierId: string) => {
     try {
-      const priceMap: Record<string, number> = { professional: 15.00, advanced: 25.00, free: 5.00 };
-      const creditsMap: Record<string, number> = { professional: 5, advanced: 6, free: 1 };
+      const priceMap: Record<string, number> = { professional: 0.00, advanced: 25.00, free: 5.00 };
+      const creditsMap: Record<string, number> = { professional: 999999, advanced: 6, free: 1 };
       const price = priceMap[tierId] ?? 0;
       const credits = creditsMap[tierId] ?? 0;
+      
+      // Handle free professional tier
+      if (tierId === 'professional' && price === 0.00) {
+        // Directly grant credits for free professional tier
+        const tierKey = 'pro';
+        const callbackUrl = `${window.location.origin}/billing?payment=success&tier=${tierKey}&credits=${credits}`;
+        window.location.href = callbackUrl;
+        return;
+      }
       
       // Convert USD to NGN for Paystack
       const currencyConversion = convertUSDToNGN(price);
@@ -103,12 +112,12 @@ export function PricingPage({ onSelectTier, onGoToDashboard }: PricingPageProps)
     {
       id: "professional",
       name: "Professional",
-      price: "$15.00",
-      priceNGN: formatNGN(convertUSDToNGN(15.00).ngn),
-      subtitle: "5 credits ($3 per credit)",
+      price: "$0.00",
+      priceNGN: "₦0",
+      subtitle: "Unlimited credits (Free)",
       description: "Perfect for active producers and artists",
       features: [
-        "5 download credits",
+        "Unlimited download credits",
         "All audio formats (up to 100MB)",
         "44.1kHz, 48kHz sample rates",
         "16/24/32-bit resolution",

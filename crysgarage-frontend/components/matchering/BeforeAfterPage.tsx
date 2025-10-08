@@ -27,7 +27,17 @@ const BeforeAfterPage: React.FC<Props> = ({ onBack, onNext }) => {
         setOriginalUrl(savedTarget);
       }
       if (savedMastered) {
-        setMasteredUrl(savedMastered);
+        // Convert relative URL to absolute URL for audio playback
+        const baseUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+          ? 'http://localhost:8002'
+          : 'https://crysgarage.studio';
+        
+        const absoluteUrl = savedMastered.startsWith('http') 
+          ? savedMastered 
+          : `${baseUrl}${savedMastered}`;
+        
+        setMasteredUrl(absoluteUrl);
+        console.log('🎵 Mastered audio URL set to:', absoluteUrl);
       }
     } catch (err) {
       setError('Failed to load saved files');

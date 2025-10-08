@@ -7,6 +7,8 @@ import { creditsAPI } from '../../services/api';
 import { pythonAudioService, TierInfo, GenreInfo } from '../../services/pythonAudioService';
 import { useAuth } from '../../contexts/AuthenticationContext';
 import { creditService } from '../../services/creditService';
+import MasteringConfirmModal from '../MasteringConfirmModal';
+import { DEV_MODE, logDevAction } from '../../utils/devMode';
 
 // Types
 interface AudioFile {
@@ -61,6 +63,7 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
   const [uploadedFile, setUploadedFile] = useState<AudioFile | null>(null);
   const [selectedGenre, setSelectedGenre] = useState<Genre | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
 
   // Debug: Track uploadedFile state changes
   useEffect(() => {
@@ -1071,8 +1074,8 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
   };
 
   // Process audio with Python service
-  const handleProcessAudio = async () => {
-    console.log('Debug - handleProcessAudio called:');
+  const startMasteringProcess = async () => {
+    console.log('Debug - startMasteringProcess called:');
     console.log('uploadedFile:', uploadedFile);
     console.log('selectedGenre:', selectedGenre);
     console.log('effectiveUser:', effectiveUser);
@@ -1349,9 +1352,46 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
+  // Confirmation modal handlers
+  const handleProcessAudio = () => {
+    console.log('🎵 PROFESSIONAL TIER: handleProcessAudio called');
+    if (!uploadedFile || !selectedGenre || !effectiveUser) {
+      const missing = [];
+      if (!uploadedFile) missing.push('file');
+      if (!selectedGenre) missing.push('genre');
+      if (!effectiveUser) missing.push('user');
+      setError(`Missing: ${missing.join(', ')}`);
+      return;
+    }
+
+    console.log('🎵 PROFESSIONAL TIER: DEV_MODE =', DEV_MODE);
+    
+    // Show confirmation modal for all users (including Dev Mode)
+    console.log('🎵 PROFESSIONAL TIER: Showing confirmation modal');
+    setShowConfirmModal(true);
+  };
+
+  const handleConfirmMastering = () => {
+    setShowConfirmModal(false);
+    startMasteringProcess();
+  };
+
+  const handleCancelMastering = () => {
+    setShowConfirmModal(false);
+  };
+
   return (
-    <div className="min-h-screen bg-crys-dark text-white">
-      <div className="container mx-auto px-4 py-8 max-w-7xl">
+    <>
+      {/* Mastering Confirmation Modal */}
+      <MasteringConfirmModal
+        isOpen={showConfirmModal}
+        onConfirm={handleConfirmMastering}
+        onCancel={handleCancelMastering}
+        tier="professional"
+      />
+
+      <div className="min-h-screen bg-crys-dark text-white">
+        <div className="container mx-auto px-4 py-8 max-w-7xl">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center space-x-4">
@@ -1655,6 +1695,7 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
 
       
     </div>
+    </>
   );
 };
 

@@ -79,7 +79,7 @@ export function BillingPage({ onNavigate }: BillingPageProps) {
 
   const tierPricing = {
     free: { credits: 1, price: 5.00, name: 'Pay Per Download' },
-    pro: { credits: 5, price: 15.00, name: 'Professional Credits' },
+    pro: { credits: 999999, price: 0.00, name: 'Professional Credits (Unlimited)' },
     advanced: { credits: 6, price: 25.00, name: 'Advanced Credits (5+1 bonus)' }
   };
 
@@ -89,10 +89,10 @@ export function BillingPage({ onNavigate }: BillingPageProps) {
       case 'pro':
         return {
           name: 'Professional',
-          price: 15.00,
-          credits: 5,
+          price: 0.00,
+          credits: 999999,
           color: 'bg-blue-500',
-          features: ['5 download credits', 'All audio formats', '44.1kHz, 48kHz sample rates', 'Advanced genre presets']
+          features: ['Unlimited download credits', 'All audio formats', '44.1kHz, 48kHz sample rates', 'Advanced genre presets']
         };
       case 'advanced':
         return {

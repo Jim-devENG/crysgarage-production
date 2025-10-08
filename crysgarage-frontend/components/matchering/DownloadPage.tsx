@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Button } from '../ui/button';
 import { Label } from '../ui/label';
+import { DEV_MODE, logDevAction } from '../../utils/devMode';
 
 interface Props {
   onBack: () => void;
@@ -19,7 +20,38 @@ const DownloadPage: React.FC<Props> = ({ onBack, onRequirePayment }) => {
     } catch {}
   }, []);
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
+    // In Dev Mode, bypass payment and download directly
+    if (DEV_MODE) {
+      logDevAction('Download bypassed - allowing direct download in dev mode');
+      
+      try {
+        const masteredUrl = localStorage.getItem('matchering.mastered_url');
+        if (!masteredUrl) {
+          alert('No mastered file found. Please process your track first.');
+          return;
+        }
+        
+        // Direct download without payment
+        const baseUrl = window.location.hostname === 'localhost' ? 'http://localhost:8002' : 'https://crysgarage.studio';
+        const downloadUrl = `${baseUrl}${masteredUrl}`;
+        
+        const link = document.createElement('a');
+        link.href = downloadUrl;
+        link.download = `mastered_${format}_${sr}.${format === 'MP3' ? 'mp3' : format === 'FLAC' ? 'flac' : 'wav'}`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        console.log('✅ Dev mode download completed');
+        return;
+      } catch (error) {
+        console.error('Download failed:', error);
+        alert('Download failed. Please try again.');
+        return;
+      }
+    }
+    
     // For Free tier: trigger payment gateway first ($5)
     onRequirePayment();
   };

@@ -216,7 +216,7 @@ export function AddonsMarketplace({ onClose, onPurchase, userTier, onUpgrade }: 
       id: 'afrobeats-drums-vol1',
       name: 'Afrobeats Drums Vol. 1',
       description: 'Authentic Afrobeats drum samples recorded in Lagos studios with traditional instruments.',
-      price: 15,
+      price: 0,
       category: 'samples',
       rating: 4.8,
       purchases: 1123,

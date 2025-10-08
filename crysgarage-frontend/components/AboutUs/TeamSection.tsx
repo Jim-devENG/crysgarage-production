@@ -180,10 +180,10 @@ const TeamSection: React.FC = () => {
             <h3 className="text-3xl font-bold text-crys-gold mb-8">Our Team Impact</h3>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
               {[
-                { label: "Years Combined Experience", value: "15+" },
-                { label: "Projects Delivered", value: "100+" },
-                { label: "Technologies Mastered", value: "25+" },
-                { label: "Happy Clients", value: "10K+" }
+                { label: "Years Combined Experience", value: "12+" },
+                { label: "Projects Delivered", value: "45+" },
+                { label: "Technologies Mastered", value: "14+" },
+                { label: "Artists & Teams Served", value: "220+" }
               ].map((stat, index) => (
                 <motion.div
                   key={stat.label}

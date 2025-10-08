@@ -115,7 +115,7 @@ function AppContent() {
     if (DEV_MODE) {
       // In Dev Mode, bypass authentication and payment
       logDevAction(`Tier selection bypassed - granting access to ${tierId} tier`);
-      handlePaymentSuccess(tierId === 'free' ? 1 : tierId === 'professional' ? 5 : 6);
+      handlePaymentSuccess(tierId === 'free' ? 1 : tierId === 'professional' ? Number.POSITIVE_INFINITY as unknown as number : 6);
       return;
     }
     
@@ -218,7 +218,8 @@ function AppContent() {
         {currentPage === 'landing' && (
           <LandingPage 
             onGetStarted={() => handleNavigation('dashboard')}
-            onTryMastering={() => handleNavigation('dashboard')}
+            onTryAnalyzer={() => handleNavigation('analyzer')}
+            onTryNormalizer={() => handleNavigation('normalizer')}
           />
         )}
 

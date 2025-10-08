@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CrysGarage Waitlist - Join the Community</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 50%, #1a1a1a 100%);
+            min-height: 100vh;
+            color: #ffffff;
+            overflow-x: hidden;
+        }
+        
+        .container {
+            max-width: 400px;
+            margin: 0 auto;
+            padding: 30px 20px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .logo {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #d4af37 0%, #f4d03f 100%);
+            border-radius: 15px;
+            margin: 0 auto 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            font-weight: 900;
+            color: #1a1a1a;
+            box-shadow: 0 4px 16px rgba(212, 175, 55, 0.3);
+        }
+        
+        .title {
+            font-size: 1.8rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #d4af37 0%, #f4d03f 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 8px;
+        }
+        
+        .subtitle {
+            font-size: 0.95rem;
+            color: #a0a0a0;
+            font-weight: 400;
+            line-height: 1.5;
+        }
+        
+        .form-container {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 
+                0 15px 30px rgba(0, 0, 0, 0.3),
+                0 0 0 1px rgba(255, 255, 255, 0.05),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+            position: relative;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 600;
+            color: #ffffff;
+            font-size: 0.9rem;
+        }
+        
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 12px 16px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 10px;
+            color: #ffffff;
+            font-size: 0.95rem;
+            font-family: inherit;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+        
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #d4af37;
+            background: rgba(255, 255, 255, 0.12);
+            box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.2);
+            transform: translateY(-1px);
+        }
+        
+        .form-group input::placeholder {
+            color: #888;
+        }
+        
+        .form-group select option {
+            background: #2d2d2d;
+            color: #ffffff;
+        }
+        
+        .submit-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #d4af37 0%, #f4d03f 100%);
+            color: #1a1a1a;
+            padding: 14px 20px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 6px 20px rgba(212, 175, 55, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(212, 175, 55, 0.4);
+        }
+        
+        .submit-btn:active {
+            transform: translateY(0);
+        }
+        
+        .submit-btn:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .status {
+            margin-top: 16px;
+            padding: 12px;
+            border-radius: 10px;
+            text-align: center;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+        
+        .status.success {
+            background: rgba(34, 197, 94, 0.1);
+            border: 1px solid rgba(34, 197, 94, 0.3);
+            color: #22c55e;
+        }
+        
+        .status.error {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #ef4444;
+        }
+        
+        .status.loading {
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            color: #3b82f6;
+        }
+        
+        .qr-section {
+            margin-top: 20px;
+            text-align: center;
+            padding: 16px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        
+        .qr-section p {
+            color: #ccc;
+            margin-bottom: 10px;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+        
+        .qr-section img {
+            width: 120px;
+            height: 120px;
+            border-radius: 8px;
+            border: 1px solid #444;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+        
+        .loading-spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(26, 26, 26, 0.3);
+            border-radius: 50%;
+            border-top-color: #1a1a1a;
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 6px;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        @media (max-width: 600px) {
+            .container {
+                padding: 20px 16px;
+            }
+            
+            .form-container {
+                padding: 24px;
+            }
+            
+            .title {
+                font-size: 1.6rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <img src="/CRG_Logo_svg.svg" alt="CrysGarage" class="logo"/>
+            <h1 class="title">Join CrysGarage</h1>
+            <p class="subtitle">Be part of the premier audio mastering community</p>
+        </div>
+        
+        <div class="form-container">
+            <form id="waitlistForm">
+                <div class="form-group">
+                    <label for="name">Full Name *</label>
+                    <input type="text" id="name" name="name" placeholder="Enter your full name" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="location">Location *</label>
+                    <input type="text" id="location" name="location" placeholder="City, Country" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="phone">Phone Number *</label>
+                    <input type="tel" id="phone" name="phone" placeholder="+234 123 456 7890" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="email">Email Address *</label>
+                    <input type="email" id="email" name="email" placeholder="your@email.com" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="category">Category *</label>
+                    <select id="category" name="category" required>
+                        <option value="">Select your category</option>
+                        <option value="Artist">🎵 Artist</option>
+                        <option value="Content Creator">📹 Content Creator</option>
+                        <option value="Sound Engineer">🎛️ Sound Engineer</option>
+                        <option value="Radio Presenter">📻 Radio Presenter</option>
+                        <option value="Podcaster">🎙️ Podcaster</option>
+                        <option value="DJ">🎧 DJ</option>
+                        <option value="Producer">🎼 Producer</option>
+                        <option value="Other">✨ Other</option>
+                    </select>
+                </div>
+                
+                <button type="submit" class="submit-btn" id="submitBtn">
+                    Join the Community
+                </button>
+            </form>
+            
+            <div id="status"></div>
+            
+            <div class="qr-section">
+                <p>Scan to register on your phone</p>
+                <a href="https://qrco.de/crysgarage-studio" target="_blank" rel="noopener">
+                    <img src="/waitlist/crysgarage-qr.png" alt="CrysGarage Waitlist QR" />
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('waitlistForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const submitBtn = document.getElementById('submitBtn');
+            const statusDiv = document.getElementById('status');
+            
+            // Disable button and show loading
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="loading-spinner"></span>Submitting...';
+            statusDiv.innerHTML = '';
+            
+            const formData = {
+                name: document.getElementById('name').value,
+                location: document.getElementById('location').value,
+                phone: document.getElementById('phone').value,
+                email: document.getElementById('email').value,
+                category: document.getElementById('category').value
+            };
+            
+            try {
+                const response = await fetch('/waitlist-api/api/waitlist/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(formData)
+                });
+                
+                if (response.ok) {
+                    statusDiv.innerHTML = '<div class="status success">✅ Registration successful! Redirecting to WhatsApp community...</div>';
+                    submitBtn.innerHTML = 'Welcome to CrysGarage!';
+                    submitBtn.style.background = 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)';
+                    
+                    setTimeout(() => {
+                        window.location.href = 'https://chat.whatsapp.com/L1eDQaPVv5L2KZE0754QD3?mode=ems_share_t';
+                    }, 2000);
+                } else {
+                    const error = await response.json();
+                    statusDiv.innerHTML = '<div class="status error">❌ Error: ' + (error.detail || 'Registration failed. Please try again.') + '</div>';
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = 'Join the Community';
+                }
+            } catch (error) {
+                statusDiv.innerHTML = '<div class="status error">❌ Network error. Please check your connection and try again.</div>';
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = 'Join the Community';
+            }
+        });
+        
+        // Add smooth animations
+        document.addEventListener('DOMContentLoaded', function() {
+            const formContainer = document.querySelector('.form-container');
+            formContainer.style.opacity = '0';
+            formContainer.style.transform = 'translateY(30px)';
+            
+            setTimeout(() => {
+                formContainer.style.transition = 'all 0.6s ease';
+                formContainer.style.opacity = '1';
+                formContainer.style.transform = 'translateY(0)';
+            }, 100);
+        });
+    </script>
+</body>
+</html>

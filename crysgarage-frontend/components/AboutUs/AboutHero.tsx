@@ -157,10 +157,10 @@ const AboutHero: React.FC = () => {
           className="mt-20 grid grid-cols-2 md:grid-cols-4 gap-8"
         >
           {[
-            { icon: Users, label: "Active Users", value: "10K+" },
-            { icon: Music, label: "Tracks Mastered", value: "50K+" },
-            { icon: Award, label: "Awards Won", value: "5+" },
-            { icon: TrendingUp, label: "Success Rate", value: "99%" }
+            { icon: Users, label: "Active Users", value: "100+" },
+            { icon: Music, label: "Tracks Mastered", value: "500+" },
+            { icon: Award, label: "Awards Won", value: "0" },
+            { icon: TrendingUp, label: "Success Rate", value: "—" }
           ].map((stat, index) => (
             <motion.div
               key={stat.label}
