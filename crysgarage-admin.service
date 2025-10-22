@@ -1,0 +1,19 @@
+[Unit]
+Description=CrysGarage Admin Service
+After=network.target
+
+[Service]
+User=nginx
+Group=nginx
+WorkingDirectory=/var/www/crysgarage.studio/admin-service
+Environment="PATH=/usr/bin:/usr/local/bin"
+Environment="PYTHONPATH=/var/www/crysgarage.studio"
+Environment="DB_PATH=/var/www/crysgarage.studio/data/crysgarage.db"
+Environment="ADMIN_TOKEN=crysgarage_admin_secret_2025"
+ExecStart=/usr/bin/python3 -m uvicorn admin_app:app --host 127.0.0.1 --port 8010 --log-level info
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+

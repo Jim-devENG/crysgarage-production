@@ -1,0 +1,14 @@
+[Unit]
+Description=CrysGarage Real-time Data Sync Service
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/var/www/crysgarage-admin/backend
+ExecStart=/usr/bin/python3 /var/www/crysgarage-admin/backend/continuous_realtime_sync.py
+Restart=always
+RestartSec=30
+
+[Install]
+WantedBy=multi-user.target

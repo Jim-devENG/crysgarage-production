@@ -1,0 +1,15 @@
+[Unit]
+Description=CrysGarage File Cleanup Service
+After=network.target
+
+[Service]
+Type=simple
+User=nginx
+Group=nginx
+WorkingDirectory=/var/www/crysgarage/audio-mastering-service
+ExecStart=/var/www/crysgarage/audio-mastering-service/venv39/bin/python cleanup_files.py
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

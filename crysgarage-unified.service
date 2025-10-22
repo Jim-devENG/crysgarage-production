@@ -1,0 +1,18 @@
+[Unit]
+Description=CrysGarage Unified Audio Service
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/var/www/crysgarage/audio-mastering-service
+Environment=PATH=/var/www/crysgarage/audio-mastering-service/venv39/bin:/usr/local/bin:/usr/bin:/bin
+ExecStartPre=/bin/bash -c 'which ffmpeg || (echo "FFmpeg not found" && exit 1)'
+ExecStart=/var/www/crysgarage/audio-mastering-service/venv39/bin/python unified_backend.py
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

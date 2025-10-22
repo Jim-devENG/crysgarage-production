@@ -1,0 +1,16 @@
+[Unit]
+Description=CrysGarage Python Audio Service
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/var/www/crysgarage/audio-mastering-service
+ExecStart=/var/www/crysgarage/audio-mastering-service/venv39/bin/python -m uvicorn main:app --host 127.0.0.1 --port 8002
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

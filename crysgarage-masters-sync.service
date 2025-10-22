@@ -1,0 +1,22 @@
+[Unit]
+Description=CrysGarage Real-time Masters Sync Service
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/var/www/crysgarage-admin/backend
+Environment=APP_ENV=production
+Environment=DATABASE_URL=sqlite+aiosqlite:///./admin.db
+ExecStart=/var/www/crysgarage-admin/backend/.venv/bin/python realtime_masters_sync.py
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+# Logging
+SyslogIdentifier=crysgarage-masters-sync
+
+[Install]
+WantedBy=multi-user.target

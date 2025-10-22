@@ -1,0 +1,19 @@
+[Unit]
+Description=CrysGarage Email Notification Service
+After=network.target
+
+[Service]
+Type=simple
+User=nginx
+Group=nginx
+WorkingDirectory=/var/www/crysgarage.studio/email-service
+Environment="PATH=/usr/local/bin:/usr/bin:/bin"
+EnvironmentFile=/var/www/crysgarage.studio/email-service/.env
+ExecStart=/usr/bin/python3 -m uvicorn email_notification_api:app --host 127.0.0.1 --port 8004 --log-level info
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
