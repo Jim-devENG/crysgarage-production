@@ -110,6 +110,17 @@ export function EnhancedCommunityPage({ onShowAuthModal }: EnhancedCommunityPage
   // Fetch posts with filters
   const fetchPosts = useCallback(async () => {
     try {
+      // Try to load from localStorage first for faster display
+      const cachedPosts = localStorage.getItem('forum_posts');
+      if (cachedPosts && !searchQuery && !selectedCategory) {
+        try {
+          const parsedPosts = JSON.parse(cachedPosts);
+          setPosts(parsedPosts);
+        } catch (e) {
+          console.log('Failed to parse cached posts');
+        }
+      }
+
       const params = new URLSearchParams();
       if (selectedCategory) params.append('category', selectedCategory);
       if (searchQuery) params.append('search', searchQuery);
@@ -119,10 +130,27 @@ export function EnhancedCommunityPage({ onShowAuthModal }: EnhancedCommunityPage
       const response = await fetch(`${FORUM_API_URL}/posts?${params}`);
       if (response.ok) {
         const data = await response.json();
-        setPosts(data.posts || []);
+        const fetchedPosts = data.posts || [];
+        setPosts(fetchedPosts);
+        
+        // Cache posts to localStorage for persistence
+        if (!searchQuery && !selectedCategory) {
+          localStorage.setItem('forum_posts', JSON.stringify(fetchedPosts));
+          localStorage.setItem('forum_posts_timestamp', Date.now().toString());
+        }
       }
     } catch (error) {
       console.error('Failed to fetch posts:', error);
+      // Fallback to cached data if available
+      const cachedPosts = localStorage.getItem('forum_posts');
+      if (cachedPosts) {
+        try {
+          const parsedPosts = JSON.parse(cachedPosts);
+          setPosts(parsedPosts);
+        } catch (e) {
+          console.log('Failed to parse cached posts on error');
+        }
+      }
     } finally {
       setLoading(false);
     }
@@ -194,12 +222,24 @@ export function EnhancedCommunityPage({ onShowAuthModal }: EnhancedCommunityPage
       });
 
       if (response.ok) {
+        const newPost = await response.json();
+        
+        // Add the new post to the current posts list immediately for instant feedback
+        setPosts(prevPosts => [newPost, ...prevPosts]);
+        
+        // Update localStorage cache
+        const updatedPosts = [newPost, ...posts];
+        localStorage.setItem('forum_posts', JSON.stringify(updatedPosts));
+        localStorage.setItem('forum_posts_timestamp', Date.now().toString());
+        
         setNewPostTitle('');
         setNewPostContent('');
         setNewPostCategory('general');
         setNewPostTags([]);
         setShowNewPostModal(false);
-        fetchPosts();
+        
+        // Also fetch fresh data to ensure consistency
+        setTimeout(() => fetchPosts(), 1000);
       } else {
         alert('Failed to create post');
       }

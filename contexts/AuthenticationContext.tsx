@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import firebaseAuthService, { User } from '../services/firebaseAuth';
+import { emailNotificationService } from '../services/emailNotificationService';
 
 interface AuthenticationContextType {
   user: User | null;
@@ -47,7 +48,18 @@ export function AuthenticationProvider({ children }: AuthenticationProviderProps
     
     // Set a timeout to stop loading after 3 seconds if Firebase doesn't respond
     const timeoutId = setTimeout(() => {
-      console.log('AuthenticationContext: Firebase initialization timeout, stopping loading');
+      console.log('AuthenticationContext: Firebase initialization timeout, checking localStorage');
+      // Fallback to localStorage if Firebase doesn't respond
+      const storedUser = localStorage.getItem('user') || localStorage.getItem('crysgarage_user');
+      if (storedUser) {
+        try {
+          const userData = JSON.parse(storedUser);
+          setUser(userData);
+          console.log('AuthenticationContext: Loaded user from localStorage:', userData);
+        } catch (error) {
+          console.error('AuthenticationContext: Failed to parse stored user data:', error);
+        }
+      }
       setIsLoading(false);
     }, 3000);
     
@@ -90,6 +102,19 @@ export function AuthenticationProvider({ children }: AuthenticationProviderProps
       setUser(user);
       setAuthVersion(prev => prev + 1); // Force re-render
       console.log('AuthenticationContext: User state set to:', user);
+      
+      // Send welcome email
+      try {
+        await emailNotificationService.sendWelcomeEmail({
+          userEmail: user.email,
+          userName: user.name,
+          userTier: user.tier
+        });
+        console.log('AuthenticationContext: Welcome email sent successfully');
+      } catch (emailError) {
+        console.error('AuthenticationContext: Failed to send welcome email:', emailError);
+        // Don't fail the signup if email fails
+      }
     } catch (error: any) {
       console.error('AuthenticationContext: Firebase signup failed:', error);
       setError(error.message || 'Failed to create account');
@@ -109,6 +134,21 @@ export function AuthenticationProvider({ children }: AuthenticationProviderProps
       console.log('AuthenticationContext: Firebase login successful:', user);
       setUser(user);
       setAuthVersion(prev => prev + 1); // Force re-render
+      
+      // Send login notification email
+      try {
+        const userIP = await emailNotificationService.getUserIP();
+        await emailNotificationService.sendLoginNotification({
+          userEmail: user.email,
+          userName: user.name,
+          loginTime: new Date().toISOString(),
+          ipAddress: userIP
+        });
+        console.log('AuthenticationContext: Login notification email sent successfully');
+      } catch (emailError) {
+        console.error('AuthenticationContext: Failed to send login notification email:', emailError);
+        // Don't fail the login if email fails
+      }
     } catch (error: any) {
       console.error('AuthenticationContext: Firebase login failed:', error);
       setError(error.message || 'Login failed');
@@ -128,6 +168,21 @@ export function AuthenticationProvider({ children }: AuthenticationProviderProps
       console.log('AuthenticationContext: Firebase Google sign in successful:', user);
       setUser(user);
       setAuthVersion(prev => prev + 1); // Force re-render
+      
+      // Send login notification email
+      try {
+        const userIP = await emailNotificationService.getUserIP();
+        await emailNotificationService.sendLoginNotification({
+          userEmail: user.email,
+          userName: user.name,
+          loginTime: new Date().toISOString(),
+          ipAddress: userIP
+        });
+        console.log('AuthenticationContext: Login notification email sent successfully');
+      } catch (emailError) {
+        console.error('AuthenticationContext: Failed to send login notification email:', emailError);
+        // Don't fail the login if email fails
+      }
     } catch (error: any) {
       console.error('AuthenticationContext: Firebase Google sign in failed:', error);
       setError(error.message || 'Google sign in failed');
@@ -162,6 +217,16 @@ export function AuthenticationProvider({ children }: AuthenticationProviderProps
       const updatedUser = await firebaseAuthService.updateProfile(profileData);
       console.log('AuthenticationContext: Firebase profile update successful:', updatedUser);
       setUser(updatedUser);
+      
+      // Update multiple localStorage keys to ensure persistence
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+      localStorage.setItem('crysgarage_user', JSON.stringify(updatedUser));
+      localStorage.setItem('crysgarage_firebase_user', JSON.stringify(updatedUser));
+      
+      // Force re-render to update UI
+      setAuthVersion(prev => prev + 1);
+      
+      console.log('AuthenticationContext: Profile data persisted to localStorage');
     } catch (error: any) {
       console.error('AuthenticationContext: Firebase profile update failed:', error);
       setError(error.message || 'Failed to update profile');
