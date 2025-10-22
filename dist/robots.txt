@@ -1,0 +1,20 @@
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: https://crysgarage.studio/sitemap.xml
+
+# Disallow admin and API endpoints
+Disallow: /admin/
+Disallow: /api/
+Disallow: /_next/
+Disallow: /static/
+
+# Allow important pages
+Allow: /
+Allow: /studio
+Allow: /help
+Allow: /billing
+
+# Crawl delay for respectful crawling
+Crawl-delay: 1
