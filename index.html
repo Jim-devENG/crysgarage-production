@@ -2,14 +2,291 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    
+    <!-- CSP REMOVED: Allowing all external scripts for Firebase & Google Sign-In -->
+    <!-- Security Headers -->
+    <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+    <meta http-equiv="X-XSS-Protection" content="1; mode=block" />
+    <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin" />
+    <meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=()" />
+    
+    <!-- Simplified favicon -->
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" sizes="32x32" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" sizes="16x16" />
+    <link rel="apple-touch-icon" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Crys Garage - Professional Audio Mastering Platform" />
-    <title>Crys Garage - Professional Audio Mastering</title>
-    <link rel="stylesheet" href="/assets/index-f9e800b7.css" />
+    <meta
+      name="description"
+      content="Crys Garage - Professional Audio Mastering Platform for African Music"
+    />
+    <meta
+      name="keywords"
+      content="audio mastering, afrobeats, gospel, hip-hop, african music, professional mastering"
+    />
+    <meta name="author" content="Crys Garage Team" />
+    
+    <!-- Canonical URL -->
+    <link rel="canonical" href="https://crysgarage.studio/" />
+    
+    <!-- Additional SEO Meta Tags -->
+    <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
+    <meta name="googlebot" content="index, follow" />
+    <meta name="bingbot" content="index, follow" />
+    
+    <!-- Theme Color -->
+    <meta name="theme-color" content="#d4af37" />
+    <meta name="msapplication-TileColor" content="#d4af37" />
+    
+    <!-- Language and Region -->
+    <meta name="language" content="English" />
+    <meta name="geo.region" content="NG" />
+    <meta name="geo.country" content="Nigeria" />
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://crysgarage.studio/" />
+    <meta
+      property="og:title"
+      content="Crys Garage - Professional Audio Mastering"
+    />
+    <meta
+      property="og:description"
+      content="Professional audio mastering platform focused on African music styles including Afrobeats, Gospel, and Hip-Hop."
+    />
+    <meta property="og:image" content="https://crysgarage.studio/og-image.jpg" />
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:url" content="https://crysgarage.studio/" />
+    <meta
+      property="twitter:title"
+      content="Crys Garage - Professional Audio Mastering"
+    />
+    <meta
+      property="twitter:description"
+      content="Professional audio mastering platform focused on African music styles including Afrobeats, Gospel, and Hip-Hop."
+    />
+    <meta
+      property="twitter:image"
+      content="https://crysgarage.studio/og-image.jpg"
+    />
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <title>Crys Garage - Professional Audio Mastering Platform</title>
+    
+    <!-- Structured Data (JSON-LD) -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "Crys Garage",
+      "description": "Professional audio mastering platform for African music including Afrobeats, Gospel, and Hip-Hop",
+      "url": "https://crysgarage.studio",
+      "applicationCategory": "MusicApplication",
+      "operatingSystem": "Web Browser",
+      "offers": {
+        "@type": "Offer",
+        "price": "5.00",
+        "priceCurrency": "USD",
+        "description": "Professional audio mastering starting at $5"
+      },
+      "provider": {
+        "@type": "Organization",
+        "name": "Crys Garage",
+        "url": "https://crysgarage.studio",
+        "logo": "https://crysgarage.studio/logo.png",
+        "description": "Professional audio mastering platform focused on African music"
+      },
+      "featureList": [
+        "Professional Audio Mastering",
+        "African Music Optimization",
+        "Multiple Export Formats",
+        "Fast Processing (2-10 minutes)",
+        "Genre-Specific Presets"
+      ],
+      "screenshot": "https://crysgarage.studio/og-image.jpg",
+      "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": "4.8",
+        "ratingCount": "150"
+      }
+    }
+    </script>
+    
+    <style>
+      /* Emergency CSS kept minimal to avoid overriding app components */
+      body {
+        background-color: #1a1a1a !important;
+        color: #ffffff !important;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif !important;
+        margin: 0 !important;
+        padding: 0 !important;
+      }
+      #root {
+        min-height: 100vh !important;
+        background-color: #1a1a1a !important;
+      }
+    </style>
+    <script>
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(function(regs){
+          regs.forEach(function(reg){ reg.unregister(); });
+        }).catch(function(){});
+      }
+    </script>
+    <script type="module" crossorigin src="/assets/index-0b294a91.js"></script>
+    <link rel="stylesheet" href="/assets/index-8eae8ca8.css">
   </head>
   <body>
     <div id="root"></div>
-    <script type="module" src="/assets/index-f72e3626.js"></script>
+    
+    
+    <!-- Lightweight DevTools deterrent: detects open devtools and overlays a warning -->
+    <script>
+      (function(){
+        try {
+          var overlay = null;
+          function showOverlay(){
+            if (overlay) return; 
+            overlay = document.createElement('div');
+            overlay.id = 'cg-devtools-overlay';
+            overlay.style.position = 'fixed';
+            overlay.style.inset = '0';
+            overlay.style.background = 'rgba(0,0,0,0.92)';
+            overlay.style.color = '#fff';
+            overlay.style.display = 'flex';
+            overlay.style.alignItems = 'center';
+            overlay.style.justifyContent = 'center';
+            overlay.style.zIndex = '999999';
+            overlay.style.fontFamily = 'Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif';
+            overlay.innerHTML = '<div style="text-align:center;padding:24px;max-width:720px">\
+              <div style="font-size:28px;font-weight:800;color:#d4af37;letter-spacing:.5px;margin-bottom:8px;">Crys Garage</div>\
+              <div style="font-size:18px;opacity:.9;margin-bottom:16px;">Protected Environment</div>\
+              <div style="font-size:14px;opacity:.85;line-height:1.6">Developer tools are open. For security, source inspection is disabled in production.\
+              Please close dev tools to continue using the app.</div>\
+            </div>';
+            document.body.appendChild(overlay);
+          }
+          function hideOverlay(){
+            if (!overlay) return; 
+            try { overlay.remove(); } catch(e){}
+            overlay = null;
+          }
+          var threshold = 160; // px; if devtools docked, inner dims shrink
+          function detect(){
+            var w = window.outerWidth - window.innerWidth > threshold;
+            var h = window.outerHeight - window.innerHeight > threshold;
+            if (w || h) showOverlay(); else hideOverlay();
+          }
+          window.addEventListener('resize', detect);
+          setInterval(detect, 1000);
+          detect();
+          // Disable common open-shortcuts
+          window.addEventListener('keydown', function(e){
+            if ((e.ctrlKey||e.metaKey) && (e.key==='u' || e.key==='U')) { e.preventDefault(); }
+            if ((e.ctrlKey||e.metaKey) && (e.shiftKey) && (e.key==='i' || e.key==='I' || e.key==='J' || e.key==='C')) { e.preventDefault(); }
+            if (e.key === 'F12') { e.preventDefault(); }
+          }, { capture:true });
+          // Disable right click (soft)
+          window.addEventListener('contextmenu', function(e){ e.preventDefault(); }, { capture:true });
+        } catch(e) {}
+      })();
+    </script>
+    
+    <!-- Visitor Tracking Script -->
+    <script>
+      // CrysGarage Visitor Tracking Script
+      (function() {
+          'use strict';
+          
+          // Configuration
+          const TRACKING_ENDPOINT = 'https://crysgarage.studio/admin/api/v1/visitors/track';
+          const SESSION_KEY = 'crysgarage_session';
+          
+          // Get or create session ID
+          function getSessionId() {
+              let sessionId = localStorage.getItem(SESSION_KEY);
+              if (!sessionId) {
+                  sessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                  localStorage.setItem(SESSION_KEY, sessionId);
+              }
+              return sessionId;
+          }
+          
+          // Track visitor
+          function trackVisitor() {
+              try {
+                  // Basic visitor information
+                  const visitorData = {
+                      session_id: getSessionId(),
+                      user_agent: navigator.userAgent,
+                      language: navigator.language,
+                      screen_resolution: screen.width + 'x' + screen.height,
+                      referrer: document.referrer,
+                      page_url: window.location.href,
+                      timestamp: new Date().toISOString()
+                  };
+                  
+                  // Send tracking data
+                  fetch(TRACKING_ENDPOINT, {
+                      method: 'POST',
+                      headers: {
+                          'Content-Type': 'application/json',
+                      },
+                      body: JSON.stringify(visitorData)
+                  }).catch(error => {
+                      console.log('Visitor tracking failed:', error);
+                  });
+                  
+              } catch (error) {
+                  console.log('Visitor tracking error:', error);
+              }
+          }
+          
+          // Track page view
+          function trackPageView() {
+              trackVisitor();
+          }
+          
+          // Track when user leaves
+          function trackExit() {
+              trackVisitor();
+          }
+          
+          // Initialize tracking
+          if (document.readyState === 'loading') {
+              document.addEventListener('DOMContentLoaded', trackPageView);
+          } else {
+              trackPageView();
+          }
+          
+          // Track page visibility changes
+          document.addEventListener('visibilitychange', function() {
+              if (document.visibilityState === 'visible') {
+                  trackPageView();
+              }
+          });
+          
+          // Track when user leaves the page
+          window.addEventListener('beforeunload', trackExit);
+          
+          // Track clicks (optional - for engagement metrics)
+          document.addEventListener('click', function(event) {
+              // Only track significant clicks (not every single click)
+              if (event.target.tagName === 'A' || event.target.tagName === 'BUTTON') {
+                  trackVisitor();
+              }
+          });
+          
+      })();
+    </script>
   </body>
 </html>
