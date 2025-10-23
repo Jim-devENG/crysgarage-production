@@ -98,6 +98,14 @@ async def get_tiers():
         "recommended_tier": "professional"
     }
 
+
+@app.get( /tiers)
+async def get_tiers_simple():
+    return {
+        tiers: TIER_CONFIGS,
+        default_tier: professional,
+        recommended_tier: professional
+    }
 # Audio Mastering Endpoint
 @app.post("/api/v1/master")
 async def master_audio(
