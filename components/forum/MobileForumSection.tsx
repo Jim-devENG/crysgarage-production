@@ -91,17 +91,6 @@ export function MobileForumSection({ onShowAuthModal }: MobileForumSectionProps)
   const fetchPosts = async (showLoading = true) => {
     if (showLoading) setLoading(true);
     try {
-      // Try to load from localStorage first for faster display
-      const cachedPosts = localStorage.getItem('forum_posts');
-      if (cachedPosts && !searchQuery) {
-        try {
-          const parsedPosts = JSON.parse(cachedPosts);
-          setPosts(parsedPosts);
-        } catch (e) {
-          console.log('Failed to parse cached posts');
-        }
-      }
-
       const params = new URLSearchParams();
       if (searchQuery) params.append('search', searchQuery);
       params.append('sort', 'newest');
@@ -110,28 +99,11 @@ export function MobileForumSection({ onShowAuthModal }: MobileForumSectionProps)
       const response = await fetch(`/api/forum/posts?${params}`);
       if (response.ok) {
         const data = await response.json();
-        const fetchedPosts = data.posts || [];
-        setPosts(fetchedPosts);
+        setPosts(data.posts || []);
         setLastRefresh(Date.now());
-        
-        // Cache posts to localStorage for persistence
-        if (!searchQuery) {
-          localStorage.setItem('forum_posts', JSON.stringify(fetchedPosts));
-          localStorage.setItem('forum_posts_timestamp', Date.now().toString());
-        }
       }
     } catch (error) {
       console.error('Failed to fetch posts:', error);
-      // Fallback to cached data if available
-      const cachedPosts = localStorage.getItem('forum_posts');
-      if (cachedPosts && !searchQuery) {
-        try {
-          const parsedPosts = JSON.parse(cachedPosts);
-          setPosts(parsedPosts);
-        } catch (e) {
-          console.log('Failed to parse cached posts on error');
-        }
-      }
     } finally {
       setLoading(false);
       setPullToRefresh(false);

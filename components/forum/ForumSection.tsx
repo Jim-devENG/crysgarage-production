@@ -52,39 +52,13 @@ export function ForumSection({ onShowAuthModal }: ForumSectionProps) {
   // Fetch posts from backend
   const fetchPosts = async () => {
     try {
-      // Try to load from localStorage first for faster display
-      const cachedPosts = localStorage.getItem('forum_posts');
-      if (cachedPosts) {
-        try {
-          const parsedPosts = JSON.parse(cachedPosts);
-          setPosts(parsedPosts);
-        } catch (e) {
-          console.log('Failed to parse cached posts');
-        }
-      }
-
       const response = await fetch('/api/forum/posts');
       if (response.ok) {
         const data = await response.json();
-        const fetchedPosts = data.posts || [];
-        setPosts(fetchedPosts);
-        
-        // Cache posts to localStorage for persistence
-        localStorage.setItem('forum_posts', JSON.stringify(fetchedPosts));
-        localStorage.setItem('forum_posts_timestamp', Date.now().toString());
+        setPosts(data.posts || []);
       }
     } catch (error) {
       console.error('Failed to fetch posts:', error);
-      // Fallback to cached data if available
-      const cachedPosts = localStorage.getItem('forum_posts');
-      if (cachedPosts) {
-        try {
-          const parsedPosts = JSON.parse(cachedPosts);
-          setPosts(parsedPosts);
-        } catch (e) {
-          console.log('Failed to parse cached posts on error');
-        }
-      }
     } finally {
       setLoading(false);
     }
