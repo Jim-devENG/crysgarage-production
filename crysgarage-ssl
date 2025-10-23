@@ -20,35 +20,35 @@ server {
     }
     # Forum endpoints
     location /categories {
-        proxy_pass http://127.0.0.1:8001;
+        proxy_pass http://127.0.0.1:8000;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_http_version 1.1;
     }
     
     location /posts {
-        proxy_pass http://127.0.0.1:8001;
+        proxy_pass http://127.0.0.1:8000;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_http_version 1.1;
     }
     
     location /comments {
-        proxy_pass http://127.0.0.1:8001;
+        proxy_pass http://127.0.0.1:8000;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_http_version 1.1;
     }
     
     location /tags {
-        proxy_pass http://127.0.0.1:8001;
+        proxy_pass http://127.0.0.1:8000;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_http_version 1.1;
     }
     
     location /analytics {
-        proxy_pass http://127.0.0.1:8001;
+        proxy_pass http://127.0.0.1:8000;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_http_version 1.1;
@@ -69,7 +69,7 @@ server {
 
     # Backend API endpoints
     location /master {
-        proxy_pass http://127.0.0.1:8001;
+        proxy_pass http://127.0.0.1:8000;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_http_version 1.1;
@@ -77,67 +77,67 @@ server {
     }
     
     location /master-matchering {
-        proxy_pass http://127.0.0.1:8001;
+        proxy_pass http://127.0.0.1:8000;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_http_version 1.1;
     }
     
     location /master-professional {
-        proxy_pass http://127.0.0.1:8001;
+        proxy_pass http://127.0.0.1:8000;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_http_version 1.1;
     }
     
     location /master-advanced {
-        proxy_pass http://127.0.0.1:8001;
+        proxy_pass http://127.0.0.1:8000;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_http_version 1.1;
     }
 
     location /analyze-upload {
-        proxy_pass http://127.0.0.1:8001;
+        proxy_pass http://127.0.0.1:8000;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_http_version 1.1;
     }
 
     location /proxy-download {
-        proxy_pass http://127.0.0.1:8001;
+        proxy_pass http://127.0.0.1:8000;
         proxy_set_header Host $host;
         proxy_http_version 1.1;
     }
 
     location /credits {
-        proxy_pass http://127.0.0.1:8001;
+        proxy_pass http://127.0.0.1:8000;
         proxy_set_header Host $host;
         proxy_http_version 1.1;
     }
 
     location /health {
-        proxy_pass http://127.0.0.1:8001;
+        proxy_pass http://127.0.0.1:8000;
     }
 
 
     location /api/ {
-        proxy_pass http://127.0.0.1:8001/api/;
+        proxy_pass http://127.0.0.1:8000/api/;
         proxy_set_header Host System.Management.Automation.Internal.Host.InternalHost;
         proxy_http_version 1.1;
     }
 
     location /tiers {
-        proxy_pass http://127.0.0.1:8001;
+        proxy_pass http://127.0.0.1:8000;
     }
     location /genres {
-        proxy_pass http://127.0.0.1:8001;
+        proxy_pass http://127.0.0.1:8000;
         proxy_set_header Host $host;
         proxy_http_version 1.1;
     }
     
     location /admin/api/v1/visitors/track {
-        proxy_pass http://127.0.0.1:8001;
+        proxy_pass http://127.0.0.1:8000;
         proxy_set_header Host $host;
         proxy_http_version 1.1;
     }
