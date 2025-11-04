@@ -4,12 +4,14 @@ After=network.target
 
 [Service]
 Type=simple
-User=nginx
-Group=nginx
+User=root
+Group=root
 WorkingDirectory=/var/www/crysgarage-api
-ExecStart=/var/www/crysgarage/audio-mastering-service/venv39/bin/python main.py
+ExecStart=/usr/bin/python3 -m uvicorn main:app --host 0.0.0.0 --port 8000
 Restart=always
 RestartSec=5
+Environment=PYTHONPATH=/var/www/crysgarage-api
+Environment=PYTHONUNBUFFERED=1
 StandardOutput=syslog
 StandardError=syslog
 SyslogIdentifier=crysgarage-api
