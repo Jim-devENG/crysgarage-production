@@ -1246,7 +1246,7 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
   const handleDownload = async () => {
     // Check payment gateway before download
     if (onDownloadAttempt && !onDownloadAttempt()) {
-      console.log(" 🎵 Download blocked - payment required);
+      console.log(" ???? Download blocked - payment required");
  return;
  }
     // Prioritize using processedFileId for downloads
