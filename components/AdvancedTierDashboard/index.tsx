@@ -28,8 +28,6 @@ import SpectrumVisualizer from './SpectrumVisualizer';
 import RealTimeAnalysisPanel from './RealTimeAnalysisPanel';
 import { GENRE_PRESETS, multiplierToDb } from './sharedGenrePresets';
 import { advancedAudioService, AdvancedEffects, AdvancedMasteringRequest } from '../../services/advancedAudioService';
-import MasteringConfirmModal from '../MasteringConfirmModal';
-import { DEV_MODE, logDevAction } from '../../utils/devMode';
 
 interface AdvancedTierDashboardProps {
   onFileUpload?: (file: File) => void;
@@ -49,7 +47,6 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
   const [processedAudioUrl, setProcessedAudioUrl] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingStep, setProcessingStep] = useState(0);
-  const [showConfirmModal, setShowConfirmModal] = useState(false);
   const processingSteps = [
     'Uploading file',
     'Analyzing audio',
@@ -604,7 +601,7 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
   };
 
   // Continue to export with Python processing
-  const startMasteringAndExport = async () => {
+  const handleContinueToExport = async () => {
     if (selectedFile) {
       setIsProcessing(true);
       setProcessingStep(0);
@@ -1005,30 +1002,6 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
     }
   };
 
-  // Confirmation modal handlers for mastering
-  const handleContinueToExport = () => {
-    console.log('🎵 ADVANCED TIER: handleContinueToExport called');
-    if (!selectedFile) {
-      showToastNotification('Please upload a file first', 'error');
-      return;
-    }
-
-    console.log('🎵 ADVANCED TIER: DEV_MODE =', DEV_MODE);
-    
-    // Show confirmation modal for all users (including Dev Mode)
-    console.log('🎵 ADVANCED TIER: Showing confirmation modal');
-    setShowConfirmModal(true);
-  };
-
-  const handleConfirmMastering = () => {
-    setShowConfirmModal(false);
-    startMasteringAndExport();
-  };
-
-  const handleCancelMastering = () => {
-    setShowConfirmModal(false);
-  };
-
   // New session handler
   const handleNewSession = () => {
     setCurrentStep(1);
@@ -1283,21 +1256,12 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
   };
 
   return (
-    <>
-      {/* Mastering Confirmation Modal */}
-      <MasteringConfirmModal
-        isOpen={showConfirmModal}
-        onConfirm={handleConfirmMastering}
-        onCancel={handleCancelMastering}
-        tier="advanced"
-      />
-
-      <div 
-        className="min-h-screen relative bg-black"
-      >
-        
-        {/* Studio Header */}
-        <div className="relative z-10">
+    <div 
+      className="min-h-screen relative bg-black"
+    >
+      
+      {/* Studio Header */}
+      <div className="relative z-10">
         <StudioHeader 
           currentStep={currentStep} 
           credits={credits} 
@@ -1344,7 +1308,6 @@ const AdvancedTierDashboard: React.FC<AdvancedTierDashboardProps> = ({
         subtitle={selectedGenre ? `Genre: ${selectedGenre}` : undefined}
       />
     </div>
-    </>
   );
 };
 

@@ -4,23 +4,21 @@
  */
 
 import axios from 'axios';
-// Note: Dev Mode should still exercise the Python backend to match real behavior
 
 // Determine Python base URL at runtime to avoid accidental root-relative calls in production
 const isLocal = typeof window !== 'undefined'
-  && window.location
   && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
 
 const computePythonBaseUrl = (): string => {
   // Prefer explicit localhost for dev; otherwise, route through the public Nginx proxy
-  if (typeof window === 'undefined' || !window.location) {
+  if (typeof window === 'undefined') {
     return 'https://crysgarage.studio';
   }
   const { hostname, origin } = window.location;
   if (hostname === 'localhost' || hostname === '127.0.0.1') {
-    return 'http://127.0.0.1:8002';
+    return 'http://localhost:8002';
   }
-  return origin || 'https://crysgarage.studio';
+  return origin;
 };
 
 const PYTHON_SERVICE_URL = computePythonBaseUrl();
@@ -86,7 +84,6 @@ export interface MasteringResponse {
   file_size?: number;
   processed_file_size_mb?: number;
   processed_file_size_bytes?: number;
-  file_id?: string; // optional unique id from backend for proxy-download
   // ML extras
   ml_summary?: Array<{ area: string; action: string; reason?: string }>;
   applied_params?: Record<string, any>;
@@ -260,7 +257,6 @@ class PythonAudioService {
     targetLufs?: number
   ): Promise<MasteringResponse> {
     try {
-      // Always use server processing even in Dev Mode so behavior matches production
       if (isLocal) {
         // Local dev mirrors production: direct to Python upload-file
         if (!this.baseURL || !this.baseURL.startsWith('http')) {
@@ -271,9 +267,7 @@ class PythonAudioService {
         formData.append('tier', tier);
         formData.append('genre', genre);
         formData.append('user_id', userId);
-        // Free and Professional (now free) should use preview mode to bypass payment/credits
-        const previewBypass = (tier === 'free' || tier === 'pro' || tier === 'professional') ? 'true' : 'false';
-        formData.append('is_preview', previewBypass);
+        formData.append('is_preview', 'false');
         formData.append('target_format', format.toUpperCase());
         formData.append('target_sample_rate', '44100');
         if (typeof targetLufs === 'number') {
@@ -287,15 +281,18 @@ class PythonAudioService {
           formData.append('wav_bit_depth', '16');
         }
 
-        console.log('Uploading file directly to Python for mastering (local, advanced endpoint)...');
-        const advData = new FormData();
-        advData.append('file', file);
-        advData.append('genre', genre);
-        advData.append('tier', tier === 'pro' ? 'professional' : tier);
-        advData.append('target_lufs', String(typeof targetLufs === 'number' ? targetLufs : -8));
-        advData.append('user_id', userId);
-        const resp = await axios.post(`${this.baseURL}/master-advanced`, advData);
-        let masteredUrl: string = resp.data?.url;
+        console.log('Uploading file directly to Python for mastering (local)...');
+        let resp;
+        try {
+          resp = await axios.post(`${this.baseURL}/upload-file/`, formData);
+        } catch (e: any) {
+          if (e?.response?.status === 404) {
+            resp = await axios.post(`${this.baseURL}/upload-file`, formData);
+          } else {
+            throw e;
+          }
+        }
+        const masteredUrl: string = resp.data?.mastered_url || resp.data?.url;
         if (!masteredUrl) {
           throw new Error('Python service did not return mastered_url');
         }
@@ -304,7 +301,6 @@ class PythonAudioService {
         return {
           status: 'done',
           url: masteredUrl,
-          file_id: resp.data?.file_id,
           lufs: -8,
           format: resolvedFormat,
           duration: 0,
@@ -322,9 +318,7 @@ class PythonAudioService {
         formData.append('tier', tier);
         formData.append('genre', genre);
         formData.append('user_id', userId);
-        // Free and Professional (now free) should use preview mode to bypass payment/credits
-        const previewBypass = (tier === 'free' || tier === 'pro' || tier === 'professional') ? 'true' : 'false';
-        formData.append('is_preview', previewBypass);
+        formData.append('is_preview', 'false');
         formData.append('target_format', format.toUpperCase());
         formData.append('target_sample_rate', '44100');
         if (typeof targetLufs === 'number') {
@@ -338,15 +332,18 @@ class PythonAudioService {
           formData.append('wav_bit_depth', '16');
         }
 
-        console.log('Uploading file directly to Python for mastering (prod, advanced endpoint)...');
-        const advData2 = new FormData();
-        advData2.append('file', file);
-        advData2.append('genre', genre);
-        advData2.append('tier', tier === 'pro' ? 'professional' : tier);
-        advData2.append('target_lufs', String(typeof targetLufs === 'number' ? targetLufs : -8));
-        advData2.append('user_id', userId);
-        const resp = await axios.post(`${this.baseURL}/master-advanced`, advData2);
-        let masteredUrl: string = resp.data?.url;
+        console.log('Uploading file directly to Python for mastering (prod)...');
+        let resp;
+        try {
+          resp = await axios.post(`${this.baseURL}/upload-file/`, formData);
+        } catch (e: any) {
+          if (e?.response?.status === 404) {
+            resp = await axios.post(`${this.baseURL}/upload-file`, formData);
+          } else {
+            throw e;
+          }
+        }
+        const masteredUrl: string = resp.data?.mastered_url || resp.data?.url;
         if (!masteredUrl) {
           throw new Error('Python service did not return mastered_url');
         }
@@ -355,7 +352,6 @@ class PythonAudioService {
         return {
           status: 'done',
           url: masteredUrl,
-          file_id: resp.data?.file_id,
           lufs: -8,
           format: resolvedFormat,
           duration: 0,

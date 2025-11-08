@@ -27,11 +27,9 @@ interface ComparisonPlayerProps {
   masteredLufs?: number;
   onBack: () => void;
   onNewUpload: () => void;
-  onDownload: () => void | Promise<void>;
+  onDownload: () => void;
   downloadFormat: 'mp3' | 'wav16' | 'wav24';
   onFormatChange: (format: 'mp3' | 'wav16' | 'wav24') => void;
-  downloadSampleRate: 44100 | 48000;
-  onSampleRateChange: (sr: 44100 | 48000) => void;
   tier: string;
 }
 
@@ -48,8 +46,6 @@ const ComparisonPlayerFixed: React.FC<ComparisonPlayerProps> = ({
   onDownload,
   downloadFormat,
   onFormatChange,
-  downloadSampleRate,
-  onSampleRateChange,
   tier
 }) => {
   // Web Audio API implementation for seamless A/B switching

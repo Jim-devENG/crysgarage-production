@@ -26,11 +26,10 @@ import {
 
 interface LandingPageProps {
   onGetStarted: () => void;
-  onTryAnalyzer: () => void;
-  onTryNormalizer: () => void;
+  onTryMastering: () => void;
 }
 
-export function LandingPage({ onGetStarted, onTryAnalyzer, onTryNormalizer }: LandingPageProps) {
+export function LandingPage({ onGetStarted, onTryMastering }: LandingPageProps) {
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
@@ -337,7 +336,7 @@ export function LandingPage({ onGetStarted, onTryAnalyzer, onTryNormalizer }: La
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 1, delay: 0.4 }}
                 >
-                  Unleash the Future
+                  Unleash the Realm
                 </motion.span>
               </motion.h1>
               
@@ -364,7 +363,7 @@ export function LandingPage({ onGetStarted, onTryAnalyzer, onTryNormalizer }: La
                 >
                   <Button 
                     size="lg"
-                    onClick={onGetStarted}
+                    onClick={onTryMastering}
                     className="bg-crys-gold hover:bg-crys-gold-muted text-crys-black px-8 py-4 text-lg"
                   >
                     <PlayCircle className="w-5 h-5 mr-2" />
@@ -640,141 +639,10 @@ export function LandingPage({ onGetStarted, onTryAnalyzer, onTryNormalizer }: La
         </div>
       </section>
 
-      {/* Free Tools Section */}
-      <section className="bg-crys-black relative py-20">
-        <div className="max-w-7xl mx-auto px-6">
-          <motion.div 
-            className="text-center mb-16"
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            viewport={{ once: true }}
-          >
-            <h2 className="text-4xl md:text-5xl font-bold text-crys-white mb-6">
-              Free Professional Tools
-            </h2>
-            <p className="text-xl text-crys-light-grey max-w-3xl mx-auto">
-              Access our powerful audio analysis and normalization tools completely free. 
-              Perfect for preparing your tracks before mastering.
-            </p>
-          </motion.div>
-
-          <div className="grid md:grid-cols-2 gap-12">
-            {/* Audio Analyzer */}
-            <motion.div
-              className="bg-gradient-to-br from-crys-charcoal to-crys-graphite rounded-2xl p-8 border border-crys-gold/20 hover:border-crys-gold/40 transition-all duration-300"
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.2 }}
-              viewport={{ once: true }}
-            >
-              <div className="flex items-center mb-6">
-                <div className="w-12 h-12 bg-crys-gold/20 rounded-xl flex items-center justify-center mr-4">
-                  <Waves className="w-6 h-6 text-crys-gold" />
-                </div>
-                <div>
-                  <h3 className="text-2xl font-bold text-crys-white">Audio Analyzer</h3>
-                  <p className="text-crys-gold text-sm font-medium">Free Professional Tool</p>
-                </div>
-              </div>
-              
-              <p className="text-crys-light-grey mb-6">
-                Professional real-time audio analysis with ITU-R BS.1770 LUFS measurement, 
-                frequency content analysis, and comprehensive audio insights.
-              </p>
-              
-              <div className="space-y-3 mb-6">
-                <div className="flex items-center text-crys-light-grey">
-                  <CheckCircle className="w-5 h-5 text-crys-gold mr-3" />
-                  <span>ITU-R BS.1770 LUFS measurement</span>
-                </div>
-                <div className="flex items-center text-crys-light-grey">
-                  <CheckCircle className="w-5 h-5 text-crys-gold mr-3" />
-                  <span>Real-time frequency content (Bass/Mid/High)</span>
-                </div>
-                <div className="flex items-center text-crys-light-grey">
-                  <CheckCircle className="w-5 h-5 text-crys-gold mr-3" />
-                  <span>Professional waveform display</span>
-                </div>
-                <div className="flex items-center text-crys-light-grey">
-                  <CheckCircle className="w-5 h-5 text-crys-gold mr-3" />
-                  <span>3-second meter hold system</span>
-                </div>
-                <div className="flex items-center text-crys-light-grey">
-                  <CheckCircle className="w-5 h-5 text-crys-gold mr-3" />
-                  <span>RMS, Peak, and Stereo width analysis</span>
-                </div>
-              </div>
-              
-            <Button 
-              onClick={onTryAnalyzer}
-                className="w-full bg-crys-gold hover:bg-crys-gold/90 text-crys-black font-semibold py-3 rounded-xl transition-all duration-300"
-              >
-                Try Audio Analyzer
-              </Button>
-            </motion.div>
-
-            {/* Audio Normalizer */}
-            <motion.div
-              className="bg-gradient-to-br from-crys-charcoal to-crys-graphite rounded-2xl p-8 border border-crys-gold/20 hover:border-crys-gold/40 transition-all duration-300"
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.4 }}
-              viewport={{ once: true }}
-            >
-              <div className="flex items-center mb-6">
-                <div className="w-12 h-12 bg-crys-gold/20 rounded-xl flex items-center justify-center mr-4">
-                  <Volume2 className="w-6 h-6 text-crys-gold" />
-                </div>
-                <div>
-                  <h3 className="text-2xl font-bold text-crys-white">Audio Normalizer</h3>
-                  <p className="text-crys-gold text-sm font-medium">Free Professional Tool</p>
-                </div>
-              </div>
-              
-              <p className="text-crys-light-grey mb-6">
-                Professional audio normalization with customizable target levels (-3dB, -6dB, -9dB). 
-                Perfect for preparing tracks before mastering.
-              </p>
-              
-              <div className="space-y-3 mb-6">
-                <div className="flex items-center text-crys-light-grey">
-                  <CheckCircle className="w-5 h-5 text-crys-gold mr-3" />
-                  <span>Customizable target levels (-3dB, -6dB, -9dB)</span>
-                </div>
-                <div className="flex items-center text-crys-light-grey">
-                  <CheckCircle className="w-5 h-5 text-crys-gold mr-3" />
-                  <span>Professional peak normalization</span>
-                </div>
-                <div className="flex items-center text-crys-light-grey">
-                  <CheckCircle className="w-5 h-5 text-crys-gold mr-3" />
-                  <span>Dynamic range preservation</span>
-                </div>
-                <div className="flex items-center text-crys-light-grey">
-                  <CheckCircle className="w-5 h-5 text-crys-gold mr-3" />
-                  <span>Multiple format support</span>
-                </div>
-                <div className="flex items-center text-crys-light-grey">
-                  <CheckCircle className="w-5 h-5 text-crys-gold mr-3" />
-                  <span>Instant processing and download</span>
-                </div>
-              </div>
-              
-            <Button 
-              onClick={onTryNormalizer}
-                className="w-full bg-crys-gold hover:bg-crys-gold/90 text-crys-black font-semibold py-3 rounded-xl transition-all duration-300"
-              >
-                Try Audio Normalizer
-              </Button>
-            </motion.div>
-          </div>
-        </div>
-      </section>
-
       {/* Why Us Section */}
       <WhyUsSection 
         onGetStarted={onGetStarted}
-        onTryMastering={onGetStarted}
+        onTryMastering={onTryMastering}
       />
 
       {/* Perfect For Section */}
@@ -877,71 +745,6 @@ export function LandingPage({ onGetStarted, onTryAnalyzer, onTryNormalizer }: La
         </div>
       </section>
 
-      {/* Partners Section */}
-      <section className="bg-crys-black relative py-20">
-        <div className="max-w-7xl mx-auto px-6">
-          <motion.div 
-            className="text-center mb-12"
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-            viewport={{ once: true }}
-          >
-            <Badge variant="secondary" className="bg-crys-gold/20 text-crys-gold mb-4">
-              Our Partners
-            </Badge>
-            <h2 className="text-3xl md:text-4xl font-bold text-crys-white mb-4">
-              Trusted by Industry Leaders
-            </h2>
-            <p className="text-lg text-crys-light-grey max-w-2xl mx-auto">
-              We're proud to partner with leading companies in the music industry
-            </p>
-          </motion.div>
-
-          <motion.div 
-            className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto items-center"
-            variants={containerVariants}
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true }}
-          >
-            {[
-              {
-                name: "Partner Company 1",
-                logo: "https://via.placeholder.com/200x100/21217537/FFFFFF?text=Partner+1",
-                alt: "Partner Company 1 Logo"
-              },
-              {
-                name: "Partner Company 2",
-                logo: "https://via.placeholder.com/200x100/21217537/FFFFFF?text=Partner+2",
-                alt: "Partner Company 2 Logo"
-              },
-              {
-                name: "Partner Company 3",
-                logo: "https://via.placeholder.com/200x100/21217537/FFFFFF?text=Partner+3",
-                alt: "Partner Company 3 Logo"
-              }
-            ].map((partner, index) => (
-              <motion.div
-                key={index}
-                variants={itemVariants}
-                className="flex items-center justify-center"
-                whileHover={{ scale: 1.05 }}
-                transition={{ duration: 0.3 }}
-              >
-                <div className="bg-audio-panel-bg/50 border border-crys-graphite hover:border-crys-gold/50 rounded-xl p-8 w-full h-32 flex items-center justify-center transition-all duration-300 backdrop-blur-sm">
-                  <ImageWithFallback
-                    src={partner.logo}
-                    alt={partner.alt}
-                    className="max-w-full max-h-20 object-contain opacity-80 hover:opacity-100 transition-opacity duration-300 grayscale hover:grayscale-0"
-                  />
-                </div>
-              </motion.div>
-            ))}
-          </motion.div>
-        </div>
-      </section>
-
       {/* CTA Section */}
       <section className="bg-gradient-to-r from-crys-gold/10 via-crys-gold/5 to-crys-gold/10 relative overflow-hidden pt-16 pb-16">
         {/* Background */}
@@ -986,7 +789,7 @@ export function LandingPage({ onGetStarted, onTryAnalyzer, onTryNormalizer }: La
             >
               <span className="text-crys-gold">♪</span> Can you make it? 
               <span className="text-crys-gold">♫</span> Craft the sound, 
-              <span className="text-crys-gold">♪</span> Unleash the future 
+              <span className="text-crys-gold">♪</span> Unleash the realm 
               <span className="text-crys-gold">♫</span>
             </motion.p>
             
@@ -1001,9 +804,9 @@ export function LandingPage({ onGetStarted, onTryAnalyzer, onTryNormalizer }: La
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
               >
-                  <Button 
+                <Button 
                   size="lg"
-                  onClick={onGetStarted}
+                  onClick={onTryMastering}
                   className="bg-crys-gold hover:bg-crys-gold-muted text-crys-black px-8 py-4 text-lg"
                 >
                   <PlayCircle className="w-5 h-5 mr-2" />

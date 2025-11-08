@@ -36,9 +36,9 @@ export function PaymentModal({
     free: {
       id: 'free',
       name: 'Pay Per Download',
-      price: 5.00,
+      price: 3.00,
       credits: 1,
-      description: '$5 for 1 download',
+      description: '$3 for 1 download',
       features: [
         '1 download credit',
         'High-quality mastered track',
@@ -52,11 +52,11 @@ export function PaymentModal({
     professional: {
       id: 'professional',
       name: 'Professional',
-      price: 0.00,
-      credits: 999999,
-      description: 'Free - Unlimited credits',
+      price: 15.00,
+      credits: 5,
+      description: '$15 for 5 credits ($3 per credit)',
       features: [
-        'Unlimited mastering credits',
+        '5 mastering credits',
         'Crysgarage Mastering Engine',
         'Genre-specific presets',
         'High-quality exports',
@@ -64,7 +64,7 @@ export function PaymentModal({
         '+16 tuning (free)',
         'All genres included',
         'Live preview & feedback',
-        'Best value - unlimited downloads'
+        'Better value than pay-per-download'
       ],
       icon: <Zap className="w-6 h-6" />
     },
@@ -105,13 +105,6 @@ export function PaymentModal({
     setIsProcessing(true);
 
     try {
-      // Handle free professional tier
-      if (selectedTier === 'professional' && selectedTierInfo.price === 0.00) {
-        console.log('Free professional tier - granting credits directly');
-        onPaymentSuccess(selectedTierInfo.credits);
-        return;
-      }
-
       // Convert USD to NGN for Paystack
       const currencyConversion = convertUSDToNGN(selectedTierInfo.price);
       const reference = `CRYS_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;

@@ -66,7 +66,7 @@ export function CreditDisplay({
     } else {
       // Default behavior - navigate to pricing
           if (!isDevUser) {
-            window.location.href = '/pricing';
+            window.location.href = '/billing';
           }
     }
   };

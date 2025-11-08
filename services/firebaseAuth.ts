@@ -11,6 +11,7 @@ import {
 } from 'firebase/auth';
 import { auth, googleProvider } from '../firebase/config';
 import { DEV_MODE, DEV_USER, logDevAction, initDevMode } from '../utils/devMode';
+import { ipTrackingService } from './ipTrackingService';
 
 // User interface that matches your existing system
 export interface User {
@@ -39,12 +40,21 @@ export interface User {
 
 // Convert Firebase user to your User interface
 const convertFirebaseUser = (firebaseUser: FirebaseUser, initialTier: 'free' | 'pro' | 'advanced' = 'free'): User => {
+  // Determine initial credits based on tier
+  let initialCredits = 0;
+  if (initialTier === 'pro') {
+    initialCredits = 2; // 2 free credits for professional tier
+  } else if (initialTier === 'advanced') {
+    initialCredits = 2; // 2 free credits for advanced tier
+  }
+  // Free tier gets 0 credits (pay-per-download)
+
   return {
     id: firebaseUser.uid,
     name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'User',
     email: firebaseUser.email || '',
     tier: initialTier,
-    credits: 0, // All tiers start with 0 credits
+    credits: initialCredits,
     join_date: new Date().toISOString(),
     total_tracks: 0,
     total_spent: 0,
@@ -192,6 +202,14 @@ class FirebaseAuthService {
     try {
       console.log('FirebaseAuth: Starting Google sign in...');
       
+      // Check IP registration before Google sign-in
+      try {
+        await ipTrackingService.registerIP();
+        console.log('FirebaseAuth: IP registration successful');
+      } catch (ipError: any) {
+        console.error('FirebaseAuth: IP registration failed:', ipError);
+        throw new Error(ipTrackingService.handleIPRegistrationError(ipError));
+      }
       
       // Try popup first, fallback to redirect if blocked
       try {
@@ -253,6 +271,14 @@ class FirebaseAuthService {
     try {
       console.log('FirebaseAuth: Starting email sign up...');
       
+      // Check IP registration before creating Firebase account
+      try {
+        await ipTrackingService.registerIP();
+        console.log('FirebaseAuth: IP registration successful');
+      } catch (ipError: any) {
+        console.error('FirebaseAuth: IP registration failed:', ipError);
+        throw new Error(ipTrackingService.handleIPRegistrationError(ipError));
+      }
       
       const result = await createUserWithEmailAndPassword(auth, email, password);
       

@@ -26,9 +26,9 @@ export function PricingTiers({ onTierSelect, selectedTier }: PricingTiersProps) 
     {
       id: "free",
       name: "Pay Per Download",
-      price: "$5.00",
+      price: "$3.00",
       credits: "1 download",
-      description: "$5 for 1 download",
+      description: "$3 for 1 download",
       features: [
         "1 download credit",
         "MP3/WAV upload",
@@ -45,11 +45,11 @@ export function PricingTiers({ onTierSelect, selectedTier }: PricingTiersProps) 
     {
       id: "professional",
       name: "Professional",
-      price: "$0.00",
-      credits: "Unlimited",
-      description: "Free",
+      price: "$15.00",
+      credits: "5 credits",
+      description: "$3 per credit",
       features: [
-        "Unlimited mastering credits",
+        "5 mastering credits",
         "All audio formats",
         "44.1kHz, 48kHz sample rates",
         "16/24/32-bit resolution",
@@ -57,7 +57,7 @@ export function PricingTiers({ onTierSelect, selectedTier }: PricingTiersProps) 
         "Noise reduction included",
         "+16 tuning correction",
         "Download in WAV/MP3/FLAC",
-        "Best value - unlimited downloads"
+        "Better value than pay-per-download"
       ],
       popular: true,
       icon: <Zap className="w-6 h-6" />,
