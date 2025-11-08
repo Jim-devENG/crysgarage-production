@@ -25,11 +25,13 @@ import {
 } from "lucide-react";
 
 interface LandingPageProps {
+  onTryAnalyzer?: () => void;
+  onTryNormalizer?: () => void;
   onGetStarted: () => void;
   onTryMastering: () => void;
 }
 
-export function LandingPage({ onGetStarted, onTryMastering }: LandingPageProps) {
+export function LandingPage({ onGetStarted, onTryMastering, onTryAnalyzer, onTryNormalizer }: LandingPageProps) {
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
@@ -368,6 +370,18 @@ export function LandingPage({ onGetStarted, onTryMastering }: LandingPageProps) 
                   >
                     <PlayCircle className="w-5 h-5 mr-2" />
                     Try Our Mastering App
+                  <Button
+                    size=" lg\n onClick={onTryAnalyzer}
+ className=bg-crys-gold hover:bg-crys-gold-muted text-crys-black px-8 py-4 text-lg ml-4\n >
+ <Waves className=w-5 h-5 mr-2 />
+ Try Analyzer
+ </Button>
+ <Button
+ size=lg\n onClick={onTryNormalizer}
+ className=bg-crys-gold hover:bg-crys-gold-muted text-crys-black px-8 py-4 text-lg ml-4\n >
+ <Volume2 className=w-5 h-5 mr-2 />
+ Try Normalizer
+ </Button>
                     <ArrowRight className="w-5 h-5 ml-2" />
                   </Button>
                 </motion.div>
