@@ -5,7 +5,6 @@ import ComparisonPlayerFixed from './ComparisonPlayerFixed';
 import RealTimeAnalysisPanel from '../AdvancedTierDashboard/RealTimeAnalysisPanel';
 import { creditsAPI } from '../../services/api';
 import { pythonAudioService, TierInfo, GenreInfo } from '../../services/pythonAudioService';
-import { useAuth } from '../../contexts/AuthenticationContext';
 import MasteringConfirmModal from '../MasteringConfirmModal';
 import { DEV_MODE, logDevAction } from '../../utils/devMode';
 
