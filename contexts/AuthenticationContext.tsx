@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import firebaseAuthService, { User } from '../services/firebaseAuth';
-import { emailNotificationService } from '../services/emailNotificationService';
 
 interface AuthenticationContextType {
   user: User | null;
@@ -91,19 +90,6 @@ export function AuthenticationProvider({ children }: AuthenticationProviderProps
       setUser(user);
       setAuthVersion(prev => prev + 1); // Force re-render
       console.log('AuthenticationContext: User state set to:', user);
-      
-      // Send welcome email notification
-      try {
-        await emailNotificationService.sendWelcomeEmail({
-          userEmail: email,
-          userName: name,
-          userTier: tier
-        });
-        console.log('AuthenticationContext: Welcome email sent successfully');
-      } catch (emailError) {
-        console.error('AuthenticationContext: Failed to send welcome email:', emailError);
-        // Don't throw error - email failure shouldn't break signup
-      }
     } catch (error: any) {
       console.error('AuthenticationContext: Firebase signup failed:', error);
       setError(error.message || 'Failed to create account');
@@ -123,21 +109,6 @@ export function AuthenticationProvider({ children }: AuthenticationProviderProps
       console.log('AuthenticationContext: Firebase login successful:', user);
       setUser(user);
       setAuthVersion(prev => prev + 1); // Force re-render
-      
-      // Send login notification email
-      try {
-        const userIP = await emailNotificationService.getUserIP();
-        await emailNotificationService.sendLoginNotification({
-          userEmail: email,
-          userName: user.name || 'User',
-          loginTime: new Date().toISOString(),
-          ipAddress: userIP
-        });
-        console.log('AuthenticationContext: Login notification sent successfully');
-      } catch (emailError) {
-        console.error('AuthenticationContext: Failed to send login notification:', emailError);
-        // Don't throw error - email failure shouldn't break login
-      }
     } catch (error: any) {
       console.error('AuthenticationContext: Firebase login failed:', error);
       setError(error.message || 'Login failed');
@@ -157,21 +128,6 @@ export function AuthenticationProvider({ children }: AuthenticationProviderProps
       console.log('AuthenticationContext: Firebase Google sign in successful:', user);
       setUser(user);
       setAuthVersion(prev => prev + 1); // Force re-render
-      
-      // Send login notification email
-      try {
-        const userIP = await emailNotificationService.getUserIP();
-        await emailNotificationService.sendLoginNotification({
-          userEmail: user.email || '',
-          userName: user.name || 'User',
-          loginTime: new Date().toISOString(),
-          ipAddress: userIP
-        });
-        console.log('AuthenticationContext: Google login notification sent successfully');
-      } catch (emailError) {
-        console.error('AuthenticationContext: Failed to send Google login notification:', emailError);
-        // Don't throw error - email failure shouldn't break login
-      }
     } catch (error: any) {
       console.error('AuthenticationContext: Firebase Google sign in failed:', error);
       setError(error.message || 'Google sign in failed');

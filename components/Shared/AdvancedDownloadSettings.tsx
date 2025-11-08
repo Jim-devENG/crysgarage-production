@@ -31,9 +31,7 @@ const AdvancedDownloadSettings: React.FC<AdvancedDownloadSettingsProps> = ({
       case 'professional':
         return [
           { value: 'MP3', label: 'MP3', description: 'Compressed', price: '$0.00' },
-          { value: 'WAV', label: 'WAV (24-bit)', description: 'Studio quality', price: '$0.00' },
-          { value: 'FLAC', label: 'FLAC', description: 'Lossless', price: '$0.00' },
-          { value: 'AIFF', label: 'AIFF (24-bit)', description: 'Apple uncompressed', price: '$0.00' }
+          { value: 'WAV', label: 'WAV (24-bit)', description: 'Studio quality', price: '$0.00' }
         ];
       case 'advanced':
         return [
@@ -59,8 +57,7 @@ const AdvancedDownloadSettings: React.FC<AdvancedDownloadSettingsProps> = ({
       case 'professional':
         return [
           { value: '44.1kHz', label: '44.1 kHz', description: 'CD standard', price: '$0.00' },
-          { value: '48kHz', label: '48 kHz', description: 'Professional', price: '$0.00' },
-          { value: '96kHz', label: '96 kHz', description: 'High-res', price: '$0.00' }
+          { value: '48kHz', label: '48 kHz', description: 'Professional', price: '$0.00' }
         ];
       case 'advanced':
         return [

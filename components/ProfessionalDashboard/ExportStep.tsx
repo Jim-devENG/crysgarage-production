@@ -95,12 +95,12 @@ const ExportStep: React.FC<ExportStepProps> = ({
       console.log('Calculating processing summary...');
       
       // Create audio context for analysis
-      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-      
+        const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+        
       // Read the original audio file
       const arrayBuffer = await selectedFile.arrayBuffer();
-      const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-      
+        const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+        
       // Calculate original audio metrics
       const originalMetrics = calculateAudioMetrics(audioBuffer);
       
@@ -305,38 +305,38 @@ const ExportStep: React.FC<ExportStepProps> = ({
   return (
     <>
       <RealTimeVisualizer />
-      <div className="space-y-8">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <button
-              onClick={onBack}
-              className="p-2 rounded-lg bg-gray-800 hover:bg-gray-700 transition-colors"
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </button>
-            <div>
-              <h2 className="text-2xl font-bold text-crys-gold">Export Your Mastered Audio</h2>
-              <p className="text-gray-400">Compare and download your professionally mastered track</p>
-            </div>
+    <div className="space-y-8">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-4">
+          <button
+            onClick={onBack}
+            className="p-2 rounded-lg bg-gray-800 hover:bg-gray-700 transition-colors"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+          <div>
+            <h2 className="text-2xl font-bold text-crys-gold">Export Your Mastered Audio</h2>
+            <p className="text-gray-400">Compare and download your professionally mastered track</p>
           </div>
         </div>
+      </div>
 
-        {/* Processing Summary */}
-        <div className="bg-gray-800 rounded-xl p-6">
-          <h3 className="text-lg font-semibold mb-4">Processing Summary</h3>
-          <div className="grid md:grid-cols-2 gap-4">
-            <div className="bg-gray-700 rounded-lg p-4">
-              <h4 className="font-medium mb-2">Original File</h4>
-              <p className="text-sm text-gray-400">{selectedFile?.name}</p>
-              <p className="text-xs text-gray-500">{(selectedFile?.size / 1024 / 1024).toFixed(2)} MB</p>
-            </div>
-            <div className="bg-gray-700 rounded-lg p-4">
-              <h4 className="font-medium mb-2">Applied Genre</h4>
-              <p className="text-sm text-crys-gold">{selectedGenre?.name}</p>
-              <p className="text-xs text-gray-500">Professional mastering preset</p>
-            </div>
+      {/* Processing Summary */}
+      <div className="bg-gray-800 rounded-xl p-6">
+        <h3 className="text-lg font-semibold mb-4">Processing Summary</h3>
+        <div className="grid md:grid-cols-2 gap-4">
+          <div className="bg-gray-700 rounded-lg p-4">
+            <h4 className="font-medium mb-2">Original File</h4>
+            <p className="text-sm text-gray-400">{selectedFile?.name}</p>
+            <p className="text-xs text-gray-500">{(selectedFile?.size / 1024 / 1024).toFixed(2)} MB</p>
           </div>
+          <div className="bg-gray-700 rounded-lg p-4">
+            <h4 className="font-medium mb-2">Applied Genre</h4>
+            <p className="text-sm text-crys-gold">{selectedGenre?.name}</p>
+            <p className="text-xs text-gray-500">Professional mastering preset</p>
+          </div>
+        </div>
           
           {/* Audio Analysis */}
           {processingSummary && (
@@ -362,31 +362,31 @@ const ExportStep: React.FC<ExportStepProps> = ({
               </div>
             </div>
           )}
-          
-          {/* Applied Changes */}
+        
+        {/* Applied Changes */}
           {processingSummary && (
-            <div className="mt-4 bg-gray-700 rounded-lg p-4">
-              <h4 className="font-medium mb-3 text-crys-gold">Applied Changes</h4>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <div className="text-center">
+          <div className="mt-4 bg-gray-700 rounded-lg p-4">
+            <h4 className="font-medium mb-3 text-crys-gold">Applied Changes</h4>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="text-center">
                   <div className="text-lg font-semibold text-crys-gold">+{processingSummary.gainApplied}dB</div>
-                  <div className="text-xs text-gray-400">Gain Boost</div>
-                </div>
-                <div className="text-center">
+                <div className="text-xs text-gray-400">Gain Boost</div>
+              </div>
+              <div className="text-center">
                   <div className="text-lg font-semibold text-crys-gold">{processingSummary.compressionApplied}</div>
-                  <div className="text-xs text-gray-400">Compression</div>
-                </div>
-                <div className="text-center">
+                <div className="text-xs text-gray-400">Compression</div>
+              </div>
+              <div className="text-center">
                   <div className="text-lg font-semibold text-crys-gold">{processingSummary.masteredLufs} LUFS</div>
-                  <div className="text-xs text-gray-400">Target Loudness</div>
-                </div>
-                <div className="text-center">
+                <div className="text-xs text-gray-400">Target Loudness</div>
+              </div>
+              <div className="text-center">
                   <div className="text-lg font-semibold text-crys-gold">{processingSummary.masteredPeak} dB</div>
-                  <div className="text-xs text-gray-400">True Peak</div>
-                </div>
+                <div className="text-xs text-gray-400">True Peak</div>
               </div>
             </div>
-          )}
+          </div>
+        )}
           
           {/* Mastered Results */}
           {processingSummary && (
@@ -412,18 +412,18 @@ const ExportStep: React.FC<ExportStepProps> = ({
               </div>
             </div>
           )}
-        </div>
+      </div>
 
-        {/* Download Options */}
-        <div className="bg-gray-800 rounded-xl p-6">
+      {/* Download Options */}
+      <div className="bg-gray-800 rounded-xl p-6">
           <h3 className="text-lg font-semibold mb-4 flex items-center">
             <Settings className="w-5 h-5 mr-2 text-crys-gold" />
             Professional Download Options
           </h3>
-          
-          <div className="space-y-4">
-            {/* Format Selection */}
-            <div className="bg-gray-700 rounded-lg p-4">
+        
+        <div className="space-y-4">
+          {/* Format Selection */}
+          <div className="bg-gray-700 rounded-lg p-4">
               <h4 className="font-medium mb-3 text-crys-gold">Select Format</h4>
               <div className="grid grid-cols-3 gap-3">
                 <button
@@ -440,36 +440,36 @@ const ExportStep: React.FC<ExportStepProps> = ({
                     <div className="text-xs text-gray-500">48kHz</div>
                   </div>
                 </button>
-                <button
+              <button
                   onClick={() => setDownloadFormat('wav24')}
-                  className={`p-3 rounded-lg border-2 transition-all ${
+                className={`p-3 rounded-lg border-2 transition-all ${
                     downloadFormat === 'wav24'
-                      ? 'border-crys-gold bg-crys-gold/20 text-crys-gold'
-                      : 'border-gray-600 bg-gray-600 text-gray-400 hover:border-gray-500'
-                  }`}
-                >
-                  <div className="text-center">
+                    ? 'border-crys-gold bg-crys-gold/20 text-crys-gold'
+                    : 'border-gray-600 bg-gray-600 text-gray-400 hover:border-gray-500'
+                }`}
+              >
+                <div className="text-center">
                     <div className="font-semibold">24-bit WAV</div>
                     <div className="text-xs">Studio Quality</div>
                     <div className="text-xs text-gray-500">48kHz</div>
-                  </div>
-                </button>
-                <button
-                  onClick={() => setDownloadFormat('mp3')}
-                  className={`p-3 rounded-lg border-2 transition-all ${
-                    downloadFormat === 'mp3'
-                      ? 'border-crys-gold bg-crys-gold/20 text-crys-gold'
-                      : 'border-gray-600 bg-gray-600 text-gray-400 hover:border-gray-500'
-                  }`}
-                >
-                  <div className="text-center">
+                </div>
+              </button>
+              <button
+                onClick={() => setDownloadFormat('mp3')}
+                className={`p-3 rounded-lg border-2 transition-all ${
+                  downloadFormat === 'mp3'
+                    ? 'border-crys-gold bg-crys-gold/20 text-crys-gold'
+                    : 'border-gray-600 bg-gray-600 text-gray-400 hover:border-gray-500'
+                }`}
+              >
+                <div className="text-center">
                     <div className="font-semibold">MP3 320kbps</div>
                     <div className="text-xs">High Quality</div>
                     <div className="text-xs text-gray-500">48kHz</div>
-                  </div>
-                </button>
-              </div>
+                </div>
+              </button>
             </div>
+          </div>
 
             {/* Professional Specifications */}
             <div className="bg-gray-700 rounded-lg p-4">
@@ -502,65 +502,65 @@ const ExportStep: React.FC<ExportStepProps> = ({
               </div>
             </div>
 
-            {/* Download Button */}
-            <div className="bg-gray-700 rounded-lg p-4">
-              <button
-                onClick={handleDownload}
+          {/* Download Button */}
+          <div className="bg-gray-700 rounded-lg p-4">
+            <button
+              onClick={handleDownload}
                 disabled={!selectedGenre || isDownloading}
-                className={`w-full py-4 px-6 rounded-lg font-semibold transition-all flex items-center justify-center space-x-2 ${
+              className={`w-full py-4 px-6 rounded-lg font-semibold transition-all flex items-center justify-center space-x-2 ${
                   selectedGenre && !isDownloading
-                    ? 'bg-crys-gold hover:bg-yellow-400 text-black'
-                    : 'bg-gray-600 text-gray-400 cursor-not-allowed'
-                }`}
-              >
-                {isDownloading ? (
-                  <>
-                    <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin"></div>
+                  ? 'bg-crys-gold hover:bg-yellow-400 text-black'
+                  : 'bg-gray-600 text-gray-400 cursor-not-allowed'
+              }`}
+            >
+              {isDownloading ? (
+                <>
+                  <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin"></div>
                     <span>Downloading...</span>
-                  </>
-                ) : (
-                  <>
-                    <Download className="w-5 h-5" />
+                </>
+              ) : (
+                <>
+                  <Download className="w-5 h-5" />
                     <span>Download {downloadFormat === 'mp3' ? 'MP3 320kbps' : downloadFormat === 'wav16' ? 'WAV 16-bit' : 'WAV 24-bit'}</span>
-                  </>
-                )}
-              </button>
-              
-              {selectedGenre && (
-                <div className="mt-3 text-center space-y-1">
-                  <p className="text-xs text-gray-400">
-                    Your audio will be processed with {selectedGenre.name} mastering
-                  </p>
-                  <p className="text-xs text-crys-gold">
+                </>
+              )}
+            </button>
+            
+            {selectedGenre && (
+              <div className="mt-3 text-center space-y-1">
+                <p className="text-xs text-gray-400">
+                  Your audio will be processed with {selectedGenre.name} mastering
+                </p>
+                <p className="text-xs text-crys-gold">
                     Format: {downloadFormat === 'mp3' ? 'MP3 320kbps' : downloadFormat === 'wav16' ? 'WAV 16-bit' : 'WAV 24-bit'} • Sample Rate: 48kHz
                   </p>
                   <p className="text-xs text-green-400">
                     Professional quality mastering with real-time processing
-                  </p>
-                </div>
-              )}
-            </div>
+                </p>
+              </div>
+            )}
           </div>
         </div>
-
-        {/* Actions */}
-        <div className="flex justify-between">
-          <button
-            onClick={onRestart}
-            className="flex items-center space-x-2 px-6 py-3 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors"
-          >
-            <RotateCcw className="w-4 h-4" />
-            <span>Start New Session</span>
-          </button>
-          
-          <button
-            onClick={onBack}
-            className="px-6 py-3 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors"
-          >
-            Back to Processing
-          </button>
-        </div>
       </div>
+
+      {/* Actions */}
+      <div className="flex justify-between">
+        <button
+          onClick={onRestart}
+          className="flex items-center space-x-2 px-6 py-3 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors"
+        >
+          <RotateCcw className="w-4 h-4" />
+          <span>Start New Session</span>
+        </button>
+        
+        <button
+          onClick={onBack}
+          className="px-6 py-3 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors"
+        >
+          Back to Processing
+        </button>
+      </div>
+    </div>
     </>
   );
 };

@@ -4,18 +4,23 @@
  * while preserving production authentication and payment logic
  */
 
-// Check if Dev Mode is enabled via environment variable
-export const DEV_MODE = import.meta.env.VITE_DEV_MODE === 'true' || (() => {
-  try {
-    // cookie-based dev mode set by backend
-    const cookieOn = document.cookie.split(';').some(c => c.trim().startsWith('cg_dev_mode='));
-    // local override (frontend-only) for super-simple dev access
-    const localOn = (typeof localStorage !== 'undefined' && localStorage.getItem('cg_dev_mode') === '1');
-    return cookieOn || localOn;
-  } catch (_) {
-    return false;
-  }
+// Dev Mode detection
+// Enabled when:
+// 1) Local dev with env flag, OR
+// 2) Explicit prod override via /dev route or ?dev=1, OR
+// 3) Manual unlock flag in localStorage
+const envDev = import.meta.env.VITE_DEV_MODE === 'true';
+const isLocalhost = typeof window !== 'undefined' && window.location && (
+  window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+);
+const urlForcesDev = typeof window !== 'undefined' && window.location && (
+  window.location.pathname === '/dev' ||
+  new URLSearchParams(window.location.search).get('dev') === '1'
+);
+const localUnlock = typeof window !== 'undefined' && (() => {
+  try { return localStorage.getItem('CRG_DEV_UNLOCK') === '1'; } catch { return false; }
 })();
+export const DEV_MODE = (envDev && isLocalhost) || urlForcesDev || localUnlock;
 
 // Dev Mode User Object
 export const DEV_USER = {
@@ -65,6 +70,10 @@ export function logDevAction(action: string, data?: any): void {
  */
 export function isDevMode(): boolean {
   return DEV_MODE;
+}
+
+export function enableDevUnlock(): void {
+  try { localStorage.setItem('CRG_DEV_UNLOCK', '1'); } catch {}
 }
 
 /**

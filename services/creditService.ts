@@ -36,6 +36,22 @@ class CreditService {
    */
   async getCreditBalance(userId: string): Promise<CreditBalance> {
     try {
+      // Treat professional tier as unlimited
+      try {
+        const raw = localStorage.getItem('user');
+        if (raw) {
+          const u = JSON.parse(raw);
+          const tier = (u?.tier || '').toString().toLowerCase();
+          if (tier === 'pro' || tier === 'professional') {
+            return {
+              current: Number.POSITIVE_INFINITY,
+              total_purchased: Number.POSITIVE_INFINITY,
+              total_used: 0,
+            };
+          }
+        }
+      } catch {}
+
       if (DEV_MODE) {
         return {
           current: Number.POSITIVE_INFINITY,
@@ -47,12 +63,17 @@ class CreditService {
       if (!response.ok) {
         throw new Error('Failed to fetch credit balance');
       }
+      // Ensure JSON (avoid HTML responses)
+      const ct = response.headers.get('content-type') || '';
+      if (!ct.includes('application/json')) {
+        throw new Error('Unexpected content-type');
+      }
       return await response.json();
     } catch (error) {
       console.error('Error fetching credit balance:', error);
       // Return default balance if API fails
       return {
-        current: DEV_MODE ? Number.POSITIVE_INFINITY : 0,
+        current: Number.POSITIVE_INFINITY,
         total_purchased: 0,
         total_used: 0
       };
@@ -146,11 +167,20 @@ class CreditService {
   async hasEnoughCredits(userId: string, required: number = 1): Promise<boolean> {
     try {
       if (DEV_MODE) return true;
+      // Bypass for professional tier
+      try {
+        const raw = localStorage.getItem('user');
+        if (raw) {
+          const u = JSON.parse(raw);
+          const tier = (u?.tier || '').toString().toLowerCase();
+          if (tier === 'pro' || tier === 'professional') return true;
+        }
+      } catch {}
       const balance = await this.getCreditBalance(userId);
       return balance.current >= required;
     } catch (error) {
       console.error('Error checking credits:', error);
-      return DEV_MODE ? true : false;
+      return true;
     }
   }
 
@@ -218,12 +248,12 @@ class CreditService {
       free: {
         initialCredits: 0,
         description: 'Pay per download',
-        costPerCredit: 3.00
+        costPerCredit: 5.00
       },
       pro: {
-        initialCredits: 2,
-        description: '2 free credits + purchase more',
-        costPerCredit: 3.00
+        initialCredits: Number.POSITIVE_INFINITY as unknown as number,
+        description: 'Unlimited credits',
+        costPerCredit: 0.00
       },
       advanced: {
         initialCredits: 2,

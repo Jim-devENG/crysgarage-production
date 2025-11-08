@@ -7,6 +7,8 @@ import { creditsAPI } from '../../services/api';
 import { pythonAudioService, TierInfo, GenreInfo } from '../../services/pythonAudioService';
 import { useAuth } from '../../contexts/AuthenticationContext';
 import { creditService } from '../../services/creditService';
+import MasteringConfirmModal from '../MasteringConfirmModal';
+import { DEV_MODE, logDevAction } from '../../utils/devMode';
 
 // Types
 interface AudioFile {
@@ -61,6 +63,7 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
   const [uploadedFile, setUploadedFile] = useState<AudioFile | null>(null);
   const [selectedGenre, setSelectedGenre] = useState<Genre | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
 
   // Debug: Track uploadedFile state changes
   useEffect(() => {
@@ -77,6 +80,7 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
   const [masteredStats, setMasteredStats] = useState<AudioStats | null>(null);
   const [masteredAudioUrl, setMasteredAudioUrl] = useState<string | null>(null);
   const [masteredRemoteUrl, setMasteredRemoteUrl] = useState<string | null>(null);
+  const [processedFileId, setProcessedFileId] = useState<string | null>(null);
   const [isPlayingOriginal, setIsPlayingOriginal] = useState(false);
   const [isPlayingMastered, setIsPlayingMastered] = useState(false);
   const [originalVolume, setOriginalVolume] = useState(1);
@@ -88,6 +92,7 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
   const [tierInfo, setTierInfo] = useState<TierInfo | null>(null);
   const [isLoadingGenres, setIsLoadingGenres] = useState(false);
   const [downloadFormat, setDownloadFormat] = useState<'mp3' | 'wav16' | 'wav24'>('wav24');
+  const [downloadSampleRate, setDownloadSampleRate] = useState<44100 | 48000>(48000);
   const [isApplyingEffects, setIsApplyingEffects] = useState(false);
   
   // LUFS and volume control states
@@ -673,7 +678,7 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
         });
       };
       const tierData = await withTimeout(pythonAudioService.getTierInformation(), 8000);
-      const proTierInfo = (tierData as any).pro || (tierData as any).professional;
+      const proTierInfo = (tierData as any).professional;
       if (proTierInfo) setTierInfo(proTierInfo);
       
     } catch (error) {
@@ -1069,8 +1074,8 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
   };
 
   // Process audio with Python service
-  const handleProcessAudio = async () => {
-    console.log('Debug - handleProcessAudio called:');
+  const startMasteringProcess = async () => {
+    console.log('Debug - startMasteringProcess called:');
     console.log('uploadedFile:', uploadedFile);
     console.log('selectedGenre:', selectedGenre);
     console.log('effectiveUser:', effectiveUser);
@@ -1150,6 +1155,8 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
       setProcessingProgress(100);
 
       console.log('Final processing completed:', result);
+      console.log('🎵 DEBUG: Processing result keys:', Object.keys(result));
+      console.log('🎵 DEBUG: Processing result file_id:', result.file_id);
 
       // Update uploadedFile with processed file size
       console.log('🎵 DEBUG: Processing result:', result);
@@ -1167,6 +1174,14 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
         setProcessingProgress(prev => prev + 0.001);
       }
 
+      // Store the file_id for downloads
+      if (result.file_id) {
+        setProcessedFileId(result.file_id);
+        console.log('🎵 DEBUG: Stored file_id:', result.file_id);
+      } else {
+        console.log('🎵 DEBUG: No file_id in processing result');
+      }
+      
       // Keep remote URL for download, create a CORS-safe playable URL for the player
       setMasteredRemoteUrl(result.url);
       try {
@@ -1227,76 +1242,43 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
     }
   };
 
-  // Download handler - using simple direct download
+  // Download handler - using proxy-download for format conversion
   const handleDownload = async () => {
-    const urlForDownload = masteredRemoteUrl || masteredAudioUrl;
-    if (!urlForDownload) return;
+    // Prioritize using processedFileId for downloads
+    if (!processedFileId && !masteredRemoteUrl && !masteredAudioUrl) {
+      console.error('🎵 DEBUG: No file available for download');
+      return;
+    }
 
     try {
-      console.log('🎵 Simple download starting');
-      console.log('🎵 DEBUG: urlForDownload:', urlForDownload);
+      console.log('🎵 Download with format conversion starting');
+      console.log('🎵 DEBUG: processedFileId:', processedFileId);
+      console.log('🎵 DEBUG: downloadFormat:', downloadFormat);
+      console.log('🎵 DEBUG: downloadSampleRate:', downloadSampleRate);
       
-      // Use simple direct download like local server
+      // Use proxy-download endpoint for format conversion
       const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
       const baseUrl = isLocal ? 'http://localhost:8002' : 'https://crysgarage.studio';
       
-      // 🎵 DEBUG: Check if it's a blob URL and handle it properly
-      if (urlForDownload.startsWith('blob:')) {
-        console.log('🎵 DEBUG: Blob URL detected, using server URL instead');
-        // For blob URLs, we need to use the server URL from the processing response
-        // This should be the masteredRemoteUrl from the processing result
-        const serverUrl = masteredRemoteUrl; // This should be the server URL, not blob
-        if (serverUrl && !serverUrl.startsWith('blob:')) {
-          const fullFilename = serverUrl.split('/').pop() || 'unknown';
-          const downloadUrl = `${baseUrl}/download/${fullFilename}`;
-          console.log('🎵 Download URL:', downloadUrl);
-          
-          const res = await fetch(downloadUrl, { method: 'GET' });
-          if (!res.ok) throw new Error(`Download HTTP ${res.status}`);
-          
-          // 🎵 DEBUG: Log response headers and content length
-          console.log('🎵 DEBUG: Response headers:', Object.fromEntries(res.headers.entries()));
-          console.log('🎵 DEBUG: Content-Length header:', res.headers.get('content-length'));
-          console.log('🎵 DEBUG: Content-Type header:', res.headers.get('content-type'));
-          
-          const blob = await res.blob();
-          console.log('🎵 DEBUG: Download blob size:', blob.size, 'bytes');
-          console.log('🎵 DEBUG: Blob type:', blob.type);
-          
-          if (blob.size < 1024) {
-            console.error('🎵 DEBUG: Blob too small:', blob.size);
-            throw new Error(`Downloaded file too small (${blob.size} bytes)`);
-          }
-          
-          const objectUrl = URL.createObjectURL(blob);
-          const baseName = (uploadedFile?.name?.replace(/\.[^/.]+$/, '') || 'audio');
-          const ext = downloadFormat === 'mp3' ? 'mp3' : 'wav';
-          
-          const a = document.createElement('a');
-          a.href = objectUrl;
-          a.download = `${baseName}_garage_${selectedGenre?.name?.toLowerCase().replace(/\s+/g, '_')}_mastered_24bit_48k.${ext}`;
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          URL.revokeObjectURL(objectUrl);
-          
-          console.log('🎵 Download completed successfully');
-          return;
-        } else {
-          throw new Error('No valid server URL available for download');
-        }
-      }
-      
-      // Extract file ID from URL or use simple download URL from response
       let downloadUrl;
-      if (urlForDownload.includes('simple_download_url')) {
-        downloadUrl = `${baseUrl}${urlForDownload}`;
+      
+      if (processedFileId) {
+        // Convert format to uppercase for backend compatibility
+        const backendFormat = downloadFormat.toUpperCase();
+        // Use file_id with proxy-download for format conversion
+        downloadUrl = `${baseUrl}/proxy-download?file_id=${processedFileId}&format=${backendFormat}&sample_rate=${downloadSampleRate}`;
+        console.log('🎵 Using file_id with proxy-download for format conversion:', processedFileId);
       } else {
-        // Fallback: try to extract file ID from URL
-        const fileId = urlForDownload.split('/').pop()?.split('.')[0] || 'unknown';
-        // Use the full filename with extension for download
-        const fullFilename = urlForDownload.split('/').pop() || 'unknown';
-        downloadUrl = `${baseUrl}/download/${fullFilename}`;
+        // Fallback to URL-based download
+        const urlForDownload = masteredRemoteUrl || masteredAudioUrl;
+        if (urlForDownload && !urlForDownload.startsWith('blob:')) {
+          // Convert format to uppercase for backend compatibility
+          const backendFormat = downloadFormat.toUpperCase();
+          downloadUrl = `${baseUrl}/proxy-download?file_url=${encodeURIComponent(urlForDownload)}&format=${backendFormat}&sample_rate=${downloadSampleRate}`;
+          console.log('🎵 Using file_url with proxy-download for format conversion:', urlForDownload);
+        } else {
+          throw new Error('No valid file available for download');
+        }
       }
       
       console.log('🎵 Download URL:', downloadUrl);
@@ -1318,17 +1300,33 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
         throw new Error(`Downloaded file too small (${blob.size} bytes)`);
       }
       
-      const objectUrl = URL.createObjectURL(blob);
-      const baseName = (uploadedFile?.name?.replace(/\.[^/.]+$/, '') || 'audio');
-      const ext = downloadFormat === 'mp3' ? 'mp3' : 'wav';
-      
-      const a = document.createElement('a');
-      a.href = objectUrl;
-      a.download = `${baseName}_garage_${selectedGenre?.name?.toLowerCase().replace(/\s+/g, '_')}_mastered_24bit_48k.${ext}`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(objectUrl);
+              const objectUrl = URL.createObjectURL(blob);
+              const baseName = (uploadedFile?.name?.replace(/\.[^/.]+$/, '') || 'audio');
+              
+              // Fix: Use proper file extensions based on format
+              const getFileExtension = (format: string) => {
+                switch (format.toLowerCase()) {
+                  case 'mp3': return 'mp3';
+                  case 'wav16': 
+                  case 'wav24': 
+                  case 'wav': return 'wav';
+                  case 'flac': return 'flac';
+                  default: return 'wav';
+                }
+              };
+              
+              const ext = getFileExtension(downloadFormat);
+              const bitDepth = downloadFormat === 'wav16' ? '16bit' : downloadFormat === 'wav24' ? '24bit' : '';
+              const sampleRate = downloadSampleRate === 48000 ? '48k' : '44k';
+              
+              const a = document.createElement('a');
+              a.href = objectUrl;
+              a.download = `${baseName}_garage_${selectedGenre?.name?.toLowerCase().replace(/\s+/g, '_')}_mastered_${bitDepth}_${sampleRate}.${ext}`;
+              a.type = downloadFormat === 'mp3' ? 'audio/mpeg' : 'audio/wav';
+              document.body.appendChild(a);
+              a.click();
+              document.body.removeChild(a);
+              URL.revokeObjectURL(objectUrl);
       
       console.log('🎵 Download completed successfully');
     } catch (error) {
@@ -1354,9 +1352,46 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
+  // Confirmation modal handlers
+  const handleProcessAudio = () => {
+    console.log('🎵 PROFESSIONAL TIER: handleProcessAudio called');
+    if (!uploadedFile || !selectedGenre || !effectiveUser) {
+      const missing = [];
+      if (!uploadedFile) missing.push('file');
+      if (!selectedGenre) missing.push('genre');
+      if (!effectiveUser) missing.push('user');
+      setError(`Missing: ${missing.join(', ')}`);
+      return;
+    }
+
+    console.log('🎵 PROFESSIONAL TIER: DEV_MODE =', DEV_MODE);
+    
+    // Show confirmation modal for all users (including Dev Mode)
+    console.log('🎵 PROFESSIONAL TIER: Showing confirmation modal');
+    setShowConfirmModal(true);
+  };
+
+  const handleConfirmMastering = () => {
+    setShowConfirmModal(false);
+    startMasteringProcess();
+  };
+
+  const handleCancelMastering = () => {
+    setShowConfirmModal(false);
+  };
+
   return (
-    <div className="min-h-screen bg-crys-dark text-white">
-      <div className="container mx-auto px-4 py-8 max-w-7xl">
+    <>
+      {/* Mastering Confirmation Modal */}
+      <MasteringConfirmModal
+        isOpen={showConfirmModal}
+        onConfirm={handleConfirmMastering}
+        onCancel={handleCancelMastering}
+        tier="professional"
+      />
+
+      <div className="min-h-screen bg-crys-dark text-white">
+        <div className="container mx-auto px-4 py-8 max-w-7xl">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center space-x-4">
@@ -1646,7 +1681,9 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
               }}
               onDownload={handleDownload}
               downloadFormat={downloadFormat}
+              downloadSampleRate={downloadSampleRate}
               onFormatChange={(f) => setDownloadFormat(f)}
+              onSampleRateChange={(sr) => setDownloadSampleRate(sr)}
               tier={effectiveUser.tier}
             />
           </div>
@@ -1658,6 +1695,7 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
 
       
     </div>
+    </>
   );
 };
 

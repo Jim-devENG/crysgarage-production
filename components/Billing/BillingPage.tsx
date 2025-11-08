@@ -78,8 +78,8 @@ export function BillingPage({ onNavigate }: BillingPageProps) {
   }, [user, updateProfile]);
 
   const tierPricing = {
-    free: { credits: 1, price: 3.00, name: 'Pay Per Download' },
-    pro: { credits: 5, price: 15.00, name: 'Professional Credits' },
+    free: { credits: 1, price: 5.00, name: 'Pay Per Download' },
+    pro: { credits: 999999, price: 0.00, name: 'Professional Credits (Unlimited)' },
     advanced: { credits: 6, price: 25.00, name: 'Advanced Credits (5+1 bonus)' }
   };
 
@@ -89,10 +89,10 @@ export function BillingPage({ onNavigate }: BillingPageProps) {
       case 'pro':
         return {
           name: 'Professional',
-          price: 15.00,
-          credits: 5,
+          price: 0.00,
+          credits: 999999,
           color: 'bg-blue-500',
-          features: ['5 download credits', 'All audio formats', '44.1kHz, 48kHz sample rates', 'Advanced genre presets']
+          features: ['Unlimited download credits', 'All audio formats', '44.1kHz, 48kHz sample rates', 'Advanced genre presets']
         };
       case 'advanced':
         return {
@@ -105,7 +105,7 @@ export function BillingPage({ onNavigate }: BillingPageProps) {
       default:
         return {
           name: 'Pay Per Download',
-          price: 3.00,
+          price: 5.00,
           credits: 1,
           color: 'bg-gray-500',
           features: ['1 download credit', 'MP3/WAV upload', '44.1kHz sample rate', '16-bit resolution']
@@ -372,7 +372,7 @@ export function BillingPage({ onNavigate }: BillingPageProps) {
                             Pay Per Download
                           </h3>
                           <p className="text-crys-light-grey text-sm">
-                            $3.00 per download - no credits required
+                            $5.00 per download - no credits required
                           </p>
                         </>
                       ) : (
