@@ -411,14 +411,12 @@ const ComparisonPlayerFixed: React.FC<ComparisonPlayerProps> = ({
             ref={originalAudioRef}
             src={originalFile?.url}
             preload="auto"
-            playsInline
             crossOrigin="anonymous"
           />
           <audio
             ref={masteredAudioRef}
             src={masteredAudioUrl || undefined}
             preload="auto"
-            playsInline
             crossOrigin="anonymous"
           />
         </div>

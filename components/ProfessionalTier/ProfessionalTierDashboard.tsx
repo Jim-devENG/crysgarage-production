@@ -6,7 +6,6 @@ import RealTimeAnalysisPanel from '../AdvancedTierDashboard/RealTimeAnalysisPane
 import { creditsAPI } from '../../services/api';
 import { pythonAudioService, TierInfo, GenreInfo } from '../../services/pythonAudioService';
 import { useAuth } from '../../contexts/AuthenticationContext';
-import { creditService } from '../../services/creditService';
 import MasteringConfirmModal from '../MasteringConfirmModal';
 import { DEV_MODE, logDevAction } from '../../utils/devMode';
 
@@ -247,7 +246,7 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
     // Route audio exclusively through Web Audio graph so effects are audible on live
     try {
       originalAudioRef.current.crossOrigin = 'anonymous';
-      (originalAudioRef.current as any).playsInline = true;
+      (originalAudioRef.current as any)
       originalAudioRef.current.preload = 'auto';
       // Keep element unmuted and with low volume so MediaElementSource is reliably fed,
       // but direct element output is minimally audible
