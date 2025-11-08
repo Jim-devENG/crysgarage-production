@@ -1244,6 +1244,11 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
 
   // Download handler - using proxy-download for format conversion
   const handleDownload = async () => {
+    // Check payment gateway before download
+    if (onDownloadAttempt && !onDownloadAttempt()) {
+      console.log(" 🎵 Download blocked - payment required);
+ return;
+ }
     // Prioritize using processedFileId for downloads
     if (!processedFileId && !masteredRemoteUrl && !masteredAudioUrl) {
       console.error('🎵 DEBUG: No file available for download');
