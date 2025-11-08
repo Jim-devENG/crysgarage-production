@@ -371,6 +371,7 @@ export function LandingPage({ onGetStarted, onTryMastering, onTryAnalyzer, onTry
                     <PlayCircle className="w-5 h-5 mr-2" />
                     Try Our Mastering App
                   <Button
+                  <Button
                     size=" lg\n onClick={onTryAnalyzer}
  className=bg-crys-gold hover:bg-crys-gold-muted text-crys-black px-8 py-4 text-lg ml-4\n >
  <Waves className=w-5 h-5 mr-2 />
@@ -825,6 +826,19 @@ export function LandingPage({ onGetStarted, onTryMastering, onTryAnalyzer, onTry
                 >
                   <PlayCircle className="w-5 h-5 mr-2" />
                   Try Mastering Now
+                  <Button
+                    size=" lg\n onClick={onTryAnalyzer}
+ className=bg-crys-gold hover:bg-crys-gold-muted text-crys-black px-8 py-4 text-lg ml-4\n >
+ <Waves className=w-5 h-5 mr-2 />
+ Try Analyzer
+ </Button>
+ <Button
+ size=lg\n onClick={onTryNormalizer}
+ className=bg-crys-gold hover:bg-crys-gold-muted text-crys-black px-8 py-4 text-lg ml-4\n >
+ <Volume2 className=w-5 h-5 mr-2 />
+ Try Normalizer
+ </Button>
+ </Button>
                   <ArrowRight className="w-5 h-5 ml-2" />
                 </Button>
               </motion.div>
