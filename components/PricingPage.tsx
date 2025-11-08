@@ -85,7 +85,7 @@ export function PricingPage({ onSelectTier, onGoToDashboard }: PricingPageProps)
   const pricingTiers = [
     {
       id: "free",
-      name: "Pay Per Download",
+      name: "Sapphire Studio",
       price: "$5.00",
       priceNGN: formatNGN(convertUSDToNGN(5.00).ngn),
       subtitle: "$5 for 1 download",
@@ -111,7 +111,7 @@ export function PricingPage({ onSelectTier, onGoToDashboard }: PricingPageProps)
     },
     {
       id: "professional",
-      name: "Professional",
+      name: "Emerald Studio",
       price: "$0.00",
       priceNGN: "₦0",
       subtitle: "Unlimited credits (Free)",
@@ -138,7 +138,7 @@ export function PricingPage({ onSelectTier, onGoToDashboard }: PricingPageProps)
     },
     {
       id: "advanced",
-      name: "Advanced Manual",
+      name: "Jasper Studio",
       price: "$25.00",
       priceNGN: formatNGN(convertUSDToNGN(25.00).ngn),
       subtitle: "5 credits + 1 bonus credit",

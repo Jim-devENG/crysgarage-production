@@ -25,7 +25,7 @@ export function PricingTiers({ onTierSelect, selectedTier }: PricingTiersProps) 
   const tiers: PricingTier[] = [
     {
       id: "free",
-      name: "Pay Per Download",
+      name: "Sapphire Studio",
       price: "$5.00",
       credits: "1 download",
       description: "$5 for 1 download",
@@ -44,7 +44,7 @@ export function PricingTiers({ onTierSelect, selectedTier }: PricingTiersProps) 
     },
     {
       id: "professional",
-      name: "Professional",
+      name: "Emerald Studio",
       price: "$0.00",
       credits: "Unlimited",
       description: "Free",
@@ -66,7 +66,7 @@ export function PricingTiers({ onTierSelect, selectedTier }: PricingTiersProps) 
     },
     {
       id: "advanced",
-      name: "Advanced Manual",
+      name: "Jasper Studio",
       price: "$25.00",
       credits: "5 + 1 bonus",
       description: "Best value with bonus credit",

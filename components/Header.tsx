@@ -33,7 +33,7 @@ export function Header({
     { id: 'landing', label: 'Home' },
     { id: 'studio', label: 'Studio' },
     // { id: 'courses', label: 'Courses' },
-    { id: 'community', label: 'Community' },
+    { id: 'forum', label: 'Forum' },
     { id: 'about', label: 'About' },
     { id: 'help', label: 'Help' },
   ];

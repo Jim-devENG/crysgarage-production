@@ -35,7 +35,7 @@ export function PaymentModal({
   const tiers = {
     free: {
       id: 'free',
-      name: 'Pay Per Download',
+      name: 'Sapphire Studio',
       price: 5.00,
       credits: 1,
       description: '$5 for 1 download',
@@ -51,7 +51,7 @@ export function PaymentModal({
     },
     professional: {
       id: 'professional',
-      name: 'Professional',
+      name: 'Emerald Studio',
       price: 0.00,
       credits: 999999,
       description: 'Free - Unlimited credits',
@@ -70,7 +70,7 @@ export function PaymentModal({
     },
     advanced: {
       id: 'advanced',
-      name: 'Advanced Manual',
+      name: 'Jasper Studio',
       price: 25.00,
       credits: 6, // 5 credits + 1 bonus
       description: '$25 for 5 credits + 1 bonus credit',
