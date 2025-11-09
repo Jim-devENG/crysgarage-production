@@ -6,7 +6,6 @@ import RealTimeAnalysisPanel from '../AdvancedTierDashboard/RealTimeAnalysisPane
 import { creditsAPI } from '../../services/api';
 import { pythonAudioService, TierInfo, GenreInfo } from '../../services/pythonAudioService';
 import MasteringConfirmModal from '../MasteringConfirmModal';
-
 // Types
 interface AudioFile {
   id: string;
@@ -16,7 +15,6 @@ interface AudioFile {
   url: string;
   processedSize?: number; // Processed file size in bytes
 }
-
 interface AudioStats {
   loudness: number;
   peak: number;
@@ -24,20 +22,16 @@ interface AudioStats {
   frequencyBalance: number;
   stereoWidth: number;
 }
-
 interface Genre {
   id: string;
   name: string;
   color: string;
   description: string;
 }
-
 type TabType = 'upload' | 'processing' | 'download';
-
 interface ProfessionalTierDashboardProps {
   onDownloadAttempt?: () => boolean;
 }
-
 const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ onDownloadAttempt }) => {
   const { user } = useAuth();
   
@@ -61,7 +55,6 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
   const [selectedGenre, setSelectedGenre] = useState<Genre | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
-
   // Debug: Track uploadedFile state changes
   useEffect(() => {
     if (uploadedFile) {
@@ -123,7 +116,6 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
   }, [isProcessing, processingSteps]);
   // Cached genre info to avoid network wait on every switch
   const [genreInfoMap, setGenreInfoMap] = useState<Record<string, any> | null>(null);
-
   // Audio refs
   const originalAudioRef = useRef<HTMLAudioElement | null>(null);
   const masteredAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -142,7 +134,6 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
   }>({ source: null, outputGain: null, lowShelf: null, midPeaking: null, highShelf: null, compressor: null, limiter: null, analyser: null });
   // Tracks the base preview gain computed from preset/level before applying the level multiplier
   const basePreviewGainRef = useRef<number>(1.0);
-
   // Vibrant African-inspired color scheme for genres
   const rainbowColors = [
     'bg-red-600',      // Vibrant Red (Afrobeats, Hip-life)
@@ -153,11 +144,9 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
     'bg-indigo-600',   // Royal Indigo (Kuduro, Ndombolo)
     'bg-purple-600'    // Rich Purple (Gengetone, Shrap)
   ];
-
   // Static canvas waveform refs/state (stable, no scroll)
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const peaksRef = useRef<Float32Array | null>(null);
-
   // Initialize audio context
   useEffect(() => {
     if (typeof window !== 'undefined' && !audioContextRef.current) {
@@ -165,14 +154,12 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
       console.log('Audio context initialized for instant effects');
     }
   }, []);
-
   // Sync original element volume/mute
   useEffect(() => {
     if (!originalAudioRef.current) return;
     try { originalAudioRef.current.volume = originalMuted ? 0 : originalVolume; } catch {}
     try { originalAudioRef.current.muted = originalMuted; } catch {}
   }, [originalVolume, originalMuted]);
-
   // Track original progress/duration
   useEffect(() => {
     const audio = originalAudioRef.current;
@@ -189,13 +176,11 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
       audio.removeEventListener('ended', onEnded);
     };
   }, [uploadedFile]);
-
   const formatTime = (secs: number) => {
     const m = Math.floor(secs / 60);
     const s = Math.floor(secs % 60);
     return `${m}:${s.toString().padStart(2, '0')}`;
   };
-
   const handleOriginalPlayPause = () => {
     if (!originalAudioRef.current) return;
     // Ensure processing chain (incl. analyser) exists before playback toggles
@@ -213,7 +198,6 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
       }
     }
   };
-
   // Handle instant preview play/pause (for genre effects)
   const handlePlayPauseInstant = () => {
     if (!originalAudioRef.current) return;
@@ -224,7 +208,6 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
     } else {
       // Resume context and play; ensure element not stalled
       buildPreviewChain();
-      // Slight nudge to retrigger playback capture
       try { originalAudioRef.current.currentTime = Math.max(0, originalAudioRef.current.currentTime - 0.001); } catch {}
       originalAudioRef.current.play().catch(()=>{});
       setIsPlayingOriginal(true);
@@ -233,12 +216,10 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
       }
     }
   };
-
   // Build or rebuild preview chain
   const buildPreviewChain = () => {
     if (!audioContextRef.current || !originalAudioRef.current) return false;
     const ctx = audioContextRef.current;
-
     // Route audio exclusively through Web Audio graph so effects are audible on live
     try {
       originalAudioRef.current.crossOrigin = 'anonymous';
@@ -249,7 +230,6 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
       originalAudioRef.current.muted = false;
       originalAudioRef.current.volume = 0.4; // x2 louder direct path for reliable capture
     } catch {}
-
     // Reuse existing MediaElementSourceNode if already created for this element
     let { source } = originalChainRef.current;
     const el: any = originalAudioRef.current as any;
@@ -265,7 +245,6 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
     } else {
       try { (source as any).disconnect && (source as any).disconnect(); } catch {}
     }
-
     // (Re)create downstream nodes (EQ5 like Advanced)
     const lowShelf = ctx.createBiquadFilter();
     lowShelf.type = 'lowshelf';
@@ -282,13 +261,11 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
     limiter.threshold.value = -6;
     limiter.ratio.value = 20;
     limiter.attack.value = 0.002;
-    limiter.release.value = 0.1;
     const analyser = ctx.createAnalyser();
     analyser.fftSize = 2048;
     analyser.smoothingTimeConstant = 0.8;
     const outputGain = ctx.createGain();
     outputGain.gain.value = 1.0;
-
     // source -> EQ5 -> compressor -> limiter -> outputGain -> destination
     source.connect(lowShelf);
     lowShelf.connect(lowMidPeaking);
@@ -300,14 +277,11 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
     limiter.connect(analyser);
     analyser.connect(outputGain);
     outputGain.connect(ctx.destination);
-
     // Add a compensating gain for audibility (ensure non-zero)
     try { outputGain.gain.value = Math.max(2.0, outputGain.gain.value || 2.0); } catch {}
-
     originalChainRef.current = { source, outputGain, lowShelf, lowMidPeaking, midPeaking, highMidPeaking, highShelf, compressor, limiter, analyser } as any;
     return true;
   };
-
   // Ensure presets are audibly distinct in preview even if backend values are mild/flat
   const ensureAudiblePreset = (p: any, name: string) => {
     const preset = JSON.parse(JSON.stringify(p || {}));
@@ -369,7 +343,6 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
     preset.compression = c;
     return preset;
   };
-
   // Initialize WaveSurfer to render waveform and enable seek on the original audio element
   // Decode uploaded file once and compute static peaks for drawing
   useEffect(() => {
@@ -410,7 +383,6 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
     compute();
     return () => { cancelled = true; };
   }, [uploadedFile]);
-
   // Draw static waveform to canvas, with progress overlay
   const drawWaveform = () => {
     const canvas = canvasRef.current;
@@ -448,7 +420,6 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(playedX, 0, Math.max(1, Math.floor(dpr)), height);
   };
-
   // Redraw on progress/resize
   useEffect(() => { drawWaveform(); }, [originalProgress, originalDuration]);
   useEffect(() => {
@@ -461,14 +432,12 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
     }
     return () => { window.removeEventListener('resize', onResize); if (ro && canvasRef.current) { try { ro.unobserve(canvasRef.current); } catch {} } };
   }, []);
-
   // Apply instant genre effects for real-time preview
   const applyInstantGenreEffects = async (genre: Genre) => {
     if (!audioContextRef.current || !originalAudioRef.current) {
       console.log('Audio context or audio element not available');
       return;
     }
-
     try {
       setIsApplyingEffects(true);
       console.log(`Applying ${genre.name.toUpperCase()} instant effects`);
@@ -483,7 +452,6 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
         buildPreviewChain();
         console.log('Audio chain created successfully');
       }
-
       // Apply genre-specific settings
       const { outputGain, lowShelf, lowMidPeaking, midPeaking, highMidPeaking, highShelf, compressor, limiter } = originalChainRef.current as any;
       
@@ -556,7 +524,6 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
         highMidPeaking.gain.setValueAtTime((preset.eq_curve.high_mid?.gain ?? 0) * exaggerate, currentTime);
         highShelf.frequency.setValueAtTime(preset.eq_curve.high_shelf.freq, currentTime);
         highShelf.gain.setValueAtTime(preset.eq_curve.high_shelf.gain * exaggerate, currentTime);
-
         // Compression: slightly stronger for audibility
         const thr = preset.compression.threshold - 4; // push harder
         const ratio = Math.min(preset.compression.ratio * 1.35, 10);
@@ -565,7 +532,6 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
         compressor.ratio.setValueAtTime(ratio, currentTime);
         compressor.attack.setValueAtTime(Math.max(0.001, preset.compression.attack), currentTime);
         compressor.release.setValueAtTime(preset.compression.release, currentTime);
-
         // Output gain target relative to LUFS target; keep within safe range
         // Map loudness level to preview gain tilt (~-12/-10/-8 reference)
         // Compute base gain from chosen LUFS (or stay close to preset when disabled)
@@ -616,7 +582,6 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
       setIsApplyingEffects(false);
     }
   };
-
   // Rebuild chain if audio element remounts or tab switches back
   useEffect(() => {
     if (activeTab === 'processing' && uploadedFile && originalAudioRef.current) {
@@ -624,7 +589,6 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, originalAudioRef.current]);
-
   // Load tier information and available genres on component mount
   useEffect(() => {
     let cancelled = false;
@@ -642,14 +606,11 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
         }
       }
     }, 10000);
-
     loadTierInformation().finally(() => {
       if (!cancelled) clearTimeout(timeoutId);
     });
-
     return () => { cancelled = true; clearTimeout(timeoutId); };
   }, []);
-
   const loadTierInformation = async () => {
     try {
       setIsLoadingGenres(true);
@@ -662,7 +623,6 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
       } catch (e) {
         console.warn('Local genre import failed:', e);
       }
-
       // Fetch tier information with timeout protection
       const withTimeout = <T,>(p: Promise<T>, ms = 8000): Promise<T> => {
         return new Promise((resolve, reject) => {
@@ -688,7 +648,6 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
       setIsLoadingGenres(false);
     }
   };
-
   const getGenreDescription = (name: string): string => {
     const descriptions: Record<string, string> = {
       'Afrobeats': 'West African pop blend',
@@ -742,7 +701,6 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
     };
     return descriptions[name] || 'Professional Mastering';
   };
-
   // Hardcoded genre presets for instant preview (fallback when Python service is unavailable)
   const getHardcodedGenrePreset = (genreName: string) => {
     const presets: Record<string, any> = {
@@ -1017,7 +975,6 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
     // Return the preset or a default one
     return presets[genreName] || presets['Pop'];
   };
-
   // File upload handler
   const handleFileUpload = (file: File) => {
     const audioFile: AudioFile = {
@@ -1033,7 +990,6 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
     setError(null);
     console.log('File uploaded successfully:', audioFile);
   };
-
   // Genre selection handler
   const handleGenreSelect = async (genre: Genre) => {
     setSelectedGenre(genre);
@@ -1065,7 +1021,6 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
       }
     } catch {}
   };
-
   // Process audio with Python service
   const startMasteringProcess = async () => {
     console.log('Debug - startMasteringProcess called:');
@@ -1081,7 +1036,6 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
       setError(`Missing: ${missing.join(', ')}`);
       return;
     }
-
     // Check credits before processing
     try {
       const hasCredits = await creditService.hasEnoughCredits(effectiveUser.id, 1);
@@ -1099,12 +1053,10 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
       setError('Unable to verify credits. Please try again.');
       return;
     }
-
     try {
       setIsProcessing(true);
       setProcessingProgress(0);
       setError(null);
-
       console.log('Starting FINAL processing with Python service...');
       console.log('Selected genre:', selectedGenre.name);
       
@@ -1124,11 +1076,9 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
           return prev + Math.random() * 10;
         });
       }, 1000);
-
       // Convert format for backend (preserve discrete WAV depth options)
       const backendFormat: 'mp3' | 'wav' | 'wav16' | 'wav24' =
         downloadFormat === 'wav16' ? 'wav16' : downloadFormat === 'wav24' ? 'wav24' : downloadFormat;
-
       // Process audio with Python service for FINAL output (not preview)
       // Peg all genres at -8 LUFS for final processing as requested
       const levelLufs = -8;
@@ -1140,17 +1090,14 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
         backendFormat,
         levelLufs
       );
-
       if (progressIntervalRef.current) {
         clearInterval(progressIntervalRef.current);
         progressIntervalRef.current = null;
       }
       setProcessingProgress(100);
-
       console.log('Final processing completed:', result);
       console.log('🎵 DEBUG: Processing result keys:', Object.keys(result));
       console.log('🎵 DEBUG: Processing result file_id:', result.file_id);
-
       // Update uploadedFile with processed file size
       console.log('🎵 DEBUG: Processing result:', result);
       console.log('🎵 DEBUG: Processed file size bytes:', result.processed_file_size_bytes);
@@ -1166,7 +1113,6 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
         // Force a re-render by updating a dummy state
         setProcessingProgress(prev => prev + 0.001);
       }
-
       // Store the file_id for downloads
       if (result.file_id) {
         setProcessedFileId(result.file_id);
@@ -1214,13 +1160,11 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
         // @ts-ignore
         appliedParams
       });
-
       // Stop any playing audio when processing completes and moving to download tab
       if (originalAudioRef.current) {
         originalAudioRef.current.pause();
         setIsPlayingOriginal(false);
       }
-
       setActiveTab('download');
     } catch (error) {
       console.error('Python processing failed:', error);
@@ -1234,7 +1178,6 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
       setProcessingProgress(0);
     }
   };
-
   // Download handler - using proxy-download for format conversion
   const handleDownload = async () => {
     // Check payment gateway before download
@@ -1247,7 +1190,6 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
       console.error('🎵 DEBUG: No file available for download');
       return;
     }
-
     try {
       console.log('🎵 Download with format conversion starting');
       console.log('🎵 DEBUG: processedFileId:', processedFileId);
@@ -1332,7 +1274,6 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
       setError('Download failed');
     }
   };
-
   // Initialize audio context
   useEffect(() => {
     if (!audioContextRef.current) {
@@ -1340,7 +1281,6 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
       console.log('Audio context initialized for instant effects');
     }
   }, []);
-
   // Format file size
   const formatFileSize = (bytes: number) => {
     if (bytes === 0) return '0 Bytes';
@@ -1349,7 +1289,6 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
-
   // Confirmation modal handlers
   const handleProcessAudio = () => {
     console.log('🎵 PROFESSIONAL TIER: handleProcessAudio called');
@@ -1361,23 +1300,19 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
       setError(`Missing: ${missing.join(', ')}`);
       return;
     }
-
     console.log('🎵 PROFESSIONAL TIER: DEV_MODE =', DEV_MODE);
     
     // Show confirmation modal for all users (including Dev Mode)
     console.log('🎵 PROFESSIONAL TIER: Showing confirmation modal');
     setShowConfirmModal(true);
   };
-
   const handleConfirmMastering = () => {
     setShowConfirmModal(false);
     startMasteringProcess();
   };
-
   const handleCancelMastering = () => {
     setShowConfirmModal(false);
   };
-
   return (
     <>
       {/* Mastering Confirmation Modal */}
@@ -1387,7 +1322,6 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
         onCancel={handleCancelMastering}
         tier="professional"
       />
-
       <div className="min-h-screen bg-crys-dark text-white">
         <div className="container mx-auto px-4 py-8 max-w-7xl">
         {/* Header */}
@@ -1425,7 +1359,6 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
             </div>
           )}
         </div>
-
         {/* Tab Navigation */}
         <div className="flex space-x-1 mb-8 bg-crys-graphite p-1 rounded-lg max-w-2xl mx-auto">
           <button
@@ -1468,14 +1401,12 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
             Download
           </button>
         </div>
-
         {/* Error Display */}
         {error && (
           <div className="mb-6 p-4 bg-red-900/20 border border-red-500 rounded-lg">
             <p className="text-red-400">{error}</p>
           </div>
         )}
-
         {/* Tab Content */}
         <>
           {/* Upload Tab */}
@@ -1512,7 +1443,6 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
               </div>
             </div>
           )}
-
           {/* Processing Tab */}
           {activeTab === 'processing' && uploadedFile && (
           <div className="max-w-6xl mx-auto">
@@ -1538,10 +1468,8 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
                 </button>
               </div>
             </div>
-
             {/* Hidden Audio Element for Instant Preview */}
             <audio ref={originalAudioRef} src={uploadedFile.url} preload="metadata" className="hidden" />
-
             {/* Static Waveform Seekbar (canvas) */}
             <div className="mt-4">
               <div className="flex items-center space-x-2 mb-1">
@@ -1561,12 +1489,10 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
                 <span className="text-xs text-crys-light-grey w-8">{formatTime(originalDuration)}</span>
               </div>
             </div>
-
             {/* Real-time Analysis directly under waveform */}
             <div className="mt-3">
               <RealTimeAnalysisPanel analyser={originalChainRef.current?.analyser || null} isPlaying={isPlayingOriginal} />
             </div>
-
             {/* Genre Selection - Directly Beneath Player */}
             <div className="bg-crys-graphite rounded-xl p-6 mb-6">
               <h3 className="text-xl font-bold mb-4 flex items-center justify-center">
@@ -1586,7 +1512,6 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
                   💡 <strong>Real-time Preview:</strong> Click any genre to hear instant effects. Make sure your audio is playing.
                 </p>
               </div>
-
               {/* Genre Grid - Centered */}
               {isLoadingGenres ? (
                 <div className="flex items-center justify-center py-8">
@@ -1614,7 +1539,6 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
                 </div>
               )}
             </div>
-
             {/* Process Button - Centered Below Genres */}
             {selectedGenre && (
               <div className="text-center">
@@ -1658,7 +1582,6 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
             )}
           </div>
         )}
-
         {/* Download/Comparison Tab */}
         {activeTab === 'download' && masteredAudioUrl && (
           <div className="max-w-4xl mx-auto">
@@ -1690,11 +1613,9 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
         {/* (single hidden audio declared above next to player) */}
         </>
       </div>
-
       
     </div>
     </>
   );
 };
-
 export default ProfessionalTierDashboard;
