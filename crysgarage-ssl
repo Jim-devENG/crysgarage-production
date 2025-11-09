@@ -55,8 +55,8 @@ server {
     }
 
     location / {
-        root /var/www/crysgarage-frontend;
-        try_files  / /index.html;
+        root /var/www/crysgarage-frontend/dist;
+        try_files \ \/ /index.html;
     }
 
     # Backend API endpoints
