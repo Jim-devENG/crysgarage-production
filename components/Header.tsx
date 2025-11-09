@@ -9,7 +9,7 @@ import {
 import { useAuth } from "../contexts/AuthenticationContext";
 import { UserDropdown } from "./authentication";
 import { CreditDisplay } from "./CreditDisplay";
-import { DEV_MODE } from "../utils/devMode";
+import { DEV_MODE, isDevModeActive } from "../utils/secureDevMode";
 
 interface HeaderProps {
   onNavigate: (page: string) => void;
@@ -90,7 +90,7 @@ export function Header({
                     <span className="px-3 py-2 rounded-lg bg-green-500/10 border border-green-500/20 text-green-400 text-sm">Dev Mode: Unlimited credits</span>
                   ) : (
                     <CreditDisplay 
-                      onPurchaseClick={() => onNavigate('pricing')}
+                      onPurchaseClick={() => onNavigate('billing')}
                       className="min-w-[200px]"
                     />
                   )}
