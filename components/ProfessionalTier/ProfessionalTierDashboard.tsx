@@ -224,7 +224,6 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
       setIsPlayingOriginal(false);
     } else {
       // Resume context and play; ensure element not stalled
-      try { if (audioContextRef.current?.state === 'suspended') audioContextRef.current.resume(); } catch {}
       // Ensure the chain exists before play
       buildPreviewChain();
       // Slight nudge to retrigger playback capture
@@ -282,7 +281,6 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
     highShelf.type = 'highshelf';
     const compressor = ctx.createDynamicsCompressor();
     const limiter = ctx.createDynamicsCompressor();
-    // Limiter-like settings
     limiter.threshold.value = -6;
     limiter.knee.value = 0;
     limiter.ratio.value = 20;
