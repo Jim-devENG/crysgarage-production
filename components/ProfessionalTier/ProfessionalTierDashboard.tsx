@@ -6,7 +6,6 @@ import RealTimeAnalysisPanel from '../AdvancedTierDashboard/RealTimeAnalysisPane
 import { creditsAPI } from '../../services/api';
 import { pythonAudioService, TierInfo, GenreInfo } from '../../services/pythonAudioService';
 import MasteringConfirmModal from '../MasteringConfirmModal';
-import { DEV_MODE, logDevAction } from '../../utils/devMode';
 
 // Types
 interface AudioFile {
@@ -224,7 +223,6 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
       setIsPlayingOriginal(false);
     } else {
       // Resume context and play; ensure element not stalled
-      // Ensure the chain exists before play
       buildPreviewChain();
       // Slight nudge to retrigger playback capture
       try { originalAudioRef.current.currentTime = Math.max(0, originalAudioRef.current.currentTime - 0.001); } catch {}
@@ -282,7 +280,6 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
     const compressor = ctx.createDynamicsCompressor();
     const limiter = ctx.createDynamicsCompressor();
     limiter.threshold.value = -6;
-    limiter.knee.value = 0;
     limiter.ratio.value = 20;
     limiter.attack.value = 0.002;
     limiter.release.value = 0.1;
