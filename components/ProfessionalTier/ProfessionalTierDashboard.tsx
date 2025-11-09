@@ -6,7 +6,6 @@ import RealTimeAnalysisPanel from '../AdvancedTierDashboard/RealTimeAnalysisPane
 import { creditsAPI } from '../../services/api';
 import { pythonAudioService, TierInfo, GenreInfo } from '../../services/pythonAudioService';
 import MasteringConfirmModal from '../MasteringConfirmModal';
-// Types
 interface AudioFile {
   id: string;
   name: string;
@@ -224,7 +223,6 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
     try {
       originalAudioRef.current.crossOrigin = 'anonymous';
       (originalAudioRef.current as any)
-      originalAudioRef.current.preload = 'auto';
       // Keep element unmuted and with low volume so MediaElementSource is reliably fed,
       // but direct element output is minimally audible
       originalAudioRef.current.muted = false;
@@ -282,7 +280,6 @@ const ProfessionalTierDashboard: React.FC<ProfessionalTierDashboardProps> = ({ o
     originalChainRef.current = { source, outputGain, lowShelf, lowMidPeaking, midPeaking, highMidPeaking, highShelf, compressor, limiter, analyser } as any;
     return true;
   };
-  // Ensure presets are audibly distinct in preview even if backend values are mild/flat
   const ensureAudiblePreset = (p: any, name: string) => {
     const preset = JSON.parse(JSON.stringify(p || {}));
     const eq = preset.eq_curve || {};
